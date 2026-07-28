@@ -1,0 +1,45 @@
+enum UserRole {
+  ADMIN
+  RECRUITER
+  CANDIDATE
+  USER
+}
+
+enum AccountStatus {
+  ACTIVE
+  SUSPENDED
+  PENDING
+}
+
+model User {
+  id           String        @id @default(uuid())
+  email        String        @unique
+  passwordHash String        @map("password_hash")
+  firstName    String        @map("first_name")
+  lastName     String        @map("last_name")
+  role         UserRole      @default(USER)
+  status       AccountStatus @default(ACTIVE)
+  isActive     Boolean       @default(true) @map("is_active")
+  refreshToken String?       @map("refresh_token")
+  createdAt    DateTime      @default(now()) @map("created_at")
+  updatedAt    DateTime      @updatedAt @map("updated_at")
+
+  refreshTokens RefreshToken[]
+
+  @@index([email, isActive])
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  tokenHash String   @unique @map("token_hash")
+  expiresAt DateTime @map("expires_at")
+  revoked   Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, revoked])
+  @@map("refresh_tokens")
+}
