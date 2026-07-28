@@ -5,6 +5,7 @@ import { GreenhouseJobProvider } from "./providers/greenhouse/provider.js";
 import { OpenPublicFeedProvider } from "./providers/public-feed/public-feed.provider.js";
 import { JobsService } from "./services/jobs.service.js";
 import { ProviderTier } from "./types/job.types.js";
+import { jobsLogger } from "../../shared/utils/logger.js";
 
 // 1. Initialize Registry
 export const jobProviderRegistry = new JobProviderRegistry();
@@ -21,6 +22,17 @@ const defaultPublicFeedProvider = new OpenPublicFeedProvider();
 
 jobProviderRegistry.register(defaultGreenhouseProvider);
 jobProviderRegistry.register(defaultPublicFeedProvider);
+
+jobsLogger.info(
+  {
+    providers: jobProviderRegistry.getAll().map((provider) => ({
+      name: provider.name,
+      tier: provider.tier,
+      enabled: provider.isEnabled,
+    })),
+  },
+  "Jobs module initialized",
+);
 
 // 3. Initialize Engines & Services via Dependency Injection
 export const deduplicationEngine = new DeduplicationEngine();

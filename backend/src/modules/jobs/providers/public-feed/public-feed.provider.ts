@@ -14,6 +14,7 @@ import {
   generateCanonicalHash,
   normalizeText,
 } from "../../utils/fingerprint.js";
+import { jobsLogger } from "../../../../shared/utils/logger.js";
 
 export interface PublicFeedJobPosting {
   readonly id: string;
@@ -36,6 +37,14 @@ export class OpenPublicFeedProvider implements IJobProvider {
   ) {}
 
   async fetchJobs(filters: JobSearchFilters): Promise<NormalizedJob[]> {
+    jobsLogger.debug(
+      {
+        provider: this.name,
+        feedUrl: this.feedUrl,
+        filters,
+      },
+      "Public feed provider fetch started",
+    );
     const samplePostings: PublicFeedJobPosting[] = [
       {
         id: "pub-1001",
@@ -119,6 +128,14 @@ export class OpenPublicFeedProvider implements IJobProvider {
         (job) => job.location.isRemote === filters.isRemote
       );
     }
+
+    jobsLogger.debug(
+      {
+        provider: this.name,
+        fetched: normalized.length,
+      },
+      "Public feed provider fetch completed",
+    );
 
     return normalized;
   }

@@ -10,6 +10,7 @@ import { ProviderHealth } from "../types/provider.types.js";
 import { NormalizedJob } from "../models/NormalizedJob.js";
 import { AggregationService } from "./aggregation/aggregation.service.js";
 import { IJobProviderRegistry } from "../registry/job-provider.registry.js";
+import { jobsLogger } from "../../../shared/utils/logger.js";
 
 export class JobsService implements IJobContract {
   constructor(
@@ -21,6 +22,13 @@ export class JobsService implements IJobContract {
     filters: JobSearchFilters,
     pagination: PaginationOptions
   ): Promise<PaginatedResult<NormalizedJob>> {
+    jobsLogger.info(
+      {
+        filters,
+        pagination,
+      },
+      "Searching jobs",
+    );
     const aggregationResult =
       await this.aggregationService.aggregateJobs(filters);
 
@@ -41,6 +49,16 @@ export class JobsService implements IJobContract {
     const startIndex = (page - 1) * limit;
     const paginatedData = sortedJobs.slice(startIndex, startIndex + limit);
 
+    jobsLogger.info(
+      {
+        total: total,
+        page,
+        limit,
+        totalPages,
+      },
+      "Search jobs completed",
+    );
+
     return {
       data: paginatedData,
       total,
@@ -51,6 +69,7 @@ export class JobsService implements IJobContract {
   }
 
   async getJobById(jobId: string): Promise<NormalizedJob | null> {
+    jobsLogger.info({ jobId }, "Looking up job by ID");
     const allProviders = this.providerRegistry.getEnabledProviders();
     for (const provider of allProviders) {
       try {
@@ -59,6 +78,13 @@ export class JobsService implements IJobContract {
           (j) => j.id === jobId || j.providerJobId === jobId
         );
         if (found) {
+          jobsLogger.info(
+            {
+              jobId,
+              provider: provider.name,
+            },
+            "Job found by provider lookup",
+          );
           return found;
         }
       } catch {
@@ -78,6 +104,16 @@ export class JobsService implements IJobContract {
 
     const result = await this.aggregationService.aggregateJobs(filters);
 
+    jobsLogger.info(
+      {
+        filters,
+        totalHarvested: result.totalFetched,
+        totalUnique: result.jobs.length,
+        totalDuplicates: result.duplicatesRemoved,
+      },
+      "Bulk ingestion summary generated",
+    );
+
     return {
       totalHarvested: result.totalFetched,
       totalUnique: result.jobs.length,
@@ -87,6 +123,7 @@ export class JobsService implements IJobContract {
   }
 
   async getProviderHealth(): Promise<Record<string, ProviderHealth>> {
+    jobsLogger.info("Collecting provider health");
     const providers = this.providerRegistry.getAll();
     const healthMap: Record<string, ProviderHealth> = {};
 
@@ -102,6 +139,13 @@ export class JobsService implements IJobContract {
         };
       }
     }
+
+    jobsLogger.info(
+      {
+        providers: Object.keys(healthMap),
+      },
+      "Provider health collection completed",
+    );
 
     return healthMap;
   }
