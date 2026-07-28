@@ -3,6 +3,7 @@ import { authRepository } from "../repositories/auth.repository.js";
 import { AppError } from "../../../shared/utils/errors/AppError.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/token.utils.js";
 import { SigninInput } from "../types/auth.types.js";
+import { cacheService, CacheKeys, CacheTTL } from "../../../infrastructure/cache/index.js";
 
 export const signinService = async ({ email, password }: SigninInput) => {
   const normalizedEmail = email.trim().toLowerCase();
@@ -33,6 +34,16 @@ export const signinService = async ({ email, password }: SigninInput) => {
   await authRepository.updateRefreshToken(user.id, refreshToken);
 
   const { passwordHash: _hash, refreshToken: _token, ...userData } = user;
+
+  // Cache user session in the caching layer (Redis / Memory)
+  await cacheService.set(
+    CacheKeys.AUTH.USER_SESSION(user.id),
+    userData,
+    CacheTTL.SEVEN_DAYS
+  );
+
+  // Clear any cached failed login attempts upon successful signin
+  await cacheService.delete(CacheKeys.AUTH.FAILED_ATTEMPTS(normalizedEmail));
 
   return {
     accessToken,
