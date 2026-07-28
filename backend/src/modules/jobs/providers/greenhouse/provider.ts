@@ -5,26 +5,33 @@ import {
   ProviderRateLimitStatus,
 } from "../../types/provider.types.js";
 import { NormalizedJob } from "../../models/NormalizedJob.js";
-import { LeverProviderConfig } from "./config.js";
-import { LeverClient } from "./client.js";
-import { LeverJobMapper } from "./mapper.js";
+import { GreenhouseProviderConfig } from "./config.js";
+import { GreenhouseClient } from "./client.js";
+import { GreenhouseJobMapper } from "./mapper.js";
 
-export class LeverJobProvider implements IJobProvider {
-  readonly name = "lever";
+export class GreenhouseJobProvider implements IJobProvider {
+  readonly name = "greenhouse";
   readonly tier: ProviderTier;
   readonly isEnabled = true;
 
-  private readonly client: LeverClient;
-  private readonly mapper: LeverJobMapper;
+  private readonly client: GreenhouseClient;
+  private readonly mapper: GreenhouseJobMapper;
 
-  constructor(private readonly config: LeverProviderConfig) {
-    this.tier = config.tier ?? ProviderTier.FREE_AUTH;
-    this.client = new LeverClient(this.name, config.baseUrl, config.timeoutMs);
-    this.mapper = new LeverJobMapper(config.companyId, this.tier);
+  constructor(private readonly config: GreenhouseProviderConfig) {
+    this.tier = config.tier ?? ProviderTier.PUBLIC;
+    this.client = new GreenhouseClient(
+      this.name,
+      config.baseUrl,
+      config.timeoutMs
+    );
+    const companyName = config.companyName || config.boardToken;
+    this.mapper = new GreenhouseJobMapper(companyName, this.tier);
   }
 
   async fetchJobs(filters: JobSearchFilters): Promise<NormalizedJob[]> {
-    const rawPostings = await this.client.fetchPostings(this.config.companyId);
+    const rawPostings = await this.client.fetchBoardJobs(
+      this.config.boardToken
+    );
     let normalized = this.mapper.mapMany(rawPostings, this.name);
 
     if (filters.query) {
