@@ -4,6 +4,12 @@ export interface ICacheDriver {
   delete(key: string): Promise<boolean>;
   deleteByPrefix(prefix: string): Promise<number>;
   exists(key: string): Promise<boolean>;
+  /**
+   * Atomically increments `key` (creating it at 1 if absent) and, only on
+   * the increment that creates the key, applies `ttlSeconds` - a
+   * fixed-window counter used for rate limiting / cooldowns.
+   */
+  increment(key: string, ttlSeconds?: number): Promise<number>;
   ping(): Promise<boolean>;
   disconnect(): Promise<void>;
 }

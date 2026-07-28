@@ -12,7 +12,9 @@ export const MessageQueues = {
 
 export const MessageRoutingKeys = {
   AUTH_SIGNIN: "auth.signin",
+  AUTH_UPDATED: "auth.updated",
   USER_REGISTERED: "user.registered",
+  EMAIL_SEND: "email.send",
 } as const;
 
 export const QoSPresets: Record<string, SubscribeOptions> = {

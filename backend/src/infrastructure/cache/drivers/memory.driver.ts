@@ -48,6 +48,22 @@ export class MemoryCacheDriver implements ICacheDriver {
     return value !== null;
   }
 
+  async increment(key: string, ttlSeconds?: number): Promise<number> {
+    const current = await this.get<number>(key);
+    const next = (current ?? 0) + 1;
+
+    // TTL is only (re)applied on the increment that creates the key, to
+    // match a fixed-window counter's semantics.
+    if (current === null) {
+      await this.set(key, next, ttlSeconds);
+    } else {
+      const entry = this.store.get(key);
+      this.store.set(key, { value: next, expiresAt: entry?.expiresAt ?? null });
+    }
+
+    return next;
+  }
+
   async ping(): Promise<boolean> {
     return true;
   }
