@@ -1,6 +1,6 @@
 import { IJobProvider } from "../interfaces/IJobProvider.js";
 import { ProviderTier } from "../types/job.types.js";
-import { JobModuleError } from "../errors/JobModuleError.js";
+import { DuplicateProviderRegistrationError } from "../errors/DuplicateProviderRegistrationError.js";
 
 export interface IJobProviderRegistry {
   register(provider: IJobProvider): void;
@@ -8,6 +8,10 @@ export interface IJobProviderRegistry {
   getAll(): IJobProvider[];
   getByTier(tier: ProviderTier): IJobProvider[];
   getEnabledProviders(filter?: {
+    tiers?: ProviderTier[];
+    names?: string[];
+  }): IJobProvider[];
+  getEnabledProvidersSortedByPriority(filter?: {
     tiers?: ProviderTier[];
     names?: string[];
   }): IJobProvider[];
@@ -19,10 +23,7 @@ export class JobProviderRegistry implements IJobProviderRegistry {
   register(provider: IJobProvider): void {
     const normalizedName = provider.name.trim().toLowerCase();
     if (this.providers.has(normalizedName)) {
-      throw new JobModuleError(
-        `Job provider with name '${provider.name}' is already registered`,
-        409
-      );
+      throw new DuplicateProviderRegistrationError(provider.name);
     }
     this.providers.set(normalizedName, provider);
   }
@@ -61,6 +62,21 @@ export class JobProviderRegistry implements IJobProviderRegistry {
         }
       }
       return true;
+    });
+  }
+
+  getEnabledProvidersSortedByPriority(filter?: {
+    tiers?: ProviderTier[];
+    names?: string[];
+  }): IJobProvider[] {
+    const enabled = this.getEnabledProviders(filter);
+    return enabled.sort((a, b) => {
+      const priorityA = a.manifest?.priority ?? 0;
+      const priorityB = b.manifest?.priority ?? 0;
+      if (priorityB !== priorityA) {
+        return priorityB - priorityA; // Descending order
+      }
+      return a.name.localeCompare(b.name); // Deterministic tie-breaker
     });
   }
 }
