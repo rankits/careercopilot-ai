@@ -1,6 +1,7 @@
 import { IJobProvider } from "../interfaces/IJobProvider.js";
 import { ProviderTier } from "../types/job.types.js";
 import { DuplicateProviderRegistrationError } from "../errors/DuplicateProviderRegistrationError.js";
+import { jobsLogger } from "../../../shared/utils/logger.js";
 
 export interface IJobProviderRegistry {
   register(provider: IJobProvider): void;
@@ -26,6 +27,14 @@ export class JobProviderRegistry implements IJobProviderRegistry {
       throw new DuplicateProviderRegistrationError(provider.name);
     }
     this.providers.set(normalizedName, provider);
+    jobsLogger.debug(
+      {
+        provider: provider.name,
+        tier: provider.tier,
+        enabled: provider.isEnabled,
+      },
+      "Provider registered",
+    );
   }
 
   getByName(name: string): IJobProvider | undefined {
@@ -70,7 +79,7 @@ export class JobProviderRegistry implements IJobProviderRegistry {
     names?: string[];
   }): IJobProvider[] {
     const enabled = this.getEnabledProviders(filter);
-    return enabled.sort((a, b) => {
+    const sorted = enabled.sort((a, b) => {
       const priorityA = a.manifest?.priority ?? 0;
       const priorityB = b.manifest?.priority ?? 0;
       if (priorityB !== priorityA) {
@@ -78,5 +87,17 @@ export class JobProviderRegistry implements IJobProviderRegistry {
       }
       return a.name.localeCompare(b.name); // Deterministic tie-breaker
     });
+    jobsLogger.debug(
+      {
+        filter,
+        providers: sorted.map((provider) => ({
+          name: provider.name,
+          tier: provider.tier,
+          priority: provider.manifest?.priority ?? 0,
+        })),
+      },
+      "Enabled providers sorted by priority",
+    );
+    return sorted;
   }
 }

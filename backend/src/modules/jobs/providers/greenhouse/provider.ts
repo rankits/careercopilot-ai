@@ -8,6 +8,7 @@ import { NormalizedJob } from "../../models/NormalizedJob.js";
 import { GreenhouseProviderConfig } from "./config.js";
 import { GreenhouseClient } from "./client.js";
 import { GreenhouseJobMapper } from "./mapper.js";
+import { jobsLogger } from "../../../../shared/utils/logger.js";
 
 export class GreenhouseJobProvider implements IJobProvider {
   readonly name = "greenhouse";
@@ -29,6 +30,14 @@ export class GreenhouseJobProvider implements IJobProvider {
   }
 
   async fetchJobs(filters: JobSearchFilters): Promise<NormalizedJob[]> {
+    jobsLogger.debug(
+      {
+        provider: this.name,
+        boardToken: this.config.boardToken,
+        filters,
+      },
+      "Greenhouse provider fetch started",
+    );
     const rawPostings = await this.client.fetchBoardJobs(
       this.config.boardToken
     );
@@ -56,11 +65,28 @@ export class GreenhouseJobProvider implements IJobProvider {
       );
     }
 
+    jobsLogger.debug(
+      {
+        provider: this.name,
+        fetched: normalized.length,
+      },
+      "Greenhouse provider fetch completed",
+    );
+
     return normalized;
   }
 
   async healthCheck(): Promise<ProviderHealth> {
-    return this.client.healthCheck();
+    jobsLogger.debug({ provider: this.name }, "Greenhouse provider health check started");
+    const health = await this.client.healthCheck();
+    jobsLogger.debug(
+      {
+        provider: this.name,
+        status: health.status,
+      },
+      "Greenhouse provider health check completed",
+    );
+    return health;
   }
 
   getRateLimitStatus(): ProviderRateLimitStatus {

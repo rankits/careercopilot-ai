@@ -1,4 +1,5 @@
 import { NextFunction, Request, Response } from "express";
+import { appLogger } from "../utils/logger.js";
 
 export const responseInterceptor = (req: Request, res: Response, next: NextFunction) => {
   const originalSend = res.send;
@@ -14,7 +15,15 @@ export const responseInterceptor = (req: Request, res: Response, next: NextFunct
     const method = req.method;
     const route = req.originalUrl;
 
-    console.log(`[API] ${method} ${route} -> ${statusCode} (${duration}ms)`);
+    appLogger.info(
+      {
+        method,
+        route,
+        statusCode,
+        durationMs: duration,
+      },
+      "API request completed",
+    );
   });
 
   next();
