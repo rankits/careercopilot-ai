@@ -16,6 +16,12 @@ export default defineConfig({
     },
   },
   test: {
+    coverage: {
+      exclude: ['dist/**', 'node_modules/**', 'src/types/**', 'src/test/**'],
+      provider: 'v8',
+      reporter: ['text', 'html', 'lcov'],
+      reportsDirectory: './coverage',
+    },
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',

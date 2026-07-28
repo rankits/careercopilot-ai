@@ -1,0 +1,10 @@
+{
+  "name": "@careercopilot/backend",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "test": "echo \"No backend tests configured yet\"",
+    "typecheck": "echo \"No backend typecheck configured yet\""
+  }
+}

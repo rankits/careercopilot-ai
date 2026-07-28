@@ -1,4 +1,6 @@
 dist
+frontend/dist
 node_modules
 coverage
+frontend/coverage
 package-lock.json
