@@ -1,5 +1,4 @@
-import type { SxProps, Theme } from '@mui/material/styles';
-
+import type { SxProps, Theme } from '@/lib/material';
 import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const socialConnectButtonSx: SxProps<Theme> = {

@@ -1,7 +1,6 @@
-import GoogleIcon from '@mui/icons-material/Google';
-import LinkedInIcon from '@mui/icons-material/LinkedIn';
-import MuiButton from '@mui/material/Button';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+
+import { GoogleIcon, LinkedInIcon, MuiButton } from '@/lib/material';
 
 import { socialConnectButtonSx } from './styles';
 

@@ -1,6 +1,4 @@
-import type { SxProps, Theme } from '@mui/material/styles';
-import type { SystemStyleObject } from '@mui/system';
-
+import type { SxProps, SystemStyleObject, Theme } from '@/lib/material';
 import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export type ButtonTone = 'primary' | 'success' | 'danger';

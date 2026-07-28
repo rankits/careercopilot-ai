@@ -1,6 +1,6 @@
-import InputAdornment from '@mui/material/InputAdornment';
-import TextField, { type TextFieldProps } from '@mui/material/TextField';
 import type { ReactNode } from 'react';
+
+import { InputAdornment, TextField, type TextFieldProps } from '@/lib/material';
 
 import { getInputSx, type InputSize, type InputTone, type InputVariant } from './styles';
 
