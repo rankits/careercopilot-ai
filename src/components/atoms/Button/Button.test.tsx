@@ -32,9 +32,23 @@ describe('Button', () => {
     expect(handleClick).not.toHaveBeenCalled();
   });
 
-  it('maps the secondary variant to an outlined MUI button', () => {
-    render(<Button variant="secondary">Cancel</Button>);
+  it('maps the outline variant to an outlined MUI button', () => {
+    render(<Button variant="outline">Cancel</Button>);
 
     expect(screen.getByRole('button', { name: /cancel/i })).toHaveClass('MuiButton-outlined');
+  });
+
+  it('supports success and danger tones', () => {
+    render(
+      <>
+        <Button tone="success">Approve</Button>
+        <Button tone="danger" variant="outline">
+          Reject
+        </Button>
+      </>,
+    );
+
+    expect(screen.getByRole('button', { name: /approve/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /reject/i })).toHaveClass('MuiButton-outlined');
   });
 });

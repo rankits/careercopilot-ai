@@ -34,4 +34,21 @@ describe('Input', () => {
     expect(screen.getByText('https://')).toBeInTheDocument();
     expect(screen.getByText('.com')).toBeInTheDocument();
   });
+
+  it('supports success tone and filled variant', () => {
+    render(
+      <Input
+        helperText="Looks good"
+        inputVariant="filled"
+        label="Portfolio"
+        tone="success"
+        value="https://careercopilot.dev"
+      />,
+    );
+
+    expect(screen.getByRole('textbox', { name: /portfolio/i })).toHaveValue(
+      'https://careercopilot.dev',
+    );
+    expect(screen.getByText(/looks good/i)).toBeInTheDocument();
+  });
 });
