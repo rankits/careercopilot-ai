@@ -1,5 +1,6 @@
 import express from "express";
 import { successResponse } from "./shared/utils/response.js";
+import { authRoutes } from "./modules/auth/index.js";
 
 const router = express.Router();
 
@@ -7,6 +8,7 @@ router.get("/status", (_req, res) => {
   res.status(200).json(successResponse("API v1 is operational"));
 });
 
-// Module routes will be mounted here (e.g., authRoutes)
+// Sample API Flow: Mount /auth routes
+router.use("/auth", authRoutes);
 
 export default router;
