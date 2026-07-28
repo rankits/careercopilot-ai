@@ -8,3 +8,11 @@ export const refreshCookieOptions: CookieOptions = {
   maxAge: REFRESH_TOKEN_EXPIRES_IN_MS,
   path: "/",
 };
+
+/** Same attributes minus `maxAge` - required for `res.clearCookie` to match the cookie it's clearing. */
+export const clearRefreshCookieOptions: CookieOptions = {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "strict",
+  path: "/",
+};

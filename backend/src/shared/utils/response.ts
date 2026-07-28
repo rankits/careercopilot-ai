@@ -8,10 +8,16 @@ export const successResponse = <T = unknown>(message: string, data?: T): ApiSucc
   };
 };
 
-export const errorResponse = <T = unknown>(message: string, errors?: T): ApiErrorResponse<T> => {
+export const errorResponse = <T = unknown>(
+  message: string,
+  errors?: T,
+  extra?: { code?: string; requestId?: string },
+): ApiErrorResponse<T> => {
   return {
     status: "error",
     message,
     ...(errors !== undefined && { errors }),
+    ...(extra?.code !== undefined && { code: extra.code }),
+    ...(extra?.requestId !== undefined && { requestId: extra.requestId }),
   };
 };
