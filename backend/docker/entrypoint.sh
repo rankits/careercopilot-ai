@@ -2,7 +2,8 @@
 set -e
 
 if [ "$RUN_MIGRATIONS" = "true" ]; then
-  echo ">>> Running PostgreSQL database migrations..."
+  echo ">>> Generating Prisma client and running PostgreSQL database migrations..."
+  npx prisma generate
   npx prisma migrate deploy
   echo ">>> Migrations completed successfully."
 fi

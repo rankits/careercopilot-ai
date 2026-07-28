@@ -1,8 +1,8 @@
 enum UserRole {
   ADMIN
+  USER
   RECRUITER
   CANDIDATE
-  USER
 }
 
 enum AccountStatus {
@@ -12,21 +12,20 @@ enum AccountStatus {
 }
 
 model User {
-  id           String        @id @default(uuid())
-  email        String        @unique
-  passwordHash String        @map("password_hash")
-  firstName    String        @map("first_name")
-  lastName     String        @map("last_name")
-  role         UserRole      @default(USER)
-  status       AccountStatus @default(ACTIVE)
-  isActive     Boolean       @default(true) @map("is_active")
-  refreshToken String?       @map("refresh_token")
-  createdAt    DateTime      @default(now()) @map("created_at")
-  updatedAt    DateTime      @updatedAt @map("updated_at")
+  id           String    @id @default(uuid())
+  email        String    @unique
+  passwordHash String
+  firstName    String
+  lastName     String
+  role         UserRole  @default(USER)
+  isActive     Boolean   @default(true)
+  refreshToken String?
+
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   refreshTokens RefreshToken[]
 
-  @@index([email, isActive])
   @@map("users")
 }
 
