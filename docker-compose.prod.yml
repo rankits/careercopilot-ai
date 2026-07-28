@@ -1,0 +1,62 @@
+version: "3.8"
+
+services:
+  postgres_prod:
+    image: postgres:16-alpine
+    container_name: career_copilot_pg_prod
+    restart: always
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password is required in .env}
+      POSTGRES_DB: ${POSTGRES_DB:-careercopilot_prod}
+    ports:
+      - "127.0.0.1:5432:5432" # Securely bind only to localhost
+    volumes:
+      - pg_prod_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-careercopilot_prod}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
+  backend_prod:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.prod
+    container_name: career_copilot_backend_prod
+    restart: always
+    ports:
+      - "5001:5001"
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres_prod:5432/${POSTGRES_DB:-careercopilot_prod}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT Access Secret is required in .env}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT Refresh Secret is required in .env}
+    depends_on:
+      postgres_prod:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: "1.5"
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "5"
+
+volumes:
+  pg_prod_data:
