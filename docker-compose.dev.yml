@@ -35,6 +35,25 @@ services:
       retries: 5
       start_period: 5s
 
+  rabbitmq_dev:
+    image: rabbitmq:3.13-management-alpine
+    container_name: career_copilot_rabbitmq_dev
+    restart: unless-stopped
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_dev_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
   backend_dev:
     build:
       context: ./backend
@@ -54,6 +73,7 @@ services:
       REDIS_MODE: standalone
       REDIS_HOST: redis_dev
       REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq_dev:5672
     volumes:
       # Mount local backend code for tsx hot-reloading
       - ./backend:/app
@@ -64,7 +84,10 @@ services:
         condition: service_healthy
       redis_dev:
         condition: service_healthy
+      rabbitmq_dev:
+        condition: service_healthy
 
 volumes:
   pg_dev_data:
   redis_dev_data:
+  rabbitmq_dev_data:
