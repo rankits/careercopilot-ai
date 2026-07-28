@@ -1,9 +1,11 @@
 node_modules
 dist
+frontend/dist
 .env
 .env.*
 !.env.example
 coverage
+frontend/coverage
 .DS_Store
 *.local
 .vscode/*
