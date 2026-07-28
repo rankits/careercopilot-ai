@@ -1,5 +1,4 @@
-import MuiButton, { type ButtonProps as MuiButtonProps } from '@mui/material/Button';
-import CircularProgress from '@mui/material/CircularProgress';
+import { CircularProgress, MuiButton, type MuiButtonProps } from '@/lib/material';
 
 import { getButtonSx, type ButtonSize, type ButtonTone, type ButtonVariant } from './styles';
 

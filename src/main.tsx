@@ -1,10 +1,10 @@
-import { ThemeProvider } from '@mui/material/styles';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 
 import { App } from '@/app/App';
+import { ThemeProvider } from '@/lib/material';
 import { store } from '@/store';
 import { appTheme } from '@/theme';
 import '@/styles/global.css';

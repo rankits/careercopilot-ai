@@ -1,19 +1,22 @@
-import { yupResolver } from '@hookform/resolvers/yup';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
-import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
-import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
-import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
-import Box from '@mui/material/Box';
-import Checkbox from '@mui/material/Checkbox';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Link from '@mui/material/Link';
-import Typography from '@mui/material/Typography';
 import { useMemo } from 'react';
 import { useForm, type FieldValues, type Path, type Resolver } from 'react-hook-form';
 
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
+
+import {
+  ArrowForwardIcon,
+  Box,
+  Checkbox,
+  EmailOutlinedIcon,
+  FormControlLabel,
+  Link,
+  LockOutlinedIcon,
+  PersonOutlineIcon,
+  Typography,
+  VisibilityOffOutlinedIcon,
+  yupResolver,
+} from '@/lib/material';
 
 import { SocialConnectButton } from '../SocialConnectButton';
 
