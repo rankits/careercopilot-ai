@@ -4,6 +4,11 @@ import { AppError } from "../../../shared/utils/errors/AppError.js";
 import { generateAccessToken, generateRefreshToken } from "../utils/token.utils.js";
 import { SigninInput } from "../types/auth.types.js";
 import { cacheService, CacheKeys, CacheTTL } from "../../../infrastructure/cache/index.js";
+import {
+  messageBus,
+  MessageExchanges,
+  MessageRoutingKeys,
+} from "../../../infrastructure/messaging/index.js";
 
 export const signinService = async ({ email, password }: SigninInput) => {
   const normalizedEmail = email.trim().toLowerCase();
@@ -44,6 +49,17 @@ export const signinService = async ({ email, password }: SigninInput) => {
 
   // Clear any cached failed login attempts upon successful signin
   await cacheService.delete(CacheKeys.AUTH.FAILED_ATTEMPTS(normalizedEmail));
+
+  // Publish user signin event to RabbitMQ message bus (non-blocking)
+  messageBus
+    .publish(MessageExchanges.DOMAIN_EVENTS, MessageRoutingKeys.AUTH_SIGNIN, {
+      userId: user.id,
+      email: user.email,
+      timestamp: new Date().toISOString(),
+    })
+    .catch((err) =>
+      console.error("[AuthService] Failed to publish signin event:", err)
+    );
 
   return {
     accessToken,
