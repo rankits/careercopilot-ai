@@ -1,11 +1,11 @@
 import { BaseProviderClient } from "../base/base.client.js";
-import { LeverJobPosting } from "./types.js";
+import { GreenhouseJobPosting, GreenhouseBoardJobsResponse } from "./types.js";
 import { ProviderFetchError } from "../../errors/ProviderFetchError.js";
 
-export class LeverClient extends BaseProviderClient {
+export class GreenhouseClient extends BaseProviderClient {
   constructor(
     providerName: string,
-    baseUrl = "https://api.lever.co/v0",
+    baseUrl = "https://boards-api.greenhouse.io/v1/boards",
     timeoutMs = 8000
   ) {
     super({
@@ -16,11 +16,11 @@ export class LeverClient extends BaseProviderClient {
     });
   }
 
-  async fetchPostings(companyId: string): Promise<LeverJobPosting[]> {
+  async fetchBoardJobs(boardToken: string): Promise<GreenhouseJobPosting[]> {
     return this.executeWithRetry(async () => {
-      const url = `${this.options.baseUrl}/postings/${encodeURIComponent(
-        companyId
-      )}?mode=json`;
+      const url = `${this.options.baseUrl}/${encodeURIComponent(
+        boardToken
+      )}/jobs`;
       const response = await fetch(url, {
         headers: {
           Accept: "application/json",
@@ -34,7 +34,8 @@ export class LeverClient extends BaseProviderClient {
         );
       }
 
-      return (await response.json()) as LeverJobPosting[];
+      const data = (await response.json()) as GreenhouseBoardJobsResponse;
+      return data.jobs || [];
     });
   }
 }
