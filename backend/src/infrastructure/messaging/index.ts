@@ -1,4 +1,3 @@
-export interface IMessageBus {
-  publish(exchange: string, routingKey: string, message: unknown): Promise<void>;
-  subscribe(queue: string, handler: (message: unknown) => Promise<void>): Promise<void>;
-}
+export * from "./messaging.interface.js";
+export * from "./messaging.topology.js";
+export { messageBus, MessageBusService } from "./messaging.service.js";
