@@ -2,6 +2,9 @@ import { createTheme } from '@mui/material/styles';
 
 import { borderRadius, colorTokens, fontFamily, fontWeight, palette } from '@/tokens';
 
+const rootFontSize = 16;
+const remToPx = (value: string) => Number.parseFloat(value) * rootFontSize;
+
 export const appTheme = createTheme({
   palette: {
     background: {
@@ -26,7 +29,7 @@ export const appTheme = createTheme({
     },
   },
   shape: {
-    borderRadius: Number.parseInt(borderRadius.lg, 10),
+    borderRadius: remToPx(borderRadius.lg),
   },
   typography: {
     button: {

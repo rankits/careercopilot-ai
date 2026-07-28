@@ -2,27 +2,33 @@ import InputAdornment from '@mui/material/InputAdornment';
 import TextField, { type TextFieldProps } from '@mui/material/TextField';
 import type { ReactNode } from 'react';
 
-import { borderRadius, spacing } from '@/tokens';
+import { getInputSx, type InputSize, type InputTone, type InputVariant } from './styles';
 
 export interface InputProps extends Omit<
   TextFieldProps,
-  'error' | 'helperText' | 'size' | 'variant'
+  'color' | 'error' | 'helperText' | 'size' | 'variant'
 > {
   errorMessage?: string;
   helperText?: ReactNode;
-  size?: 'small' | 'medium';
+  inputVariant?: InputVariant;
+  size?: InputSize;
   startAdornment?: ReactNode;
   endAdornment?: ReactNode;
+  tone?: InputTone;
 }
 
 export function Input({
   endAdornment,
   errorMessage,
   helperText,
+  inputVariant = 'outline',
   size = 'medium',
   startAdornment,
+  tone = 'default',
   ...props
 }: InputProps) {
+  const resolvedTone: InputTone = errorMessage ? 'error' : tone;
+
   return (
     <TextField
       {...props}
@@ -41,13 +47,12 @@ export function Input({
         },
         ...props.slotProps,
       }}
-      sx={{
-        '& .MuiOutlinedInput-root': {
-          borderRadius: borderRadius.lg,
-          minHeight: size === 'small' ? spacing[10] : spacing[12],
-        },
-        ...props.sx,
-      }}
+      sx={getInputSx({
+        consumerSx: props.sx,
+        inputVariant,
+        size,
+        tone: resolvedTone,
+      })}
     />
   );
 }
