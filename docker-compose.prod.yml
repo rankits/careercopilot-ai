@@ -56,6 +56,34 @@ services:
         max-size: "20m"
         max-file: "3"
 
+  rabbitmq_prod:
+    image: rabbitmq:3.13-alpine
+    container_name: career_copilot_rabbitmq_prod
+    restart: always
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RabbitMQ password is required in .env}
+    ports:
+      - "127.0.0.1:5672:5672" # Securely bind AMQP only to localhost
+    volumes:
+      - rabbitmq_prod_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "20m"
+        max-file: "3"
+
   backend_prod:
     build:
       context: ./backend
@@ -75,10 +103,13 @@ services:
       REDIS_HOST: redis_prod
       REDIS_PORT: 6379
       REDIS_PASSWORD: ${REDIS_PASSWORD:-}
+      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD}@rabbitmq_prod:5672
     depends_on:
       postgres_prod:
         condition: service_healthy
       redis_prod:
+        condition: service_healthy
+      rabbitmq_prod:
         condition: service_healthy
     deploy:
       resources:
@@ -94,3 +125,4 @@ services:
 volumes:
   pg_prod_data:
   redis_prod_data:
+  rabbitmq_prod_data:
