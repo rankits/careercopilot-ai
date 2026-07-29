@@ -1,3 +1,5 @@
+import { Link as RouterLink } from 'react-router-dom';
+
 import { Button } from '@/components/atoms/Button';
 
 import fullLogoUrl from '@/assets/logo/career-copilot-full-logo.svg';
@@ -40,16 +42,18 @@ function SidebarNavButton({
   tone: NonNullable<SidebarProps['tone']>;
 }) {
   const Icon = item.icon;
+  const navigationProps = item.href
+    ? { component: RouterLink, to: item.href }
+    : { type: 'button' as const };
 
   return (
     <NavButton
+      {...navigationProps}
       aria-current={active ? 'page' : undefined}
       active={active}
       collapsed={collapsed}
-      href={item.href}
       onClick={() => onSelect?.(item)}
       tone={tone}
-      type="button"
     >
       <Icon fontSize="small" />
       {collapsed ? null : <span>{item.label}</span>}
