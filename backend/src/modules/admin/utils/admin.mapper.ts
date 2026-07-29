@@ -1,5 +1,5 @@
-import type { AdminWithRole } from "../repositories/admin.repository.js";
-import type { SafeAdmin } from "../types/admin.types.js";
+import type { AdminWithRole } from "@/modules/admin/repositories/admin.repository.js";
+import type { SafeAdmin } from "@/modules/admin/types/admin.types.js";
 
 export const toSafeAdmin = (admin: AdminWithRole): SafeAdmin => ({
   id: admin.publicId,

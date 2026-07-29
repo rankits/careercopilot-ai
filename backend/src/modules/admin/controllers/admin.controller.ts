@@ -1,10 +1,10 @@
 import { Request, Response } from "express";
-import * as adminService from "../services/admin.service.js";
-import { AppError } from "../../../shared/utils/errors/AppError.js";
-import { catchAsync } from "../../../shared/utils/catchAsync.js";
-import { successResponse } from "../../../shared/utils/response.js";
-import { toSafeAdminResponse } from "../utils/admin.mapper.js";
-import type { RequestContext } from "../types/admin.types.js";
+import * as adminService from "@/modules/admin/services/admin.service.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { catchAsync } from "@/shared/utils/catchAsync.js";
+import { successResponse } from "@/shared/utils/response.js";
+import { toSafeAdminResponse } from "@/modules/admin/utils/admin.mapper.js";
+import type { RequestContext } from "@/modules/admin/types/admin.types.js";
 
 const getRequestContext = (req: Request): RequestContext => ({
   ipAddress: req.ip,

@@ -1,2 +1,2 @@
-export { default as adminRoutes } from "./routes/admin.route.js";
-export * from "./types/admin.types.js";
+export { default as adminRoutes } from "@/modules/admin/routes/admin.route.js";
+export * from "@/modules/admin/types/admin.types.js";

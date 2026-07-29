@@ -7,17 +7,17 @@ import {
   meController,
   refreshController,
   systemStatsController,
-} from "../controllers/admin.controller.js";
-import { authMiddleware } from "../../../shared/middlewares/auth.middleware.js";
-import { requirePrincipalType, requireRole } from "../../../shared/middlewares/rbac.middleware.js";
-import { validateResource } from "../../../shared/middlewares/validateResource.js";
-import { authRateLimiter } from "../../../shared/middlewares/rateLimiter.js";
+} from "@/modules/admin/controllers/admin.controller.js";
+import { authMiddleware } from "@/shared/middlewares/auth.middleware.js";
+import { requirePrincipalType, requireRole } from "@/shared/middlewares/rbac.middleware.js";
+import { validateResource } from "@/shared/middlewares/validateResource.js";
+import { authRateLimiter } from "@/shared/middlewares/rateLimiter.js";
 import {
   adminChangePasswordSchema,
   adminLoginSchema,
   adminLogoutSchema,
   adminRefreshTokenSchema,
-} from "../validations/admin.schema.js";
+} from "@/modules/admin/validations/admin.schema.js";
 
 const router = express.Router();
 
