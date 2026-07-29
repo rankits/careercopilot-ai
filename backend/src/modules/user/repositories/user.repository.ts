@@ -1,6 +1,6 @@
 import type { AuditAction, Prisma, User } from "@prisma/client";
-import { prisma } from "../../../shared/config/db.conf.js";
-import type { RequestContext } from "../types/user.types.js";
+import { prisma } from "@/shared/config/db.conf.js";
+import type { RequestContext } from "@/modules/user/types/user.types.js";
 
 export type UserWithRole = User & { role: { name: string } };
 

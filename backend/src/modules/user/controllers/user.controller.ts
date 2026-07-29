@@ -1,11 +1,11 @@
 import { Request, Response } from "express";
-import * as userService from "../services/user.service.js";
-import { AppError } from "../../../shared/utils/errors/AppError.js";
-import { catchAsync } from "../../../shared/utils/catchAsync.js";
-import { successResponse } from "../../../shared/utils/response.js";
-import { toPaginatedUsersResponse, toUserProfileResponse } from "../utils/user.mapper.js";
-import { listUsersQuerySchema } from "../validations/user.schema.js";
-import type { RequestContext } from "../types/user.types.js";
+import * as userService from "@/modules/user/services/user.service.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { catchAsync } from "@/shared/utils/catchAsync.js";
+import { successResponse } from "@/shared/utils/response.js";
+import { toPaginatedUsersResponse, toUserProfileResponse } from "@/modules/user/utils/user.mapper.js";
+import { listUsersQuerySchema } from "@/modules/user/validations/user.schema.js";
+import type { RequestContext } from "@/modules/user/types/user.types.js";
 
 const requirePrincipalId = (req: Request): string => {
   if (!req.user) throw new AppError("Authentication required", 401);
