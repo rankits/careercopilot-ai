@@ -13,6 +13,7 @@ export { default as LockOutlinedIcon } from '@mui/icons-material/LockOutlined';
 export { default as LogoutIcon } from '@mui/icons-material/Logout';
 export { default as NotificationsOutlinedIcon } from '@mui/icons-material/NotificationsOutlined';
 export { default as PersonOutlineIcon } from '@mui/icons-material/PersonOutline';
+export { default as PhoneOutlinedIcon } from '@mui/icons-material/PhoneOutlined';
 export { default as SearchOutlinedIcon } from '@mui/icons-material/SearchOutlined';
 export { default as SettingsOutlinedIcon } from '@mui/icons-material/SettingsOutlined';
 export { default as StarIcon } from '@mui/icons-material/Star';
