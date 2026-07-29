@@ -61,6 +61,22 @@ export const colorTokens = {
   textInverse: palette.gray0,
 } as const;
 
+export const jobFeedTokens = {
+  badgeBackground: palette.gray100,
+  badgeText: palette.gray700,
+  companyLogoSurface: palette.gray50,
+  filterActiveBackground: colorTokens.actionPrimaryGradient,
+  filterBackground: colorTokens.backgroundCard,
+  jobCardAccent: colorTokens.actionPrimary,
+  matchBackground: colorTokens.feedbackSuccessSurface,
+  matchText: colorTokens.feedbackSuccess,
+  scrollbarThumb: palette.gray300,
+  scrollbarTrack: palette.gray100,
+  skillBackground: palette.gray100,
+  skillText: palette.gray700,
+  verifiedIcon: '#1868db',
+} as const;
+
 export const spacing = {
   0: '0rem',
   1: '0.25rem',
@@ -118,6 +134,7 @@ export const tokens = {
   fontFamily,
   fontSize,
   fontWeight,
+  jobFeed: jobFeedTokens,
   palette,
   shadows,
   spacing,
