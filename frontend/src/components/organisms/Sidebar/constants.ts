@@ -1,3 +1,4 @@
+import { ROUTES } from '@/constants/routes';
 import {
   BookmarkBorderOutlinedIcon,
   BusinessCenterOutlinedIcon,
@@ -9,8 +10,8 @@ import {
 import type { SidebarNavItem } from './interfaces';
 
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
-  { icon: HomeOutlinedIcon, id: 'dashboard', label: 'Dashboard' },
-  { icon: SearchOutlinedIcon, id: 'job-search', label: 'Job Search' },
+  { href: ROUTES.HOME, icon: HomeOutlinedIcon, id: 'dashboard', label: 'Dashboard' },
+  { href: ROUTES.JOB_FEED, icon: SearchOutlinedIcon, id: 'jobs-feed', label: 'Jobs Feed' },
   { icon: TuneOutlinedIcon, id: 'ai-match', label: 'AI Match' },
   { icon: BusinessCenterOutlinedIcon, id: 'applications', label: 'Applications' },
   { icon: BookmarkBorderOutlinedIcon, id: 'saved-jobs', label: 'Saved Jobs' },
