@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import { OtpPurpose, Status } from "@prisma/client";
-import app, { fakeDb } from "../helpers/app.js";
-import { resetTestState } from "../helpers/reset.js";
-import { findQueuedEmail } from "../helpers/messaging-mock.js";
+import app, { fakeDb } from "@/test-utils/app.js";
+import { resetTestState } from "@/test-utils/reset.js";
+import { findQueuedEmail } from "@/test-utils/messaging-mock.js";
 import {
   seedVerifiedUser,
   seedUnverifiedUser,
@@ -11,7 +11,7 @@ import {
   accessTokenForUser,
   authHeader,
   extractCookie,
-} from "../helpers/fixtures.js";
+} from "@/test-utils/fixtures.js";
 
 const API = "/api/v1/auth";
 const REFRESH_COOKIE = "refreshToken";

@@ -1,8 +1,8 @@
 import { Status } from "@prisma/client";
-import type { FakeAdmin, FakeUser } from "./fake-prisma.js";
-import { fakeDb } from "./prisma-mock.js";
-import { PasswordUtil } from "../../src/shared/security/password.util.js";
-import { signAccessToken } from "../../src/shared/security/jwt.util.js";
+import type { FakeAdmin, FakeUser } from "@/test-utils/fake-prisma.js";
+import { fakeDb } from "@/test-utils/prisma-mock.js";
+import { PasswordUtil } from "@/shared/security/password.util.js";
+import { signAccessToken } from "@/shared/security/jwt.util.js";
 
 /** Meets the app's password policy: upper + lower + digit + symbol, 8+ chars. */
 export const VALID_PASSWORD = "Str0ng!Passw0rd";

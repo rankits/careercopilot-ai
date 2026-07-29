@@ -1,16 +1,17 @@
 import { defineConfig } from "vitest/config";
+import { fileURLToPath } from "node:url";
 
 export default defineConfig({
   test: {
     environment: "node",
-    include: ["tests/**/*.spec.ts"],
+    include: ["src/**/__tests__/**/*.test.ts"],
     globals: false,
     testTimeout: 10_000,
     hookTimeout: 10_000,
     // Overrides applied before dotenv loads (dotenv never clobbers an
     // already-set process.env value), so the suite never depends on a real
     // Postgres/Redis/RabbitMQ being reachable - Prisma is mocked (see
-    // tests/helpers/prisma-mock.ts) and the caching layer is forced to its
+    // src/test-utils/prisma-mock.ts) and the caching layer is forced to its
     // in-process memory driver regardless of the developer's local .env.
     env: {
       NODE_ENV: "test",
@@ -37,6 +38,11 @@ export default defineConfig({
       provider: "v8",
       reporter: ["text", "html"],
       include: ["src/modules/auth/**", "src/modules/user/**", "src/modules/admin/**"],
+    },
+  },
+  resolve: {
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
     },
   },
 });

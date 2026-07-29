@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import { Status } from "@prisma/client";
-import app, { fakeDb } from "../helpers/app.js";
-import { resetTestState } from "../helpers/reset.js";
+import app, { fakeDb } from "@/test-utils/app.js";
+import { resetTestState } from "@/test-utils/reset.js";
 import {
   seedAdmin,
   seedVerifiedUser,
@@ -10,7 +10,7 @@ import {
   accessTokenForAdmin,
   accessTokenForUser,
   authHeader,
-} from "../helpers/fixtures.js";
+} from "@/test-utils/fixtures.js";
 
 const API = "/api/v1/admin";
 
