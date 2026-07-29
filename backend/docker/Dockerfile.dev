@@ -8,7 +8,7 @@ WORKDIR /app
 
 # Cache dependency installation & Prisma client generation layer
 COPY package*.json ./
-COPY prisma/schema.prisma ./prisma/schema.prisma
+COPY prisma ./prisma
 
 RUN npm install && npx prisma generate
 
