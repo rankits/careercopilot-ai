@@ -2,6 +2,7 @@ import express from 'express';
 import { successResponse } from '@/shared/utils/response.js';
 import { authRoutes } from '@/modules/auth/index.js';
 import jobsRoutes from '@/modules/jobs/routes/jobs.route.js';
+import { jobListingRoutes } from '@/modules/job-listing/index.js';
 import { resumeRoutes } from '@/modules/resumes/index.js';
 
 const router = express.Router();
@@ -11,7 +12,8 @@ router.get('/status', (_req, res) => {
 });
 
 router.use('/auth', authRoutes);
-router.use('/jobs', jobsRoutes);
+router.use('/jobs', jobListingRoutes); // Public job discovery
+router.use('/jobs-ingestion', jobsRoutes); // Administrative ingestion endpoints
 router.use('/resumes', resumeRoutes);
 
 export default router;
