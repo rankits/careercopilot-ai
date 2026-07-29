@@ -1,5 +1,5 @@
 import jwt from "jsonwebtoken";
-import { TokenPayload } from "../types/auth.types.js";
+import { TokenPayload } from "@/modules/auth/types/auth.types.js";
 
 const ACCESS_SECRET =
   process.env.JWT_ACCESS_SECRET || "default_access_secret_for_development_change_in_production";

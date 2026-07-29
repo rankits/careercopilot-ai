@@ -1,4 +1,4 @@
-import { SubscribeOptions } from "./messaging.interface.js";
+import { SubscribeOptions } from "@/infrastructure/messaging/messaging.interface.js";
 
 export const MessageExchanges = {
   DOMAIN_EVENTS: "careercopilot.events",

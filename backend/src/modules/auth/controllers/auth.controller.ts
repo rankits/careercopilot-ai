@@ -1,8 +1,8 @@
 import { NextFunction, Request, Response } from "express";
-import { signinService } from "../services/auth.service.js";
-import { REFRESH_TOKEN_COOKIE_KEY } from "../constants/auth.constant.js";
-import { refreshCookieOptions } from "../config/cookies.conf.js";
-import { successResponse } from "../../../shared/utils/response.js";
+import { signinService } from "@/modules/auth/services/auth.service.js";
+import { REFRESH_TOKEN_COOKIE_KEY } from "@/modules/auth/constants/auth.constant.js";
+import { refreshCookieOptions } from "@/modules/auth/config/cookies.conf.js";
+import { successResponse } from "@/shared/utils/response.js";
 
 export const signinController = async (req: Request, res: Response, next: NextFunction) => {
   try {
