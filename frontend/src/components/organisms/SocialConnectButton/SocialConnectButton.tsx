@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-import { GoogleIcon, LinkedInIcon, MuiButton } from '@/lib/material';
+import googleBrandIcon from '@/assets/icons/google-brand.svg';
+import { LinkedInIcon, MuiButton } from '@/lib/material';
 
 import { socialConnectButtonSx } from './styles';
 
@@ -15,7 +16,16 @@ export interface SocialConnectButtonProps extends Omit<
 
 const providerContent: Record<SocialProvider, { icon: ReactNode; label: string }> = {
   google: {
-    icon: <GoogleIcon aria-hidden="true" color="primary" />,
+    icon: (
+      <img
+        alt=""
+        aria-hidden="true"
+        data-testid="GoogleBrandIcon"
+        height="20"
+        src={googleBrandIcon}
+        width="20"
+      />
+    ),
     label: 'Continue with Google',
   },
   linkedin: {
