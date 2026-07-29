@@ -6,6 +6,21 @@ export const resumeIdParamsSchema = z.object({
   }),
 });
 
+export const resumeParseActionParamsSchema = z.object({
+  params: z.object({
+    resumeId: z.string().uuid(),
+  }),
+});
+
+export const resumeReparseSchema = z.object({
+  params: z.object({
+    resumeId: z.string().uuid(),
+  }),
+  body: z.object({
+    reason: z.string().min(1).max(500).optional(),
+  }),
+});
+
 export const confirmProfileSchema = z.object({
   params: z.object({
     userId: z.string().min(1),

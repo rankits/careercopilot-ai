@@ -51,6 +51,33 @@ export const getParsedDataController = async (req: Request, res: Response, next:
   }
 };
 
+export const getParseStatusController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const parseStatus = await resumeService.getParseStatus(String(req.params.resumeId));
+    return res.status(200).json(successResponse("Resume parse status retrieved", parseStatus));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const startParseController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await resumeService.startParse(String(req.params.resumeId));
+    return res.status(202).json(successResponse("Resume parsing queued", result));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const reparseResumeController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await resumeService.reparseResume(String(req.params.resumeId), req.body?.reason);
+    return res.status(202).json(successResponse("Resume reparse queued", result));
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const confirmProfileController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const profile = await resumeService.confirmProfile({

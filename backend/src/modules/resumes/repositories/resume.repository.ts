@@ -91,7 +91,7 @@ export const resumeRepository = {
     });
   },
 
-  findLatestParseRun(resumeId: string): Promise<ResumeParseRun | null> {
+  findLatestParseRun(resumeId: string): Promise<(ResumeParseRun & { extraction: ResumeExtraction | null }) | null> {
     return prisma.resumeParseRun.findFirst({
       where: { resumeId },
       orderBy: { createdAt: "desc" },
