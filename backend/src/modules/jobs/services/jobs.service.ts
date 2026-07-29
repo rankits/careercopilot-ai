@@ -11,9 +11,11 @@ import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
 import { AggregationService } from "@/modules/jobs/services/aggregation/aggregation.service.js";
 import { IJobProviderRegistry } from "@/modules/jobs/registry/job-provider.registry.js";
 import { jobsLogger } from "@/shared/utils/logger.js";
+import { IJobRepository } from "@/modules/jobs/interfaces/IJobRepository.js";
 
 export class JobsService implements IJobContract {
   constructor(
+    private readonly jobRepository: IJobRepository,
     private readonly aggregationService: AggregationService,
     private readonly providerRegistry: IJobProviderRegistry
   ) {}
@@ -103,6 +105,9 @@ export class JobsService implements IJobContract {
     };
 
     const result = await this.aggregationService.aggregateJobs(filters);
+
+    // Persist to database
+    await this.jobRepository.upsertMany(result.jobs);
 
     jobsLogger.info(
       {
