@@ -1,9 +1,9 @@
 import type { Server } from "node:http";
-import app from "./app.js";
-import { env } from "./shared/config/env.conf.js";
-import { logger } from "./shared/logger/logger.js";
-import { connectDatabase, disconnectDatabase } from "./shared/config/db.conf.js";
-import { startEmailWorker } from "./workers/email.worker.js";
+import app from "@/app.js";
+import { env } from "@/shared/config/env.conf.js";
+import { logger } from "@/shared/logger/logger.js";
+import { connectDatabase, disconnectDatabase } from "@/shared/config/db.conf.js";
+import { startEmailWorker } from "@/workers/email.worker.js";
 
 const PORT = env.PORT;
 const BASE_URL = env.BASE_URL || `http://localhost:${PORT}`;

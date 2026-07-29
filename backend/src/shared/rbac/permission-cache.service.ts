@@ -1,5 +1,5 @@
-import { prisma } from "../config/db.conf.js";
-import { cacheService } from "../../infrastructure/cache/index.js";
+import { prisma } from "@/shared/config/db.conf.js";
+import { cacheService } from "@/infrastructure/cache/index.js";
 
 const ROLE_PERMISSIONS_TTL_SECONDS = 60 * 60; // 1 hour
 const roleKey = (roleName: string): string => `careercopilot:rbac:role-permissions:${roleName}`;

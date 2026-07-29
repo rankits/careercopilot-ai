@@ -1,8 +1,7 @@
 import { PrismaClient, Prisma } from "@prisma/client";
-import { logger } from "../logger/logger.js";
+import { logger } from "@/shared/logger/logger.js";
 
 declare global {
-  // eslint-disable-next-line no-var
   var prisma: PrismaClient | undefined;
 }
 

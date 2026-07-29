@@ -13,10 +13,10 @@ import {
   resetPasswordController,
   verifyLoginOtpController,
   verifyRegistrationOtpController,
-} from "../controllers/auth.controller.js";
-import { authMiddleware } from "../../../shared/middlewares/auth.middleware.js";
-import { validateResource } from "../../../shared/middlewares/validateResource.js";
-import { authRateLimiter, otpRateLimiter } from "../../../shared/middlewares/rateLimiter.js";
+} from "@/modules/auth/controllers/auth.controller.js";
+import { authMiddleware } from "@/shared/middlewares/auth.middleware.js";
+import { validateResource } from "@/shared/middlewares/validateResource.js";
+import { authRateLimiter, otpRateLimiter } from "@/shared/middlewares/rateLimiter.js";
 import {
   changePasswordSchema,
   forgotPasswordSchema,
@@ -29,7 +29,7 @@ import {
   resendOtpSchema,
   resetPasswordSchema,
   verifyRegistrationOtpSchema,
-} from "../validations/auth.schema.js";
+} from "@/modules/auth/validations/auth.schema.js";
 
 const router = express.Router();
 

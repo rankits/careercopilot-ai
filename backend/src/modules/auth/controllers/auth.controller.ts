@@ -1,12 +1,12 @@
 import { Request, Response } from "express";
-import * as authService from "../services/auth.service.js";
-import { AppError } from "../../../shared/utils/errors/AppError.js";
-import { catchAsync } from "../../../shared/utils/catchAsync.js";
-import { successResponse } from "../../../shared/utils/response.js";
-import { toSafeUserResponse } from "../utils/auth.mapper.js";
-import { REFRESH_TOKEN_COOKIE_KEY } from "../constants/auth.constant.js";
-import { clearRefreshCookieOptions, refreshCookieOptions } from "../config/cookies.conf.js";
-import type { AuthSession, AuthTokens, RequestContext } from "../types/auth.types.js";
+import * as authService from "@/modules/auth/services/auth.service.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { catchAsync } from "@/shared/utils/catchAsync.js";
+import { successResponse } from "@/shared/utils/response.js";
+import { toSafeUserResponse } from "@/modules/auth/utils/auth.mapper.js";
+import { REFRESH_TOKEN_COOKIE_KEY } from "@/modules/auth/constants/auth.constant.js";
+import { clearRefreshCookieOptions, refreshCookieOptions } from "@/modules/auth/config/cookies.conf.js";
+import type { AuthSession, AuthTokens, RequestContext } from "@/modules/auth/types/auth.types.js";
 
 const getRequestContext = (req: Request): RequestContext => ({
   ipAddress: req.ip,

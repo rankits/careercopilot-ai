@@ -1,7 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { cacheService } from "../../infrastructure/cache/index.js";
-import { AppError } from "../utils/errors/AppError.js";
-import { securityConfig } from "../config/security.conf.js";
+import { cacheService } from "@/infrastructure/cache/index.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { securityConfig } from "@/shared/config/security.conf.js";
 
 interface RateLimiterOptions {
   windowMinutes: number;

@@ -1,7 +1,7 @@
 import { z, ZodTypeAny } from "zod";
 import { OtpPurpose } from "@prisma/client";
-import { securityConfig } from "../../../shared/config/security.conf.js";
-import { PasswordUtil } from "../../../shared/security/password.util.js";
+import { securityConfig } from "@/shared/config/security.conf.js";
+import { PasswordUtil } from "@/shared/security/password.util.js";
 
 /** `validateResource` always parses `{ body, query, params }` - this wraps a body schema into that envelope. */
 const withEnvelope = (body: ZodTypeAny) =>

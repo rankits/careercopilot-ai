@@ -1,5 +1,5 @@
-import { escapeHtml } from "./html-escape.util.js";
-import type { RenderedEmail } from "./otp-email.template.js";
+import { escapeHtml } from "@/infrastructure/email/templates/html-escape.util.js";
+import type { RenderedEmail } from "@/infrastructure/email/templates/otp-email.template.js";
 
 export interface SecurityAlertEmailData {
   firstName: string;

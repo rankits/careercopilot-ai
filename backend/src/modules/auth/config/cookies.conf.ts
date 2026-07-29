@@ -1,5 +1,5 @@
 import { CookieOptions } from "express";
-import { REFRESH_TOKEN_EXPIRES_IN_MS } from "../constants/auth.constant.js";
+import { REFRESH_TOKEN_EXPIRES_IN_MS } from "@/modules/auth/constants/auth.constant.js";
 
 export const refreshCookieOptions: CookieOptions = {
   httpOnly: true,

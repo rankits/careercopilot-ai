@@ -1,5 +1,5 @@
-import { createApiPost, createApiGet, successSchema, errorSchema } from "../../../shared/swagger/factory.js";
-import { safeUserSchema, accessTokenFields, commonSecureResponses } from "../../../shared/swagger/schemas.js";
+import { createApiPost, createApiGet, successSchema, errorSchema } from "@/shared/swagger/factory.js";
+import { safeUserSchema, accessTokenFields, commonSecureResponses } from "@/shared/swagger/schemas.js";
 
 const BASE_URL = "/api/v1/auth";
 const TAGS = ["Auth"];

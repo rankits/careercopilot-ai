@@ -1,7 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import type { PrincipalType } from "../security/jwt.util.js";
-import { AppError } from "../utils/errors/AppError.js";
-import { PermissionCache } from "../rbac/permission-cache.service.js";
+import type { PrincipalType } from "@/shared/security/jwt.util.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { PermissionCache } from "@/shared/rbac/permission-cache.service.js";
 
 /**
  * Defense-in-depth guard for routes that must only ever be reachable by

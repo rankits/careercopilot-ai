@@ -1,6 +1,6 @@
 import { OtpPurpose } from "@prisma/client";
-import { parseDurationSeconds } from "../../../shared/security/jwt.util.js";
-import { jwtConfig } from "../../../shared/config/jwt.conf.js";
+import { parseDurationSeconds } from "@/shared/security/jwt.util.js";
+import { jwtConfig } from "@/shared/config/jwt.conf.js";
 
 export const REFRESH_TOKEN_COOKIE_KEY = "refreshToken";
 
