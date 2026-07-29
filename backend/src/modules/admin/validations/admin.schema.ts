@@ -1,6 +1,6 @@
 import { z, ZodTypeAny } from "zod";
-import { securityConfig } from "../../../shared/config/security.conf.js";
-import { PasswordUtil } from "../../../shared/security/password.util.js";
+import { securityConfig } from "@/shared/config/security.conf.js";
+import { PasswordUtil } from "@/shared/security/password.util.js";
 
 const withEnvelope = (body: ZodTypeAny) =>
   z.object({ body, query: z.object({}).optional(), params: z.object({}).optional() });

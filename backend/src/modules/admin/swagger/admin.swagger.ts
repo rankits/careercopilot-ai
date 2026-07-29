@@ -1,5 +1,5 @@
-import { createApiPost, createApiGet, successSchema, errorSchema } from "../../../shared/swagger/factory.js";
-import { safeAdminSchema, authTokensSchema, commonAdminResponses } from "../../../shared/swagger/schemas.js";
+import { createApiPost, createApiGet, successSchema, errorSchema } from "@/shared/swagger/factory.js";
+import { safeAdminSchema, authTokensSchema, commonAdminResponses } from "@/shared/swagger/schemas.js";
 
 const BASE_URL = "/api/v1/admin";
 const TAGS = ["Admin"];

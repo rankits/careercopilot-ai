@@ -1,1 +1,1 @@
-export * from "./admin.swagger.js";
+export * from "@/modules/admin/swagger/admin.swagger.js";

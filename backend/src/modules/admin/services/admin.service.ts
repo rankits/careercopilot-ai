@@ -1,21 +1,21 @@
 import { Status, AuditAction } from "@prisma/client";
-import { adminRepository } from "../repositories/admin.repository.js";
-import { AdminTokenService } from "./admin-token.service.js";
-import { PasswordUtil } from "../../../shared/security/password.util.js";
-import { AppError } from "../../../shared/utils/errors/AppError.js";
-import { toSafeAdmin } from "../utils/admin.mapper.js";
+import { adminRepository } from "@/modules/admin/repositories/admin.repository.js";
+import { AdminTokenService } from "@/modules/admin/services/admin-token.service.js";
+import { PasswordUtil } from "@/shared/security/password.util.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { toSafeAdmin } from "@/modules/admin/utils/admin.mapper.js";
 import {
   messageBus,
   MessageExchanges,
   MessageRoutingKeys,
-} from "../../../infrastructure/messaging/index.js";
+} from "@/infrastructure/messaging/index.js";
 import type {
   AdminChangePasswordInput,
   AdminLoginInput,
   AdminLogoutInput,
   AdminRefreshTokenInput,
-} from "../validations/admin.schema.js";
-import type { AdminSession, AuthTokens, RequestContext, SafeAdmin, SystemStats } from "../types/admin.types.js";
+} from "@/modules/admin/validations/admin.schema.js";
+import type { AdminSession, AuthTokens, RequestContext, SafeAdmin, SystemStats } from "@/modules/admin/types/admin.types.js";
 
 export const login = async (
   input: AdminLoginInput,

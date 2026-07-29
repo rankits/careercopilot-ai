@@ -1,8 +1,8 @@
 import { Status, type Admin, type Prisma } from "@prisma/client";
-import { prisma } from "../../../shared/config/db.conf.js";
-import { securityConfig } from "../../../shared/config/security.conf.js";
-import { AuditService, type WriteAuditLogInput } from "../../../shared/audit/audit.service.js";
-import type { SystemStats } from "../types/admin.types.js";
+import { prisma } from "@/shared/config/db.conf.js";
+import { securityConfig } from "@/shared/config/security.conf.js";
+import { AuditService, type WriteAuditLogInput } from "@/shared/audit/audit.service.js";
+import type { SystemStats } from "@/modules/admin/types/admin.types.js";
 
 export type AdminWithRole = Admin & { role: { name: string } };
 
