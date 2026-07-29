@@ -102,17 +102,19 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
       <Box sx={authFormSx.stack}>
         {fields.map((field) => {
           const fieldError = errors[field.name]?.message;
+          const isPhoneField = field.type === 'tel';
+          const inputMode = isPhoneField ? 'tel' : undefined;
 
           return (
             <Input
               autoComplete={field.autoComplete}
               errorMessage={typeof fieldError === 'string' ? fieldError : undefined}
               fullWidth
-              inputMode={field.type === 'tel' ? 'tel' : undefined}
+              inputMode={inputMode}
               key={field.name}
               label={field.label}
               onInput={
-                field.type === 'tel'
+                isPhoneField
                   ? (event) => {
                       const input = event.target as HTMLInputElement;
                       input.value = sanitizePhoneNumber(input.value);
