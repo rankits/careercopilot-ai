@@ -1,6 +1,16 @@
-import { CandidateProfile, Prisma, Resume, ResumeExtraction, ResumeStatus, ResumeStorageDriver } from "@prisma/client";
+import {
+  CandidateProfile,
+  Prisma,
+  Resume,
+  ResumeExtraction,
+  ResumeParseRun,
+  ResumeParseStatus as PrismaResumeParseStatus,
+  ResumeStatus,
+  ResumeStorageDriver,
+} from "@prisma/client";
 import { prisma } from "@/shared/config/db.conf.js";
 import { OnboardingProfilePayload, ParsedResumeData } from "@/modules/resumes/types/resume.types.js";
+import { ResumeParseStatus } from "@/modules/resumes/domain/resume-parser-status.js";
 
 export interface CreateResumeRecordInput {
   id: string;
@@ -12,6 +22,45 @@ export interface CreateResumeRecordInput {
   fileUrl: string;
   storageKey: string;
   storageDriver: ResumeStorageDriver;
+}
+
+export interface CreateResumeParseRunInput {
+  resumeId: string;
+  status: ResumeParseStatus;
+  attemptNumber: number;
+  provider: string;
+  model: string;
+  promptVersion: string;
+  schemaVersion: string;
+  sourceHash?: string;
+  extractedTextHash?: string;
+  parsedData?: unknown;
+  confidence?: number;
+  warnings?: string[];
+  requiresReview?: boolean;
+  inputTokens?: number;
+  outputTokens?: number;
+  latencyMs?: number;
+  errorCode?: string;
+  errorMessage?: string;
+  startedAt?: Date;
+  completedAt?: Date;
+}
+
+export interface UpdateResumeParseRunInput {
+  status?: ResumeParseStatus;
+  parsedData?: unknown;
+  confidence?: number;
+  warnings?: string[];
+  requiresReview?: boolean;
+  extractedTextHash?: string;
+  inputTokens?: number;
+  outputTokens?: number;
+  latencyMs?: number;
+  errorCode?: string;
+  errorMessage?: string;
+  startedAt?: Date;
+  completedAt?: Date;
 }
 
 export const resumeRepository = {
@@ -42,6 +91,64 @@ export const resumeRepository = {
     });
   },
 
+  findLatestParseRun(resumeId: string): Promise<ResumeParseRun | null> {
+    return prisma.resumeParseRun.findFirst({
+      where: { resumeId },
+      orderBy: { createdAt: "desc" },
+      include: {
+        extraction: true,
+      },
+    });
+  },
+
+  createParseRun(input: CreateResumeParseRunInput): Promise<ResumeParseRun> {
+    return prisma.resumeParseRun.create({
+      data: {
+        resumeId: input.resumeId,
+        status: input.status as PrismaResumeParseStatus,
+        attemptNumber: input.attemptNumber,
+        provider: input.provider,
+        model: input.model,
+        promptVersion: input.promptVersion,
+        schemaVersion: input.schemaVersion,
+        sourceHash: input.sourceHash,
+        extractedTextHash: input.extractedTextHash,
+        parsedData: input.parsedData as Prisma.InputJsonValue | undefined,
+        confidence: input.confidence,
+        warnings: input.warnings as Prisma.InputJsonValue | undefined,
+        requiresReview: input.requiresReview,
+        inputTokens: input.inputTokens,
+        outputTokens: input.outputTokens,
+        latencyMs: input.latencyMs,
+        errorCode: input.errorCode,
+        errorMessage: input.errorMessage,
+        startedAt: input.startedAt,
+        completedAt: input.completedAt,
+      },
+    });
+  },
+
+  updateParseRun(id: string, input: UpdateResumeParseRunInput): Promise<ResumeParseRun> {
+    return prisma.resumeParseRun.update({
+      where: { id },
+      data: {
+        status: input.status as PrismaResumeParseStatus | undefined,
+        parsedData: input.parsedData as Prisma.InputJsonValue | undefined,
+        confidence: input.confidence,
+        warnings: input.warnings as Prisma.InputJsonValue | undefined,
+        requiresReview: input.requiresReview,
+        extractedTextHash: input.extractedTextHash,
+        inputTokens: input.inputTokens,
+        outputTokens: input.outputTokens,
+        latencyMs: input.latencyMs,
+        errorCode: input.errorCode,
+        errorMessage: input.errorMessage,
+        startedAt: input.startedAt,
+        completedAt: input.completedAt,
+      },
+    });
+  },
+
   updateResumeStatus(id: string, status: ResumeStatus, failureReason?: string): Promise<Resume> {
     return prisma.resume.update({
       where: { id },
@@ -55,6 +162,7 @@ export const resumeRepository = {
 
   createExtraction(input: {
     resumeId: string;
+    parseRunId?: string;
     extractedText: string;
     extractedData: ParsedResumeData;
     parserVersion: string;
@@ -63,6 +171,7 @@ export const resumeRepository = {
     return prisma.resumeExtraction.create({
       data: {
         resumeId: input.resumeId,
+        parseRunId: input.parseRunId,
         extractedText: input.extractedText,
         extractedData: input.extractedData as unknown as Prisma.InputJsonValue,
         parserVersion: input.parserVersion,

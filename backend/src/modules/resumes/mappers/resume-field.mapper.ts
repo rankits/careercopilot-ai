@@ -1,3 +1,4 @@
+import { resumeNormaliserService } from "@/modules/resumes/normalisation/resume-normaliser.service.js";
 import { OnboardingProfilePayload, ParsedResumeData } from "@/modules/resumes/types/resume.types.js";
 
 export const resumeFieldMapper = {
@@ -6,14 +7,16 @@ export const resumeFieldMapper = {
     resumeId?: string;
     parsedData: ParsedResumeData;
   }): OnboardingProfilePayload {
+    const normalized = resumeNormaliserService.normalize(input.parsedData);
+
     return {
       userId: input.userId,
       sourceResumeId: input.resumeId,
-      personalDetails: input.parsedData.personalDetails || {},
-      experience: input.parsedData.experience || [],
-      education: input.parsedData.education || [],
-      skills: Array.from(new Set(input.parsedData.skills || [])).sort(),
-      certifications: input.parsedData.certifications || [],
+      personalDetails: normalized.personalDetails,
+      experience: normalized.experience,
+      education: normalized.education,
+      skills: normalized.skills,
+      certifications: normalized.certifications,
     };
   },
 };
