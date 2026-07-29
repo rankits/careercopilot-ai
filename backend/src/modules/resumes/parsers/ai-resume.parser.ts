@@ -2,22 +2,6 @@ import { createAiModel } from "@/modules/resumes/ai/ai-model.factory.js";
 import { RESUME_PARSER_SYSTEM_PROMPT } from "@/modules/resumes/ai/prompts/resume-parser.prompt.js";
 import { resumeNormaliserService } from "@/modules/resumes/normalisation/resume-normaliser.service.js";
 import { ResumeParser, ResumeParserInput, ResumeParserResult } from "@/modules/resumes/types/resume.types.js";
-import { z } from "zod";
-
-const extractJsonPayload = (value: unknown): string => {
-  if (typeof value === "string") {
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map((part) => (typeof part === "string" ? part : ""))
-      .join("")
-      .trim();
-  }
-
-  return "";
-};
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
@@ -106,23 +90,16 @@ export class AiResumeParser implements ResumeParser {
     const response = await model.extract({
       systemPrompt: RESUME_PARSER_SYSTEM_PROMPT,
       documentText: input.extractedText,
-      schema: z.any(),
+      schema: {
+        parse: (value: unknown) => value,
+      } as never,
       metadata: {
         promptVersion: "resume-parser-v1",
         schemaVersion: "resume-schema-v1",
       },
     });
 
-    const rawText = extractJsonPayload(response);
-    const cleanedText = rawText.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(cleanedText);
-    } catch {
-      throw new Error("Gemini did not return valid JSON for the resume parser");
-    }
-
+    const parsed = typeof response === "string" ? JSON.parse(response) : response;
     const normalized = buildParsedResumeData(parsed);
     const confidence =
       isRecord(parsed) &&
