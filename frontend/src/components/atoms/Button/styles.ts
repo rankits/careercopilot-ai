@@ -37,6 +37,10 @@ const sizeStyles: Record<ButtonSize, { fontSize: string; minHeight: string; padd
   small: { fontSize: fontSize.xs, minHeight: spacing[8], paddingX: spacing[5] },
 };
 
+const primaryGradientBackground = {
+  background: colorTokens.actionPrimaryGradient,
+};
+
 function getVariantStyles(tone: ButtonTone, variant: ButtonVariant): SystemStyleObject<Theme> {
   const colors = toneStyles[tone];
 
@@ -75,16 +79,20 @@ function getVariantStyles(tone: ButtonTone, variant: ButtonVariant): SystemStyle
   if (tone === 'primary') {
     return {
       '&:active': {
-        background: colorTokens.actionPrimaryGradient,
+        ...primaryGradientBackground,
         boxShadow: '0 0.25rem 0.75rem rgba(89, 30, 194, 0.28)',
         transform: 'translateY(0.0625rem)',
       },
+      '&:focus-visible': {
+        ...primaryGradientBackground,
+        boxShadow: `${colorTokens.actionPrimarySubtle} 0 0 0 0.25rem, 0 0.625rem 1.125rem rgba(89, 30, 194, 0.26)`,
+      },
       '&:hover': {
-        background: colorTokens.actionPrimaryGradient,
+        ...primaryGradientBackground,
         boxShadow: '0 0.875rem 1.5rem rgba(89, 30, 194, 0.32)',
         transform: 'translateY(-0.0625rem)',
       },
-      background: colorTokens.actionPrimaryGradient,
+      ...primaryGradientBackground,
       borderColor: 'transparent',
       boxShadow: '0 0.625rem 1.125rem rgba(89, 30, 194, 0.26)',
       color: colorTokens.textInverse,
