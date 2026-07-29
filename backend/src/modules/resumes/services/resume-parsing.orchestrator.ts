@@ -50,8 +50,8 @@ const runParsingPipeline = async (input: {
     attemptNumber: 1,
     provider: resumeConfig.parserEngine === "AI" ? resumeConfig.ai.provider : "rule-based",
     model: parserVersion,
-    promptVersion: resumeConfig.parserEngine === "AI" ? "resume-parser-v1" : "rule-based-v1",
-    schemaVersion: "resume-schema-v1",
+    promptVersion: resumeConfig.parserEngine === "AI" ? "resume-parser-v2" : "rule-based-v1",
+    schemaVersion: resumeConfig.parserEngine === "AI" ? "resume-schema-v2" : "rule-based-v1",
     sourceHash: input.sourceHash,
     startedAt: new Date(),
   });
