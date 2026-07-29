@@ -1,8 +1,8 @@
-import { promises as fs } from "fs";
-import path from "path";
+import { promises as fs } from 'fs';
+import path from 'path';
 
 export interface ResumeStorageConfig {
-  driver: "local";
+  driver: 'local';
   localBasePath: string;
 }
 
@@ -29,7 +29,7 @@ export class ResumeStorageService {
   }
 
   async store(input: StoreResumeInput): Promise<StoreResumeResult> {
-    const ext = path.extname(input.originalName) || ".bin";
+    const ext = path.extname(input.originalName) || '.bin';
     const filename = `${input.userId}-${input.resumeId}${ext}`;
     const filePath = path.join(this.config.localBasePath, filename);
 

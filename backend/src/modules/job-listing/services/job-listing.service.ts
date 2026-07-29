@@ -1,10 +1,10 @@
-import { IJobSearchRepository } from "@/modules/job-listing/contracts/IJobSearchRepository.js";
+import { IJobSearchRepository } from '@/modules/job-listing/contracts/IJobSearchRepository.js';
 import {
   JobSearchOptions,
   PaginatedJobResult,
   JobListDto,
   JobDetailDto,
-} from "@/modules/job-listing/types/job-listing.types.js";
+} from '@/modules/job-listing/types/job-listing.types.js';
 
 export class JobListingService {
   constructor(private readonly searchRepository: IJobSearchRepository) {}

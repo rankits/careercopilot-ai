@@ -1,6 +1,6 @@
-import { PDFParse } from "pdf-parse";
-import mammoth from "mammoth";
-import { ParsedResumeData } from "@/modules/resumes/types/resume.types.js";
+import { PDFParse } from 'pdf-parse';
+import mammoth from 'mammoth';
+import { ParsedResumeData } from '@/modules/resumes/types/resume.types.js';
 
 export interface ResumeDocument {
   buffer: Buffer;
@@ -11,7 +11,7 @@ export interface ResumeDocument {
 export class ResumeParserService {
   public async parseResume(document: ResumeDocument): Promise<ParsedResumeData> {
     const extractedText = await this.extractText(document);
-    const normalizedText = extractedText.replace(/\s+/g, " ").trim();
+    const normalizedText = extractedText.replace(/\s+/g, ' ').trim();
 
     return {
       personalDetails: {
@@ -30,46 +30,49 @@ export class ResumeParserService {
   private async extractText(document: ResumeDocument): Promise<string> {
     const lowerName = document.originalName.toLowerCase();
 
-    if (lowerName.endsWith(".pdf")) {
+    if (lowerName.endsWith('.pdf')) {
       const parser = new PDFParse({ data: document.buffer });
       try {
         const parsed = await parser.getText();
-        return parsed.text || "";
+        return parsed.text || '';
       } finally {
         await parser.destroy();
       }
     }
 
-    if (lowerName.endsWith(".docx")) {
+    if (lowerName.endsWith('.docx')) {
       const result = await mammoth.extractRawText({ buffer: document.buffer });
-      return result.value || "";
+      return result.value || '';
     }
 
-    if (lowerName.endsWith(".doc")) {
-      return "";
+    if (lowerName.endsWith('.doc')) {
+      return '';
     }
 
-    return document.buffer.toString("utf8");
+    return document.buffer.toString('utf8');
   }
 
   private extractFullName(text: string): string {
-    const lines = text.split(/\n|\r/).map((line) => line.trim()).filter(Boolean);
-    return lines[0] ?? "Unknown";
+    const lines = text
+      .split(/\n|\r/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+    return lines[0] ?? 'Unknown';
   }
 
   private extractEmail(text: string): string {
     const match = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
-    return match?.[0] ?? "";
+    return match?.[0] ?? '';
   }
 
   private extractPhone(text: string): string {
     const match = text.match(/(?:\+?\d[\d\s().-]{7,}\d)/);
-    return match?.[0] ?? "";
+    return match?.[0] ?? '';
   }
 
   private extractLocation(text: string): string {
     const match = text.match(/([A-Z][a-z]+(?:,\s*[A-Z][a-z]+)?)/);
-    return match?.[0] ?? "";
+    return match?.[0] ?? '';
   }
 
   private extractExperience(text: string): Array<Record<string, unknown>> {
@@ -84,29 +87,41 @@ export class ResumeParserService {
   }
 
   private extractEducation(text: string): Array<Record<string, unknown>> {
-    const educationKeywords = ["bachelor", "master", "degree", "university", "college", "diploma"];
+    const educationKeywords = ['bachelor', 'master', 'degree', 'university', 'college', 'diploma'];
     const matches = educationKeywords.filter((keyword) => text.toLowerCase().includes(keyword));
 
     return matches.length
       ? matches.map((keyword) => ({
           degree: keyword,
-          source: "rule-based-parser",
+          source: 'rule-based-parser',
         }))
       : [];
   }
 
   private extractSkills(text: string): string[] {
-    const skillKeywords = ["typescript", "node", "javascript", "react", "aws", "docker", "sql", "postgres", "python", "java", "agile"];
+    const skillKeywords = [
+      'typescript',
+      'node',
+      'javascript',
+      'react',
+      'aws',
+      'docker',
+      'sql',
+      'postgres',
+      'python',
+      'java',
+      'agile',
+    ];
     return skillKeywords.filter((skill) => text.toLowerCase().includes(skill));
   }
 
   private extractCertifications(text: string): Array<Record<string, unknown>> {
-    const certKeywords = ["certified", "certificate", "aws", "scrum", "azure"];
+    const certKeywords = ['certified', 'certificate', 'aws', 'scrum', 'azure'];
     return certKeywords
       .filter((keyword) => text.toLowerCase().includes(keyword))
       .map((keyword) => ({
         name: keyword,
-        source: "rule-based-parser",
+        source: 'rule-based-parser',
       }));
   }
 }

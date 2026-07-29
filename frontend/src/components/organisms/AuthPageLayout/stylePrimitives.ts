@@ -1,10 +1,4 @@
-import {
-  Box,
-  styled,
-  Typography,
-  type SxProps,
-  type Theme,
-} from '@/lib/material';
+import { Box, styled, Typography, type SxProps, type Theme } from '@/lib/material';
 import {
   borderRadius,
   borderWidth,

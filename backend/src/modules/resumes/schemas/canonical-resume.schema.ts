@@ -1,12 +1,12 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 const NullableText = z.string().nullable();
 
 const ProfessionalLabelSchema = z.object({
   label: z.string(),
-  category: z.enum(["ROLE", "SPECIALISATION", "TECH_STACK", "DOMAIN"]),
+  category: z.enum(['ROLE', 'SPECIALISATION', 'TECH_STACK', 'DOMAIN']),
   confidence: z.number().min(0).max(1),
-  source: z.enum(["EXPLICIT", "INFERRED"]),
+  source: z.enum(['EXPLICIT', 'INFERRED']),
   evidence: z.array(z.string()),
 });
 
@@ -56,7 +56,13 @@ const CertificationSchema = z.object({
   credentialUrl: NullableText,
 });
 
-const LanguageProficiencySchema = z.enum(["NATIVE", "BASIC", "CONVERSATIONAL", "PROFESSIONAL", "FLUENT"]);
+const LanguageProficiencySchema = z.enum([
+  'NATIVE',
+  'BASIC',
+  'CONVERSATIONAL',
+  'PROFESSIONAL',
+  'FLUENT',
+]);
 
 const LanguageSchema = z.object({
   name: z.string(),
@@ -90,16 +96,16 @@ const ProfessionalProfileSchema = z.object({
   primaryRole: NullableText,
   seniorityLevel: z
     .enum([
-      "INTERN",
-      "ENTRY",
-      "JUNIOR",
-      "MID",
-      "SENIOR",
-      "LEAD",
-      "MANAGER",
-      "DIRECTOR",
-      "EXECUTIVE",
-      "UNKNOWN",
+      'INTERN',
+      'ENTRY',
+      'JUNIOR',
+      'MID',
+      'SENIOR',
+      'LEAD',
+      'MANAGER',
+      'DIRECTOR',
+      'EXECUTIVE',
+      'UNKNOWN',
     ])
     .nullable(),
   totalExperienceMonths: z.number().int().nonnegative(),
@@ -107,7 +113,7 @@ const ProfessionalProfileSchema = z.object({
 });
 
 export const ExpandedCanonicalResumeSchema = z.object({
-  schemaVersion: z.literal("resume-schema-v2"),
+  schemaVersion: z.literal('resume-schema-v2'),
   personalInformation: z.object({
     fullName: NullableText,
     firstName: NullableText,
