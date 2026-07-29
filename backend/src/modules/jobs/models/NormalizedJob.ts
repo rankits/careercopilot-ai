@@ -1,4 +1,4 @@
-import { ProviderTier, JobSalaryPeriod } from "../types/job.types.js";
+import { ProviderTier, JobSalaryPeriod } from "@/modules/jobs/types/job.types.js";
 
 export interface NormalizedJobLocation {
   readonly raw: string;
@@ -31,3 +31,4 @@ export interface NormalizedJob {
   readonly postedAt: string;         // ISO-8601 UTC timestamp
   readonly canonicalHash: string;    // SHA-256 fingerprint for deduplication
 }
+

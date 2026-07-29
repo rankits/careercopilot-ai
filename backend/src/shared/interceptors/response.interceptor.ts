@@ -1,5 +1,5 @@
 import { NextFunction, Request, Response } from "express";
-import { appLogger } from "../utils/logger.js";
+import { appLogger } from "@/shared/utils/logger.js";
 
 export const responseInterceptor = (req: Request, res: Response, next: NextFunction) => {
   const originalSend = res.send;

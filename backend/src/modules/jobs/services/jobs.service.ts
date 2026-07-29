@@ -1,16 +1,16 @@
-import { IJobContract } from "../contracts/IJobContract.js";
+import { IJobContract } from "@/modules/jobs/contracts/IJobContract.js";
 import {
   JobSearchFilters,
   PaginationOptions,
   PaginatedResult,
   BulkIngestionOptions,
   BulkIngestionSummary,
-} from "../types/job.types.js";
-import { ProviderHealth } from "../types/provider.types.js";
-import { NormalizedJob } from "../models/NormalizedJob.js";
-import { AggregationService } from "./aggregation/aggregation.service.js";
-import { IJobProviderRegistry } from "../registry/job-provider.registry.js";
-import { jobsLogger } from "../../../shared/utils/logger.js";
+} from "@/modules/jobs/types/job.types.js";
+import { ProviderHealth } from "@/modules/jobs/types/provider.types.js";
+import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
+import { AggregationService } from "@/modules/jobs/services/aggregation/aggregation.service.js";
+import { IJobProviderRegistry } from "@/modules/jobs/registry/job-provider.registry.js";
+import { jobsLogger } from "@/shared/utils/logger.js";
 
 export class JobsService implements IJobContract {
   constructor(
@@ -150,3 +150,4 @@ export class JobsService implements IJobContract {
     return healthMap;
   }
 }
+

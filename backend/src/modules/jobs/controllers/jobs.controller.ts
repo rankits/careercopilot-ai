@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from "express";
-import { jobsService } from "../JobModule.js";
-import { successResponse } from "../../../shared/utils/response.js";
-import { jobsLogger } from "../../../shared/utils/logger.js";
+import { jobsService } from "@/modules/jobs/JobModule.js";
+import { successResponse } from "@/shared/utils/response.js";
+import { jobsLogger } from "@/shared/utils/logger.js";
 
 export const triggerJobsController = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -45,3 +45,4 @@ export const jobsHealthController = async (_req: Request, res: Response, next: N
     next(error);
   }
 };
+

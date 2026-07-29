@@ -1,7 +1,7 @@
 import express from "express";
-import jobsRoutes from "./modules/jobs/routes/jobs.route.js";
 import { successResponse } from "@/shared/utils/response.js";
 import { authRoutes } from "@/modules/auth/index.js";
+import jobsRoutes from "@/modules/jobs/routes/jobs.route.js";
 
 const router = express.Router();
 

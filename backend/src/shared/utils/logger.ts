@@ -1,5 +1,5 @@
 import pino from "pino";
-import { loggerConfig } from "../config/logger.conf.js";
+import { loggerConfig } from "@/shared/config/logger.conf.js";
 
 export const appLogger = pino({
   name: "career-copilot",

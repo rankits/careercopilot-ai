@@ -4,9 +4,9 @@ import {
   PaginatedResult,
   BulkIngestionOptions,
   BulkIngestionSummary,
-} from "../types/job.types.js";
-import { ProviderHealth } from "../types/provider.types.js";
-import { NormalizedJob } from "../models/NormalizedJob.js";
+} from "@/modules/jobs/types/job.types.js";
+import { ProviderHealth } from "@/modules/jobs/types/provider.types.js";
+import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
 
 export interface IJobContract {
   searchJobs(
@@ -22,3 +22,4 @@ export interface IJobContract {
 
   getProviderHealth(): Promise<Record<string, ProviderHealth>>;
 }
+

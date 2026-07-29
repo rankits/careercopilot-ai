@@ -5,7 +5,7 @@ import {
   ProviderTier,
   ProviderHealthStatus,
   DuplicateProviderRegistrationError,
-} from "../../index.js";
+} from "@/modules/jobs/index.js";
 
 const createMockProvider = (
   name: string,
@@ -102,3 +102,4 @@ describe("JobProviderRegistry - JAP-401 Specification", () => {
     expect(sorted.map((p) => p.name)).toEqual(["Lever"]);
   });
 });
+

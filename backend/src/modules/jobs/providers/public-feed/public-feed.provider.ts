@@ -1,20 +1,20 @@
-import { IJobProvider } from "../../interfaces/IJobProvider.js";
+import { IJobProvider } from "@/modules/jobs/interfaces/IJobProvider.js";
 import {
   ProviderTier,
   JobSearchFilters,
   JobSalaryPeriod,
-} from "../../types/job.types.js";
+} from "@/modules/jobs/types/job.types.js";
 import {
   ProviderHealth,
   ProviderHealthStatus,
   ProviderRateLimitStatus,
-} from "../../types/provider.types.js";
-import { NormalizedJob } from "../../models/NormalizedJob.js";
+} from "@/modules/jobs/types/provider.types.js";
+import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
 import {
   generateCanonicalHash,
   normalizeText,
-} from "../../utils/fingerprint.js";
-import { jobsLogger } from "../../../../shared/utils/logger.js";
+} from "@/modules/jobs/utils/fingerprint.js";
+import { jobsLogger } from "@/shared/utils/logger.js";
 
 export interface PublicFeedJobPosting {
   readonly id: string;
@@ -156,3 +156,4 @@ export class OpenPublicFeedProvider implements IJobProvider {
     };
   }
 }
+
