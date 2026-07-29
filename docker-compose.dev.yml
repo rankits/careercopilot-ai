@@ -63,6 +63,8 @@ services:
     ports:
       - "5001:5001"
     environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
       NODE_ENV: development
       PORT: 5001
       DATABASE_URL: postgresql://postgres:postgres_password@postgres_dev:5432/careercopilot_dev?schema=public

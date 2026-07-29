@@ -2,6 +2,7 @@ import express from "express";
 import { successResponse } from "@/shared/utils/response.js";
 import { authRoutes } from "@/modules/auth/index.js";
 import jobsRoutes from "@/modules/jobs/routes/jobs.route.js";
+import { resumeRoutes } from "@/modules/resumes/index.js";
 
 const router = express.Router();
 
@@ -12,5 +13,6 @@ router.get("/status", (_req, res) => {
 // Sample API Flow: Mount /auth routes
 router.use("/auth", authRoutes);
 router.use("/jobs", jobsRoutes);
+router.use("/resumes", resumeRoutes);
 
 export default router;
