@@ -23,6 +23,7 @@ describe('AuthForm', () => {
     expect(screen.getByRole('textbox', { name: /full name/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
+    expect(screen.getByTestId('PhoneOutlinedIcon')).toBeInTheDocument();
     expect(screen.queryByText(/forgot password/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: /remember me/i })).not.toBeInTheDocument();
   });
@@ -82,6 +83,16 @@ describe('AuthForm', () => {
     );
 
     expect(screen.getByRole('textbox', { name: /current role/i })).toBeInTheDocument();
+  });
+
+  it('removes alphabetic and unsupported characters from the phone number field', async () => {
+    const user = userEvent.setup();
+    render(<AuthForm mode="register" />);
+    const phoneInput = screen.getByRole('textbox', { name: /phone number/i });
+
+    await user.type(phoneInput, 'call +91 98765@43210');
+
+    expect(phoneInput).toHaveValue('+91 9876543210');
   });
 
   it('disables submit action while submitting', () => {

@@ -1,2 +1,2 @@
-export { default as recommendationsRoutes } from "./routes/recommendations.route.js";
-export * from "./types/recommendations.types.js";
+export { default as recommendationsRoutes } from "@/modules/recommendations/routes/recommendations.route.js";
+export * from "@/modules/recommendations/types/recommendations.types.js";

@@ -63,6 +63,8 @@ services:
     ports:
       - "5001:5001"
     environment:
+      CHOKIDAR_USEPOLLING: "true"
+      WATCHPACK_POLLING: "true"
       NODE_ENV: development
       PORT: 5001
       DATABASE_URL: postgresql://postgres:postgres_password@postgres_dev:5432/careercopilot_dev?schema=public
@@ -74,6 +76,8 @@ services:
       REDIS_HOST: redis_dev
       REDIS_PORT: 6379
       RABBITMQ_URL: amqp://guest:guest@rabbitmq_dev:5672
+      LOGGING_ENABLED: "true"
+      LOG_PRETTY: "true"
     volumes:
       # Mount local backend code for tsx hot-reloading
       - ./backend:/app

@@ -1,5 +1,5 @@
 import pino from "pino";
-import { env, isProduction } from "../config/env.conf.js";
+import { env, isProduction } from "@/shared/config/env.conf.js";
 
 /**
  * Application-wide structured logger. Secrets/credentials are redacted so

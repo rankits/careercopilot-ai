@@ -1,6 +1,6 @@
-import { ICacheDriver, ICacheService } from "./cache.interface.js";
-import { MemoryCacheDriver } from "./drivers/memory.driver.js";
-import { RedisCacheDriver } from "./drivers/redis.driver.js";
+import { ICacheDriver, ICacheService } from "@/infrastructure/cache/cache.interface.js";
+import { MemoryCacheDriver } from "@/infrastructure/cache/drivers/memory.driver.js";
+import { RedisCacheDriver } from "@/infrastructure/cache/drivers/redis.driver.js";
 
 export class CacheService implements ICacheService {
   private driver: ICacheDriver;
