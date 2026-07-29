@@ -59,7 +59,37 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+    expect(screen.getByRole('main')).toHaveStyle({ overflow: 'hidden' });
+    expect(screen.getByRole('heading', { name: /welcome back!/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /careercopilot/i })).toHaveStyle({
+      position: 'absolute',
+    });
+    expect(screen.getByRole('img', { name: /ai platform illustration/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /ai platform illustration/i })).toHaveStyle({
+      maxWidth: '40rem',
+      objectFit: 'contain',
+    });
+    expect(screen.getByRole('img', { name: /ai platform illustration/i })).not.toHaveStyle({
+      maxHeight: '15rem',
+    });
+    expect(screen.getByRole('region', { name: /career copilot product overview/i })).toHaveStyle({
+      display: 'grid',
+    });
+    expect(screen.getByRole('heading', { name: /find the right opportunities/i })).toHaveStyle({
+      maxWidth: '30rem',
+    });
+    expect(screen.getByRole('heading', { name: /find the right opportunities/i })).toBeInTheDocument();
+    expect(screen.getByText(/^smart job matching$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^ai-powered guidance$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^application tracking$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^resume score$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^jobs aggregated$/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/^your data is safe$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^privacy first$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^ai you can trust$/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/security and trust/i)).toHaveStyle({
+      backgroundColor: 'rgba(255, 255, 255, 0.82)',
+    });
     expect(screen.getByRole('checkbox', { name: /remember me/i })).toBeChecked();
 
     await user.click(screen.getByRole('link', { name: /create account/i }));
