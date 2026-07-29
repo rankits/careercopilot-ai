@@ -7,6 +7,11 @@
     "dev": "npm --prefix frontend run dev",
     "build": "npm --prefix frontend run build",
     "preview": "npm --prefix frontend run preview",
+    "backend:dev": "npm --prefix backend run dev",
+    "backend:build": "npm --prefix backend run build",
+    "backend:lint": "npm --prefix backend run lint",
+    "backend:lint:fix": "npm --prefix backend run lint:fix",
+    "backend:typecheck": "npm --prefix backend run typecheck",
     "test": "npm --prefix frontend run test",
     "test:coverage": "npm --prefix frontend run test:coverage",
     "test:watch": "npm --prefix frontend run test:watch",
@@ -16,7 +21,7 @@
     "format:check": "prettier --check .",
     "typecheck": "npm --prefix frontend run typecheck",
     "prepare": "husky",
-    "validate": "npm run typecheck && npm run lint && npm run test && npm run format:check && npm run build"
+    "validate": "npm run typecheck && npm run lint && npm run test && npm run format:check && npm run build && npm run backend:typecheck && npm run backend:lint && npm run backend:build"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
@@ -30,10 +35,17 @@
       "npm --prefix frontend run lint:fix --",
       "prettier --write"
     ],
+    "backend/**/*.{ts,tsx,js,jsx}": [
+      "npm --prefix backend run lint:fix --",
+      "prettier --write"
+    ],
     "*.{json,css,scss,md,yml,yaml}": [
       "prettier --write"
     ],
     "frontend/**/*.{json,css,scss,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "backend/**/*.{json,css,scss,md,yml,yaml}": [
       "prettier --write"
     ]
   }

@@ -1,4 +1,4 @@
-import { ApiErrorResponse, ApiSuccessResponse } from "../types/response.js";
+import { ApiErrorResponse, ApiSuccessResponse } from "@/shared/types/response.js";
 
 export const successResponse = <T = unknown>(message: string, data?: T): ApiSuccessResponse<T> => {
   return {

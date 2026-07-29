@@ -10,6 +10,13 @@ export interface LoginPayload {
   password: string;
 }
 
+export interface RegisterPayload {
+  email: string;
+  name: string;
+  password: string;
+  phoneNumber: string;
+}
+
 export interface AuthResponse {
   accessToken: string;
   user: User;

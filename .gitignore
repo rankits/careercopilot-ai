@@ -10,3 +10,6 @@ frontend/coverage
 *.local
 .vscode/*
 !.vscode/extensions.json
+docs
+backend/docs/
+backend/storage/
