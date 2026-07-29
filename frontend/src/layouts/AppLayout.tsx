@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom';
 
 import type { SidebarVariant } from '@/components/organisms/Sidebar/interfaces';
 
-import { Sidebar } from '@/components';
+import { AppHeader, Sidebar } from '@/components';
 import { useMediaQuery } from '@/lib/material';
 
 export function AppLayout() {
@@ -17,9 +17,12 @@ export function AppLayout() {
         onVariantChange={setSidebarVariant}
         variant={sidebarVariant}
       />
-      <main className="main-content">
-        <Outlet />
-      </main>
+      <div className="content-shell">
+        <AppHeader />
+        <main className="main-content">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }
