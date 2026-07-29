@@ -1,4 +1,4 @@
-import { resumeParsingOrchestrator } from "@/modules/resumes/services/resume-parsing.orchestrator.js";
+import { resumeParsingOrchestrator } from '@/modules/resumes/services/resume-parsing.orchestrator.js';
 
 export const resumeProcessingService = {
   async processUploadedResume(input: {

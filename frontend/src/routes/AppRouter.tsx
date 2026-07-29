@@ -2,6 +2,7 @@ import { Navigate, Route, Routes } from 'react-router-dom';
 
 import { ROUTES } from '@/constants/routes';
 import { HomePage } from '@/pages/HomePage';
+import { JobFeedPage } from '@/pages/JobFeedPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProfilePage } from '@/pages/ProfilePage';
@@ -15,6 +16,7 @@ export function AppRouter() {
       <Route path="/app" element={<Navigate to={ROUTES.PROFILE} replace />} />
       <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
+      <Route path={ROUTES.JOB_FEED} element={<JobFeedPage />} />
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

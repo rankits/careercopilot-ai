@@ -1,4 +1,4 @@
-version: "3.8"
+version: '3.8'
 
 services:
   postgres_dev:
@@ -10,11 +10,11 @@ services:
       POSTGRES_PASSWORD: postgres_password
       POSTGRES_DB: careercopilot_dev
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - pg_dev_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres -d careercopilot_dev"]
+      test: ['CMD-SHELL', 'pg_isready -U postgres -d careercopilot_dev']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -25,11 +25,11 @@ services:
     container_name: career_copilot_redis_dev
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - '6379:6379'
     volumes:
       - redis_dev_data:/data
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ['CMD', 'redis-cli', 'ping']
       interval: 5s
       timeout: 5s
       retries: 5
@@ -40,15 +40,15 @@ services:
     container_name: career_copilot_rabbitmq_dev
     restart: unless-stopped
     ports:
-      - "5672:5672"   # AMQP protocol port
-      - "15672:15672" # Management UI port
+      - '5672:5672' # AMQP protocol port
+      - '15672:15672' # Management UI port
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
     volumes:
       - rabbitmq_dev_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -61,14 +61,14 @@ services:
     container_name: career_copilot_backend_dev
     restart: unless-stopped
     ports:
-      - "5001:5001"
+      - '5001:5001'
     environment:
-      CHOKIDAR_USEPOLLING: "true"
-      WATCHPACK_POLLING: "true"
+      CHOKIDAR_USEPOLLING: 'true'
+      WATCHPACK_POLLING: 'true'
       NODE_ENV: development
       PORT: 5001
       DATABASE_URL: postgresql://postgres:postgres_password@postgres_dev:5432/careercopilot_dev?schema=public
-      RUN_MIGRATIONS: "true"
+      RUN_MIGRATIONS: 'true'
       JWT_ACCESS_SECRET: dev_access_secret_change_in_production
       JWT_REFRESH_SECRET: dev_refresh_secret_change_in_production
       CACHE_DRIVER: redis
@@ -76,8 +76,8 @@ services:
       REDIS_HOST: redis_dev
       REDIS_PORT: 6379
       RABBITMQ_URL: amqp://guest:guest@rabbitmq_dev:5672
-      LOGGING_ENABLED: "true"
-      LOG_PRETTY: "true"
+      LOGGING_ENABLED: 'true'
+      LOG_PRETTY: 'true'
     volumes:
       # Mount local backend code for tsx hot-reloading
       - ./backend:/app

@@ -1,13 +1,7 @@
 import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
-import {
-  AuthContent,
-  AuthRoot,
-  FeatureIcon,
-  FormColumn,
-  FormStack,
-} from './styles';
+import { AuthContent, AuthRoot, FeatureIcon, FormColumn, FormStack } from './styles';
 
 describe('AuthPageLayout styled components', () => {
   it('provides reusable Material styled layout components', () => {

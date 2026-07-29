@@ -1,4 +1,4 @@
-import { ResumeStorageDriverName } from "@/modules/resumes/types/resume.types.js";
+import { ResumeStorageDriverName } from '@/modules/resumes/types/resume.types.js';
 
 export interface StoreResumeInput {
   buffer: Buffer;

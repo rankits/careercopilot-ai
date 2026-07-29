@@ -7,10 +7,13 @@ import {
   ResumeParseStatus as PrismaResumeParseStatus,
   ResumeStatus,
   ResumeStorageDriver,
-} from "@prisma/client";
-import { prisma } from "@/shared/config/db.conf.js";
-import { OnboardingProfilePayload, ParsedResumeData } from "@/modules/resumes/types/resume.types.js";
-import { ResumeParseStatus } from "@/modules/resumes/domain/resume-parser-status.js";
+} from '@prisma/client';
+import { prisma } from '@/shared/config/db.conf.js';
+import {
+  OnboardingProfilePayload,
+  ParsedResumeData,
+} from '@/modules/resumes/types/resume.types.js';
+import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
 
 export interface CreateResumeRecordInput {
   id: string;
@@ -63,7 +66,7 @@ export interface UpdateResumeParseRunInput {
   completedAt?: Date;
 }
 
-const sanitizeText = (value: string): string => value.replace(/\u0000/g, "");
+const sanitizeText = (value: string): string => value.replace(/\u0000/g, '');
 
 export const resumeRepository = {
   createResume(input: CreateResumeRecordInput): Promise<Resume> {
@@ -89,14 +92,16 @@ export const resumeRepository = {
   findLatestExtraction(resumeId: string): Promise<ResumeExtraction | null> {
     return prisma.resumeExtraction.findFirst({
       where: { resumeId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
     });
   },
 
-  findLatestParseRun(resumeId: string): Promise<(ResumeParseRun & { extraction: ResumeExtraction | null }) | null> {
+  findLatestParseRun(
+    resumeId: string,
+  ): Promise<(ResumeParseRun & { extraction: ResumeExtraction | null }) | null> {
     return prisma.resumeParseRun.findFirst({
       where: { resumeId },
-      orderBy: { createdAt: "desc" },
+      orderBy: { createdAt: 'desc' },
       include: {
         extraction: true,
       },
@@ -157,7 +162,8 @@ export const resumeRepository = {
       data: {
         status,
         failureReason,
-        processedAt: status === ResumeStatus.PROCESSED || status === ResumeStatus.FAILED ? new Date() : null,
+        processedAt:
+          status === ResumeStatus.PROCESSED || status === ResumeStatus.FAILED ? new Date() : null,
       },
     });
   },

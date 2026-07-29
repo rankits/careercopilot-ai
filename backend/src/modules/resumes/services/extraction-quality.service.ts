@@ -20,26 +20,26 @@ export const extractionQualityService = {
 
     if (trimmed.length < 200) {
       score -= 0.35;
-      warnings.push("Extracted text is very short.");
+      warnings.push('Extracted text is very short.');
     }
 
     if (lines.length < 8) {
       score -= 0.2;
-      warnings.push("Extracted text has very few non-empty lines.");
+      warnings.push('Extracted text has very few non-empty lines.');
     }
 
     if (!EMAIL_PATTERN.test(trimmed)) {
       score -= 0.2;
-      warnings.push("No email address detected in extracted text.");
+      warnings.push('No email address detected in extracted text.');
     }
 
     if (!PHONE_PATTERN.test(trimmed)) {
       score -= 0.1;
-      warnings.push("No phone number detected in extracted text.");
+      warnings.push('No phone number detected in extracted text.');
     }
 
     if (/(page \d+ of \d+|confidential|resume|curriculum vitae)/i.test(trimmed)) {
-      warnings.push("Document may contain boilerplate or repeated headers.");
+      warnings.push('Document may contain boilerplate or repeated headers.');
     }
 
     const normalizedScore = Math.max(0, Math.min(1, Number(score.toFixed(2))));
@@ -51,4 +51,3 @@ export const extractionQualityService = {
     };
   },
 };
-

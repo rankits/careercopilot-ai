@@ -1,19 +1,22 @@
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
-import type { StructuredAiExtractionRequest, StructuredAiModel } from "@/modules/resumes/ai/ai-model.contract.js";
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
+import type {
+  StructuredAiExtractionRequest,
+  StructuredAiModel,
+} from '@/modules/resumes/ai/ai-model.contract.js';
 
 const extractJsonPayload = (value: unknown): string => {
-  if (typeof value === "string") {
+  if (typeof value === 'string') {
     return value;
   }
 
   if (Array.isArray(value)) {
     return value
-      .map((part) => (typeof part === "string" ? part : ""))
-      .join("")
+      .map((part) => (typeof part === 'string' ? part : ''))
+      .join('')
       .trim();
   }
 
-  return "";
+  return '';
 };
 
 export class GeminiStructuredAiModel implements StructuredAiModel {
@@ -36,11 +39,11 @@ export class GeminiStructuredAiModel implements StructuredAiModel {
 
     const response = await model.invoke([
       {
-        role: "system",
+        role: 'system',
         content: request.systemPrompt,
       },
       {
-        role: "user",
+        role: 'user',
         content: `
 Extract the resume information from the content below.
 
@@ -53,13 +56,16 @@ Return only a valid JSON object that matches the requested schema.
     ]);
 
     const rawText = extractJsonPayload((response as { content?: unknown }).content ?? response);
-    const jsonText = rawText.replace(/^```json\s*/i, "").replace(/```$/i, "").trim();
+    const jsonText = rawText
+      .replace(/^```json\s*/i, '')
+      .replace(/```$/i, '')
+      .trim();
 
     let parsed: unknown;
     try {
       parsed = JSON.parse(jsonText);
     } catch {
-      throw new Error("Gemini did not return valid JSON for the resume parser");
+      throw new Error('Gemini did not return valid JSON for the resume parser');
     }
 
     return request.schema.parse(parsed);

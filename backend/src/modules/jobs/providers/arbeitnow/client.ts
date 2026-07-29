@@ -1,11 +1,11 @@
-import { BaseProviderClient } from "@/modules/jobs/providers/base/base.client.js";
+import { BaseProviderClient } from '@/modules/jobs/providers/base/base.client.js';
 import {
   ArbeitnowJobPosting,
   ArbeitnowJobsResponse,
-} from "@/modules/jobs/providers/arbeitnow/types.js";
-import { ProviderFetchError } from "@/modules/jobs/errors/ProviderFetchError.js";
+} from '@/modules/jobs/providers/arbeitnow/types.js';
+import { ProviderFetchError } from '@/modules/jobs/errors/ProviderFetchError.js';
 
-const DEFAULT_BASE_URL = "https://www.arbeitnow.com/api/job-board-api";
+const DEFAULT_BASE_URL = 'https://www.arbeitnow.com/api/job-board-api';
 
 export class ArbeitnowClient extends BaseProviderClient {
   constructor(
@@ -41,7 +41,7 @@ export class ArbeitnowClient extends BaseProviderClient {
     const url = new URL(this.options.baseUrl ?? DEFAULT_BASE_URL);
 
     if (page > 1) {
-      url.searchParams.set("page", String(page));
+      url.searchParams.set('page', String(page));
     }
 
     return url.toString();
@@ -54,7 +54,7 @@ export class ArbeitnowClient extends BaseProviderClient {
     try {
       const response = await fetch(url, {
         headers: {
-          Accept: "application/json",
+          Accept: 'application/json',
         },
         signal: controller.signal,
       });
