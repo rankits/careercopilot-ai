@@ -1,5 +1,5 @@
 import { Redis, Cluster, RedisOptions, ClusterNode } from "ioredis";
-import { ICacheDriver } from "../cache.interface.js";
+import { ICacheDriver } from "@/infrastructure/cache/cache.interface.js";
 
 type RedisClientType = Redis | Cluster;
 

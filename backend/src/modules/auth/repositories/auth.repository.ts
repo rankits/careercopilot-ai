@@ -1,5 +1,5 @@
 import { Prisma, User, UserRole } from "@prisma/client";
-import { prisma } from "../../../shared/config/db.conf.js";
+import { prisma } from "@/shared/config/db.conf.js";
 
 export interface CreateUserInput {
   email: string;

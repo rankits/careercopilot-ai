@@ -1,7 +1,7 @@
 import { ZodError } from "zod";
 import { NextFunction, Request, Response } from "express";
-import { AppError } from "../utils/errors/AppError.js";
-import { errorResponse } from "../utils/response.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { errorResponse } from "@/shared/utils/response.js";
 
 export const errorHandler = (err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error("[ERROR] : ", err);
