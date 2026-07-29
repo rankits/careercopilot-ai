@@ -1,14 +1,14 @@
-import { ParsedResumeData } from "@/modules/resumes/types/resume.types.js";
+import { ParsedResumeData } from '@/modules/resumes/types/resume.types.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const normalizeText = (value: unknown): string => {
-  if (typeof value !== "string") {
-    return "";
+  if (typeof value !== 'string') {
+    return '';
   }
 
-  return value.replace(/\s+/g, " ").trim();
+  return value.replace(/\s+/g, ' ').trim();
 };
 
 const normalizeNullableText = (value: unknown): string | null => {
@@ -50,14 +50,18 @@ const normalizeRecord = (value: Record<string, unknown>): Record<string, unknown
   const normalized: Record<string, unknown> = {};
 
   for (const [key, entry] of Object.entries(value)) {
-    if (typeof entry === "string") {
+    if (typeof entry === 'string') {
       normalized[key] = normalizeNullableText(entry);
       continue;
     }
 
     if (Array.isArray(entry)) {
       normalized[key] = entry.map((child) =>
-        typeof child === "string" ? normalizeText(child) : isRecord(child) ? normalizeRecord(child) : child,
+        typeof child === 'string'
+          ? normalizeText(child)
+          : isRecord(child)
+            ? normalizeRecord(child)
+            : child,
       );
       continue;
     }
@@ -91,13 +95,16 @@ const parseYearMonth = (value: string): Date => {
   return new Date(Number(match[1]), Number(match[2]) - 1, 1);
 };
 
-const calculateTotalExperienceMonths = (experience: Array<Record<string, unknown>>, currentDate = new Date()): number => {
+const calculateTotalExperienceMonths = (
+  experience: Array<Record<string, unknown>>,
+  currentDate = new Date(),
+): number => {
   const periods = experience
-    .filter((item) => typeof item.startDate === "string")
+    .filter((item) => typeof item.startDate === 'string')
     .map((item) => {
       const start = parseYearMonth(String(item.startDate));
       const end =
-        item.isCurrent === true || typeof item.endDate !== "string" || !item.endDate
+        item.isCurrent === true || typeof item.endDate !== 'string' || !item.endDate
           ? currentDate
           : parseYearMonth(String(item.endDate));
 
@@ -130,7 +137,10 @@ const calculateTotalExperienceMonths = (experience: Array<Record<string, unknown
 
   return merged.reduce((total, period) => {
     const months =
-      (period.end.getFullYear() - period.start.getFullYear()) * 12 + period.end.getMonth() - period.start.getMonth() + 1;
+      (period.end.getFullYear() - period.start.getFullYear()) * 12 +
+      period.end.getMonth() -
+      period.start.getMonth() +
+      1;
 
     return total + Math.max(months, 0);
   }, 0);
@@ -140,11 +150,11 @@ export const resumeNormaliserService = {
   normalize(parsedData: ParsedResumeData): ParsedResumeData {
     const experience = normalizeRecordArray(parsedData.experience);
     const totalExperienceMonths =
-      typeof parsedData.totalExperienceMonths === "number" && parsedData.totalExperienceMonths >= 0
+      typeof parsedData.totalExperienceMonths === 'number' && parsedData.totalExperienceMonths >= 0
         ? parsedData.totalExperienceMonths
         : calculateTotalExperienceMonths(experience);
     const totalExperienceYears =
-      typeof parsedData.totalExperienceYears === "number" && parsedData.totalExperienceYears >= 0
+      typeof parsedData.totalExperienceYears === 'number' && parsedData.totalExperienceYears >= 0
         ? Number(parsedData.totalExperienceYears.toFixed(1))
         : Number((totalExperienceMonths / 12).toFixed(1));
 
@@ -157,11 +167,15 @@ export const resumeNormaliserService = {
         ? normalizeRecordArray(parsedData.professionalLabels)
         : undefined,
       experience,
-      projects: Array.isArray(parsedData.projects) ? normalizeRecordArray(parsedData.projects) : undefined,
+      projects: Array.isArray(parsedData.projects)
+        ? normalizeRecordArray(parsedData.projects)
+        : undefined,
       education: normalizeRecordArray(parsedData.education),
       skills: normalizeStringArray(parsedData.skills),
       certifications: normalizeRecordArray(parsedData.certifications),
-      languages: Array.isArray(parsedData.languages) ? normalizeRecordArray(parsedData.languages) : undefined,
+      languages: Array.isArray(parsedData.languages)
+        ? normalizeRecordArray(parsedData.languages)
+        : undefined,
       links: isRecord(parsedData.links) ? normalizeRecord(parsedData.links) : undefined,
       totalExperienceMonths,
       totalExperienceYears,

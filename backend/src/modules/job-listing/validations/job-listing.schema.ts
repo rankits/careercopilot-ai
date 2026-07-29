@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from 'zod';
 
 export const jobSearchQuerySchema = z.object({
   query: z.object({
@@ -11,16 +11,14 @@ export const jobSearchQuerySchema = z.object({
     minSalary: z.coerce.number().nonnegative().optional(),
     maxSalary: z.coerce.number().nonnegative().optional(),
     currency: z.string().length(3).optional(),
-    sortBy: z
-      .enum(["relevance", "newest", "salaryHighToLow", "salaryLowToHigh"])
-      .default("newest"),
+    sortBy: z.enum(['relevance', 'newest', 'salaryHighToLow', 'salaryLowToHigh']).default('newest'),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
-  })
+  }),
 });
 
 export const jobIdParamsSchema = z.object({
   params: z.object({
-    jobId: z.string().uuid("Invalid job ID format"),
-  })
+    jobId: z.string().uuid('Invalid job ID format'),
+  }),
 });

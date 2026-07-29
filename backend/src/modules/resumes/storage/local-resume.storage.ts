@@ -1,7 +1,11 @@
-import fs from "node:fs/promises";
-import path from "node:path";
-import { resumeConfig } from "@/modules/resumes/config/resume.config.js";
-import { ResumeStorage, StoreResumeInput, StoredResume } from "@/modules/resumes/storage/resume-storage.interface.js";
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { resumeConfig } from '@/modules/resumes/config/resume.config.js';
+import {
+  ResumeStorage,
+  StoreResumeInput,
+  StoredResume,
+} from '@/modules/resumes/storage/resume-storage.interface.js';
 
 export class LocalResumeStorage implements ResumeStorage {
   async store(input: StoreResumeInput): Promise<StoredResume> {
@@ -12,7 +16,7 @@ export class LocalResumeStorage implements ResumeStorage {
     return {
       key: input.key,
       url: `local://${input.key}`,
-      driver: "LOCAL",
+      driver: 'LOCAL',
     };
   }
 }

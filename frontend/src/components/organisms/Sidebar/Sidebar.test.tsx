@@ -11,7 +11,7 @@ describe('Sidebar', () => {
 
     expect(screen.getByLabelText(/primary navigation/i)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /career copilot/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /dashboard/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -31,12 +31,19 @@ describe('Sidebar', () => {
   it('notifies when a navigation item is selected', async () => {
     const user = userEvent.setup();
     const handleSelect = vi.fn();
+    const items = [
+      {
+        icon: DEFAULT_SIDEBAR_ITEMS[1]!.icon,
+        id: 'custom-jobs',
+        label: 'Custom Jobs',
+      },
+    ];
 
-    render(<Sidebar onItemSelect={handleSelect} />);
+    render(<Sidebar items={items} onItemSelect={handleSelect} />);
 
-    await user.click(screen.getByRole('button', { name: /job search/i }));
+    await user.click(screen.getByRole('button', { name: /custom jobs/i }));
 
-    expect(handleSelect).toHaveBeenCalledWith(DEFAULT_SIDEBAR_ITEMS[1]);
+    expect(handleSelect).toHaveBeenCalledWith(items[0]);
   });
 
   it('requests collapsed variant from the toggle button', async () => {
@@ -54,6 +61,7 @@ describe('Sidebar', () => {
     render(<Sidebar mobileMode="bottomNav" />);
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('button')).toHaveLength(5);
+    expect(screen.getAllByRole('link')).toHaveLength(2);
+    expect(screen.getAllByRole('button')).toHaveLength(3);
   });
 });

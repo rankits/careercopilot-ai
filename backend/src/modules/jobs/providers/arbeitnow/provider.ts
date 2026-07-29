@@ -1,17 +1,14 @@
-import { IJobProvider } from "@/modules/jobs/interfaces/IJobProvider.js";
-import { ProviderTier, JobSearchFilters } from "@/modules/jobs/types/job.types.js";
-import {
-  ProviderHealth,
-  ProviderRateLimitStatus,
-} from "@/modules/jobs/types/provider.types.js";
-import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
-import { ArbeitnowProviderConfig } from "@/modules/jobs/providers/arbeitnow/config.js";
-import { ArbeitnowClient } from "@/modules/jobs/providers/arbeitnow/client.js";
-import { ArbeitnowJobMapper } from "@/modules/jobs/providers/arbeitnow/mapper.js";
-import { jobsLogger } from "@/shared/utils/logger.js";
+import { IJobProvider } from '@/modules/jobs/interfaces/IJobProvider.js';
+import { ProviderTier, JobSearchFilters } from '@/modules/jobs/types/job.types.js';
+import { ProviderHealth, ProviderRateLimitStatus } from '@/modules/jobs/types/provider.types.js';
+import { NormalizedJob } from '@/modules/jobs/models/NormalizedJob.js';
+import { ArbeitnowProviderConfig } from '@/modules/jobs/providers/arbeitnow/config.js';
+import { ArbeitnowClient } from '@/modules/jobs/providers/arbeitnow/client.js';
+import { ArbeitnowJobMapper } from '@/modules/jobs/providers/arbeitnow/mapper.js';
+import { jobsLogger } from '@/shared/utils/logger.js';
 
 export class ArbeitnowJobProvider implements IJobProvider {
-  readonly name = "arbeitnow";
+  readonly name = 'arbeitnow';
   readonly tier: ProviderTier;
   readonly isEnabled = true;
 
@@ -20,12 +17,7 @@ export class ArbeitnowJobProvider implements IJobProvider {
 
   constructor(private readonly config: ArbeitnowProviderConfig = {}) {
     this.tier = config.tier ?? ProviderTier.PUBLIC;
-    this.client = new ArbeitnowClient(
-      this.name,
-      config.baseUrl,
-      config.timeoutMs,
-      config.maxPages,
-    );
+    this.client = new ArbeitnowClient(this.name, config.baseUrl, config.timeoutMs, config.maxPages);
     this.mapper = new ArbeitnowJobMapper(this.tier);
   }
 
@@ -36,7 +28,7 @@ export class ArbeitnowJobProvider implements IJobProvider {
         baseUrl: this.config.baseUrl,
         filters,
       },
-      "Arbeitnow provider fetch started",
+      'Arbeitnow provider fetch started',
     );
 
     const rawPostings = await this.client.fetchFeedJobs();
@@ -75,21 +67,21 @@ export class ArbeitnowJobProvider implements IJobProvider {
         provider: this.name,
         fetched: normalized.length,
       },
-      "Arbeitnow provider fetch completed",
+      'Arbeitnow provider fetch completed',
     );
 
     return normalized;
   }
 
   async healthCheck(): Promise<ProviderHealth> {
-    jobsLogger.debug({ provider: this.name }, "Arbeitnow provider health check started");
+    jobsLogger.debug({ provider: this.name }, 'Arbeitnow provider health check started');
     const health = await this.client.healthCheck();
     jobsLogger.debug(
       {
         provider: this.name,
         status: health.status,
       },
-      "Arbeitnow provider health check completed",
+      'Arbeitnow provider health check completed',
     );
     return health;
   }
