@@ -1,4 +1,4 @@
-import { ICacheDriver } from "../cache.interface.js";
+import { ICacheDriver } from "@/infrastructure/cache/cache.interface.js";
 
 interface CacheEntry {
   value: unknown;

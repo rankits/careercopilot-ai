@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { signinSchema } from "../validations/auth.schema.js";
+import { signinSchema } from "@/modules/auth/validations/auth.schema.js";
 
 export type SigninInput = z.infer<typeof signinSchema>["body"];
 

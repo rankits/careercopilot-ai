@@ -1,7 +1,7 @@
 import express from "express";
-import { signinController } from "../controllers/auth.controller.js";
-import { validateResource } from "../../../shared/middlewares/validateResource.js";
-import { signinSchema } from "../validations/auth.schema.js";
+import { signinController } from "@/modules/auth/controllers/auth.controller.js";
+import { validateResource } from "@/shared/middlewares/validateResource.js";
+import { signinSchema } from "@/modules/auth/validations/auth.schema.js";
 
 const router = express.Router();
 

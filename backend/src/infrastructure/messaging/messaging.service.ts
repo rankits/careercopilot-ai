@@ -4,8 +4,8 @@ import {
   MessageHandler,
   PublishOptions,
   SubscribeOptions,
-} from "./messaging.interface.js";
-import { RabbitMQBusDriver } from "./drivers/rabbitmq.driver.js";
+} from "@/infrastructure/messaging/messaging.interface.js";
+import { RabbitMQBusDriver } from "@/infrastructure/messaging/drivers/rabbitmq.driver.js";
 
 export class MessageBusService implements IMessageBus {
   private driver: IMessageBusDriver;
