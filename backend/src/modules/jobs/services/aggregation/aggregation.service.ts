@@ -68,18 +68,29 @@ export class AggregationService {
         const durationMs = Date.now() - providerStartTime;
         const errorMessage =
           error instanceof Error ? error.message : String(error);
+        const errorCause =
+          error instanceof Error &&
+          "originalError" in error &&
+          error.originalError instanceof Error
+            ? {
+                name: error.originalError.name,
+                message: error.originalError.message,
+                stack: error.originalError.stack,
+              }
+            : undefined;
         jobsLogger.error(
           {
             provider: provider.name,
             durationMs,
             error: errorMessage,
+            cause: errorCause,
           },
           "Provider fetch failed",
         );
         providerStats[provider.name] = {
           fetched: 0,
           durationMs,
-          error: errorMessage,
+          error: errorCause?.message || errorMessage,
         };
         throw error;
       }

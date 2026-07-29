@@ -6,6 +6,7 @@ import {
 import { ProviderFetchError } from "@/modules/jobs/errors/ProviderFetchError.js";
 import { RateLimitError } from "@/modules/jobs/errors/RateLimitError.js";
 import { calculateJitteredBackoff, sleep } from "@/modules/jobs/utils/backoff.js";
+import { jobsLogger } from "@/shared/utils/logger.js";
 
 export interface BaseClientOptions {
   readonly providerName: string;
@@ -60,15 +61,42 @@ export abstract class BaseProviderClient {
         return result;
       } catch (error) {
         lastError = error;
+        const errorMessage = error instanceof Error ? error.message : String(error);
+
+        jobsLogger.warn(
+          {
+            provider: this.options.providerName,
+            attempt,
+            maxRetries,
+            error: errorMessage,
+          },
+          "Provider fetch attempt failed",
+        );
 
         if (error instanceof RateLimitError) {
           const waitMs = error.retryAfterMs ?? 2000;
+          jobsLogger.warn(
+            {
+              provider: this.options.providerName,
+              attempt,
+              waitMs,
+            },
+            "Provider rate limited, delaying retry",
+          );
           await sleep(waitMs);
           continue;
         }
 
         if (attempt < maxRetries) {
           const backoffMs = calculateJitteredBackoff(attempt);
+          jobsLogger.debug(
+            {
+              provider: this.options.providerName,
+              attempt,
+              backoffMs,
+            },
+            "Scheduling provider retry",
+          );
           await sleep(backoffMs);
         }
       }
@@ -80,6 +108,20 @@ export abstract class BaseProviderClient {
     } else {
       this.circuitStatus = ProviderHealthStatus.DEGRADED;
     }
+
+    const finalErrorMessage =
+      lastError instanceof Error ? lastError.message : String(lastError);
+
+    jobsLogger.error(
+      {
+        provider: this.options.providerName,
+        maxRetries,
+        consecutiveFailures: this.consecutiveFailures,
+        circuitStatus: this.circuitStatus,
+        error: finalErrorMessage,
+      },
+      "Provider fetch exhausted all retries",
+    );
 
     throw new ProviderFetchError(
       this.options.providerName,
