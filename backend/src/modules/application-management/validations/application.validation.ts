@@ -65,7 +65,7 @@ export const CreateApplicationSchema = z.discriminatedUnion('sourceType', [
   ExternalUrlApplicationSchema,
 ]);
 
-export type CreateApplicationInput = z.infer<typeof CreateApplicationSchema>;
+export type CreateApplicationInput = z.input<typeof CreateApplicationSchema>;
 
 export const UpdateApplicationSchema = z.object({
   jobTitle: z.string().trim().min(1).max(160).optional(),
