@@ -69,8 +69,25 @@ h1 {
 .main-content {
   height: 100%;
   min-width: 0;
-  overflow: hidden;
-  padding: 1.5rem;
+  overflow-x: hidden;
+  overflow-y: scroll;
+  padding: 1rem;
+  scrollbar-gutter: stable;
+  scrollbar-color: #d1d5db #f3f4f6;
+  scrollbar-width: thin;
+}
+
+.main-content::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
 }
 .profile-card {
   background: white;
