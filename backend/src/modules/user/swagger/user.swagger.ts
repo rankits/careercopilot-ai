@@ -1,5 +1,5 @@
-import { createApiEndpoint, createApiGet, successSchema, errorSchema } from "../../../shared/swagger/factory.js";
-import { safeUserSchema, paginatedSchema, commonSecureResponses, commonAdminResponses } from "../../../shared/swagger/schemas.js";
+import { createApiEndpoint, createApiGet, successSchema, errorSchema } from "@/shared/swagger/factory.js";
+import { safeUserSchema, paginatedSchema, commonSecureResponses, commonAdminResponses } from "@/shared/swagger/schemas.js";
 
 const BASE_URL = "/api/v1/users";
 const TAGS = ["Users"];

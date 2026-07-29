@@ -1,9 +1,9 @@
 import { AuditAction } from "@prisma/client";
-import { userRepository } from "../repositories/user.repository.js";
-import { AppError } from "../../../shared/utils/errors/AppError.js";
-import { toUserListItem, toUserProfile } from "../utils/user.mapper.js";
-import type { ListUsersQuery, UpdateProfileInput } from "../validations/user.schema.js";
-import type { PaginatedResult, RequestContext, UserListItem, UserProfile } from "../types/user.types.js";
+import { userRepository } from "@/modules/user/repositories/user.repository.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { toUserListItem, toUserProfile } from "@/modules/user/utils/user.mapper.js";
+import type { ListUsersQuery, UpdateProfileInput } from "@/modules/user/validations/user.schema.js";
+import type { PaginatedResult, RequestContext, UserListItem, UserProfile } from "@/modules/user/types/user.types.js";
 
 /**
  * Cross-module lookup: other modules (resume, applications, ...) that need

@@ -1,5 +1,5 @@
-import type { UserWithRole } from "../repositories/user.repository.js";
-import type { PaginatedResult, UserListItem, UserProfile } from "../types/user.types.js";
+import type { UserWithRole } from "@/modules/user/repositories/user.repository.js";
+import type { PaginatedResult, UserListItem, UserProfile } from "@/modules/user/types/user.types.js";
 
 export const toUserProfile = (user: UserWithRole): UserProfile => ({
   id: user.publicId,
