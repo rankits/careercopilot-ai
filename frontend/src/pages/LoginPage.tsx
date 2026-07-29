@@ -11,7 +11,7 @@ export function LoginPage() {
   return (
     <Box component="main">
       {error ? (
-        <Box role="alert" sx={{ color: 'error.main', mb: 2 }}>
+        <Box role="alert" sx={{ mb: 2 }}>
           {error}
         </Box>
       ) : null}
