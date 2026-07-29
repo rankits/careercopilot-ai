@@ -15,6 +15,9 @@ RUN npm install && npx prisma generate
 # Copy source code
 COPY . .
 
+RUN chmod +x docker/entrypoint.sh
+
 EXPOSE 5001
 
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["npm", "run", "dev"]
