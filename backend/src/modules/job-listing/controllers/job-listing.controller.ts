@@ -1,0 +1,82 @@
+import { NextFunction, Request, Response } from 'express';
+import { jobListingService } from '@/modules/job-listing/index.js';
+import { successResponse } from '@/shared/utils/response.js';
+import {
+  JobSearchOptions,
+  JobSearchFilters,
+  JobSearchPagination,
+  JobSortBy,
+} from '@/modules/job-listing/types/job-listing.types.js';
+
+export const searchJobsController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const query = req.query as any;
+
+    const filters: JobSearchFilters = {
+      query: query.query,
+      companySlug: query.companySlug,
+      location: query.location,
+      remoteTypes: query.remoteTypes
+        ? Array.isArray(query.remoteTypes)
+          ? query.remoteTypes
+          : [query.remoteTypes]
+        : undefined,
+      employmentTypes: query.employmentTypes
+        ? Array.isArray(query.employmentTypes)
+          ? query.employmentTypes
+          : [query.employmentTypes]
+        : undefined,
+      skills: query.skills
+        ? Array.isArray(query.skills)
+          ? query.skills
+          : [query.skills]
+        : undefined,
+      minSalary: query.minSalary ? Number(query.minSalary) : undefined,
+      maxSalary: query.maxSalary ? Number(query.maxSalary) : undefined,
+      currency: query.currency,
+    };
+
+    const pagination: JobSearchPagination = {
+      page: query.page ? Number(query.page) : 1,
+      limit: query.limit ? Number(query.limit) : 20,
+    };
+
+    const sortBy: JobSortBy = query.sortBy || 'newest';
+
+    const options: JobSearchOptions = {
+      filters,
+      pagination,
+      sortBy,
+    };
+
+    const result = await jobListingService.searchJobs(options);
+
+    return res.status(200).json(
+      successResponse('Jobs retrieved successfully', {
+        items: result.items,
+        pagination: result.pagination,
+        appliedFilters: filters,
+      }),
+    );
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const getJobByIdController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { jobId } = req.params;
+    const job = await jobListingService.getJobDetails(jobId as string);
+
+    if (!job) {
+      return res.status(404).json({
+        status: 'error',
+        message: 'Job not found',
+      });
+    }
+
+    return res.status(200).json(successResponse('Job retrieved successfully', job));
+  } catch (error) {
+    next(error);
+  }
+};

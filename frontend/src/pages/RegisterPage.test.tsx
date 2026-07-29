@@ -52,7 +52,21 @@ describe('RegisterPage', () => {
     const user = userEvent.setup();
     renderPage();
 
+    expect(screen.getByRole('main')).toHaveStyle({ height: '100dvh' });
     expect(screen.getByRole('heading', { name: /create account/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /careercopilot/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /career journey illustration/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /login from header/i })).toHaveAttribute(
+      'href',
+      '/login',
+    );
+    expect(
+      screen.getByRole('heading', { name: /start your smarter career journey/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/^smart job matching$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^ai-powered guidance$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^application tracking$/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^secure & private$/i)).not.toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /full name/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /phone number/i })).toBeInTheDocument();
 
@@ -121,7 +135,9 @@ describe('RegisterPage', () => {
         phoneNumber: '+919876543210',
       }),
     );
-    expect(await screen.findByRole('heading', { name: /profile destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
     expect(
       queryClient.getMutationCache().find({ mutationKey: ['auth', 'register'] })?.state.status,
     ).toBe('success');
@@ -174,6 +190,8 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(registerMock).toHaveBeenCalledTimes(2);
-    expect(await screen.findByRole('heading', { name: /profile destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
   });
 });
