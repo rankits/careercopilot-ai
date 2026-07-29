@@ -1,20 +1,20 @@
-export type ParserEngine = "RULE_BASED" | "AI";
-export type ResumeStorageDriverName = "LOCAL" | "S3";
+export type ParserEngine = 'RULE_BASED' | 'AI';
+export type ResumeStorageDriverName = 'LOCAL' | 'S3';
 
-export type ProfessionalLabelCategory = "ROLE" | "SPECIALISATION" | "TECH_STACK" | "DOMAIN";
-export type ProfessionalLabelSource = "EXPLICIT" | "INFERRED";
+export type ProfessionalLabelCategory = 'ROLE' | 'SPECIALISATION' | 'TECH_STACK' | 'DOMAIN';
+export type ProfessionalLabelSource = 'EXPLICIT' | 'INFERRED';
 export type ProfessionalSeniorityLevel =
-  | "INTERN"
-  | "ENTRY"
-  | "JUNIOR"
-  | "MID"
-  | "SENIOR"
-  | "LEAD"
-  | "MANAGER"
-  | "DIRECTOR"
-  | "EXECUTIVE"
-  | "UNKNOWN";
-export type LanguageProficiency = "NATIVE" | "BASIC" | "CONVERSATIONAL" | "PROFESSIONAL" | "FLUENT";
+  | 'INTERN'
+  | 'ENTRY'
+  | 'JUNIOR'
+  | 'MID'
+  | 'SENIOR'
+  | 'LEAD'
+  | 'MANAGER'
+  | 'DIRECTOR'
+  | 'EXECUTIVE'
+  | 'UNKNOWN';
+export type LanguageProficiency = 'NATIVE' | 'BASIC' | 'CONVERSATIONAL' | 'PROFESSIONAL' | 'FLUENT';
 
 export interface ParsedResumeData {
   personalDetails: Record<string, unknown>;
@@ -122,7 +122,7 @@ export interface CanonicalResumeParseQuality {
 }
 
 export interface CanonicalResume {
-  schemaVersion: "resume-schema-v2";
+  schemaVersion: 'resume-schema-v2';
   personalInformation: {
     fullName: string | null;
     firstName: string | null;

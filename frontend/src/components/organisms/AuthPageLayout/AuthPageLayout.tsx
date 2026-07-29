@@ -102,13 +102,11 @@ function LoginHero() {
         </Styled.AiBadge>
         <Styled.HeroHeading as="h2">
           Find the right opportunities.{' '}
-          <Styled.AccentText as="span">
-            Build your dream career.
-          </Styled.AccentText>
+          <Styled.AccentText as="span">Build your dream career.</Styled.AccentText>
         </Styled.HeroHeading>
         <Styled.Description>
-          Discover roles, optimize your resume, track applications, and prepare for interviews
-          with one intelligent career workspace.
+          Discover roles, optimize your resume, track applications, and prepare for interviews with
+          one intelligent career workspace.
         </Styled.Description>
       </Styled.HeroCopy>
 
@@ -119,10 +117,7 @@ function LoginHero() {
       </Styled.LoginFeatureList>
 
       <Styled.LoginVisual>
-        <Styled.LoginIllustration
-          alt="AI platform illustration"
-          src={aiPlatformIllustration}
-        />
+        <Styled.LoginIllustration alt="AI platform illustration" src={aiPlatformIllustration} />
       </Styled.LoginVisual>
     </Styled.LoginHeroSection>
   );
@@ -152,11 +147,7 @@ function RegisterPanel() {
       <Styled.RegisterHeroTop>
         <Styled.RegisterCopy>
           <Styled.RegisterHeading as="h2">
-            Start your{' '}
-            <Styled.AccentText as="span">
-              smarter career
-            </Styled.AccentText>{' '}
-            journey today
+            Start your <Styled.AccentText as="span">smarter career</Styled.AccentText> journey today
           </Styled.RegisterHeading>
           <Styled.Description>
             Build a stronger profile and make every career move with confidence.
@@ -182,11 +173,7 @@ export function AuthPageLayout({ children, error, mode }: AuthPageLayoutProps) {
   return (
     <Styled.AuthRoot as="main" mode={mode}>
       <Styled.AuthHeader mode={mode}>
-        <Styled.LogoImage
-          alt="CareerCopilot"
-          mode={mode}
-          src={careerCopilotLogo}
-        />
+        <Styled.LogoImage alt="CareerCopilot" mode={mode} src={careerCopilotLogo} />
         {isRegister ? (
           <Styled.HeaderLoginText>
             Already have an account?{' '}

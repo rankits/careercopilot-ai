@@ -1,17 +1,23 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactNode } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_SIDEBAR_ITEMS } from './constants';
 import { Sidebar } from './Sidebar';
 
+function renderSidebar(ui: ReactNode) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
 describe('Sidebar', () => {
   it('renders the default desktop navigation', () => {
-    render(<Sidebar />);
+    renderSidebar(<Sidebar />);
 
     expect(screen.getByLabelText(/primary navigation/i)).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /career copilot/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /dashboard/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -19,7 +25,7 @@ describe('Sidebar', () => {
   });
 
   it('collapses labels for icon-only mode', () => {
-    render(<Sidebar variant="collapsed" />);
+    renderSidebar(<Sidebar variant="collapsed" />);
 
     expect(screen.getByRole('img', { name: /career copilot/i })).toHaveAttribute(
       'src',
@@ -31,19 +37,26 @@ describe('Sidebar', () => {
   it('notifies when a navigation item is selected', async () => {
     const user = userEvent.setup();
     const handleSelect = vi.fn();
+    const items = [
+      {
+        icon: DEFAULT_SIDEBAR_ITEMS[1]!.icon,
+        id: 'custom-jobs',
+        label: 'Custom Jobs',
+      },
+    ];
 
-    render(<Sidebar onItemSelect={handleSelect} />);
+    renderSidebar(<Sidebar items={items} onItemSelect={handleSelect} />);
 
-    await user.click(screen.getByRole('button', { name: /job search/i }));
+    await user.click(screen.getByRole('button', { name: /custom jobs/i }));
 
-    expect(handleSelect).toHaveBeenCalledWith(DEFAULT_SIDEBAR_ITEMS[1]);
+    expect(handleSelect).toHaveBeenCalledWith(items[0]);
   });
 
   it('requests collapsed variant from the toggle button', async () => {
     const user = userEvent.setup();
     const handleVariantChange = vi.fn();
 
-    render(<Sidebar onVariantChange={handleVariantChange} />);
+    renderSidebar(<Sidebar onVariantChange={handleVariantChange} />);
 
     await user.click(screen.getByRole('button', { name: /collapse sidebar/i }));
 
@@ -51,9 +64,10 @@ describe('Sidebar', () => {
   });
 
   it('renders bottom navigation for mobile mode', () => {
-    render(<Sidebar mobileMode="bottomNav" />);
+    renderSidebar(<Sidebar mobileMode="bottomNav" />);
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('button')).toHaveLength(5);
+    expect(screen.getAllByRole('link')).toHaveLength(2);
+    expect(screen.getAllByRole('button')).toHaveLength(3);
   });
 });
