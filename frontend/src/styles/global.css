@@ -72,6 +72,13 @@ h1 {
   overflow: hidden;
   padding: 1.5rem;
 }
+.home-content {
+  align-content: center;
+  display: grid;
+  justify-items: center;
+  min-height: 100%;
+  text-align: center;
+}
 .profile-card {
   background: white;
   border: 1px solid #dfe7f6;
