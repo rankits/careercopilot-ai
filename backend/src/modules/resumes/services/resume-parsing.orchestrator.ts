@@ -27,6 +27,8 @@ export interface ResumeReparseInput {
   reason?: string;
 }
 
+const sanitizeExtractedText = (value: string): string => value.replace(/\u0000/g, "");
+
 const runParsingPipeline = async (input: {
   resumeId: string;
   userId: string;
@@ -36,6 +38,7 @@ const runParsingPipeline = async (input: {
   fileName: string;
   sourceHash: string;
 }): Promise<void> => {
+  const extractedText = sanitizeExtractedText(input.extractedText);
   const parserVersion =
     resumeConfig.parserEngine === "AI"
       ? `${resumeConfig.ai.provider}:${resumeConfig.ai.model}`
@@ -58,11 +61,11 @@ const runParsingPipeline = async (input: {
       status: ResumeParseStatus.EXTRACTING_TEXT,
     });
 
-    const quality = extractionQualityService.analyze(input.extractedText);
+    const quality = extractionQualityService.analyze(extractedText);
 
     await resumeRepository.updateParseRun(parseRun.id, {
       status: ResumeParseStatus.CHECKING_EXTRACTION,
-      extractedTextHash: createHash("sha256").update(input.extractedText).digest("hex"),
+      extractedTextHash: createHash("sha256").update(extractedText).digest("hex"),
       confidence: quality.score,
       warnings: quality.warnings,
       requiresReview: quality.requiresReview,
@@ -71,7 +74,7 @@ const runParsingPipeline = async (input: {
     jobsLogger.info(
       {
         resumeId: input.resumeId,
-        extractedTextLength: input.extractedText.length,
+        extractedTextLength: extractedText.length,
         quality,
       },
       "Resume text extracted",
@@ -83,7 +86,7 @@ const runParsingPipeline = async (input: {
 
     const parser = createResumeParser();
     const parsed = await parser.parseResume({
-      extractedText: input.extractedText,
+      extractedText,
       document: {
         buffer: input.buffer,
         mimeType: input.mimeType,
@@ -102,7 +105,7 @@ const runParsingPipeline = async (input: {
     await resumeRepository.createExtraction({
       resumeId: input.resumeId,
       parseRunId: parseRun.id,
-      extractedText: input.extractedText,
+      extractedText,
       extractedData: normalizedData,
       parserVersion: parsed.parserVersion,
       confidenceScore: parsed.confidenceScore ?? quality.score,
@@ -162,7 +165,7 @@ export const resumeParsingOrchestrator = {
       await runParsingPipeline({
         resumeId: input.resumeId,
         userId: input.userId,
-        extractedText,
+        extractedText: sanitizeExtractedText(extractedText),
         buffer: input.buffer,
         mimeType: input.mimeType,
         fileName: input.fileName,
@@ -186,11 +189,11 @@ export const resumeParsingOrchestrator = {
     await runParsingPipeline({
       resumeId: input.resumeId,
       userId: input.userId,
-      extractedText: input.extractedText,
-      buffer: Buffer.from(input.extractedText, "utf8"),
+      extractedText: sanitizeExtractedText(input.extractedText),
+      buffer: Buffer.from(sanitizeExtractedText(input.extractedText), "utf8"),
       mimeType: input.mimeType,
       fileName: input.fileName,
-      sourceHash: createHash("sha256").update(input.extractedText).digest("hex"),
+      sourceHash: createHash("sha256").update(sanitizeExtractedText(input.extractedText)).digest("hex"),
     });
   },
 };

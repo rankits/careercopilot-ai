@@ -63,6 +63,8 @@ export interface UpdateResumeParseRunInput {
   completedAt?: Date;
 }
 
+const sanitizeText = (value: string): string => value.replace(/\u0000/g, "");
+
 export const resumeRepository = {
   createResume(input: CreateResumeRecordInput): Promise<Resume> {
     return prisma.resume.create({
@@ -172,7 +174,7 @@ export const resumeRepository = {
       data: {
         resumeId: input.resumeId,
         parseRunId: input.parseRunId,
-        extractedText: input.extractedText,
+        extractedText: sanitizeText(input.extractedText),
         extractedData: input.extractedData as unknown as Prisma.InputJsonValue,
         parserVersion: input.parserVersion,
         confidenceScore: input.confidenceScore,
