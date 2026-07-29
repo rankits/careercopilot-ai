@@ -1,10 +1,10 @@
 export const palette = {
   blue50: '#f4f7ff',
   blue100: '#ede9ff',
-  blue500: '#886cff',
-  blue600: '#635bff',
-  blue700: '#4f46e5',
-  blue800: '#3f2bc2',
+  blue500: '#C190F6',
+  blue600: '#8230F0',
+  blue700: '#591EC2',
+  blue800: '#3F168C',
   green50: '#f0fdf4',
   green100: '#dcfce7',
   green600: '#16a34a',
@@ -30,6 +30,7 @@ export const palette = {
 
 export const colorTokens = {
   actionPrimary: palette.blue600,
+  actionPrimaryGradient: 'linear-gradient(135deg, #591EC2 0%, #8230F0 55%, #C190F6 100%)',
   actionPrimaryHover: palette.blue700,
   actionPrimaryActive: palette.blue800,
   actionPrimarySurface: palette.blue50,
