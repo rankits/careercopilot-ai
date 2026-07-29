@@ -10,9 +10,9 @@ import { vi } from "vitest";
  * Kept self-contained (no outer variable references) for the same
  * hoisting reason as prisma-mock.ts.
  */
-vi.mock("../../src/infrastructure/messaging/index.js", async () => {
-  const actual = await vi.importActual<typeof import("../../src/infrastructure/messaging/index.js")>(
-    "../../src/infrastructure/messaging/index.js",
+vi.mock("@/infrastructure/messaging/index.js", async () => {
+  const actual = await vi.importActual<typeof import("@/infrastructure/messaging/index.js")>(
+    "@/infrastructure/messaging/index.js",
   );
   return {
     ...actual,
@@ -26,7 +26,7 @@ vi.mock("../../src/infrastructure/messaging/index.js", async () => {
   };
 });
 
-import { messageBus } from "../../src/infrastructure/messaging/index.js";
+import { messageBus } from "@/infrastructure/messaging/index.js";
 
 export const publishEventMock = messageBus.publishEvent as unknown as ReturnType<typeof vi.fn>;
 

@@ -1,8 +1,8 @@
 import { describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
-import app, { fakeDb } from "../helpers/app.js";
-import { resetTestState } from "../helpers/reset.js";
-import { seedVerifiedUser, accessTokenForUser, authHeader } from "../helpers/fixtures.js";
+import app, { fakeDb } from "@/test-utils/app.js";
+import { resetTestState } from "@/test-utils/reset.js";
+import { seedVerifiedUser, accessTokenForUser, authHeader } from "@/test-utils/fixtures.js";
 
 const API = "/api/v1/users";
 
