@@ -85,6 +85,7 @@ const runParsingPipeline = async (input: {
     });
 
     const parser = createResumeParser();
+
     const parsed = await parser.parseResume({
       extractedText,
       document: {
@@ -93,8 +94,22 @@ const runParsingPipeline = async (input: {
         fileName: input.fileName,
       },
     });
-
     const normalizedData = resumeNormaliserService.normalize(parsed.data);
+
+    jobsLogger.info(
+      {
+        resumeId: input.resumeId,
+        parserVersion: parsed.parserVersion,
+        mappedResumePreview: {
+          personalDetails: normalizedData.personalDetails,
+          experienceCount: normalizedData.experience.length,
+          educationCount: normalizedData.education.length,
+          skillsCount: normalizedData.skills.length,
+          certificationsCount: normalizedData.certifications.length,
+        },
+      },
+      "Resume payload mapped to application model",
+    );
 
     await resumeRepository.updateParseRun(parseRun.id, {
       status: ResumeParseStatus.VALIDATING,
