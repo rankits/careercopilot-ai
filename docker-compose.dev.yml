@@ -74,6 +74,8 @@ services:
       REDIS_HOST: redis_dev
       REDIS_PORT: 6379
       RABBITMQ_URL: amqp://guest:guest@rabbitmq_dev:5672
+      LOGGING_ENABLED: "true"
+      LOG_PRETTY: "true"
     volumes:
       # Mount local backend code for tsx hot-reloading
       - ./backend:/app

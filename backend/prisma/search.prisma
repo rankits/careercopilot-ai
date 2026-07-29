@@ -1,0 +1,9 @@
+model IndexState {
+  jobId           String   @id @map("job_id")
+  databaseVersion Int      @map("database_version")
+  indexedVersion  Int      @map("indexed_version")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([databaseVersion, indexedVersion])
+  @@map("index_states")
+}
