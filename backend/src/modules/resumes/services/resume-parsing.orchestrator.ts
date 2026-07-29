@@ -1,14 +1,14 @@
-import { createHash } from "node:crypto";
-import { ResumeStatus } from "@prisma/client";
-import { resumeConfig } from "@/modules/resumes/config/resume.config.js";
-import { createResumeParser } from "@/modules/resumes/parsers/parser.factory.js";
-import { resumeFieldMapper } from "@/modules/resumes/mappers/resume-field.mapper.js";
-import { resumeNormaliserService } from "@/modules/resumes/normalisation/resume-normaliser.service.js";
-import { resumeRepository } from "@/modules/resumes/repositories/resume.repository.js";
-import { textExtractionService } from "@/modules/resumes/services/text-extraction.service.js";
-import { extractionQualityService } from "@/modules/resumes/services/extraction-quality.service.js";
-import { jobsLogger } from "@/shared/utils/logger.js";
-import { ResumeParseStatus } from "@/modules/resumes/domain/resume-parser-status.js";
+import { createHash } from 'node:crypto';
+import { ResumeStatus } from '@prisma/client';
+import { resumeConfig } from '@/modules/resumes/config/resume.config.js';
+import { createResumeParser } from '@/modules/resumes/parsers/parser.factory.js';
+import { resumeFieldMapper } from '@/modules/resumes/mappers/resume-field.mapper.js';
+import { resumeNormaliserService } from '@/modules/resumes/normalisation/resume-normaliser.service.js';
+import { resumeRepository } from '@/modules/resumes/repositories/resume.repository.js';
+import { textExtractionService } from '@/modules/resumes/services/text-extraction.service.js';
+import { extractionQualityService } from '@/modules/resumes/services/extraction-quality.service.js';
+import { jobsLogger } from '@/shared/utils/logger.js';
+import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
 
 export interface ResumeParseInput {
   resumeId: string;
@@ -27,7 +27,7 @@ export interface ResumeReparseInput {
   reason?: string;
 }
 
-const sanitizeExtractedText = (value: string): string => value.replace(/\u0000/g, "");
+const sanitizeExtractedText = (value: string): string => value.replace(/\u0000/g, '');
 
 const runParsingPipeline = async (input: {
   resumeId: string;
@@ -40,18 +40,18 @@ const runParsingPipeline = async (input: {
 }): Promise<void> => {
   const extractedText = sanitizeExtractedText(input.extractedText);
   const parserVersion =
-    resumeConfig.parserEngine === "AI"
+    resumeConfig.parserEngine === 'AI'
       ? `${resumeConfig.ai.provider}:${resumeConfig.ai.model}`
-      : "rule-based-v1";
+      : 'rule-based-v1';
 
   const parseRun = await resumeRepository.createParseRun({
     resumeId: input.resumeId,
     status: ResumeParseStatus.QUEUED,
     attemptNumber: 1,
-    provider: resumeConfig.parserEngine === "AI" ? resumeConfig.ai.provider : "rule-based",
+    provider: resumeConfig.parserEngine === 'AI' ? resumeConfig.ai.provider : 'rule-based',
     model: parserVersion,
-    promptVersion: resumeConfig.parserEngine === "AI" ? "resume-parser-v2" : "rule-based-v1",
-    schemaVersion: resumeConfig.parserEngine === "AI" ? "resume-schema-v2" : "rule-based-v1",
+    promptVersion: resumeConfig.parserEngine === 'AI' ? 'resume-parser-v1' : 'rule-based-v1',
+    schemaVersion: 'resume-schema-v1',
     sourceHash: input.sourceHash,
     startedAt: new Date(),
   });
@@ -65,7 +65,7 @@ const runParsingPipeline = async (input: {
 
     await resumeRepository.updateParseRun(parseRun.id, {
       status: ResumeParseStatus.CHECKING_EXTRACTION,
-      extractedTextHash: createHash("sha256").update(extractedText).digest("hex"),
+      extractedTextHash: createHash('sha256').update(extractedText).digest('hex'),
       confidence: quality.score,
       warnings: quality.warnings,
       requiresReview: quality.requiresReview,
@@ -77,7 +77,7 @@ const runParsingPipeline = async (input: {
         extractedTextLength: extractedText.length,
         quality,
       },
-      "Resume text extracted",
+      'Resume text extracted',
     );
 
     await resumeRepository.updateParseRun(parseRun.id, {
@@ -85,6 +85,7 @@ const runParsingPipeline = async (input: {
     });
 
     const parser = createResumeParser();
+    // console.log("Parsed text ", extractedText);
 
     const parsed = await parser.parseResume({
       extractedText,
@@ -94,22 +95,8 @@ const runParsingPipeline = async (input: {
         fileName: input.fileName,
       },
     });
+    console.log('Parsed data ', parsed);
     const normalizedData = resumeNormaliserService.normalize(parsed.data);
-
-    jobsLogger.info(
-      {
-        resumeId: input.resumeId,
-        parserVersion: parsed.parserVersion,
-        mappedResumePreview: {
-          personalDetails: normalizedData.personalDetails,
-          experienceCount: normalizedData.experience.length,
-          educationCount: normalizedData.education.length,
-          skillsCount: normalizedData.skills.length,
-          certificationsCount: normalizedData.certifications.length,
-        },
-      },
-      "Resume payload mapped to application model",
-    );
 
     await resumeRepository.updateParseRun(parseRun.id, {
       status: ResumeParseStatus.VALIDATING,
@@ -133,7 +120,9 @@ const runParsingPipeline = async (input: {
     });
 
     await resumeRepository.updateParseRun(parseRun.id, {
-      status: quality.requiresReview ? ResumeParseStatus.NEEDS_REVIEW : ResumeParseStatus.NORMALISING,
+      status: quality.requiresReview
+        ? ResumeParseStatus.NEEDS_REVIEW
+        : ResumeParseStatus.NORMALISING,
       completedAt: new Date(),
     });
 
@@ -145,7 +134,7 @@ const runParsingPipeline = async (input: {
     });
     await resumeRepository.updateResumeStatus(input.resumeId, ResumeStatus.PROCESSED);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Resume processing failed";
+    const message = error instanceof Error ? error.message : 'Resume processing failed';
     await resumeRepository
       .updateParseRun(parseRun.id, {
         status: ResumeParseStatus.FAILED,
@@ -161,7 +150,7 @@ const runParsingPipeline = async (input: {
         userId: input.userId,
         error: message,
       },
-      "Resume parsing orchestration failed",
+      'Resume parsing orchestration failed',
     );
   }
 };
@@ -184,10 +173,10 @@ export const resumeParsingOrchestrator = {
         buffer: input.buffer,
         mimeType: input.mimeType,
         fileName: input.fileName,
-        sourceHash: createHash("sha256").update(input.buffer).digest("hex"),
+        sourceHash: createHash('sha256').update(input.buffer).digest('hex'),
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Resume processing failed";
+      const message = error instanceof Error ? error.message : 'Resume processing failed';
       await resumeRepository.updateResumeStatus(input.resumeId, ResumeStatus.FAILED, message);
 
       jobsLogger.error(
@@ -196,7 +185,7 @@ export const resumeParsingOrchestrator = {
           userId: input.userId,
           error: message,
         },
-        "Resume parsing orchestration failed",
+        'Resume parsing orchestration failed',
       );
     }
   },
@@ -205,10 +194,12 @@ export const resumeParsingOrchestrator = {
       resumeId: input.resumeId,
       userId: input.userId,
       extractedText: sanitizeExtractedText(input.extractedText),
-      buffer: Buffer.from(sanitizeExtractedText(input.extractedText), "utf8"),
+      buffer: Buffer.from(sanitizeExtractedText(input.extractedText), 'utf8'),
       mimeType: input.mimeType,
       fileName: input.fileName,
-      sourceHash: createHash("sha256").update(sanitizeExtractedText(input.extractedText)).digest("hex"),
+      sourceHash: createHash('sha256')
+        .update(sanitizeExtractedText(input.extractedText))
+        .digest('hex'),
     });
   },
 };
