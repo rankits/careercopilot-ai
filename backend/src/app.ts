@@ -1,10 +1,10 @@
 import express from "express";
-import preMiddlewares from "./preMiddlewares.js";
-import apiV1Routes from "./routes.js";
-import { errorHandler } from "./shared/middlewares/errorHandler.js";
-import { responseInterceptor } from "./shared/interceptors/response.interceptor.js";
-import { endpointNotFound } from "./shared/middlewares/endpointNotFound.js";
-import securityMiddlewares from "./securityMiddlewares.js";
+import preMiddlewares from "@/preMiddlewares.js";
+import apiV1Routes from "@/routes.js";
+import { errorHandler } from "@/shared/middlewares/errorHandler.js";
+import { responseInterceptor } from "@/shared/interceptors/response.interceptor.js";
+import { endpointNotFound } from "@/shared/middlewares/endpointNotFound.js";
+import securityMiddlewares from "@/securityMiddlewares.js";
 
 const app = express();
 

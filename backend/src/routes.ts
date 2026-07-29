@@ -1,6 +1,6 @@
 import express from "express";
-import { successResponse } from "./shared/utils/response.js";
-import { authRoutes } from "./modules/auth/index.js";
+import { successResponse } from "@/shared/utils/response.js";
+import { authRoutes } from "@/modules/auth/index.js";
 
 const router = express.Router();
 

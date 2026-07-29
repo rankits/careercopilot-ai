@@ -5,8 +5,8 @@ import {
   MessageEnvelope,
   PublishOptions,
   SubscribeOptions,
-} from "../messaging.interface.js";
-import { QoSPresets } from "../messaging.topology.js";
+} from "@/infrastructure/messaging/messaging.interface.js";
+import { QoSPresets } from "@/infrastructure/messaging/messaging.topology.js";
 
 export class RabbitMQBusDriver implements IMessageBusDriver {
   private connection: ChannelModel | null = null;

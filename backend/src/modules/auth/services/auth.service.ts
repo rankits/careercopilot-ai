@@ -1,14 +1,14 @@
 import bcrypt from "bcrypt";
-import { authRepository } from "../repositories/auth.repository.js";
-import { AppError } from "../../../shared/utils/errors/AppError.js";
-import { generateAccessToken, generateRefreshToken } from "../utils/token.utils.js";
-import { SigninInput } from "../types/auth.types.js";
-import { cacheService, CacheKeys, CacheTTL } from "../../../infrastructure/cache/index.js";
+import { authRepository } from "@/modules/auth/repositories/auth.repository.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { generateAccessToken, generateRefreshToken } from "@/modules/auth/utils/token.utils.js";
+import { SigninInput } from "@/modules/auth/types/auth.types.js";
+import { cacheService, CacheKeys, CacheTTL } from "@/infrastructure/cache/index.js";
 import {
   messageBus,
   MessageExchanges,
   MessageRoutingKeys,
-} from "../../../infrastructure/messaging/index.js";
+} from "@/infrastructure/messaging/index.js";
 
 export const signinService = async ({ email, password }: SigninInput) => {
   const normalizedEmail = email.trim().toLowerCase();
