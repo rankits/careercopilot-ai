@@ -18,120 +18,158 @@ export interface ResumeParseInput {
   fileName: string;
 }
 
+export interface ResumeReparseInput {
+  resumeId: string;
+  userId: string;
+  extractedText: string;
+  mimeType: string;
+  fileName: string;
+  reason?: string;
+}
+
+const runParsingPipeline = async (input: {
+  resumeId: string;
+  userId: string;
+  extractedText: string;
+  buffer: Buffer;
+  mimeType: string;
+  fileName: string;
+  sourceHash: string;
+}): Promise<void> => {
+  const parserVersion =
+    resumeConfig.parserEngine === "AI"
+      ? `${resumeConfig.ai.provider}:${resumeConfig.ai.model}`
+      : "rule-based-v1";
+
+  const parseRun = await resumeRepository.createParseRun({
+    resumeId: input.resumeId,
+    status: ResumeParseStatus.QUEUED,
+    attemptNumber: 1,
+    provider: resumeConfig.parserEngine === "AI" ? resumeConfig.ai.provider : "rule-based",
+    model: parserVersion,
+    promptVersion: resumeConfig.parserEngine === "AI" ? "resume-parser-v1" : "rule-based-v1",
+    schemaVersion: "resume-schema-v1",
+    sourceHash: input.sourceHash,
+    startedAt: new Date(),
+  });
+
+  try {
+    await resumeRepository.updateParseRun(parseRun.id, {
+      status: ResumeParseStatus.EXTRACTING_TEXT,
+    });
+
+    const quality = extractionQualityService.analyze(input.extractedText);
+
+    await resumeRepository.updateParseRun(parseRun.id, {
+      status: ResumeParseStatus.CHECKING_EXTRACTION,
+      extractedTextHash: createHash("sha256").update(input.extractedText).digest("hex"),
+      confidence: quality.score,
+      warnings: quality.warnings,
+      requiresReview: quality.requiresReview,
+    });
+
+    jobsLogger.info(
+      {
+        resumeId: input.resumeId,
+        extractedTextLength: input.extractedText.length,
+        quality,
+      },
+      "Resume text extracted",
+    );
+
+    await resumeRepository.updateParseRun(parseRun.id, {
+      status: ResumeParseStatus.PARSING,
+    });
+
+    const parser = createResumeParser();
+    const parsed = await parser.parseResume({
+      extractedText: input.extractedText,
+      document: {
+        buffer: input.buffer,
+        mimeType: input.mimeType,
+        fileName: input.fileName,
+      },
+    });
+
+    const normalizedData = resumeNormaliserService.normalize(parsed.data);
+
+    await resumeRepository.updateParseRun(parseRun.id, {
+      status: ResumeParseStatus.VALIDATING,
+      parsedData: normalizedData,
+      confidence: parsed.confidenceScore ?? quality.score,
+    });
+
+    await resumeRepository.createExtraction({
+      resumeId: input.resumeId,
+      parseRunId: parseRun.id,
+      extractedText: input.extractedText,
+      extractedData: normalizedData,
+      parserVersion: parsed.parserVersion,
+      confidenceScore: parsed.confidenceScore ?? quality.score,
+    });
+
+    const onboardingPayload = resumeFieldMapper.toOnboardingProfile({
+      userId: input.userId,
+      resumeId: input.resumeId,
+      parsedData: normalizedData,
+    });
+
+    await resumeRepository.updateParseRun(parseRun.id, {
+      status: quality.requiresReview ? ResumeParseStatus.NEEDS_REVIEW : ResumeParseStatus.NORMALISING,
+      completedAt: new Date(),
+    });
+
+    await resumeRepository.upsertCandidateProfile(onboardingPayload);
+    await resumeRepository.updateParseRun(parseRun.id, {
+      status: quality.requiresReview ? ResumeParseStatus.NEEDS_REVIEW : ResumeParseStatus.COMPLETED,
+      requiresReview: quality.requiresReview,
+      completedAt: new Date(),
+    });
+    await resumeRepository.updateResumeStatus(input.resumeId, ResumeStatus.PROCESSED);
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Resume processing failed";
+    await resumeRepository
+      .updateParseRun(parseRun.id, {
+        status: ResumeParseStatus.FAILED,
+        errorMessage: message,
+        completedAt: new Date(),
+      })
+      .catch(() => undefined);
+    await resumeRepository.updateResumeStatus(input.resumeId, ResumeStatus.FAILED, message);
+
+    jobsLogger.error(
+      {
+        resumeId: input.resumeId,
+        userId: input.userId,
+        error: message,
+      },
+      "Resume parsing orchestration failed",
+    );
+  }
+};
+
 export const resumeParsingOrchestrator = {
   async parseUploadedResume(input: ResumeParseInput): Promise<void> {
     await resumeRepository.updateResumeStatus(input.resumeId, ResumeStatus.PROCESSING);
-    let parseRunId: string | null = null;
 
     try {
-      const sourceHash = createHash("sha256").update(input.buffer).digest("hex");
-      const parserVersion =
-        resumeConfig.parserEngine === "AI"
-          ? `${resumeConfig.ai.provider}:${resumeConfig.ai.model}`
-          : "rule-based-v1";
-
-      const parseRun = await resumeRepository.createParseRun({
-        resumeId: input.resumeId,
-        status: ResumeParseStatus.QUEUED,
-        attemptNumber: 1,
-        provider: resumeConfig.parserEngine === "AI" ? resumeConfig.ai.provider : "rule-based",
-        model: parserVersion,
-        promptVersion: resumeConfig.parserEngine === "AI" ? "resume-parser-v1" : "rule-based-v1",
-        schemaVersion: "resume-schema-v1",
-        sourceHash,
-        startedAt: new Date(),
-      });
-      parseRunId = parseRun.id;
-
-      await resumeRepository.updateParseRun(parseRun.id, {
-        status: ResumeParseStatus.EXTRACTING_TEXT,
-      });
-
       const extractedText = await textExtractionService.extractText({
         buffer: input.buffer,
         mimeType: input.mimeType,
         fileName: input.fileName,
       });
 
-      const quality = extractionQualityService.analyze(extractedText);
-
-      await resumeRepository.updateParseRun(parseRun.id, {
-        status: ResumeParseStatus.CHECKING_EXTRACTION,
-        extractedTextHash: createHash("sha256").update(extractedText).digest("hex"),
-        confidence: quality.score,
-        warnings: quality.warnings,
-        requiresReview: quality.requiresReview,
-      });
-
-      jobsLogger.info(
-        {
-          resumeId: input.resumeId,
-          extractedTextLength: extractedText.length,
-          quality,
-        },
-        "Resume text extracted",
-      );
-
-      await resumeRepository.updateParseRun(parseRun.id, {
-        status: ResumeParseStatus.PARSING,
-      });
-
-      const parser = createResumeParser();
-      const parsed = await parser.parseResume({
-        document: {
-          buffer: input.buffer,
-          mimeType: input.mimeType,
-          fileName: input.fileName,
-        },
-        extractedText,
-      });
-
-      const normalizedData = resumeNormaliserService.normalize(parsed.data);
-
-      await resumeRepository.updateParseRun(parseRun.id, {
-        status: ResumeParseStatus.VALIDATING,
-        parsedData: normalizedData,
-        confidence: parsed.confidenceScore ?? quality.score,
-      });
-
-      await resumeRepository.createExtraction({
+      await runParsingPipeline({
         resumeId: input.resumeId,
-        parseRunId: parseRun.id,
-        extractedText,
-        extractedData: normalizedData,
-        parserVersion: parsed.parserVersion,
-        confidenceScore: parsed.confidenceScore ?? quality.score,
-      });
-
-      const onboardingPayload = resumeFieldMapper.toOnboardingProfile({
         userId: input.userId,
-        resumeId: input.resumeId,
-        parsedData: normalizedData,
+        extractedText,
+        buffer: input.buffer,
+        mimeType: input.mimeType,
+        fileName: input.fileName,
+        sourceHash: createHash("sha256").update(input.buffer).digest("hex"),
       });
-
-      await resumeRepository.updateParseRun(parseRun.id, {
-        status: quality.requiresReview ? ResumeParseStatus.NEEDS_REVIEW : ResumeParseStatus.NORMALISING,
-        completedAt: new Date(),
-      });
-
-      await resumeRepository.upsertCandidateProfile(onboardingPayload);
-      await resumeRepository.updateParseRun(parseRun.id, {
-        status: quality.requiresReview ? ResumeParseStatus.NEEDS_REVIEW : ResumeParseStatus.COMPLETED,
-        requiresReview: quality.requiresReview,
-        completedAt: new Date(),
-      });
-      await resumeRepository.updateResumeStatus(input.resumeId, ResumeStatus.PROCESSED);
     } catch (error) {
       const message = error instanceof Error ? error.message : "Resume processing failed";
-      if (parseRunId) {
-        await resumeRepository
-          .updateParseRun(parseRunId, {
-            status: ResumeParseStatus.FAILED,
-            errorMessage: message,
-            completedAt: new Date(),
-          })
-          .catch(() => undefined);
-      }
       await resumeRepository.updateResumeStatus(input.resumeId, ResumeStatus.FAILED, message);
 
       jobsLogger.error(
@@ -143,5 +181,16 @@ export const resumeParsingOrchestrator = {
         "Resume parsing orchestration failed",
       );
     }
+  },
+  async parseExistingResume(input: ResumeReparseInput): Promise<void> {
+    await runParsingPipeline({
+      resumeId: input.resumeId,
+      userId: input.userId,
+      extractedText: input.extractedText,
+      buffer: Buffer.from(input.extractedText, "utf8"),
+      mimeType: input.mimeType,
+      fileName: input.fileName,
+      sourceHash: createHash("sha256").update(input.extractedText).digest("hex"),
+    });
   },
 };

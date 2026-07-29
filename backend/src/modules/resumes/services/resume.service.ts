@@ -7,6 +7,8 @@ import { resumeRepository } from "@/modules/resumes/repositories/resume.reposito
 import { createResumeStorage } from "@/modules/resumes/storage/resume-storage.factory.js";
 import { ParsedResumeData } from "@/modules/resumes/types/resume.types.js";
 import { resumeProcessingService } from "@/modules/resumes/services/resume-processing.service.js";
+import { resumeParsingOrchestrator } from "@/modules/resumes/services/resume-parsing.orchestrator.js";
+import { ResumeParseStatus } from "@/modules/resumes/domain/resume-parser-status.js";
 
 const PUBLIC_USER_ID = "public";
 
@@ -95,18 +97,131 @@ export const resumeService = {
       throw new AppError("Resume not found", 404);
     }
 
-    const extraction = await resumeRepository.findLatestExtraction(resumeId);
-    if (!extraction) {
+    const parseRun = await resumeRepository.findLatestParseRun(resumeId);
+    if (!parseRun) {
       throw new AppError("Resume parsed data is not available yet", 404);
     }
 
     return {
       resumeId,
       status: resume.status,
-      parserVersion: extraction.parserVersion,
-      confidenceScore: extraction.confidenceScore,
-      extractedData: extraction.extractedData,
-      createdAt: extraction.createdAt,
+      parseRunId: parseRun.id,
+      parserVersion: parseRun.extraction?.parserVersion ?? parseRun.model,
+      confidenceScore: parseRun.confidence ?? parseRun.extraction?.confidenceScore ?? null,
+      extractedData: parseRun.parsedData ?? parseRun.extraction?.extractedData ?? null,
+      createdAt: parseRun.createdAt,
+    };
+  },
+
+  async getParseStatus(resumeId: string) {
+    const resume = await resumeRepository.findResumeById(resumeId);
+    if (!resume) {
+      throw new AppError("Resume not found", 404);
+    }
+
+    const parseRun = await resumeRepository.findLatestParseRun(resumeId);
+    if (!parseRun) {
+      throw new AppError("Resume has not been parsed yet", 404);
+    }
+
+    const stepByStatus: Record<ResumeParseStatus, string> = {
+      QUEUED: "QUEUED",
+      EXTRACTING_TEXT: "EXTRACTING_TEXT",
+      CHECKING_EXTRACTION: "CHECKING_EXTRACTION",
+      PARSING: "PARSING",
+      VALIDATING: "VALIDATING",
+      NORMALISING: "NORMALISING",
+      COMPLETED: "COMPLETED",
+      NEEDS_REVIEW: "NEEDS_REVIEW",
+      FAILED: "FAILED",
+    };
+
+    const progressByStatus: Record<ResumeParseStatus, number> = {
+      QUEUED: 5,
+      EXTRACTING_TEXT: 20,
+      CHECKING_EXTRACTION: 35,
+      PARSING: 60,
+      VALIDATING: 80,
+      NORMALISING: 90,
+      COMPLETED: 100,
+      NEEDS_REVIEW: 100,
+      FAILED: 100,
+    };
+
+    return {
+      resumeId,
+      parseRunId: parseRun.id,
+      status: parseRun.status,
+      currentStep: stepByStatus[parseRun.status],
+      progress: progressByStatus[parseRun.status],
+      requiresReview: parseRun.requiresReview,
+      warnings: parseRun.warnings,
+      startedAt: parseRun.startedAt,
+      completedAt: parseRun.completedAt,
+      updatedAt: parseRun.updatedAt,
+      resumeStatus: resume.status,
+    };
+  },
+
+  async startParse(resumeId: string) {
+    const resume = await resumeRepository.findResumeById(resumeId);
+    if (!resume) {
+      throw new AppError("Resume not found", 404);
+    }
+
+    const extraction = await resumeRepository.findLatestExtraction(resumeId);
+    if (!extraction?.extractedText) {
+      throw new AppError("Resume parsed data is not available yet", 404);
+    }
+
+    const userId = resume.userId ?? PUBLIC_USER_ID;
+    const fileName = resume.fileName;
+    const mimeType = resume.mimeType;
+
+    setImmediate(() => {
+      void resumeParsingOrchestrator.parseExistingResume({
+        resumeId,
+        userId,
+        extractedText: extraction.extractedText ?? "",
+        mimeType,
+        fileName,
+      });
+    });
+
+    return {
+      resumeId,
+      status: "QUEUED" as const,
+    };
+  },
+
+  async reparseResume(resumeId: string, reason?: string) {
+    const resume = await resumeRepository.findResumeById(resumeId);
+    if (!resume) {
+      throw new AppError("Resume not found", 404);
+    }
+
+    const extraction = await resumeRepository.findLatestExtraction(resumeId);
+    if (!extraction?.extractedText) {
+      throw new AppError("Resume parsed data is not available yet", 404);
+    }
+
+    const userId = resume.userId ?? PUBLIC_USER_ID;
+
+    setImmediate(() => {
+      void resumeParsingOrchestrator.parseExistingResume({
+        resumeId,
+        userId,
+        extractedText: extraction.extractedText ?? "",
+        mimeType: resume.mimeType,
+        fileName: resume.fileName,
+        reason,
+      });
+    });
+
+    return {
+      resumeId,
+      status: "QUEUED" as const,
+      reason,
     };
   },
 

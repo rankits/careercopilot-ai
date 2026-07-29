@@ -110,12 +110,12 @@ export interface CanonicalResume {
 }
 
 export interface ResumeParserInput {
-  document: {
-    buffer: Buffer;
-    mimeType: string;
-    fileName: string;
-  };
   extractedText: string;
+  document?: {
+    buffer?: Buffer;
+    mimeType?: string;
+    fileName?: string;
+  };
 }
 
 export interface ResumeParserResult {
