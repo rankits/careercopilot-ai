@@ -24,6 +24,81 @@ const toNullableText = (value: unknown): string | null => {
   return text.length > 0 ? text : null;
 };
 
+const ensureUrl = (value: string | null | undefined): string | null => {
+  const text = toNullableText(value);
+  if (!text) {
+    return null;
+  }
+
+  return /^https?:\/\//i.test(text) ? text : `https://${text}`;
+};
+
+const MONTHS: Record<string, string> = {
+  jan: "01",
+  feb: "02",
+  mar: "03",
+  apr: "04",
+  may: "05",
+  jun: "06",
+  jul: "07",
+  aug: "08",
+  sep: "09",
+  oct: "10",
+  nov: "11",
+  dec: "12",
+};
+
+const normaliseResumeDate = (value: string | null | undefined): string | null => {
+  if (!value) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  if (/^\d{4}-\d{2}$/.test(trimmed)) {
+    return trimmed;
+  }
+
+  if (/^\d{4}$/.test(trimmed)) {
+    return `${trimmed}-01`;
+  }
+
+  if (/^present$/i.test(trimmed)) {
+    return null;
+  }
+
+  const monthYear = /^([A-Za-z]{3,9})\s+(\d{4})$/.exec(trimmed);
+  if (monthYear) {
+    const month = MONTHS[monthYear[1].slice(0, 3).toLowerCase()];
+    return month ? `${monthYear[2]}-${month}` : null;
+  }
+
+  return null;
+};
+
+const normaliseProficiency = (
+  value: string | null | undefined,
+): "NATIVE" | "BASIC" | "CONVERSATIONAL" | "PROFESSIONAL" | "FLUENT" | null => {
+  switch (value?.trim().toLowerCase()) {
+    case "native":
+      return "NATIVE";
+    case "basic":
+    case "beginner":
+      return "BASIC";
+    case "conversational":
+    case "intermediate":
+      return "CONVERSATIONAL";
+    case "professional":
+    case "working proficiency":
+      return "PROFESSIONAL";
+    case "fluent":
+    case "advanced":
+      return "FLUENT";
+    default:
+      return null;
+  }
+};
+
 const firstDefined = (...values: unknown[]): unknown => values.find((value) => value !== undefined);
 
 const normalizeStringArray = (value: unknown): string[] => {
@@ -72,45 +147,89 @@ const normalizeRecordArray = (value: unknown): Array<Record<string, unknown>> =>
 };
 
 const normalizeLinks = (value: unknown): CanonicalResume["links"] => {
-  const data = isRecord(value) ? value : {};
-  const other = Array.isArray(data.other)
-    ? data.other.flatMap((item) => {
-        if (typeof item === "string") {
-          const url = toText(item);
-          return url ? [{ platform: null, label: null, url }] : [];
-        }
+  const source = Array.isArray(value)
+    ? value
+    : isRecord(value) && Array.isArray(value.other)
+      ? value.other
+      : [];
 
-        if (!isRecord(item)) {
-          return [];
-        }
-
-        const url = toText(item.url ?? item.href ?? item.link);
-        if (!url) {
-          return [];
-        }
-
-        return [
-          {
-            platform: toNullableText(item.platform),
-            label: toNullableText(item.label),
-            url,
-          },
-        ];
-      })
-    : [];
-
-  return {
-    linkedIn: toNullableText(firstDefined(data.linkedIn, data.linkedin)),
-    github: toNullableText(data.github),
-    portfolio: toNullableText(data.portfolio),
-    website: toNullableText(data.website),
-    stackoverflow: toNullableText(data.stackoverflow),
-    leetcode: toNullableText(data.leetcode),
-    hackerrank: toNullableText(data.hackerrank),
-    behance: toNullableText(data.behance),
-    dribbble: toNullableText(data.dribbble),
-    other,
+  const result = {
+    linkedIn: null as string | null,
+    github: null as string | null,
+    portfolio: null as string | null,
+    website: null as string | null,
+    stackoverflow: null as string | null,
+    leetcode: null as string | null,
+    hackerrank: null as string | null,
+    behance: null as string | null,
+    dribbble: null as string | null,
+    other: [] as Array<{
+      platform: string | null;
+      label: string | null;
+      url: string;
+    }>,
   };
+
+  for (const item of source) {
+    if (typeof item === "string") {
+      const url = ensureUrl(item);
+      if (url) {
+        result.other.push({ platform: null, label: null, url });
+      }
+      continue;
+    }
+
+    if (!isRecord(item)) {
+      continue;
+    }
+
+    const platform = toText(item.platform ?? item.type ?? item.name).toLowerCase();
+    const url = ensureUrl(toNullableText(firstDefined(item.url, item.href, item.link)));
+
+    if (!url) {
+      continue;
+    }
+
+    switch (platform) {
+      case "linkedin":
+        result.linkedIn = url;
+        break;
+      case "github":
+        result.github = url;
+        break;
+      case "portfolio":
+        result.portfolio = url;
+        break;
+      case "website":
+      case "personal website":
+        result.website = url;
+        break;
+      case "stackoverflow":
+      case "stack overflow":
+        result.stackoverflow = url;
+        break;
+      case "leetcode":
+        result.leetcode = url;
+        break;
+      case "hackerrank":
+        result.hackerrank = url;
+        break;
+      case "behance":
+        result.behance = url;
+        break;
+      case "dribbble":
+        result.dribbble = url;
+        break;
+      default:
+        result.other.push({
+          platform: toNullableText(item.platform),
+          label: toNullableText(item.label),
+          url,
+        });
+    }
+  }
+
+  return result;
 };
 
 const mapProfessionalLinksToLegacy = (value: CanonicalResume["links"]): Record<string, unknown> => ({
@@ -142,14 +261,15 @@ const mapLocation = (value: unknown): CanonicalResume["personalInformation"]["lo
 const mapPersonalInformation = (value: unknown): CanonicalResume["personalInformation"] => {
   const data = isRecord(value) ? value : {};
   const links = normalizeLinks(firstDefined(data.links, data.socialLinks, data.urls));
+  const location = isRecord(data.location) ? data.location : {};
 
   return {
     fullName: toNullableText(firstDefined(data.fullName, data.full_name, data.name)),
-    firstName: toNullableText(firstDefined(data.firstName, data.first_name)),
-    lastName: toNullableText(firstDefined(data.lastName, data.last_name)),
+    firstName: toNullableText(firstDefined(data.firstName, data.first_name, data.given_name)),
+    lastName: toNullableText(firstDefined(data.lastName, data.last_name, data.family_name)),
     email: toNullableText(data.email),
     phone: toNullableText(data.phone),
-    location: mapLocation(firstDefined(data.location, data.address)),
+    location: mapLocation(firstDefined(location.formatted, data.location, data.address)),
     links: {
       linkedin: links.linkedIn,
       github: links.github,
@@ -210,7 +330,7 @@ const mapExperience = (value: unknown): CanonicalResume["employmentHistory"] => 
       return [];
     }
 
-    const title = toNullableText(firstDefined(item.title, item.position, item.role));
+    const title = toNullableText(firstDefined(item.title, item.position, item.role, item.job_title));
     const company = toNullableText(item.company);
 
     return [
@@ -218,11 +338,12 @@ const mapExperience = (value: unknown): CanonicalResume["employmentHistory"] => 
         company,
         title,
         location: toNullableText(item.location),
-        startDate: toNullableText(firstDefined(item.startDate, item.start_date)),
-        endDate: toNullableText(firstDefined(item.endDate, item.end_date)),
+        startDate: normaliseResumeDate(toNullableText(firstDefined(item.startDate, item.start_date))),
+        endDate: normaliseResumeDate(toNullableText(firstDefined(item.endDate, item.end_date))),
         isCurrent:
           item.isCurrent === true ||
           item.current === true ||
+          toText(item.endDate ?? item.end_date).toLowerCase() === "present" ||
           (!item.endDate && !item.end_date) ||
           item.endDate === null ||
           item.end_date === null,
@@ -253,9 +374,12 @@ const mapProjects = (value: unknown): CanonicalResume["projects"] => {
         name,
         role: toNullableText(item.role),
         company: toNullableText(item.company),
-        startDate: toNullableText(firstDefined(item.startDate, item.start_date)),
-        endDate: toNullableText(firstDefined(item.endDate, item.end_date)),
-        isCurrent: item.isCurrent === true || item.current === true,
+        startDate: normaliseResumeDate(toNullableText(firstDefined(item.startDate, item.start_date))),
+        endDate: normaliseResumeDate(toNullableText(firstDefined(item.endDate, item.end_date))),
+        isCurrent:
+          item.isCurrent === true ||
+          item.current === true ||
+          toText(item.endDate ?? item.end_date).toLowerCase() === "present",
         description: toNullableText(item.description),
         responsibilities: normalizeStringArray(item.responsibilities),
         achievements: normalizeStringArray(item.achievements),
@@ -277,10 +401,10 @@ const mapEducation = (value: unknown): CanonicalResume["education"] => {
     return [
       {
         institution: toNullableText(item.institution),
-        qualification: toNullableText(firstDefined(item.qualification, item.degree)),
+        qualification: toNullableText(firstDefined(item.qualification, item.degree, item.job_title)),
         fieldOfStudy: toNullableText(firstDefined(item.fieldOfStudy, item.field_of_study)),
-        startDate: toNullableText(firstDefined(item.startDate, item.start_date)),
-        endDate: toNullableText(firstDefined(item.endDate, item.end_date)),
+        startDate: normaliseResumeDate(toNullableText(firstDefined(item.startDate, item.start_date))),
+        endDate: normaliseResumeDate(toNullableText(firstDefined(item.endDate, item.end_date))),
         grade: toNullableText(item.grade),
         location: toNullableText(item.location),
       },
@@ -300,8 +424,8 @@ const mapCertifications = (value: unknown): CanonicalResume["certifications"] =>
       {
         name: toNullableText(firstDefined(item.name, item.title)),
         issuer: toNullableText(item.issuer),
-        issueDate: toNullableText(firstDefined(item.issueDate, item.issue_date)),
-        expiryDate: toNullableText(firstDefined(item.expiryDate, item.expiry_date)),
+        issueDate: normaliseResumeDate(toNullableText(firstDefined(item.issueDate, item.issue_date, item.year))),
+        expiryDate: normaliseResumeDate(toNullableText(firstDefined(item.expiryDate, item.expiry_date))),
         credentialId: toNullableText(firstDefined(item.credentialId, item.credential_id)),
         credentialUrl: toNullableText(firstDefined(item.credentialUrl, item.credential_url)),
       },
@@ -330,20 +454,12 @@ const mapLanguages = (value: unknown): CanonicalResume["languages"] => {
       return [];
     }
 
-    const name = toText(item.name);
+    const name = toText(firstDefined(item.name, item.language, item.label));
     if (!name) {
       return [];
     }
 
-    const proficiencyValue = toText(item.proficiency).toUpperCase();
-    const proficiency =
-      proficiencyValue === "NATIVE" ||
-      proficiencyValue === "BASIC" ||
-      proficiencyValue === "CONVERSATIONAL" ||
-      proficiencyValue === "PROFESSIONAL" ||
-      proficiencyValue === "FLUENT"
-        ? (proficiencyValue as LanguageProficiency)
-        : null;
+    const proficiency = normaliseProficiency(toText(firstDefined(item.proficiency, item.level, item.fluency)));
 
     return [
       {
@@ -382,8 +498,32 @@ const mapSkills = (value: unknown): CanonicalResume["skills"] => {
     };
   }
 
+  const groupedSkills = [
+    data.backend,
+    data.frontend,
+    data.data,
+    data.cloudDevops,
+    data.cloud_devops,
+    data.practices,
+    data.tools,
+    data.frameworks,
+    data.softSkills,
+    data.soft_skills,
+    data.domains,
+    data.technical,
+    data.backendTechnologies,
+    data.backend_technologies,
+    data.frontendTechnologies,
+    data.frontend_technologies,
+    data.database,
+    data.databases,
+  ].flatMap(normalizeStringArray);
+
   return {
-    technical: normalizeStringArray(data.technical),
+    technical:
+      normalizeStringArray(data.technical).length > 0
+        ? normalizeStringArray(data.technical)
+        : groupedSkills,
     tools: normalizeStringArray(data.tools),
     frameworks: normalizeStringArray(data.frameworks),
     softSkills: normalizeStringArray(data.softSkills),
@@ -454,6 +594,10 @@ const calculateTotalExperienceMonths = (
 };
 
 const deriveSeniorityLevel = (months: number): ProfessionalSeniorityLevel => {
+  if (months <= 0) {
+    return "UNKNOWN";
+  }
+
   if (months < 12) {
     return "ENTRY";
   }
@@ -525,6 +669,7 @@ const deriveProfessionalLabels = (
 };
 
 const deriveProfessionalProfile = (input: {
+  headline: string | null;
   professionalSummary: string | null;
   currentPosition: { title: string | null; company: string | null };
   experience: CanonicalResume["employmentHistory"];
@@ -540,7 +685,7 @@ const deriveProfessionalProfile = (input: {
     currentTitle;
 
   return {
-    headline: currentTitle ?? primaryRole,
+    headline: input.headline ?? currentTitle ?? primaryRole,
     summary: input.professionalSummary,
     currentTitle,
     primaryRole,
@@ -552,21 +697,73 @@ const deriveProfessionalProfile = (input: {
 
 const buildCanonicalResume = (value: unknown): CanonicalResume => {
   const data = isRecord(value) ? value : {};
-  const personalInformation = mapPersonalInformation(firstDefined(data.personalInformation, data.personal_info));
-  const links = normalizeLinks(firstDefined(data.links, data.personalInformation && isRecord(data.personalInformation) ? data.personalInformation.links : undefined, data.personal_info && isRecord(data.personal_info) ? data.personal_info.links : undefined));
+  const personalInformationRaw = firstDefined(data.personal_information, data.personalInformation, data.personal_info);
+  const personalInformation = mapPersonalInformation(personalInformationRaw);
+  const personalInfoRecord = isRecord(personalInformationRaw) ? personalInformationRaw : {};
+  const links = normalizeLinks(
+    firstDefined(
+      data.links,
+      personalInfoRecord.links,
+      personalInfoRecord.social_links,
+      personalInfoRecord.urls,
+    ),
+  );
   const employmentHistory = mapExperience(firstDefined(data.employmentHistory, data.work_experience, data.workExperience, data.experience));
   const education = mapEducation(firstDefined(data.education, data.academics, data.qualifications));
   const certifications = mapCertifications(firstDefined(data.certifications, data.certificates, data.licenses));
   const skills = mapSkills(firstDefined(data.skills, data.skillBlocks, data.skillset));
   const projects = mapProjects(firstDefined(data.projects, data.projectHighlights, data.project_history));
   const languages = mapLanguages(firstDefined(data.languages, data.spokenLanguages));
-  const professionalSummary = toNullableText(firstDefined(data.professionalSummary, data.summary, data.professional_summary));
+  const professionalSummary = toNullableText(
+    firstDefined(
+      personalInfoRecord.summary,
+      personalInfoRecord.professional_summary,
+      data.professionalSummary,
+      data.summary,
+      data.professional_summary,
+    ),
+  );
+  const professionalHeadline = toNullableText(
+    firstDefined(
+      personalInfoRecord.headline,
+      personalInfoRecord.professional_headline,
+      data.professionalHeadline,
+      data.headline,
+      data.professional_headline,
+    ),
+  );
   const currentPosition = {
-    title: toNullableText(firstDefined(data.currentPosition && isRecord(data.currentPosition) ? data.currentPosition.title : undefined, data.currentTitle, data.current_title)),
-    company: toNullableText(firstDefined(data.currentPosition && isRecord(data.currentPosition) ? data.currentPosition.company : undefined, data.currentCompany, data.current_company)),
+    title: toNullableText(
+      firstDefined(
+        data.currentPosition && isRecord(data.currentPosition) ? data.currentPosition.title : undefined,
+        personalInfoRecord.current_title,
+        personalInfoRecord.headline,
+        data.currentTitle,
+        data.current_title,
+        employmentHistory.find((item) => item.isCurrent)?.title,
+      ),
+    ),
+    company: toNullableText(
+      firstDefined(
+        data.currentPosition && isRecord(data.currentPosition) ? data.currentPosition.company : undefined,
+        personalInfoRecord.current_company,
+        data.currentCompany,
+        data.current_company,
+        employmentHistory.find((item) => item.isCurrent)?.company,
+      ),
+    ),
   };
-  const professionalLabels = mapProfessionalLabels(firstDefined(data.professionalLabels, data.professional_labels, data.labels));
+  const professionalLabels = mapProfessionalLabels(
+    firstDefined(
+      personalInfoRecord.professional_labels,
+      personalInfoRecord.professionalLabels,
+      data.professionalLabels,
+      data.professional_labels,
+      data.labels,
+    ),
+  );
   const professionalProfile = deriveProfessionalProfile({
+    headline: professionalHeadline,
     professionalSummary,
     currentPosition,
     experience: employmentHistory,
@@ -666,7 +863,6 @@ export class AiResumeParser implements ResumeParser {
         schemaVersion: "resume-schema-v2",
       },
     });
-
     const parsed = typeof response === "string" ? JSON.parse(response) : response;
     const canonical = buildCanonicalResume(parsed);
     const parsedData = resumeNormaliserService.normalize(toParsedResumeData(canonical));
