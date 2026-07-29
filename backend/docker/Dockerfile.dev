@@ -9,6 +9,8 @@ WORKDIR /app
 # Cache dependency installation & Prisma client generation layer
 COPY package*.json ./
 COPY prisma ./prisma
+# COPY ENTRY POINT SCRIPT
+COPY docker/entrypoint.sh ./docker/entrypoint.sh
 
 RUN npm install && npx prisma generate
 

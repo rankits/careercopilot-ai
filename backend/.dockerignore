@@ -25,5 +25,7 @@ yarn-error.log*
 
 # Docker config
 docker/
+!docker/
+!docker/entrypoint.sh
 Dockerfile*
 docker-compose*.yml
