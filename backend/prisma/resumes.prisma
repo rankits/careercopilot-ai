@@ -1,0 +1,67 @@
+enum ResumeStatus {
+  UPLOADED
+  PROCESSING
+  PROCESSED
+  FAILED
+}
+
+enum ResumeStorageDriver {
+  LOCAL
+  S3
+}
+
+model Resume {
+  id             String              @id @default(uuid())
+  userId         String?             @map("user_id")
+  fileName       String              @map("file_name")
+  originalName   String              @map("original_name")
+  mimeType       String              @map("mime_type")
+  sizeBytes      Int                 @map("size_bytes")
+  fileUrl        String              @map("file_url")
+  storageKey     String              @map("storage_key")
+  storageDriver  ResumeStorageDriver @default(LOCAL) @map("storage_driver")
+  status         ResumeStatus        @default(UPLOADED)
+  failureReason  String?             @map("failure_reason") @db.Text
+  uploadedAt     DateTime            @default(now()) @map("uploaded_at")
+  processedAt    DateTime?           @map("processed_at")
+  createdAt      DateTime            @default(now()) @map("created_at")
+  updatedAt      DateTime            @updatedAt @map("updated_at")
+
+  extractions    ResumeExtraction[]
+
+  @@index([userId, uploadedAt(sort: Desc)])
+  @@index([status, uploadedAt])
+  @@map("resumes")
+}
+
+model ResumeExtraction {
+  id              String   @id @default(uuid())
+  resumeId        String   @map("resume_id")
+  extractedText   String?  @map("extracted_text") @db.Text
+  extractedData   Json     @map("extracted_data")
+  parserVersion   String   @map("parser_version")
+  confidenceScore Float?   @map("confidence_score")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  resume          Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+
+  @@index([resumeId, createdAt(sort: Desc)])
+  @@map("resume_extractions")
+}
+
+model CandidateProfile {
+  id              String   @id @default(uuid())
+  userId          String   @unique @map("user_id")
+  personalDetails Json     @default("{}") @map("personal_details")
+  experience      Json     @default("[]")
+  education       Json     @default("[]")
+  skills          Json     @default("[]")
+  certifications  Json     @default("[]")
+  sourceResumeId  String?  @map("source_resume_id")
+  confirmedAt     DateTime? @map("confirmed_at")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([sourceResumeId])
+  @@map("candidate_profiles")
+}
