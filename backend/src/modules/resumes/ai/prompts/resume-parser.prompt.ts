@@ -13,6 +13,10 @@ export const RESUME_PARSER_SYSTEM_PROMPT = [
   "7. Preserve names, titles, and institutions as written.",
   "8. Convert dates only when they are unambiguous.",
   "9. Do not classify a skill unless it is present or clearly demonstrated.",
-  "10. Return output matching the supplied schema exactly.",
+  "10. Extract projects separately from employment history.",
+  "11. Generate a concise professional headline and summary using only evidence from the resume.",
+  "12. Identify professional labels only when there is clear evidence.",
+  "13. Extract spoken languages only when explicitly mentioned.",
+  "14. Extract LinkedIn, GitHub, portfolio, and other professional URLs when present.",
+  "15. Return output matching the supplied schema exactly.",
 ].join("\n");
-

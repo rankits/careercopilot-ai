@@ -2,6 +2,14 @@ import { z } from "zod";
 
 const NullableText = z.string().nullable();
 
+const ProfessionalLabelSchema = z.object({
+  label: z.string(),
+  category: z.enum(["ROLE", "SPECIALISATION", "TECH_STACK", "DOMAIN"]),
+  confidence: z.number().min(0).max(1),
+  source: z.enum(["EXPLICIT", "INFERRED"]),
+  evidence: z.array(z.string()),
+});
+
 const EmploymentSchema = z.object({
   company: NullableText,
   title: NullableText,
@@ -13,6 +21,20 @@ const EmploymentSchema = z.object({
   responsibilities: z.array(z.string()),
   achievements: z.array(z.string()),
   technologies: z.array(z.string()),
+});
+
+const ProjectSchema = z.object({
+  name: z.string(),
+  role: NullableText,
+  company: NullableText,
+  startDate: NullableText,
+  endDate: NullableText,
+  isCurrent: z.boolean(),
+  description: NullableText,
+  responsibilities: z.array(z.string()),
+  achievements: z.array(z.string()),
+  technologies: z.array(z.string()),
+  links: z.array(z.string()),
 });
 
 const EducationSchema = z.object({
@@ -34,21 +56,58 @@ const CertificationSchema = z.object({
   credentialUrl: NullableText,
 });
 
-const ProjectSchema = z.object({
-  name: NullableText,
-  description: NullableText,
-  role: NullableText,
-  technologies: z.array(z.string()),
-  url: NullableText,
-});
+const LanguageProficiencySchema = z.enum(["NATIVE", "BASIC", "CONVERSATIONAL", "PROFESSIONAL", "FLUENT"]);
 
 const LanguageSchema = z.object({
   name: z.string(),
-  proficiency: NullableText,
+  proficiency: LanguageProficiencySchema.nullable(),
+  isNative: z.boolean(),
 });
 
-export const CanonicalResumeSchema = z.object({
-  schemaVersion: z.literal("resume-schema-v1"),
+const ProfessionalLinksSchema = z.object({
+  linkedIn: NullableText,
+  github: NullableText,
+  portfolio: NullableText,
+  website: NullableText,
+  stackoverflow: NullableText,
+  leetcode: NullableText,
+  hackerrank: NullableText,
+  behance: NullableText,
+  dribbble: NullableText,
+  other: z.array(
+    z.object({
+      platform: NullableText,
+      label: NullableText,
+      url: z.string(),
+    }),
+  ),
+});
+
+const ProfessionalProfileSchema = z.object({
+  headline: NullableText,
+  summary: NullableText,
+  currentTitle: NullableText,
+  primaryRole: NullableText,
+  seniorityLevel: z
+    .enum([
+      "INTERN",
+      "ENTRY",
+      "JUNIOR",
+      "MID",
+      "SENIOR",
+      "LEAD",
+      "MANAGER",
+      "DIRECTOR",
+      "EXECUTIVE",
+      "UNKNOWN",
+    ])
+    .nullable(),
+  totalExperienceMonths: z.number().int().nonnegative(),
+  totalExperienceYears: z.number().nonnegative(),
+});
+
+export const ExpandedCanonicalResumeSchema = z.object({
+  schemaVersion: z.literal("resume-schema-v2"),
   personalInformation: z.object({
     fullName: NullableText,
     firstName: NullableText,
@@ -73,7 +132,10 @@ export const CanonicalResumeSchema = z.object({
     title: NullableText,
     company: NullableText,
   }),
+  professionalProfile: ProfessionalProfileSchema.nullable(),
+  professionalLabels: z.array(ProfessionalLabelSchema),
   employmentHistory: z.array(EmploymentSchema),
+  projects: z.array(ProjectSchema),
   education: z.array(EducationSchema),
   skills: z.object({
     technical: z.array(z.string()),
@@ -83,11 +145,12 @@ export const CanonicalResumeSchema = z.object({
     domains: z.array(z.string()),
   }),
   certifications: z.array(CertificationSchema),
-  projects: z.array(ProjectSchema),
   languages: z.array(LanguageSchema),
+  links: ProfessionalLinksSchema,
   awards: z.array(z.string()),
   publications: z.array(z.string()),
-  totalExperienceMonths: z.number().int().nonnegative().nullable(),
+  totalExperienceMonths: z.number().int().nonnegative(),
+  totalExperienceYears: z.number().nonnegative(),
   parseQuality: z.object({
     overallConfidence: z.number().min(0).max(1),
     requiresReview: z.boolean(),
@@ -96,5 +159,6 @@ export const CanonicalResumeSchema = z.object({
   }),
 });
 
-export type CanonicalResume = z.infer<typeof CanonicalResumeSchema>;
+export const CanonicalResumeSchema = ExpandedCanonicalResumeSchema;
 
+export type CanonicalResume = z.infer<typeof ExpandedCanonicalResumeSchema>;

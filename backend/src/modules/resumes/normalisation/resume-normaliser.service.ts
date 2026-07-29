@@ -81,15 +81,90 @@ const normalizePersonalDetails = (value: unknown): Record<string, unknown> => {
   return normalizeRecord(value);
 };
 
+const parseYearMonth = (value: string): Date => {
+  const match = /^(\d{4})-(\d{2})$/.exec(value);
+
+  if (!match) {
+    throw new Error(`Invalid YYYY-MM date: ${value}`);
+  }
+
+  return new Date(Number(match[1]), Number(match[2]) - 1, 1);
+};
+
+const calculateTotalExperienceMonths = (experience: Array<Record<string, unknown>>, currentDate = new Date()): number => {
+  const periods = experience
+    .filter((item) => typeof item.startDate === "string")
+    .map((item) => {
+      const start = parseYearMonth(String(item.startDate));
+      const end =
+        item.isCurrent === true || typeof item.endDate !== "string" || !item.endDate
+          ? currentDate
+          : parseYearMonth(String(item.endDate));
+
+      return {
+        start: new Date(start.getFullYear(), start.getMonth(), 1),
+        end: new Date(end.getFullYear(), end.getMonth(), 1),
+      };
+    })
+    .filter((period) => period.end >= period.start)
+    .sort((a, b) => a.start.getTime() - b.start.getTime());
+
+  if (periods.length === 0) {
+    return 0;
+  }
+
+  const merged: typeof periods = [];
+
+  for (const period of periods) {
+    const previous = merged[merged.length - 1];
+
+    if (!previous || period.start > previous.end) {
+      merged.push({ ...period });
+      continue;
+    }
+
+    if (period.end > previous.end) {
+      previous.end = period.end;
+    }
+  }
+
+  return merged.reduce((total, period) => {
+    const months =
+      (period.end.getFullYear() - period.start.getFullYear()) * 12 + period.end.getMonth() - period.start.getMonth() + 1;
+
+    return total + Math.max(months, 0);
+  }, 0);
+};
+
 export const resumeNormaliserService = {
   normalize(parsedData: ParsedResumeData): ParsedResumeData {
+    const experience = normalizeRecordArray(parsedData.experience);
+    const totalExperienceMonths =
+      typeof parsedData.totalExperienceMonths === "number" && parsedData.totalExperienceMonths >= 0
+        ? parsedData.totalExperienceMonths
+        : calculateTotalExperienceMonths(experience);
+    const totalExperienceYears =
+      typeof parsedData.totalExperienceYears === "number" && parsedData.totalExperienceYears >= 0
+        ? Number(parsedData.totalExperienceYears.toFixed(1))
+        : Number((totalExperienceMonths / 12).toFixed(1));
+
     return {
       personalDetails: normalizePersonalDetails(parsedData.personalDetails),
-      experience: normalizeRecordArray(parsedData.experience),
+      professionalProfile: isRecord(parsedData.professionalProfile)
+        ? normalizeRecord(parsedData.professionalProfile)
+        : parsedData.professionalProfile,
+      professionalLabels: Array.isArray(parsedData.professionalLabels)
+        ? normalizeRecordArray(parsedData.professionalLabels)
+        : undefined,
+      experience,
+      projects: Array.isArray(parsedData.projects) ? normalizeRecordArray(parsedData.projects) : undefined,
       education: normalizeRecordArray(parsedData.education),
       skills: normalizeStringArray(parsedData.skills),
       certifications: normalizeRecordArray(parsedData.certifications),
+      languages: Array.isArray(parsedData.languages) ? normalizeRecordArray(parsedData.languages) : undefined,
+      links: isRecord(parsedData.links) ? normalizeRecord(parsedData.links) : undefined,
+      totalExperienceMonths,
+      totalExperienceYears,
     };
   },
 };
-

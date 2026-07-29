@@ -1,12 +1,34 @@
 export type ParserEngine = "RULE_BASED" | "AI";
 export type ResumeStorageDriverName = "LOCAL" | "S3";
 
+export type ProfessionalLabelCategory = "ROLE" | "SPECIALISATION" | "TECH_STACK" | "DOMAIN";
+export type ProfessionalLabelSource = "EXPLICIT" | "INFERRED";
+export type ProfessionalSeniorityLevel =
+  | "INTERN"
+  | "ENTRY"
+  | "JUNIOR"
+  | "MID"
+  | "SENIOR"
+  | "LEAD"
+  | "MANAGER"
+  | "DIRECTOR"
+  | "EXECUTIVE"
+  | "UNKNOWN";
+export type LanguageProficiency = "NATIVE" | "BASIC" | "CONVERSATIONAL" | "PROFESSIONAL" | "FLUENT";
+
 export interface ParsedResumeData {
   personalDetails: Record<string, unknown>;
+  professionalProfile?: Record<string, unknown>;
+  professionalLabels?: Array<Record<string, unknown>>;
   experience: Array<Record<string, unknown>>;
+  projects?: Array<Record<string, unknown>>;
   education: Array<Record<string, unknown>>;
   skills: string[];
   certifications: Array<Record<string, unknown>>;
+  languages?: Array<Record<string, unknown>>;
+  links?: Record<string, unknown>;
+  totalExperienceMonths?: number;
+  totalExperienceYears?: number;
 }
 
 export interface CanonicalResumeLocation {
@@ -21,6 +43,23 @@ export interface CanonicalResumeLinkSet {
   github: string | null;
   portfolio: string | null;
   other: string[];
+}
+
+export interface CanonicalProfessionalLinks {
+  linkedIn: string | null;
+  github: string | null;
+  portfolio: string | null;
+  website: string | null;
+  stackoverflow: string | null;
+  leetcode: string | null;
+  hackerrank: string | null;
+  behance: string | null;
+  dribbble: string | null;
+  other: Array<{
+    platform: string | null;
+    label: string | null;
+    url: string;
+  }>;
 }
 
 export interface CanonicalResumeEmployment {
@@ -56,16 +95,23 @@ export interface CanonicalResumeCertification {
 }
 
 export interface CanonicalResumeProject {
-  name: string | null;
-  description: string | null;
+  name: string;
   role: string | null;
+  company: string | null;
+  startDate: string | null;
+  endDate: string | null;
+  isCurrent: boolean;
+  description: string | null;
+  responsibilities: string[];
+  achievements: string[];
   technologies: string[];
-  url: string | null;
+  links: string[];
 }
 
 export interface CanonicalResumeLanguage {
   name: string;
-  proficiency: string | null;
+  proficiency: LanguageProficiency | null;
+  isNative: boolean;
 }
 
 export interface CanonicalResumeParseQuality {
@@ -76,7 +122,7 @@ export interface CanonicalResumeParseQuality {
 }
 
 export interface CanonicalResume {
-  schemaVersion: "resume-schema-v1";
+  schemaVersion: "resume-schema-v2";
   personalInformation: {
     fullName: string | null;
     firstName: string | null;
@@ -91,7 +137,24 @@ export interface CanonicalResume {
     title: string | null;
     company: string | null;
   };
+  professionalProfile: {
+    headline: string | null;
+    summary: string | null;
+    currentTitle: string | null;
+    primaryRole: string | null;
+    seniorityLevel: ProfessionalSeniorityLevel | null;
+    totalExperienceMonths: number;
+    totalExperienceYears: number;
+  } | null;
+  professionalLabels: Array<{
+    label: string;
+    category: ProfessionalLabelCategory;
+    confidence: number;
+    source: ProfessionalLabelSource;
+    evidence: string[];
+  }>;
   employmentHistory: CanonicalResumeEmployment[];
+  projects: CanonicalResumeProject[];
   education: CanonicalResumeEducation[];
   skills: {
     technical: string[];
@@ -101,11 +164,12 @@ export interface CanonicalResume {
     domains: string[];
   };
   certifications: CanonicalResumeCertification[];
-  projects: CanonicalResumeProject[];
   languages: CanonicalResumeLanguage[];
+  links: CanonicalProfessionalLinks;
   awards: string[];
   publications: string[];
-  totalExperienceMonths: number | null;
+  totalExperienceMonths: number;
+  totalExperienceYears: number;
   parseQuality: CanonicalResumeParseQuality;
 }
 

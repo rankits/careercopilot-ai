@@ -6,8 +6,8 @@ export interface ParserProfile {
   model: string;
   temperature: number;
   maxRetries: number;
-  schemaVersion: "resume-schema-v1";
-  promptVersion: "resume-parser-v1";
+  schemaVersion: "resume-schema-v2";
+  promptVersion: "resume-parser-v2";
 }
 
 const parserProfiles: Record<string, ParserProfile> = {
@@ -16,8 +16,8 @@ const parserProfiles: Record<string, ParserProfile> = {
     model: resumeConfig.ai.model,
     temperature: resumeConfig.ai.temperature,
     maxRetries: resumeConfig.ai.maxRetries,
-    schemaVersion: "resume-schema-v1",
-    promptVersion: "resume-parser-v1",
+    schemaVersion: "resume-schema-v2",
+    promptVersion: "resume-parser-v2",
   },
 };
 
@@ -32,4 +32,3 @@ export const getParserProfile = (profileName = "resume-parser-default"): ParserP
 };
 
 export { parserProfiles };
-
