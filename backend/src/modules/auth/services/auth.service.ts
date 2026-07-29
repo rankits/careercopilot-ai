@@ -1,20 +1,20 @@
 import { Status, AuditAction, OtpPurpose } from "@prisma/client";
-import { authRepository, type UserWithRole } from "../repositories/auth.repository.js";
-import { PasswordUtil } from "../../../shared/security/password.util.js";
-import { OtpService } from "./otp.service.js";
-import { TokenService } from "./token.service.js";
-import { GENERIC_OTP_SENT_MESSAGE, OTP_PURPOSE_LABELS } from "../constants/auth.constant.js";
-import { toSafeUser, toTokenContext } from "../utils/auth.mapper.js";
-import { securityConfig } from "../../../shared/config/security.conf.js";
-import { AppError } from "../../../shared/utils/errors/AppError.js";
-import { AuditService } from "../../../shared/audit/audit.service.js";
-import { EmailQueue } from "../../../queues/email.queue.js";
-import { cacheService, CacheKeys, CacheTTL } from "../../../infrastructure/cache/index.js";
+import { authRepository, type UserWithRole } from "@/modules/auth/repositories/auth.repository.js";
+import { PasswordUtil } from "@/shared/security/password.util.js";
+import { OtpService } from "@/modules/auth/services/otp.service.js";
+import { TokenService } from "@/modules/auth/services/token.service.js";
+import { GENERIC_OTP_SENT_MESSAGE, OTP_PURPOSE_LABELS } from "@/modules/auth/constants/auth.constant.js";
+import { toSafeUser, toTokenContext } from "@/modules/auth/utils/auth.mapper.js";
+import { securityConfig } from "@/shared/config/security.conf.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { AuditService } from "@/shared/audit/audit.service.js";
+import { EmailQueue } from "@/queues/email.queue.js";
+import { cacheService, CacheKeys, CacheTTL } from "@/infrastructure/cache/index.js";
 import {
   messageBus,
   MessageExchanges,
   MessageRoutingKeys,
-} from "../../../infrastructure/messaging/index.js";
+} from "@/infrastructure/messaging/index.js";
 import type {
   ChangePasswordInput,
   ForgotPasswordInput,
@@ -26,8 +26,8 @@ import type {
   ResendOtpInput,
   ResetPasswordInput,
   VerifyRegistrationOtpInput,
-} from "../validations/auth.schema.js";
-import type { AuthSession, AuthTokens, RequestContext, SafeUser } from "../types/auth.types.js";
+} from "@/modules/auth/validations/auth.schema.js";
+import type { AuthSession, AuthTokens, RequestContext, SafeUser } from "@/modules/auth/types/auth.types.js";
 
 const assertLoginable = (user: UserWithRole): void => {
   if (!user.isEmailVerified || user.status === Status.PendingVerification) {

@@ -1,5 +1,5 @@
 import jwt, { type SignOptions } from "jsonwebtoken";
-import { jwtConfig } from "../config/jwt.conf.js";
+import { jwtConfig } from "@/shared/config/jwt.conf.js";
 
 /**
  * Stateless JWT access-token helpers, deliberately kept out of any single

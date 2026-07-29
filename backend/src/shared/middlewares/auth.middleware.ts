@@ -1,7 +1,7 @@
 import type { NextFunction, Request, Response } from "express";
-import { verifyAccessToken } from "../security/jwt.util.js";
-import { getCurrentTokenVersion } from "../security/token-version.cache.js";
-import { AppError } from "../utils/errors/AppError.js";
+import { verifyAccessToken } from "@/shared/security/jwt.util.js";
+import { getCurrentTokenVersion } from "@/shared/security/token-version.cache.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
 
 const BEARER_PREFIX = "Bearer ";
 

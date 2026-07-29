@@ -2,7 +2,7 @@ import {
   messageBus,
   MessageExchanges,
   MessageRoutingKeys,
-} from "../infrastructure/messaging/index.js";
+} from "@/infrastructure/messaging/index.js";
 
 export interface SendOtpEmailInput {
   to: string;

@@ -1,7 +1,7 @@
-import { authSwagger } from "../../modules/auth/swagger/index.js";
-import { userSwagger } from "../../modules/user/swagger/index.js";
-import { adminSwagger } from "../../modules/admin/swagger/index.js";
-import { env } from "./env.conf.js";
+import { authSwagger } from "@/modules/auth/swagger/index.js";
+import { userSwagger } from "@/modules/user/swagger/index.js";
+import { adminSwagger } from "@/modules/admin/swagger/index.js";
+import { env } from "@/shared/config/env.conf.js";
 
 /**
  * Aggregated OpenAPI 3.0 document, served at `/api-docs` (see `app.ts`).

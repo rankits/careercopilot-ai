@@ -4,7 +4,7 @@ import type {
   AuthGetApiConfig,
   PathParameter,
   QueryParameter,
-} from "../types/swagger.types.js";
+} from "@/shared/types/swagger.types.js";
 
 type HttpMethod = "get" | "post" | "put" | "patch" | "delete";
 

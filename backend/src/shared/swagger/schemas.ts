@@ -1,5 +1,5 @@
-import { errorSchema } from "./factory.js";
-import type { ApiResponses } from "../types/swagger.types.js";
+import { errorSchema } from "@/shared/swagger/factory.js";
+import type { ApiResponses } from "@/shared/types/swagger.types.js";
 
 /** Mirrors `modules/auth/utils/auth.mapper.ts#SafeUserResponseDto`. */
 export const safeUserSchema = {

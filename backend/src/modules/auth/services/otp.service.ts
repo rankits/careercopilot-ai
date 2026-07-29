@@ -1,8 +1,8 @@
 import { createHash, randomInt } from "node:crypto";
 import { OtpPurpose, OtpTransport } from "@prisma/client";
-import { prisma } from "../../../shared/config/db.conf.js";
-import { securityConfig } from "../../../shared/config/security.conf.js";
-import { AppError } from "../../../shared/utils/errors/AppError.js";
+import { prisma } from "@/shared/config/db.conf.js";
+import { securityConfig } from "@/shared/config/security.conf.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
 
 const hashCode = (code: string): string => createHash("sha256").update(code).digest("hex");
 

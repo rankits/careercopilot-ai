@@ -1,4 +1,4 @@
-import { env } from "./env.conf.js";
+import { env } from "@/shared/config/env.conf.js";
 
 /**
  * JWT configuration.

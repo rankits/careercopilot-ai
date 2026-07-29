@@ -1,10 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { ZodError } from "zod";
 import { NextFunction, Request, Response } from "express";
-import { AppError } from "../utils/errors/AppError.js";
-import { errorResponse } from "../utils/response.js";
-import { logger } from "../logger/logger.js";
-import { isProduction } from "../config/env.conf.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { errorResponse } from "@/shared/utils/response.js";
+import { logger } from "@/shared/logger/logger.js";
+import { isProduction } from "@/shared/config/env.conf.js";
 
 interface MappedError {
   statusCode: number;

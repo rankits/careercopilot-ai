@@ -1,6 +1,6 @@
 import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
 import { promisify } from "node:util";
-import { securityConfig } from "../config/security.conf.js";
+import { securityConfig } from "@/shared/config/security.conf.js";
 
 const scryptAsync = promisify(scrypt);
 

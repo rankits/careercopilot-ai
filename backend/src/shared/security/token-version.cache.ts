@@ -1,6 +1,6 @@
-import { cacheService } from "../../infrastructure/cache/index.js";
-import { prisma } from "../config/db.conf.js";
-import type { PrincipalType } from "./jwt.util.js";
+import { cacheService } from "@/infrastructure/cache/index.js";
+import { prisma } from "@/shared/config/db.conf.js";
+import type { PrincipalType } from "@/shared/security/jwt.util.js";
 
 const TTL_SECONDS = 300;
 const key = (principalType: PrincipalType, publicId: string): string =>

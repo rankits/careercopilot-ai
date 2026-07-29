@@ -1,16 +1,16 @@
 import express from "express";
 import swaggerUi from "swagger-ui-express";
-import preMiddlewares from "./preMiddlewares.js";
-import apiV1Routes from "./routes.js";
-import { errorHandler } from "./shared/middlewares/errorHandler.js";
-import { responseInterceptor } from "./shared/interceptors/response.interceptor.js";
-import { endpointNotFound } from "./shared/middlewares/endpointNotFound.js";
-import { globalRateLimiter } from "./shared/middlewares/rateLimiter.js";
-import securityMiddlewares from "./securityMiddlewares.js";
-import { prisma } from "./shared/config/db.conf.js";
-import { cacheService } from "./infrastructure/cache/index.js";
-import { env } from "./shared/config/env.conf.js";
-import { swaggerSpec } from "./shared/config/swagger.conf.js";
+import preMiddlewares from "@/preMiddlewares.js";
+import apiV1Routes from "@/routes.js";
+import { errorHandler } from "@/shared/middlewares/errorHandler.js";
+import { responseInterceptor } from "@/shared/interceptors/response.interceptor.js";
+import { endpointNotFound } from "@/shared/middlewares/endpointNotFound.js";
+import { globalRateLimiter } from "@/shared/middlewares/rateLimiter.js";
+import securityMiddlewares from "@/securityMiddlewares.js";
+import { prisma } from "@/shared/config/db.conf.js";
+import { cacheService } from "@/infrastructure/cache/index.js";
+import { env } from "@/shared/config/env.conf.js";
+import { swaggerSpec } from "@/shared/config/swagger.conf.js";
 
 const app = express();
 

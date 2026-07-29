@@ -1,17 +1,17 @@
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { AuditAction } from "@prisma/client";
-import { prisma } from "../../../shared/config/db.conf.js";
+import { prisma } from "@/shared/config/db.conf.js";
 import {
   signAccessToken,
   getAccessTokenTtlSeconds,
   parseDurationSeconds,
-} from "../../../shared/security/jwt.util.js";
-import { setCachedTokenVersion } from "../../../shared/security/token-version.cache.js";
-import { jwtConfig } from "../../../shared/config/jwt.conf.js";
-import { securityConfig } from "../../../shared/config/security.conf.js";
-import { AppError } from "../../../shared/utils/errors/AppError.js";
-import { AuditService } from "../../../shared/audit/audit.service.js";
-import type { AuthTokens, RequestContext, UserTokenContext } from "../types/auth.types.js";
+} from "@/shared/security/jwt.util.js";
+import { setCachedTokenVersion } from "@/shared/security/token-version.cache.js";
+import { jwtConfig } from "@/shared/config/jwt.conf.js";
+import { securityConfig } from "@/shared/config/security.conf.js";
+import { AppError } from "@/shared/utils/errors/AppError.js";
+import { AuditService } from "@/shared/audit/audit.service.js";
+import type { AuthTokens, RequestContext, UserTokenContext } from "@/modules/auth/types/auth.types.js";
 
 const FULL_SESSION_TTL_SECONDS = parseDurationSeconds(
   jwtConfig.refreshExpiresIn,

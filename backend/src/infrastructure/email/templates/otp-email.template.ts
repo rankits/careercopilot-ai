@@ -1,4 +1,4 @@
-import { escapeHtml } from "./html-escape.util.js";
+import { escapeHtml } from "@/infrastructure/email/templates/html-escape.util.js";
 
 export interface OtpEmailData {
   firstName: string;

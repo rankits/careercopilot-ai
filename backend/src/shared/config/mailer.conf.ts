@@ -1,4 +1,4 @@
-import { env } from "./env.conf.js";
+import { env } from "@/shared/config/env.conf.js";
 
 /**
  * SMTP mailer configuration. Defaults target a local Mailpit-style dev

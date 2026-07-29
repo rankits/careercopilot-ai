@@ -4,15 +4,15 @@ import {
   MessageQueues,
   MessageRoutingKeys,
   QoSPresets,
-} from "../infrastructure/messaging/index.js";
-import { sendMail } from "../infrastructure/email/index.js";
+} from "@/infrastructure/messaging/index.js";
+import { sendMail } from "@/infrastructure/email/index.js";
 import {
   renderOtpEmail,
   renderWelcomeEmail,
   renderSecurityAlertEmail,
-} from "../infrastructure/email/index.js";
-import { logger } from "../shared/logger/logger.js";
-import type { EmailJob } from "../queues/email.queue.js";
+} from "@/infrastructure/email/index.js";
+import { logger } from "@/shared/logger/logger.js";
+import type { EmailJob } from "@/queues/email.queue.js";
 
 const processEmailJob = async (job: EmailJob): Promise<void> => {
   switch (job.type) {
