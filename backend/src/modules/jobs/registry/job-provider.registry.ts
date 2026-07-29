@@ -1,7 +1,7 @@
-import { IJobProvider } from "../interfaces/IJobProvider.js";
-import { ProviderTier } from "../types/job.types.js";
-import { DuplicateProviderRegistrationError } from "../errors/DuplicateProviderRegistrationError.js";
-import { jobsLogger } from "../../../shared/utils/logger.js";
+import { IJobProvider } from "@/modules/jobs/interfaces/IJobProvider.js";
+import { ProviderTier } from "@/modules/jobs/types/job.types.js";
+import { DuplicateProviderRegistrationError } from "@/modules/jobs/errors/DuplicateProviderRegistrationError.js";
+import { jobsLogger } from "@/shared/utils/logger.js";
 
 export interface IJobProviderRegistry {
   register(provider: IJobProvider): void;
@@ -101,3 +101,4 @@ export class JobProviderRegistry implements IJobProviderRegistry {
     return sorted;
   }
 }
+

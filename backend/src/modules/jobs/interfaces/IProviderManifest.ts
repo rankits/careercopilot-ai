@@ -1,4 +1,4 @@
-import { ProviderTier } from "../types/job.types.js";
+import { ProviderTier } from "@/modules/jobs/types/job.types.js";
 
 export type RetryPolicyType = "exponential" | "linear" | "fixed";
 
@@ -14,3 +14,4 @@ export interface IProviderManifest {
   readonly retryPolicy: RetryPolicyType;
   readonly enabled: boolean;
 }
+

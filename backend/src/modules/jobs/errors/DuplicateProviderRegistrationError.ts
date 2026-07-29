@@ -1,4 +1,4 @@
-import { JobModuleError } from "./JobModuleError.js";
+import { JobModuleError } from "@/modules/jobs/errors/JobModuleError.js";
 
 export class DuplicateProviderRegistrationError extends JobModuleError {
   constructor(providerName: string) {

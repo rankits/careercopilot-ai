@@ -1,4 +1,4 @@
-import { ProviderTier } from "../../types/job.types.js";
+import { ProviderTier } from "@/modules/jobs/types/job.types.js";
 
 export interface GreenhouseProviderConfig {
   readonly boardToken: string;
@@ -7,3 +7,4 @@ export interface GreenhouseProviderConfig {
   readonly baseUrl?: string;
   readonly timeoutMs?: number;
 }
+

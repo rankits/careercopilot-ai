@@ -1,6 +1,6 @@
 import dotenv from "dotenv";
-import { appLogger } from "./shared/utils/logger.js";
 import app from "@/app.js";
+import { appLogger } from "@/shared/utils/logger.js";
 
 dotenv.config();
 

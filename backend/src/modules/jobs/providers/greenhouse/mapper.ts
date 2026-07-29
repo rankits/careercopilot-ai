@@ -1,11 +1,11 @@
-import { IJobMapper } from "../../interfaces/IJobMapper.js";
-import { NormalizedJob } from "../../models/NormalizedJob.js";
-import { ProviderTier } from "../../types/job.types.js";
-import { GreenhouseJobPosting } from "./types.js";
+import { IJobMapper } from "@/modules/jobs/interfaces/IJobMapper.js";
+import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
+import { ProviderTier } from "@/modules/jobs/types/job.types.js";
+import { GreenhouseJobPosting } from "@/modules/jobs/providers/greenhouse/types.js";
 import {
   generateCanonicalHash,
   normalizeText,
-} from "../../utils/fingerprint.js";
+} from "@/modules/jobs/utils/fingerprint.js";
 
 export class GreenhouseJobMapper implements IJobMapper<GreenhouseJobPosting> {
   constructor(
@@ -74,3 +74,4 @@ export class GreenhouseJobMapper implements IJobMapper<GreenhouseJobPosting> {
     return rawList.map((item) => this.mapToNormalizedJob(item, providerName));
   }
 }
+

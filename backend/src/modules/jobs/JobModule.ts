@@ -1,11 +1,11 @@
-import { JobProviderRegistry } from "./registry/job-provider.registry.js";
-import { DeduplicationEngine } from "./services/aggregation/deduplication.engine.js";
-import { AggregationService } from "./services/aggregation/aggregation.service.js";
-import { GreenhouseJobProvider } from "./providers/greenhouse/provider.js";
-import { OpenPublicFeedProvider } from "./providers/public-feed/public-feed.provider.js";
-import { JobsService } from "./services/jobs.service.js";
-import { ProviderTier } from "./types/job.types.js";
-import { jobsLogger } from "../../shared/utils/logger.js";
+import { JobProviderRegistry } from "@/modules/jobs/registry/job-provider.registry.js";
+import { DeduplicationEngine } from "@/modules/jobs/services/aggregation/deduplication.engine.js";
+import { AggregationService } from "@/modules/jobs/services/aggregation/aggregation.service.js";
+import { GreenhouseJobProvider } from "@/modules/jobs/providers/greenhouse/provider.js";
+import { OpenPublicFeedProvider } from "@/modules/jobs/providers/public-feed/public-feed.provider.js";
+import { JobsService } from "@/modules/jobs/services/jobs.service.js";
+import { ProviderTier } from "@/modules/jobs/types/job.types.js";
+import { jobsLogger } from "@/shared/utils/logger.js";
 
 // 1. Initialize Registry
 export const jobProviderRegistry = new JobProviderRegistry();
@@ -51,3 +51,4 @@ export const jobsService = new JobsService(
 export function initJobModule(): JobsService {
   return jobsService;
 }
+

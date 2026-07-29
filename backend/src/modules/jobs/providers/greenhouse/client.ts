@@ -1,6 +1,6 @@
-import { BaseProviderClient } from "../base/base.client.js";
-import { GreenhouseJobPosting, GreenhouseBoardJobsResponse } from "./types.js";
-import { ProviderFetchError } from "../../errors/ProviderFetchError.js";
+import { BaseProviderClient } from "@/modules/jobs/providers/base/base.client.js";
+import { GreenhouseJobPosting, GreenhouseBoardJobsResponse } from "@/modules/jobs/providers/greenhouse/types.js";
+import { ProviderFetchError } from "@/modules/jobs/errors/ProviderFetchError.js";
 
 export class GreenhouseClient extends BaseProviderClient {
   constructor(
@@ -39,3 +39,4 @@ export class GreenhouseClient extends BaseProviderClient {
     });
   }
 }
+

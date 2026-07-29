@@ -2,10 +2,10 @@ import {
   ProviderHealth,
   ProviderHealthStatus,
   ProviderRateLimitStatus,
-} from "../../types/provider.types.js";
-import { ProviderFetchError } from "../../errors/ProviderFetchError.js";
-import { RateLimitError } from "../../errors/RateLimitError.js";
-import { calculateJitteredBackoff, sleep } from "../../utils/backoff.js";
+} from "@/modules/jobs/types/provider.types.js";
+import { ProviderFetchError } from "@/modules/jobs/errors/ProviderFetchError.js";
+import { RateLimitError } from "@/modules/jobs/errors/RateLimitError.js";
+import { calculateJitteredBackoff, sleep } from "@/modules/jobs/utils/backoff.js";
 
 export interface BaseClientOptions {
   readonly providerName: string;
@@ -88,3 +88,4 @@ export abstract class BaseProviderClient {
     );
   }
 }
+

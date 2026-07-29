@@ -1,8 +1,8 @@
-import { IJobProviderRegistry } from "../../registry/job-provider.registry.js";
-import { DeduplicationEngine } from "./deduplication.engine.js";
-import { JobSearchFilters } from "../../types/job.types.js";
-import { NormalizedJob } from "../../models/NormalizedJob.js";
-import { jobsLogger } from "../../../../shared/utils/logger.js";
+import { IJobProviderRegistry } from "@/modules/jobs/registry/job-provider.registry.js";
+import { DeduplicationEngine } from "@/modules/jobs/services/aggregation/deduplication.engine.js";
+import { JobSearchFilters } from "@/modules/jobs/types/job.types.js";
+import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
+import { jobsLogger } from "@/shared/utils/logger.js";
 
 export interface ProviderExecutionStats {
   readonly fetched: number;
@@ -115,3 +115,4 @@ export class AggregationService {
     };
   }
 }
+

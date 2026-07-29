@@ -1,14 +1,14 @@
-import { IJobProvider } from "../../interfaces/IJobProvider.js";
-import { ProviderTier, JobSearchFilters } from "../../types/job.types.js";
+import { IJobProvider } from "@/modules/jobs/interfaces/IJobProvider.js";
+import { ProviderTier, JobSearchFilters } from "@/modules/jobs/types/job.types.js";
 import {
   ProviderHealth,
   ProviderRateLimitStatus,
-} from "../../types/provider.types.js";
-import { NormalizedJob } from "../../models/NormalizedJob.js";
-import { GreenhouseProviderConfig } from "./config.js";
-import { GreenhouseClient } from "./client.js";
-import { GreenhouseJobMapper } from "./mapper.js";
-import { jobsLogger } from "../../../../shared/utils/logger.js";
+} from "@/modules/jobs/types/provider.types.js";
+import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
+import { GreenhouseProviderConfig } from "@/modules/jobs/providers/greenhouse/config.js";
+import { GreenhouseClient } from "@/modules/jobs/providers/greenhouse/client.js";
+import { GreenhouseJobMapper } from "@/modules/jobs/providers/greenhouse/mapper.js";
+import { jobsLogger } from "@/shared/utils/logger.js";
 
 export class GreenhouseJobProvider implements IJobProvider {
   readonly name = "greenhouse";
@@ -93,3 +93,4 @@ export class GreenhouseJobProvider implements IJobProvider {
     return this.client.getRateLimitStatus();
   }
 }
+

@@ -1,9 +1,9 @@
-import { NormalizedJob } from "../models/NormalizedJob.js";
+import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
 import {
   JobSearchFilters,
   PaginationOptions,
   PaginatedResult,
-} from "../types/job.types.js";
+} from "@/modules/jobs/types/job.types.js";
 
 export interface IJobRepository {
   upsertMany(jobs: NormalizedJob[]): Promise<{ count: number }>;
@@ -14,3 +14,4 @@ export interface IJobRepository {
   ): Promise<PaginatedResult<NormalizedJob>>;
   deleteExpiredBefore(timestamp: string): Promise<{ count: number }>;
 }
+
