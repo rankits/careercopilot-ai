@@ -1,12 +1,15 @@
 export { yupResolver } from '@hookform/resolvers/yup';
 export { default as ArrowForwardIcon } from '@mui/icons-material/ArrowForward';
+export { default as AutoAwesomeOutlinedIcon } from '@mui/icons-material/AutoAwesomeOutlined';
 export { default as BookmarkBorderOutlinedIcon } from '@mui/icons-material/BookmarkBorderOutlined';
 export { default as BusinessCenterOutlinedIcon } from '@mui/icons-material/BusinessCenterOutlined';
 export { default as ChevronLeftIcon } from '@mui/icons-material/ChevronLeft';
 export { default as ChevronRightIcon } from '@mui/icons-material/ChevronRight';
+export { default as CheckCircleOutlineIcon } from '@mui/icons-material/CheckCircleOutline';
 export { default as EmailOutlinedIcon } from '@mui/icons-material/EmailOutlined';
 export { default as GoogleIcon } from '@mui/icons-material/Google';
 export { default as HomeOutlinedIcon } from '@mui/icons-material/HomeOutlined';
+export { default as InsightsOutlinedIcon } from '@mui/icons-material/InsightsOutlined';
 export { default as KeyboardArrowDownIcon } from '@mui/icons-material/KeyboardArrowDown';
 export { default as LinkedInIcon } from '@mui/icons-material/LinkedIn';
 export { default as LockOutlinedIcon } from '@mui/icons-material/LockOutlined';
@@ -15,6 +18,7 @@ export { default as NotificationsOutlinedIcon } from '@mui/icons-material/Notifi
 export { default as PersonOutlineIcon } from '@mui/icons-material/PersonOutline';
 export { default as PhoneOutlinedIcon } from '@mui/icons-material/PhoneOutlined';
 export { default as SearchOutlinedIcon } from '@mui/icons-material/SearchOutlined';
+export { default as SecurityOutlinedIcon } from '@mui/icons-material/SecurityOutlined';
 export { default as SettingsOutlinedIcon } from '@mui/icons-material/SettingsOutlined';
 export { default as StarIcon } from '@mui/icons-material/Star';
 export { default as TuneOutlinedIcon } from '@mui/icons-material/TuneOutlined';

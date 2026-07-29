@@ -9,6 +9,11 @@ describe('SocialConnectButton', () => {
     render(<SocialConnectButton provider="google" />);
 
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
+    expect(screen.getByTestId('GoogleBrandIcon')).toHaveProperty('tagName', 'IMG');
+    expect(screen.getByTestId('GoogleBrandIcon').getAttribute('src')).toMatch(
+      /^(data:image\/svg\+xml|\/src\/assets\/icons\/google-brand\.svg)/,
+    );
+    expect(screen.queryByTestId('GoogleIcon')).not.toBeInTheDocument();
   });
 
   it('handles provider click events', async () => {
