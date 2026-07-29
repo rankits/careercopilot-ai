@@ -1,7 +1,7 @@
 import { IJobMapper } from "@/modules/jobs/interfaces/IJobMapper.js";
 import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
 import { ProviderTier } from "@/modules/jobs/types/job.types.js";
-import { GreenhouseJobPosting } from "@/modules/jobs/providers/greenhouse/types.js";
+import { ArbeitnowJobPosting } from "@/modules/jobs/providers/arbeitnow/types.js";
 import {
   generateCanonicalHash,
   normalizeText,
@@ -15,7 +15,7 @@ const cleanRequiredString = (
 
   if (!cleaned) {
     throw new Error(
-      `Cannot map Greenhouse job because "${fieldName}" is missing`,
+      `Cannot map Arbeitnow job because "${fieldName}" is missing`,
     );
   }
 
@@ -53,50 +53,76 @@ const stripHtml = (
 };
 
 const toIsoDate = (
-  value: string | null | undefined,
+  value: number | string | null | undefined,
 ): string | undefined => {
-  const cleaned = cleanOptionalString(value);
+  if (typeof value === "number" && Number.isFinite(value)) {
+    const epochMilliseconds =
+      value > 1_000_000_000_000 ? value : value * 1000;
 
-  if (!cleaned) {
+    const date = new Date(epochMilliseconds);
+
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
+
     return undefined;
   }
 
-  const parsed = new Date(cleaned);
+  if (typeof value === "string" && value.trim()) {
+    const date = new Date(value.trim());
 
-  if (Number.isNaN(parsed.getTime())) {
-    return undefined;
+    if (!Number.isNaN(date.getTime())) {
+      return date.toISOString();
+    }
   }
 
-  return parsed.toISOString();
+  return undefined;
 };
 
-const isRemoteLocation = (
-  location: string | undefined,
-): boolean => {
-  if (!location) {
-    return false;
-  }
+const mapLocation = (
+  location: string | null | undefined,
+  remote: boolean | null | undefined,
+): NormalizedJob["location"] => {
+  const rawLocation = cleanOptionalString(location);
 
-  return /\bremote\b/i.test(location);
+  return {
+    raw: rawLocation ?? "",
+    isRemote: remote === true,
+  };
 };
 
-export class GreenhouseJobMapper
-  implements IJobMapper<GreenhouseJobPosting>
+const mapTags = (
+  tags: string[] | null | undefined,
+  jobTypes: string[] | null | undefined,
+): string[] => {
+  const values = [...(tags ?? []), ...(jobTypes ?? [])]
+    .map((value) => value.trim())
+    .filter(Boolean);
+
+  return Array.from(
+    new Map(
+      values.map((value) => [
+        value.toLocaleLowerCase(),
+        value,
+      ]),
+    ).values(),
+  );
+};
+
+export class ArbeitnowJobMapper
+  implements IJobMapper<ArbeitnowJobPosting>
 {
   constructor(
-    private readonly defaultCompanyName: string,
     private readonly tier: ProviderTier = ProviderTier.PUBLIC,
   ) {}
 
   mapToNormalizedJob(
-    raw: GreenhouseJobPosting,
-    providerName = "greenhouse",
+    raw: ArbeitnowJobPosting,
+    providerName = "arbeitnow",
   ): NormalizedJob {
     const providerJobId = cleanRequiredString(
-      raw.id !== null && raw.id !== undefined
-        ? String(raw.id)
-        : undefined,
-      "id",
+      raw.slug,
+      "slug",
     );
 
     const title = cleanRequiredString(
@@ -104,41 +130,29 @@ export class GreenhouseJobMapper
       "title",
     );
 
-    const configuredCompanyName = cleanOptionalString(
-      this.defaultCompanyName,
+    const companyName = cleanRequiredString(
+      raw.company_name,
+      "company_name",
     );
-
-    const companyName =
-      cleanOptionalString(raw.company_name) ??
-      configuredCompanyName;
-
-    if (!companyName) {
-      throw new Error(
-        'Cannot map Greenhouse job because "company_name" is missing',
-      );
-    }
 
     const applyUrl = cleanRequiredString(
-      raw.absolute_url,
-      "absolute_url",
+      raw.url,
+      "url",
     );
 
-    const rawLocation = cleanOptionalString(
-      raw.location?.name,
+    const location = mapLocation(
+      raw.location,
+      raw.remote,
     );
 
-    const isRemote = isRemoteLocation(rawLocation);
+    const description = stripHtml(raw.description) ?? "";
 
-    const description = stripHtml(raw.content);
-
-    const postedAt = toIsoDate(
-      raw.first_published,
+    const tags = mapTags(
+      raw.tags,
+      raw.job_types,
     );
 
-    const rawTags = (raw as { tags?: unknown }).tags;
-    const tags = Array.isArray(rawTags)
-      ? rawTags.map((tag: unknown) => String(tag).trim()).filter(Boolean)
-      : [];
+    const postedAt = toIsoDate(raw.created_at) ?? new Date().toISOString();
 
     return {
       id: providerJobId,
@@ -152,30 +166,28 @@ export class GreenhouseJobMapper
       companyName,
       normalizedCompany: normalizeText(companyName),
 
-      location: {
-        raw: rawLocation ?? "",
-        isRemote,
-      },
+      location,
 
-      tags,
-      description: description ?? "",
+      description,
 
       applyUrl,
 
-      postedAt: postedAt ?? "",
+      tags,
+
+      postedAt,
 
       canonicalHash: generateCanonicalHash(
         companyName,
         title,
-        rawLocation,
-        isRemote,
+        location.raw,
+        location.isRemote,
       ),
     };
   }
 
   mapMany(
-    rawList: GreenhouseJobPosting[],
-    providerName = "greenhouse",
+    rawList: ArbeitnowJobPosting[],
+    providerName = "arbeitnow",
   ): NormalizedJob[] {
     return rawList.map((raw) =>
       this.mapToNormalizedJob(raw, providerName),

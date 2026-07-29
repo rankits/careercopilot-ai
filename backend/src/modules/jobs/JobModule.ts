@@ -42,7 +42,11 @@ export const aggregationService = new AggregationService(
 );
 
 // 4. Export Primary IJobContract implementation
+import { PrismaJobRepository } from "@/modules/jobs/repositories/job.repository.js";
+export const jobRepository = new PrismaJobRepository();
+
 export const jobsService = new JobsService(
+  jobRepository,
   aggregationService,
   jobProviderRegistry
 );
