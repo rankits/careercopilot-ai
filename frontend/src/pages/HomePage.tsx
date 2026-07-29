@@ -1,9 +1,3 @@
-import { AuthForm } from '@/components';
-
 export function HomePage() {
-  return (
-    <section className="landing-page">
-      <AuthForm />
-    </section>
-  );
+  return <section aria-label="Home page" />;
 }

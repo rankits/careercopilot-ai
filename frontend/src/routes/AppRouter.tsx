@@ -9,8 +9,8 @@ import { ProfilePage } from '@/pages/ProfilePage';
 export function AppRouter() {
   return (
     <Routes>
-      <Route path={ROUTES.HOME} element={<HomePage />} />
       <Route element={<AppLayout />}>
+        <Route path={ROUTES.HOME} element={<HomePage />} />
         <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
       </Route>
       <Route path="/app" element={<Navigate to={ROUTES.PROFILE} replace />} />
