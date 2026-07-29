@@ -1,23 +1,15 @@
 import { AuthForm } from '@/components/organisms/AuthForm';
+import { AuthPageLayout } from '@/components/organisms/AuthPageLayout';
 
-import {
-  useRegister,
-  type RegisterFormValues,
-} from '@/features/auth/hooks/useRegister';
+import { useRegister, type RegisterFormValues } from '@/features/auth/hooks/useRegister';
 
 import { ROUTES } from '@/constants/routes';
-import { Box } from '@/lib/material';
 
 export function RegisterPage() {
   const { error, goToLogin, isSubmitting, submit } = useRegister();
 
   return (
-    <Box component="main">
-      {error ? (
-        <Box role="alert" sx={{ mb: 2 }}>
-          {error}
-        </Box>
-      ) : null}
+    <AuthPageLayout error={error} mode="register">
       <AuthForm<RegisterFormValues>
         alternateActionHref={ROUTES.LOGIN}
         isSubmitting={isSubmitting}
@@ -25,6 +17,6 @@ export function RegisterPage() {
         onAlternateActionClick={goToLogin}
         onValidSubmit={(values) => void submit(values)}
       />
-    </Box>
+    </AuthPageLayout>
   );
 }
