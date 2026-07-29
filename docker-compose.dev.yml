@@ -1,0 +1,93 @@
+version: "3.8"
+
+services:
+  postgres_dev:
+    image: postgres:16-alpine
+    container_name: career_copilot_pg_dev
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres_password
+      POSTGRES_DB: careercopilot_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_dev_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d careercopilot_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  redis_dev:
+    image: redis:7-alpine
+    container_name: career_copilot_redis_dev
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_dev_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  rabbitmq_dev:
+    image: rabbitmq:3.13-management-alpine
+    container_name: career_copilot_rabbitmq_dev
+    restart: unless-stopped
+    ports:
+      - "5672:5672"   # AMQP protocol port
+      - "15672:15672" # Management UI port
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_dev_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  backend_dev:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.dev
+    container_name: career_copilot_backend_dev
+    restart: unless-stopped
+    ports:
+      - "5001:5001"
+    environment:
+      NODE_ENV: development
+      PORT: 5001
+      DATABASE_URL: postgresql://postgres:postgres_password@postgres_dev:5432/careercopilot_dev?schema=public
+      RUN_MIGRATIONS: "true"
+      JWT_ACCESS_SECRET: dev_access_secret_change_in_production
+      JWT_REFRESH_SECRET: dev_refresh_secret_change_in_production
+      CACHE_DRIVER: redis
+      REDIS_MODE: standalone
+      REDIS_HOST: redis_dev
+      REDIS_PORT: 6379
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq_dev:5672
+    volumes:
+      # Mount local backend code for tsx hot-reloading
+      - ./backend:/app
+      # Anonymous volume to preserve container node_modules from being overwritten by Windows host
+      - /app/node_modules
+    depends_on:
+      postgres_dev:
+        condition: service_healthy
+      redis_dev:
+        condition: service_healthy
+      rabbitmq_dev:
+        condition: service_healthy
+
+volumes:
+  pg_dev_data:
+  redis_dev_data:
+  rabbitmq_dev_data:
