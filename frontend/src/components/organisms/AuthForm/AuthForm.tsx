@@ -180,7 +180,18 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               control={<Checkbox defaultChecked {...register('rememberMe' as Path<TFormValues>)} />}
               label="Remember me"
             />
-            <Link href={forgotPasswordHref} onClick={onForgotPasswordClick} sx={authFormSx.link}>
+            <Link
+              href={forgotPasswordHref}
+              onClick={(event) => {
+                if (!onForgotPasswordClick) {
+                  return;
+                }
+
+                event.preventDefault();
+                onForgotPasswordClick?.();
+              }}
+              sx={authFormSx.link}
+            >
               Forgot password?
             </Link>
           </Box>
