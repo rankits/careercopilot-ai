@@ -10,6 +10,12 @@ export const resumeConfig = {
   storageDriver: (process.env.RESUME_STORAGE_DRIVER || "LOCAL").toUpperCase() as ResumeStorageDriverName,
   parserEngine: (process.env.PARSER_ENGINE || "RULE_BASED").toUpperCase() as ParserEngine,
   maxFileSizeBytes: toPositiveInt(process.env.RESUME_MAX_FILE_SIZE_MB, 10) * 1024 * 1024,
+  ai: {
+    provider: (process.env.AI_RESUME_PARSER_PROVIDER || "google").toLowerCase(),
+    model: process.env.AI_RESUME_PARSER_MODEL || "gemini-3.5-flash",
+    temperature: Number(process.env.AI_RESUME_PARSER_TEMPERATURE ?? "0"),
+    maxRetries: toPositiveInt(process.env.AI_RESUME_PARSER_MAX_RETRIES, 2),
+  },
   localStorageDir:
     process.env.RESUME_LOCAL_STORAGE_DIR || path.resolve(process.cwd(), "storage", "resumes"),
   s3: {
