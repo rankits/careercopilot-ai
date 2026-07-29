@@ -13,6 +13,7 @@ import {
   Link,
   LockOutlinedIcon,
   PersonOutlineIcon,
+  PhoneOutlinedIcon,
   Typography,
   VisibilityOffOutlinedIcon,
   yupResolver,
@@ -28,6 +29,7 @@ const fieldIcons: AuthFieldIconMap = {
   email: EmailOutlinedIcon,
   lock: LockOutlinedIcon,
   person: PersonOutlineIcon,
+  phone: PhoneOutlinedIcon,
   visibilityOff: VisibilityOffOutlinedIcon,
 };
 
@@ -39,6 +41,10 @@ function renderIcon(icon?: AuthFieldIcon) {
   const Icon = fieldIcons[icon];
 
   return <Icon fontSize="small" />;
+}
+
+function sanitizePhoneNumber(value: string) {
+  return value.replace(/[^\d+()\s-]/g, '').replace(/^\s+/, '');
 }
 
 export function AuthForm<TFormValues extends FieldValues = FieldValues>({
@@ -102,8 +108,17 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               autoComplete={field.autoComplete}
               errorMessage={typeof fieldError === 'string' ? fieldError : undefined}
               fullWidth
+              inputMode={field.type === 'tel' ? 'tel' : undefined}
               key={field.name}
               label={field.label}
+              onInput={
+                field.type === 'tel'
+                  ? (event) => {
+                      const input = event.target as HTMLInputElement;
+                      input.value = sanitizePhoneNumber(input.value);
+                    }
+                  : undefined
+              }
               placeholder={field.placeholder}
               startAdornment={renderIcon(field.startIcon)}
               type={field.type ?? 'text'}

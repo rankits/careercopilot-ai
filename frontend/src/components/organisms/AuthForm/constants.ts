@@ -57,6 +57,14 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
       type: 'email',
     },
     {
+      autoComplete: 'tel',
+      label: 'Phone number',
+      name: 'phoneNumber',
+      placeholder: '+1 555 123 4567',
+      startIcon: 'phone',
+      type: 'tel',
+    },
+    {
       autoComplete: 'new-password',
       endIcon: 'visibilityOff',
       label: 'Password',
@@ -89,10 +97,17 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
       .oneOf([yup.ref('password')], 'Passwords must match')
       .required('Confirm password is required'),
     email: yup.string().email('Enter a valid email address').required('Email is required'),
-    name: yup.string().required('Full name is required'),
+    name: yup.string().trim().required('Full name is required'),
     password: yup
       .string()
       .min(8, 'Password must be at least 8 characters')
       .required('Password is required'),
+    phoneNumber: yup
+      .string()
+      .required('Phone number is required')
+      .matches(/^\+?(?=(?:\D*\d){10,15}\D*$)[\d\s()-]+$/, {
+        excludeEmptyString: true,
+        message: 'Enter a valid phone number',
+      }),
   }),
 } as const;
