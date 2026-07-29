@@ -10,6 +10,18 @@ enum ResumeStorageDriver {
   S3
 }
 
+enum ResumeParseStatus {
+  QUEUED
+  EXTRACTING_TEXT
+  CHECKING_EXTRACTION
+  PARSING
+  VALIDATING
+  NORMALISING
+  COMPLETED
+  NEEDS_REVIEW
+  FAILED
+}
+
 model Resume {
   id             String              @id @default(uuid())
   userId         String?             @map("user_id")
@@ -28,6 +40,7 @@ model Resume {
   updatedAt      DateTime            @updatedAt @map("updated_at")
 
   extractions    ResumeExtraction[]
+  parseRuns      ResumeParseRun[]
 
   @@index([userId, uploadedAt(sort: Desc)])
   @@index([status, uploadedAt])
@@ -37,6 +50,7 @@ model Resume {
 model ResumeExtraction {
   id              String   @id @default(uuid())
   resumeId        String   @map("resume_id")
+  parseRunId      String?  @unique @map("parse_run_id")
   extractedText   String?  @map("extracted_text") @db.Text
   extractedData   Json     @map("extracted_data")
   parserVersion   String   @map("parser_version")
@@ -44,9 +58,42 @@ model ResumeExtraction {
   createdAt       DateTime @default(now()) @map("created_at")
 
   resume          Resume   @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  parseRun        ResumeParseRun? @relation(fields: [parseRunId], references: [id], onDelete: SetNull)
 
   @@index([resumeId, createdAt(sort: Desc)])
   @@map("resume_extractions")
+}
+
+model ResumeParseRun {
+  id                String            @id @default(uuid())
+  resumeId          String            @map("resume_id")
+  status            ResumeParseStatus
+  attemptNumber     Int               @default(1) @map("attempt_number")
+  provider          String
+  model             String
+  promptVersion     String            @map("prompt_version")
+  schemaVersion     String            @map("schema_version")
+  sourceHash        String?           @map("source_hash")
+  extractedTextHash String?           @map("extracted_text_hash")
+  parsedData        Json?             @map("parsed_data")
+  confidence        Float?
+  warnings          Json?
+  requiresReview    Boolean           @default(false) @map("requires_review")
+  inputTokens       Int?              @map("input_tokens")
+  outputTokens      Int?              @map("output_tokens")
+  latencyMs         Int?              @map("latency_ms")
+  errorCode         String?           @map("error_code")
+  errorMessage      String?           @map("error_message")
+  startedAt         DateTime?         @map("started_at")
+  completedAt       DateTime?         @map("completed_at")
+  createdAt         DateTime          @default(now()) @map("created_at")
+  updatedAt         DateTime          @updatedAt @map("updated_at")
+
+  resume            Resume            @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  extraction        ResumeExtraction?
+
+  @@index([resumeId, createdAt(sort: Desc)])
+  @@map("resume_parse_runs")
 }
 
 model CandidateProfile {
