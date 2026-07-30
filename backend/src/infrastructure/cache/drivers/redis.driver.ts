@@ -112,6 +112,14 @@ export class RedisCacheDriver implements ICacheDriver {
     return res > 0;
   }
 
+  async increment(key: string, ttlSeconds?: number): Promise<number> {
+    const count = await this.client.incr(key);
+    if (count === 1 && ttlSeconds && ttlSeconds > 0) {
+      await this.client.expire(key, ttlSeconds);
+    }
+    return count;
+  }
+
   async ping(): Promise<boolean> {
     try {
       const res = await this.client.ping();
