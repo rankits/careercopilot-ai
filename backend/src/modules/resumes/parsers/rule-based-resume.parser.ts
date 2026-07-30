@@ -1,23 +1,27 @@
-import { ResumeParser, ResumeParserInput, ResumeParserResult } from "@/modules/resumes/types/resume.types.js";
+import {
+  ResumeParser,
+  ResumeParserInput,
+  ResumeParserResult,
+} from '@/modules/resumes/types/resume.types.js';
 
 const skillKeywords = [
-  "javascript",
-  "typescript",
-  "react",
-  "node",
-  "express",
-  "postgresql",
-  "mongodb",
-  "aws",
-  "docker",
-  "kubernetes",
-  "python",
-  "java",
-  "spring",
-  "sql",
-  "redis",
-  "rabbitmq",
-  "graphql",
+  'javascript',
+  'typescript',
+  'react',
+  'node',
+  'express',
+  'postgresql',
+  'mongodb',
+  'aws',
+  'docker',
+  'kubernetes',
+  'python',
+  'java',
+  'spring',
+  'sql',
+  'redis',
+  'rabbitmq',
+  'graphql',
 ];
 
 const compactLines = (text: string) =>
@@ -37,11 +41,15 @@ export class RuleBasedResumeParser implements ResumeParser {
 
     const skills = skillKeywords.filter((skill) => lowerText.includes(skill));
     const education = lines
-      .filter((line) => /(university|college|bachelor|master|degree|b\.tech|m\.tech|mba|phd)/i.test(line))
+      .filter((line) =>
+        /(university|college|bachelor|master|degree|b\.tech|m\.tech|mba|phd)/i.test(line),
+      )
       .slice(0, 10)
       .map((line) => ({ raw: line }));
     const experience = lines
-      .filter((line) => /(engineer|developer|manager|analyst|consultant|intern|architect|lead)/i.test(line))
+      .filter((line) =>
+        /(engineer|developer|manager|analyst|consultant|intern|architect|lead)/i.test(line),
+      )
       .slice(0, 12)
       .map((line) => ({ raw: line }));
     const certifications = lines
@@ -50,7 +58,7 @@ export class RuleBasedResumeParser implements ResumeParser {
       .map((line) => ({ raw: line }));
 
     return {
-      parserVersion: "rule-based-v1",
+      parserVersion: 'rule-based-v1',
       confidenceScore: 0.45,
       data: {
         personalDetails: {

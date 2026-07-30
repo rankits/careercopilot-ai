@@ -60,7 +60,9 @@ describe('RegisterPage', () => {
       'href',
       '/login',
     );
-    expect(screen.getByRole('heading', { name: /start your smarter career journey/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /start your smarter career journey/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/^smart job matching$/i)).toBeInTheDocument();
     expect(screen.getByText(/^ai-powered guidance$/i)).toBeInTheDocument();
     expect(screen.getByText(/^application tracking$/i)).toBeInTheDocument();
@@ -133,7 +135,9 @@ describe('RegisterPage', () => {
         phoneNumber: '+919876543210',
       }),
     );
-    expect(await screen.findByRole('heading', { name: /profile destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
     expect(
       queryClient.getMutationCache().find({ mutationKey: ['auth', 'register'] })?.state.status,
     ).toBe('success');
@@ -186,6 +190,8 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(registerMock).toHaveBeenCalledTimes(2);
-    expect(await screen.findByRole('heading', { name: /profile destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
   });
 });

@@ -45,4 +45,12 @@ describe('AppRouter auth routes', () => {
 
     expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
   });
+
+  it('renders app layout for home routes', () => {
+    renderRoute('/');
+
+    expect(screen.getByRole('banner')).toBeInTheDocument();
+    expect(screen.getByLabelText(/primary navigation/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/home page/i)).toBeInTheDocument();
+  });
 });
