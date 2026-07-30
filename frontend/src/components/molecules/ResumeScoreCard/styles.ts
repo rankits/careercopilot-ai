@@ -1,3 +1,5 @@
+import type { ElementType } from 'react';
+
 import { Button } from '@/components/atoms/Button';
 
 import { Box, Typography, styled } from '@/lib/material';
@@ -49,7 +51,7 @@ export const ResumeScoreHeader = styled(Box)({
   },
 });
 
-export const ResumeScoreTitle = styled(Typography)({
+export const ResumeScoreTitle = styled(Typography)<{ component?: ElementType }>({
   fontSize: fontSize.lg,
   fontWeight: fontWeight.bold,
 });
