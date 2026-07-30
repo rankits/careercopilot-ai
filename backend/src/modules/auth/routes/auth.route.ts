@@ -12,7 +12,6 @@ import {
   resendOtpController,
   resetPasswordController,
   verifyLoginOtpController,
-  verifyRegistrationOtpController,
 } from '@/modules/auth/controllers/auth.controller.js';
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
@@ -28,20 +27,13 @@ import {
   registerSchema,
   resendOtpSchema,
   resetPasswordSchema,
-  verifyRegistrationOtpSchema,
 } from '@/modules/auth/validations/auth.schema.js';
 
 const router = express.Router();
 
-// --- Registration & email verification ---
-router.post('/register', otpRateLimiter, validateResource(registerSchema), registerController);
+// --- Registration ---
+router.post('/register', authRateLimiter, validateResource(registerSchema), registerController);
 router.post('/otp/resend', otpRateLimiter, validateResource(resendOtpSchema), resendOtpController);
-router.post(
-  '/otp/verify-registration',
-  authRateLimiter,
-  validateResource(verifyRegistrationOtpSchema),
-  verifyRegistrationOtpController,
-);
 
 // --- Login (password & OTP) ---
 router.post('/login', authRateLimiter, validateResource(loginSchema), loginController);

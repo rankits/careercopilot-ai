@@ -48,7 +48,7 @@ export const authSwagger = {
     {
       summary: 'Register a new account',
       description:
-        'Creates a pending (unverified) account and emails a 6-digit registration code. Re-submitting for an existing, still-unverified email updates that pending account instead of creating a duplicate.',
+        'Creates the account, activates it immediately (no email verification code), and issues a session (refresh token via httpOnly cookie). Re-submitting for an existing, not-yet-verified email updates that account in place instead of creating a duplicate.',
       body: {
         required: ['email', 'password', 'firstName', 'lastName'],
         properties: {
@@ -61,13 +61,14 @@ export const authSwagger = {
       },
       responses: {
         201: {
-          description: 'Registration initiated - verification code emailed',
-          schema: successSchema(
-            'Registration initiated. Please verify the code sent to your email.',
-            {
-              email: emailField,
+          description: 'Account created - session issued',
+          schema: sessionResponseSchema,
+          headers: {
+            'Set-Cookie': {
+              description: 'httpOnly `refreshToken` cookie',
+              schema: { type: 'string' },
             },
-          ),
+          },
         },
         400: {
           description: 'Validation error',
@@ -87,59 +88,22 @@ export const authSwagger = {
     `${BASE_URL}/otp/resend`,
     {
       summary: 'Resend a one-time code',
-      description:
-        'Re-issues a code for the given purpose (registration / login / password_reset).',
+      description: 'Re-issues a code for the given purpose (login / password_reset).',
       body: {
         required: ['email', 'purpose'],
         properties: {
           email: emailField,
           purpose: {
             type: 'string',
-            enum: ['registration', 'login', 'password_reset'],
-            example: 'registration',
+            enum: ['login', 'password_reset'],
+            example: 'login',
           },
         },
       },
       responses: {
         200: genericOtpSentResponse,
         400: { description: 'Validation error' },
-        409: {
-          description: 'Requested a registration code for an email that is already verified',
-          schema: errorSchema('This email is already verified. Please sign in.', 'CONFLICT'),
-        },
         429: { description: 'Resend cooldown not yet elapsed, or the address has been blocked' },
-      },
-    },
-    false,
-    TAGS,
-  ),
-
-  ...createApiPost(
-    `${BASE_URL}/otp/verify-registration`,
-    {
-      summary: 'Verify a registration code',
-      description:
-        'Completes registration: activates the account and issues a session (refresh token via httpOnly cookie).',
-      body: {
-        required: ['email', 'code'],
-        properties: { email: emailField, code: otpCodeField },
-      },
-      responses: {
-        200: {
-          description: 'Email verified - session issued',
-          schema: sessionResponseSchema,
-          headers: {
-            'Set-Cookie': {
-              description: 'httpOnly `refreshToken` cookie',
-              schema: { type: 'string' },
-            },
-          },
-        },
-        400: { description: 'Invalid or expired code' },
-        409: {
-          description: 'This email is already verified',
-          schema: errorSchema('This email is already verified. Please sign in.', 'CONFLICT'),
-        },
       },
     },
     false,

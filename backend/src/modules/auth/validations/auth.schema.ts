@@ -50,14 +50,11 @@ export const registerSchema = withEnvelope(
 export const resendOtpSchema = withEnvelope(
   z.object({
     email: emailSchema,
-    purpose: z.nativeEnum(OtpPurpose),
-  }),
-);
-
-export const verifyRegistrationOtpSchema = withEnvelope(
-  z.object({
-    email: emailSchema,
-    code: otpCodeSchema,
+    purpose: z
+      .nativeEnum(OtpPurpose)
+      .refine((purpose) => purpose !== OtpPurpose.Registration, {
+        message: 'Registration no longer requires a verification code',
+      }),
   }),
 );
 
@@ -128,7 +125,6 @@ export const logoutSchema = withEnvelope(
 
 export type RegisterInput = z.infer<typeof registerSchema>['body'];
 export type ResendOtpInput = z.infer<typeof resendOtpSchema>['body'];
-export type VerifyRegistrationOtpInput = z.infer<typeof verifyRegistrationOtpSchema>['body'];
 export type LoginInput = z.infer<typeof loginSchema>['body'];
 export type LoginOtpRequestInput = z.infer<typeof loginOtpRequestSchema>['body'];
 export type LoginOtpVerifyInput = z.infer<typeof loginOtpVerifySchema>['body'];
