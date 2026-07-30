@@ -23,7 +23,7 @@ export default defineConfig({
       reportsDirectory: './coverage',
     },
     environment: 'jsdom',
-    fileParallelism: false,
+    // fileParallelism: false,
     globals: true,
     setupFiles: './src/test/setup.ts',
   },
