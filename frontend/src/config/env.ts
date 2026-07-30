@@ -4,6 +4,6 @@ const requireEnv = (value: unknown, fallback: string): string =>
 const fallbackApiBaseUrl = 'http://localhost:5001/api/v1';
 
 export const env = {
-  apiBaseUrl: requireEnv(import.meta.env.VITE_API_BASE_URL, fallbackApiBaseUrl),
+  apiBaseUrl: requireEnv(import.meta.env.VITE_API_BASE_URL, 'http://localhost:5001/api/v1'),
   appName: requireEnv(import.meta.env.VITE_APP_NAME, 'CareerCopilot'),
 } as const;

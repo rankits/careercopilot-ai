@@ -19,7 +19,7 @@
 body {
   margin: 0;
   min-width: 320px;
-  min-height: 100vh;
+  min-height: 100dvh;
   overflow: hidden;
   background:
     radial-gradient(circle at top left, rgba(99, 91, 255, 0.08), transparent 28rem), #f8fafc;
@@ -58,12 +58,14 @@ h1 {
 .app-shell {
   display: grid;
   grid-template-columns: auto 1fr;
-  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
   overflow: hidden;
 }
 .content-shell {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
   min-height: 0;
   min-width: 0;
   overflow: hidden;
@@ -73,7 +75,9 @@ h1 {
   min-width: 0;
   overflow-x: hidden;
   overflow-y: auto;
+  overscroll-behavior-y: contain;
   padding: 1rem;
+  -webkit-overflow-scrolling: touch;
   scrollbar-gutter: stable;
   scrollbar-color: #d1d5db #f3f4f6;
   scrollbar-width: thin;
