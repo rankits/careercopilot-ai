@@ -25,17 +25,19 @@ describe('authService register', () => {
     await expect(
       authService.register({
         email: 'ada@example.com',
-        name: 'Ada',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
         password: 'password123',
-        phoneNumber: '+919876543210',
+        phone: '+919876543210',
       }),
     ).resolves.toEqual(response);
 
     expect(postMock).toHaveBeenCalledWith('/auth/register', {
       email: 'ada@example.com',
-      name: 'Ada',
+      firstName: 'Ada',
+      lastName: 'Lovelace',
       password: 'password123',
-      phoneNumber: '+919876543210',
+      phone: '+919876543210',
     });
   });
 
@@ -46,9 +48,10 @@ describe('authService register', () => {
     await expect(
       authService.register({
         email: 'ada@example.com',
-        name: 'Ada',
+        firstName: 'Ada',
+        lastName: 'Lovelace',
         password: 'password123',
-        phoneNumber: '+919876543210',
+        phone: '+919876543210',
       }),
     ).rejects.toBe(failure);
   });

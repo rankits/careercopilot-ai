@@ -28,6 +28,7 @@ export { default as WorkOutlineOutlinedIcon } from '@mui/icons-material/WorkOutl
 export { default as StarIcon } from '@mui/icons-material/Star';
 export { default as TuneOutlinedIcon } from '@mui/icons-material/TuneOutlined';
 export type { SvgIconComponent } from '@mui/icons-material';
+export { default as VisibilityOutlinedIcon } from '@mui/icons-material/VisibilityOutlined';
 export { default as VisibilityOffOutlinedIcon } from '@mui/icons-material/VisibilityOffOutlined';
 export { default as Avatar } from '@mui/material/Avatar';
 export { default as Badge } from '@mui/material/Badge';
