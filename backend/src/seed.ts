@@ -9,9 +9,9 @@
  * single shared PrismaClient instance / process exit code.
  */
 import { PrismaClient } from '@prisma/client';
-import { seedPermissions } from './seed/permissions.seed.js';
-import { seedRoles } from './seed/roles.seed.js';
-import { seedDefaultAdmin } from './seed/admin.seed.js';
+import { seedPermissions } from '@/seed/seed/permissions.seed';
+import { seedRoles } from '@/seed/seed/roles.seed';
+import { seedDefaultAdmin } from '@/seed/seed/admin.seed';
 
 const prisma = new PrismaClient();
 

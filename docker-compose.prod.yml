@@ -124,6 +124,7 @@ services:
       RESUME_S3_PREFIX: ${RESUME_S3_PREFIX}
       RUN_MIGRATIONS: ${RUN_MIGRATIONS}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      RUN_SEEDS_ON_STARTUP: ${RUN_SEEDS_ON_STARTUP}
     volumes:
       - backend_prod_storage:/app/storage/resumes
     depends_on:
