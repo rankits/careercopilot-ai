@@ -1,0 +1,95 @@
+import type { JobCardData } from '@/components/molecules';
+
+import { jobs } from '@/constants/pages/jobFeed';
+import {
+  AccessTimeOutlinedIcon,
+  BusinessCenterOutlinedIcon,
+  CheckCircleOutlineIcon,
+  InsightsOutlinedIcon,
+} from '@/lib/material';
+
+export const dashboardMetrics = [
+  {
+    helper: 'up 12% this week',
+    icon: BusinessCenterOutlinedIcon,
+    label: 'Applications',
+    value: '152',
+  },
+  {
+    helper: 'up 2% this week',
+    icon: AccessTimeOutlinedIcon,
+    label: 'Interviews',
+    value: '8',
+  },
+  {
+    helper: 'Congrats!',
+    icon: CheckCircleOutlineIcon,
+    label: 'Offers',
+    value: '2',
+  },
+  {
+    helper: 'up 8% this week',
+    icon: InsightsOutlinedIcon,
+    label: 'Avg. Match Score',
+    value: '91%',
+  },
+] as const;
+
+export const bestJobMatch = jobs[0] as JobCardData;
+export const recommendedJobs = jobs.slice(1, 5);
+
+export const dashboardFilterOptions = {
+  experience: [
+    { label: 'Experience', value: 'all' },
+    { label: '0 - 2 yrs', value: '0-2' },
+    { label: '3 - 4 yrs', value: '3-4' },
+  ],
+  location: [
+    { label: 'Location', value: 'all' },
+    { label: 'Bangalore', value: 'bangalore' },
+    { label: 'Hyderabad', value: 'hyderabad' },
+  ],
+  salary: [
+    { label: 'Salary', value: 'all' },
+    { label: 'Under 15 LPA', value: 'under-15' },
+    { label: '15 - 25 LPA', value: '15-25' },
+  ],
+  sort: [
+    { label: 'Sort by: Best Match', value: 'best-match' },
+    { label: 'Newest', value: 'newest' },
+    { label: 'Salary', value: 'salary' },
+  ],
+  workMode: [
+    { label: 'Work Mode', value: 'all' },
+    { label: 'Remote', value: 'remote' },
+    { label: 'Hybrid', value: 'hybrid' },
+  ],
+};
+
+export const dashboardFilters = [
+  {
+    key: 'location',
+    label: 'Location',
+    value: 'all',
+  },
+  {
+    key: 'experience',
+    label: 'Experience',
+    value: 'all',
+  },
+  {
+    key: 'salary',
+    label: 'Salary',
+    value: 'all',
+  },
+  {
+    key: 'workMode',
+    label: 'Work Mode',
+    value: 'all',
+  },
+  {
+    key: 'sort',
+    label: 'Sort by: Best Match',
+    value: 'best-match',
+  },
+] as const;
