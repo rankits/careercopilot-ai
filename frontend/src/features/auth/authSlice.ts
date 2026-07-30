@@ -2,7 +2,7 @@ import { createAsyncThunk, createSlice } from '@reduxjs/toolkit';
 
 import { STORAGE_KEYS } from '@/constants/storage';
 import { authService } from '@/features/auth/services/auth.service';
-import type { AuthState, LoginPayload, User } from '@/features/auth/types/auth.types';
+import type { AuthResponse, AuthState, LoginPayload, User } from '@/features/auth/types/auth.types';
 import { storage } from '@/utils/storage';
 
 const storedToken = storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN);
@@ -16,7 +16,7 @@ const initialState: AuthState = {
   error: null,
 };
 
-export const login = createAsyncThunk('auth/login', async (payload: LoginPayload) => {
+export const login = createAsyncThunk<AuthResponse, LoginPayload>('auth/login', async (payload) => {
   return authService.login(payload);
 });
 
