@@ -1,5 +1,5 @@
-import type { AuditAction, Prisma } from "@prisma/client";
-import { prisma } from "@/shared/config/db.conf.js";
+import type { AuditAction, Prisma } from '@prisma/client';
+import { prisma } from '@/shared/config/db.conf.js';
 
 export interface AuditContext {
   ipAddress?: string | undefined;

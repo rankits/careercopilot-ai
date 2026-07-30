@@ -1,9 +1,14 @@
-import { AuditAction } from "@prisma/client";
-import { userRepository } from "@/modules/user/repositories/user.repository.js";
-import { AppError } from "@/shared/utils/errors/AppError.js";
-import { toUserListItem, toUserProfile } from "@/modules/user/utils/user.mapper.js";
-import type { ListUsersQuery, UpdateProfileInput } from "@/modules/user/validations/user.schema.js";
-import type { PaginatedResult, RequestContext, UserListItem, UserProfile } from "@/modules/user/types/user.types.js";
+import { AuditAction } from '@prisma/client';
+import { userRepository } from '@/modules/user/repositories/user.repository.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+import { toUserListItem, toUserProfile } from '@/modules/user/utils/user.mapper.js';
+import type { ListUsersQuery, UpdateProfileInput } from '@/modules/user/validations/user.schema.js';
+import type {
+  PaginatedResult,
+  RequestContext,
+  UserListItem,
+  UserProfile,
+} from '@/modules/user/types/user.types.js';
 
 /**
  * Cross-module lookup: other modules (resume, applications, ...) that need
@@ -19,7 +24,7 @@ export const getUserProfile = async (publicId: string): Promise<UserProfile | nu
 export const getMyProfile = async (publicId: string): Promise<UserProfile> => {
   const user = await userRepository.findByPublicId(publicId);
   if (!user) {
-    throw new AppError("Account not found", 404);
+    throw new AppError('Account not found', 404);
   }
   return toUserProfile(user);
 };
@@ -31,7 +36,7 @@ export const updateMyProfile = async (
 ): Promise<UserProfile> => {
   const existing = await userRepository.findByPublicId(publicId);
   if (!existing) {
-    throw new AppError("Account not found", 404);
+    throw new AppError('Account not found', 404);
   }
 
   const updated = await userRepository.updateProfile(existing.id, input);
@@ -45,9 +50,7 @@ export const updateMyProfile = async (
   return toUserProfile(updated);
 };
 
-export const listUsers = async (
-  query: ListUsersQuery,
-): Promise<PaginatedResult<UserListItem>> => {
+export const listUsers = async (query: ListUsersQuery): Promise<PaginatedResult<UserListItem>> => {
   const { items, total } = await userRepository.list(query);
   return {
     items: items.map(toUserListItem),

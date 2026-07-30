@@ -1,6 +1,6 @@
-import type { AuditAction, Prisma, User } from "@prisma/client";
-import { prisma } from "@/shared/config/db.conf.js";
-import type { RequestContext } from "@/modules/user/types/user.types.js";
+import type { AuditAction, Prisma, User } from '@prisma/client';
+import { prisma } from '@/shared/config/db.conf.js';
+import type { RequestContext } from '@/modules/user/types/user.types.js';
 
 export type UserWithRole = User & { role: { name: string } };
 
@@ -55,9 +55,9 @@ export const userRepository = {
     const where: Prisma.UserWhereInput = filter.search
       ? {
           OR: [
-            { email: { contains: filter.search, mode: "insensitive" } },
-            { firstName: { contains: filter.search, mode: "insensitive" } },
-            { lastName: { contains: filter.search, mode: "insensitive" } },
+            { email: { contains: filter.search, mode: 'insensitive' } },
+            { firstName: { contains: filter.search, mode: 'insensitive' } },
+            { lastName: { contains: filter.search, mode: 'insensitive' } },
           ],
         }
       : {};
@@ -65,7 +65,7 @@ export const userRepository = {
     const [items, total] = await Promise.all([
       prisma.user.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy: { createdAt: 'desc' },
         skip: (filter.page - 1) * filter.limit,
         take: filter.limit,
         ...withRole,

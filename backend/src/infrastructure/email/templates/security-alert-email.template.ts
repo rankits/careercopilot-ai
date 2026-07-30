@@ -1,5 +1,5 @@
-import { escapeHtml } from "@/infrastructure/email/templates/html-escape.util.js";
-import type { RenderedEmail } from "@/infrastructure/email/templates/otp-email.template.js";
+import { escapeHtml } from '@/infrastructure/email/templates/html-escape.util.js';
+import type { RenderedEmail } from '@/infrastructure/email/templates/otp-email.template.js';
 
 export interface SecurityAlertEmailData {
   firstName: string;
@@ -20,19 +20,19 @@ export const renderSecurityAlertEmail = (data: SecurityAlertEmailData): Rendered
 
   const text = [
     `Hi ${data.firstName},`,
-    "",
-    `We're confirming: ${data.eventLabel} at ${when}${data.ipAddress ? ` from IP ${data.ipAddress}` : ""}.`,
+    '',
+    `We're confirming: ${data.eventLabel} at ${when}${data.ipAddress ? ` from IP ${data.ipAddress}` : ''}.`,
     "If this wasn't you, reset your password immediately and contact support.",
-    "",
-    "- CareerCopilot Security",
-  ].join("\n");
+    '',
+    '- CareerCopilot Security',
+  ].join('\n');
 
   const html = `
   <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1f2937;">
     <h2 style="color: #b91c1c;">Security alert</h2>
     <p>Hi ${escapeHtml(data.firstName)},</p>
     <p>We're confirming: <strong>${escapeHtml(data.eventLabel)}</strong></p>
-    <p style="color: #6b7280; font-size: 13px;">${escapeHtml(when)}${data.ipAddress ? ` &middot; IP ${escapeHtml(data.ipAddress)}` : ""}</p>
+    <p style="color: #6b7280; font-size: 13px;">${escapeHtml(when)}${data.ipAddress ? ` &middot; IP ${escapeHtml(data.ipAddress)}` : ''}</p>
     <p>If this wasn't you, reset your password immediately and contact support.</p>
   </div>`;
 

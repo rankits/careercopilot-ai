@@ -1,5 +1,5 @@
-import type { UserWithRole } from "@/modules/auth/repositories/auth.repository.js";
-import type { SafeUser, UserTokenContext } from "@/modules/auth/types/auth.types.js";
+import type { UserWithRole } from '@/modules/auth/repositories/auth.repository.js';
+import type { SafeUser, UserTokenContext } from '@/modules/auth/types/auth.types.js';
 
 /** Strips internal id/credential fields before a user record leaves the module - `id` is always the publicId. */
 export const toSafeUser = (user: UserWithRole): SafeUser => ({

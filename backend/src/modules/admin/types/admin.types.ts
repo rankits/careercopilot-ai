@@ -1,4 +1,4 @@
-import type { Status } from "@prisma/client";
+import type { Status } from '@prisma/client';
 
 export interface RequestContext {
   ipAddress?: string | undefined;

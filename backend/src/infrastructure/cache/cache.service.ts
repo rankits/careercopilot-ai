@@ -1,13 +1,13 @@
-import { ICacheDriver, ICacheService } from "@/infrastructure/cache/cache.interface.js";
-import { MemoryCacheDriver } from "@/infrastructure/cache/drivers/memory.driver.js";
-import { RedisCacheDriver } from "@/infrastructure/cache/drivers/redis.driver.js";
+import { ICacheDriver, ICacheService } from '@/infrastructure/cache/cache.interface.js';
+import { MemoryCacheDriver } from '@/infrastructure/cache/drivers/memory.driver.js';
+import { RedisCacheDriver } from '@/infrastructure/cache/drivers/redis.driver.js';
 
 export class CacheService implements ICacheService {
   private driver: ICacheDriver;
 
   constructor() {
-    const driverType = (process.env.CACHE_DRIVER || "memory").toLowerCase();
-    if (driverType === "redis") {
+    const driverType = (process.env.CACHE_DRIVER || 'memory').toLowerCase();
+    if (driverType === 'redis') {
       this.driver = new RedisCacheDriver();
     } else {
       this.driver = new MemoryCacheDriver();
@@ -46,11 +46,7 @@ export class CacheService implements ICacheService {
     return this.driver.disconnect();
   }
 
-  async getOrSet<T>(
-    key: string,
-    fetcher: () => Promise<T>,
-    ttlSeconds?: number
-  ): Promise<T> {
+  async getOrSet<T>(key: string, fetcher: () => Promise<T>, ttlSeconds?: number): Promise<T> {
     const cached = await this.get<T>(key);
     if (cached !== null) {
       return cached;

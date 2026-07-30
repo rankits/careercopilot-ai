@@ -1,4 +1,4 @@
-import { ICacheDriver } from "@/infrastructure/cache/cache.interface.js";
+import { ICacheDriver } from '@/infrastructure/cache/cache.interface.js';
 
 interface CacheEntry {
   value: unknown;
@@ -30,7 +30,7 @@ export class MemoryCacheDriver implements ICacheDriver {
   }
 
   async deleteByPrefix(prefix: string): Promise<number> {
-    const normalizedPrefix = prefix.endsWith("*") ? prefix.slice(0, -1) : prefix;
+    const normalizedPrefix = prefix.endsWith('*') ? prefix.slice(0, -1) : prefix;
     let count = 0;
 
     for (const key of this.store.keys()) {

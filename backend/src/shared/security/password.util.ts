@@ -1,6 +1,6 @@
-import { randomBytes, scrypt, timingSafeEqual } from "node:crypto";
-import { promisify } from "node:util";
-import { securityConfig } from "@/shared/config/security.conf.js";
+import { randomBytes, scrypt, timingSafeEqual } from 'node:crypto';
+import { promisify } from 'node:util';
+import { securityConfig } from '@/shared/config/security.conf.js';
 
 const scryptAsync = promisify(scrypt);
 
@@ -27,13 +27,13 @@ export interface HashedPassword {
  */
 export const PasswordUtil = {
   async hash(plain: string): Promise<HashedPassword> {
-    const passwordSalt = randomBytes(SALT_LENGTH_BYTES).toString("hex");
+    const passwordSalt = randomBytes(SALT_LENGTH_BYTES).toString('hex');
     const derivedKey = (await scryptAsync(plain, passwordSalt, KEY_LENGTH_BYTES)) as Buffer;
-    return { passwordHash: derivedKey.toString("hex"), passwordSalt };
+    return { passwordHash: derivedKey.toString('hex'), passwordSalt };
   },
 
   async verify(plain: string, hash: string, salt: string): Promise<boolean> {
-    const storedHash = Buffer.from(hash, "hex");
+    const storedHash = Buffer.from(hash, 'hex');
     const derivedKey = (await scryptAsync(plain, salt, KEY_LENGTH_BYTES)) as Buffer;
 
     // A corrupt/foreign hash value must never reach timingSafeEqual, which

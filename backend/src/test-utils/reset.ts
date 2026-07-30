@@ -1,6 +1,6 @@
-import { fakeDb } from "@/test-utils/app.js";
-import { cacheService } from "@/infrastructure/cache/index.js";
-import { publishEventMock } from "@/test-utils/messaging-mock.js";
+import { fakeDb } from '@/test-utils/app.js';
+import { cacheService } from '@/infrastructure/cache/index.js';
+import { publishEventMock } from '@/test-utils/messaging-mock.js';
 
 /**
  * Resets all test-visible state between cases: the in-memory fake

@@ -1,20 +1,23 @@
-import { Status, AuditAction, OtpPurpose } from "@prisma/client";
-import { authRepository, type UserWithRole } from "@/modules/auth/repositories/auth.repository.js";
-import { PasswordUtil } from "@/shared/security/password.util.js";
-import { OtpService } from "@/modules/auth/services/otp.service.js";
-import { TokenService } from "@/modules/auth/services/token.service.js";
-import { GENERIC_OTP_SENT_MESSAGE, OTP_PURPOSE_LABELS } from "@/modules/auth/constants/auth.constant.js";
-import { toSafeUser, toTokenContext } from "@/modules/auth/utils/auth.mapper.js";
-import { securityConfig } from "@/shared/config/security.conf.js";
-import { AppError } from "@/shared/utils/errors/AppError.js";
-import { AuditService } from "@/shared/audit/audit.service.js";
-import { EmailQueue } from "@/queues/email.queue.js";
-import { cacheService, CacheKeys, CacheTTL } from "@/infrastructure/cache/index.js";
+import { Status, AuditAction, OtpPurpose } from '@prisma/client';
+import { authRepository, type UserWithRole } from '@/modules/auth/repositories/auth.repository.js';
+import { PasswordUtil } from '@/shared/security/password.util.js';
+import { OtpService } from '@/modules/auth/services/otp.service.js';
+import { TokenService } from '@/modules/auth/services/token.service.js';
+import {
+  GENERIC_OTP_SENT_MESSAGE,
+  OTP_PURPOSE_LABELS,
+} from '@/modules/auth/constants/auth.constant.js';
+import { toSafeUser, toTokenContext } from '@/modules/auth/utils/auth.mapper.js';
+import { securityConfig } from '@/shared/config/security.conf.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+import { AuditService } from '@/shared/audit/audit.service.js';
+import { EmailQueue } from '@/queues/email.queue.js';
+import { cacheService, CacheKeys, CacheTTL } from '@/infrastructure/cache/index.js';
 import {
   messageBus,
   MessageExchanges,
   MessageRoutingKeys,
-} from "@/infrastructure/messaging/index.js";
+} from '@/infrastructure/messaging/index.js';
 import type {
   ChangePasswordInput,
   ForgotPasswordInput,
@@ -26,22 +29,27 @@ import type {
   ResendOtpInput,
   ResetPasswordInput,
   VerifyRegistrationOtpInput,
-} from "@/modules/auth/validations/auth.schema.js";
-import type { AuthSession, AuthTokens, RequestContext, SafeUser } from "@/modules/auth/types/auth.types.js";
+} from '@/modules/auth/validations/auth.schema.js';
+import type {
+  AuthSession,
+  AuthTokens,
+  RequestContext,
+  SafeUser,
+} from '@/modules/auth/types/auth.types.js';
 
 const assertLoginable = (user: UserWithRole): void => {
   if (!user.isEmailVerified || user.status === Status.PendingVerification) {
-    throw new AppError("Please verify your email before signing in", 403, "EMAIL_NOT_VERIFIED");
+    throw new AppError('Please verify your email before signing in', 403, 'EMAIL_NOT_VERIFIED');
   }
   if (user.status === Status.Suspended) {
     throw new AppError(
-      "This account has been suspended. Contact support.",
+      'This account has been suspended. Contact support.',
       403,
-      "ACCOUNT_SUSPENDED",
+      'ACCOUNT_SUSPENDED',
     );
   }
   if (user.status === Status.Deactivated) {
-    throw new AppError("This account has been deactivated.", 403, "ACCOUNT_DEACTIVATED");
+    throw new AppError('This account has been deactivated.', 403, 'ACCOUNT_DEACTIVATED');
   }
 };
 
@@ -104,7 +112,7 @@ const cacheUserSession = async (user: SafeUser): Promise<void> => {
 
 const publishAuthUpdated = async (
   user: UserWithRole,
-  reason: "REGISTERED" | "PASSWORD_CHANGED" | "PASSWORD_RESET",
+  reason: 'REGISTERED' | 'PASSWORD_CHANGED' | 'PASSWORD_RESET',
 ): Promise<void> => {
   await messageBus
     .publishEvent(MessageExchanges.DOMAIN_EVENTS, MessageRoutingKeys.AUTH_UPDATED, {
@@ -114,7 +122,7 @@ const publishAuthUpdated = async (
       timestamp: new Date().toISOString(),
     })
     .catch((err: unknown) =>
-      console.error("[AuthService] Failed to publish auth.updated event:", err),
+      console.error('[AuthService] Failed to publish auth.updated event:', err),
     );
 };
 
@@ -125,7 +133,7 @@ export const register = async (
   const existing = await authRepository.findUserByEmail(input.email);
 
   if (existing?.isEmailVerified) {
-    throw new AppError("An account with this email already exists", 409, "CONFLICT");
+    throw new AppError('An account with this email already exists', 409, 'CONFLICT');
   }
 
   const credentials = await PasswordUtil.hash(input.password);
@@ -149,7 +157,7 @@ export const register = async (
   await AuditService.write({ userId: user.id, action: AuditAction.Register, context });
 
   return {
-    message: "Registration initiated. Please verify the code sent to your email.",
+    message: 'Registration initiated. Please verify the code sent to your email.',
     email: user.email,
   };
 };
@@ -167,7 +175,7 @@ export const resendOtp = async (
   }
 
   if (input.purpose === OtpPurpose.Registration && user.isEmailVerified) {
-    throw new AppError("This email is already verified. Please sign in.", 409, "CONFLICT");
+    throw new AppError('This email is already verified. Please sign in.', 409, 'CONFLICT');
   }
   if (input.purpose !== OtpPurpose.Registration && !user.isEmailVerified) {
     return { message: GENERIC_OTP_SENT_MESSAGE };
@@ -183,10 +191,10 @@ export const verifyRegistrationOtp = async (
 ): Promise<AuthSession> => {
   const user = await authRepository.findUserByEmail(input.email);
   if (!user) {
-    throw new AppError("Invalid email or verification code", 400);
+    throw new AppError('Invalid email or verification code', 400);
   }
   if (user.isEmailVerified) {
-    throw new AppError("This email is already verified. Please sign in.", 409, "CONFLICT");
+    throw new AppError('This email is already verified. Please sign in.', 409, 'CONFLICT');
   }
 
   await consumeOtpOrThrow(
@@ -194,7 +202,7 @@ export const verifyRegistrationOtp = async (
     user,
     input.code,
     context,
-    "Invalid or expired verification code",
+    'Invalid or expired verification code',
   );
 
   const verifiedUser = await authRepository.markEmailVerified(user.id);
@@ -203,12 +211,12 @@ export const verifyRegistrationOtp = async (
     userId: user.id,
     action: AuditAction.LoginSuccess,
     context,
-    metadata: { via: "REGISTRATION_VERIFIED" },
+    metadata: { via: 'REGISTRATION_VERIFIED' },
   });
 
   const tokens = await TokenService.issueSession(toTokenContext(verifiedUser), context);
   await EmailQueue.sendWelcomeEmail({ to: verifiedUser.email, firstName: verifiedUser.firstName });
-  await publishAuthUpdated(verifiedUser, "REGISTERED");
+  await publishAuthUpdated(verifiedUser, 'REGISTERED');
 
   const safeUser = toSafeUser(verifiedUser);
   await cacheUserSession(safeUser);
@@ -218,14 +226,14 @@ export const verifyRegistrationOtp = async (
 export const login = async (input: LoginInput, context: RequestContext): Promise<AuthSession> => {
   const user = await authRepository.findUserByEmail(input.email);
   if (!user) {
-    throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
+    throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
 
   if (user.lockedUntil && user.lockedUntil.getTime() > Date.now()) {
     throw new AppError(
       `Too many failed attempts. Try again after ${user.lockedUntil.toISOString()}`,
       423,
-      "ACCOUNT_LOCKED",
+      'ACCOUNT_LOCKED',
     );
   }
 
@@ -241,7 +249,7 @@ export const login = async (input: LoginInput, context: RequestContext): Promise
         metadata: { lockedUntil },
       });
     }
-    throw new AppError("Invalid email or password", 401, "INVALID_CREDENTIALS");
+    throw new AppError('Invalid email or password', 401, 'INVALID_CREDENTIALS');
   }
 
   assertLoginable(user);
@@ -251,7 +259,7 @@ export const login = async (input: LoginInput, context: RequestContext): Promise
     userId: user.id,
     action: AuditAction.LoginSuccess,
     context,
-    metadata: { via: "PASSWORD" },
+    metadata: { via: 'PASSWORD' },
   });
 
   const tokens = await TokenService.issueSession(toTokenContext(user), context, input.rememberMe);
@@ -264,7 +272,7 @@ export const login = async (input: LoginInput, context: RequestContext): Promise
       email: user.email,
       timestamp: new Date().toISOString(),
     })
-    .catch((err: unknown) => console.error("[AuthService] Failed to publish signin event:", err));
+    .catch((err: unknown) => console.error('[AuthService] Failed to publish signin event:', err));
 
   return { user: safeUser, tokens };
 };
@@ -288,10 +296,10 @@ export const verifyLoginOtp = async (
 ): Promise<AuthSession> => {
   const user = await authRepository.findUserByEmail(input.email);
   if (!user) {
-    throw new AppError("Invalid email or code", 401, "INVALID_CREDENTIALS");
+    throw new AppError('Invalid email or code', 401, 'INVALID_CREDENTIALS');
   }
 
-  await consumeOtpOrThrow(OtpPurpose.Login, user, input.code, context, "Invalid or expired code");
+  await consumeOtpOrThrow(OtpPurpose.Login, user, input.code, context, 'Invalid or expired code');
   assertLoginable(user);
 
   await authRepository.recordSuccessfulLogin(user.id, context.ipAddress);
@@ -299,7 +307,7 @@ export const verifyLoginOtp = async (
     userId: user.id,
     action: AuditAction.LoginSuccess,
     context,
-    metadata: { via: "OTP" },
+    metadata: { via: 'OTP' },
   });
 
   const tokens = await TokenService.issueSession(toTokenContext(user), context, input.rememberMe);
@@ -333,7 +341,7 @@ export const resetPassword = async (
 ): Promise<{ message: string }> => {
   const user = await authRepository.findUserByEmail(input.email);
   if (!user) {
-    throw new AppError("Invalid email or code", 400);
+    throw new AppError('Invalid email or code', 400);
   }
 
   await consumeOtpOrThrow(
@@ -341,7 +349,7 @@ export const resetPassword = async (
     user,
     input.code,
     context,
-    "Invalid or expired code",
+    'Invalid or expired code',
   );
 
   const credentials = await PasswordUtil.hash(input.newPassword);
@@ -357,12 +365,12 @@ export const resetPassword = async (
   await EmailQueue.sendSecurityAlertEmail({
     to: user.email,
     firstName: user.firstName,
-    eventLabel: "Your password was reset",
+    eventLabel: 'Your password was reset',
     ipAddress: context.ipAddress,
   });
-  await publishAuthUpdated(user, "PASSWORD_RESET");
+  await publishAuthUpdated(user, 'PASSWORD_RESET');
 
-  return { message: "Password has been reset. Please sign in with your new password." };
+  return { message: 'Password has been reset. Please sign in with your new password.' };
 };
 
 export const changePassword = async (
@@ -372,12 +380,12 @@ export const changePassword = async (
 ): Promise<{ message: string }> => {
   const user = await authRepository.findUserByPublicId(principalId);
   if (!user) {
-    throw new AppError("Account not found", 404);
+    throw new AppError('Account not found', 404);
   }
 
   const isValid = await verifyPassword(user.id, input.currentPassword);
   if (!isValid) {
-    throw new AppError("Current password is incorrect", 401, "INVALID_CREDENTIALS");
+    throw new AppError('Current password is incorrect', 401, 'INVALID_CREDENTIALS');
   }
 
   const credentials = await PasswordUtil.hash(input.newPassword);
@@ -390,12 +398,12 @@ export const changePassword = async (
   await EmailQueue.sendSecurityAlertEmail({
     to: user.email,
     firstName: user.firstName,
-    eventLabel: "Your password was changed",
+    eventLabel: 'Your password was changed',
     ipAddress: context.ipAddress,
   });
-  await publishAuthUpdated(user, "PASSWORD_CHANGED");
+  await publishAuthUpdated(user, 'PASSWORD_CHANGED');
 
-  return { message: "Password changed. You have been signed out of all other sessions." };
+  return { message: 'Password changed. You have been signed out of all other sessions.' };
 };
 
 export const refreshSession = async (
@@ -414,7 +422,7 @@ export const logout = async (
   if (refreshToken) {
     await TokenService.revokeSession(refreshToken, context);
   }
-  return { message: "Logged out successfully" };
+  return { message: 'Logged out successfully' };
 };
 
 export const logoutAll = async (
@@ -423,19 +431,19 @@ export const logoutAll = async (
 ): Promise<{ message: string }> => {
   const user = await authRepository.findUserByPublicId(principalId);
   if (!user) {
-    throw new AppError("Account not found", 404);
+    throw new AppError('Account not found', 404);
   }
 
   await TokenService.revokeAllSessions(user.id);
   await TokenService.bumpTokenVersion(user.id);
   await AuditService.write({ userId: user.id, action: AuditAction.LogoutAll, context });
-  return { message: "Logged out from all devices" };
+  return { message: 'Logged out from all devices' };
 };
 
 export const getCurrentUser = async (principalId: string): Promise<SafeUser> => {
   const user = await authRepository.findUserByPublicId(principalId);
   if (!user) {
-    throw new AppError("Account not found", 404);
+    throw new AppError('Account not found', 404);
   }
   return toSafeUser(user);
 };

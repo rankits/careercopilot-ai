@@ -1,7 +1,7 @@
-import { z, ZodTypeAny } from "zod";
-import { OtpPurpose } from "@prisma/client";
-import { securityConfig } from "@/shared/config/security.conf.js";
-import { PasswordUtil } from "@/shared/security/password.util.js";
+import { z, ZodTypeAny } from 'zod';
+import { OtpPurpose } from '@prisma/client';
+import { securityConfig } from '@/shared/config/security.conf.js';
+import { PasswordUtil } from '@/shared/security/password.util.js';
 
 /** `validateResource` always parses `{ body, query, params }` - this wraps a body schema into that envelope. */
 const withEnvelope = (body: ZodTypeAny) =>
@@ -11,7 +11,7 @@ const withEnvelope = (body: ZodTypeAny) =>
     params: z.object({}).optional(),
   });
 
-const emailSchema = z.string().trim().toLowerCase().email("Please provide a valid email address");
+const emailSchema = z.string().trim().toLowerCase().email('Please provide a valid email address');
 
 const passwordSchema = z
   .string()
@@ -19,22 +19,22 @@ const passwordSchema = z
     securityConfig.password.minLength,
     `Password must be at least ${securityConfig.password.minLength} characters`,
   )
-  .max(128, "Password is too long")
+  .max(128, 'Password is too long')
   .refine((value) => PasswordUtil.meetsPolicy(value), {
-    message: "Password must include an uppercase letter, a lowercase letter, a number and a symbol",
+    message: 'Password must include an uppercase letter, a lowercase letter, a number and a symbol',
   });
 
-const nameSchema = z.string().trim().min(1, "This field is required").max(80, "Too long");
+const nameSchema = z.string().trim().min(1, 'This field is required').max(80, 'Too long');
 
 const phoneSchema = z
   .string()
   .trim()
-  .regex(/^\+?[1-9]\d{7,14}$/, "Phone must be a valid E.164 number, e.g. +14155552671");
+  .regex(/^\+?[1-9]\d{7,14}$/, 'Phone must be a valid E.164 number, e.g. +14155552671');
 
 const otpCodeSchema = z
   .string()
   .trim()
-  .regex(/^\d+$/, "Code must be numeric")
+  .regex(/^\d+$/, 'Code must be numeric')
   .length(securityConfig.otp.length, `Code must be ${securityConfig.otp.length} digits`);
 
 export const registerSchema = withEnvelope(
@@ -64,7 +64,7 @@ export const verifyRegistrationOtpSchema = withEnvelope(
 export const loginSchema = withEnvelope(
   z.object({
     email: emailSchema,
-    password: z.string().min(1, "Password is required"),
+    password: z.string().min(1, 'Password is required'),
     rememberMe: z.boolean().optional().default(false),
   }),
 );
@@ -100,12 +100,12 @@ export const resetPasswordSchema = withEnvelope(
 export const changePasswordSchema = withEnvelope(
   z
     .object({
-      currentPassword: z.string().min(1, "Current password is required"),
+      currentPassword: z.string().min(1, 'Current password is required'),
       newPassword: passwordSchema,
     })
     .refine((data) => data.currentPassword !== data.newPassword, {
-      message: "New password must be different from the current password",
-      path: ["newPassword"],
+      message: 'New password must be different from the current password',
+      path: ['newPassword'],
     }),
 );
 
@@ -126,14 +126,14 @@ export const logoutSchema = withEnvelope(
   }),
 );
 
-export type RegisterInput = z.infer<typeof registerSchema>["body"];
-export type ResendOtpInput = z.infer<typeof resendOtpSchema>["body"];
-export type VerifyRegistrationOtpInput = z.infer<typeof verifyRegistrationOtpSchema>["body"];
-export type LoginInput = z.infer<typeof loginSchema>["body"];
-export type LoginOtpRequestInput = z.infer<typeof loginOtpRequestSchema>["body"];
-export type LoginOtpVerifyInput = z.infer<typeof loginOtpVerifySchema>["body"];
-export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>["body"];
-export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>["body"];
-export type ChangePasswordInput = z.infer<typeof changePasswordSchema>["body"];
-export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>["body"];
-export type LogoutInput = z.infer<typeof logoutSchema>["body"];
+export type RegisterInput = z.infer<typeof registerSchema>['body'];
+export type ResendOtpInput = z.infer<typeof resendOtpSchema>['body'];
+export type VerifyRegistrationOtpInput = z.infer<typeof verifyRegistrationOtpSchema>['body'];
+export type LoginInput = z.infer<typeof loginSchema>['body'];
+export type LoginOtpRequestInput = z.infer<typeof loginOtpRequestSchema>['body'];
+export type LoginOtpVerifyInput = z.infer<typeof loginOtpVerifySchema>['body'];
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>['body'];
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];
+export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];
+export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>['body'];
+export type LogoutInput = z.infer<typeof logoutSchema>['body'];

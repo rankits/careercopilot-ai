@@ -1,5 +1,5 @@
-import { randomUUID } from "node:crypto";
-import { Status, type OtpPurpose, type OtpTransport } from "@prisma/client";
+import { randomUUID } from 'node:crypto';
+import { Status, type OtpPurpose, type OtpTransport } from '@prisma/client';
 
 /**
  * A small, purpose-built in-memory stand-in for PrismaClient, covering
@@ -123,7 +123,7 @@ export interface FakeAuditLog {
 
 const withRole = <T extends { roleId: number }>(record: T, roles: Map<number, FakeRole>) => ({
   ...record,
-  role: { name: roles.get(record.roleId)?.name ?? "USER" },
+  role: { name: roles.get(record.roleId)?.name ?? 'USER' },
 });
 
 const applyIncrements = (record: Record<string, unknown>, data: Record<string, unknown>) => {
@@ -135,14 +135,14 @@ const applyIncrements = (record: Record<string, unknown>, data: Record<string, u
     // do partial updates by always passing every key, `undefined` for the
     // ones the caller didn't set.
     if (value === undefined) continue;
-    if (value && typeof value === "object" && "increment" in (value as Record<string, unknown>)) {
+    if (value && typeof value === 'object' && 'increment' in (value as Record<string, unknown>)) {
       const current = (next[key] as number | undefined) ?? 0;
       next[key] = current + (value as { increment: number }).increment;
-    } else if (key !== "meta") {
+    } else if (key !== 'meta') {
       next[key] = value;
     }
   }
-  if ("updatedAt" in next) next.updatedAt = new Date();
+  if ('updatedAt' in next) next.updatedAt = new Date();
   return next;
 };
 
@@ -160,8 +160,8 @@ const allocId = () => nextId++;
 
 export class FakeDb {
   roles = new Map<number, FakeRole>([
-    [1, { id: 1, name: "USER" }],
-    [2, { id: 2, name: "ADMIN" }],
+    [1, { id: 1, name: 'USER' }],
+    [2, { id: 2, name: 'ADMIN' }],
   ]);
 
   users: FakeUser[] = [];
@@ -184,13 +184,15 @@ export class FakeDb {
     this.auditLogs = [];
   }
 
-  seedUser(overrides: Partial<FakeUser> & { passwordHash: string; passwordSalt: string }): FakeUser {
+  seedUser(
+    overrides: Partial<FakeUser> & { passwordHash: string; passwordSalt: string },
+  ): FakeUser {
     const now = new Date();
     const user: FakeUser = {
       id: allocId(),
       publicId: randomUUID(),
-      firstName: "Jane",
-      lastName: "Doe",
+      firstName: 'Jane',
+      lastName: 'Doe',
       email: `user${Date.now()}${Math.random()}@example.com`,
       phone: null,
       profileImage: null,
@@ -216,13 +218,15 @@ export class FakeDb {
     return user;
   }
 
-  seedAdmin(overrides: Partial<FakeAdmin> & { passwordHash: string; passwordSalt: string }): FakeAdmin {
+  seedAdmin(
+    overrides: Partial<FakeAdmin> & { passwordHash: string; passwordSalt: string },
+  ): FakeAdmin {
     const now = new Date();
     const admin: FakeAdmin = {
       id: allocId(),
       publicId: randomUUID(),
-      firstName: "Ada",
-      lastName: "Admin",
+      firstName: 'Ada',
+      lastName: 'Admin',
       email: `admin${Date.now()}${Math.random()}@example.com`,
       profileImage: null,
       status: Status.Active,
@@ -331,7 +335,10 @@ export class FakeDb {
         }) => {
           const index = db.users.findIndex((u) => u.id === where.id);
           if (index === -1) throw new Error(`FakeDb: user ${where.id} not found`);
-          const updated = applyIncrements(db.users[index] as unknown as Record<string, unknown>, data) as unknown as FakeUser;
+          const updated = applyIncrements(
+            db.users[index] as unknown as Record<string, unknown>,
+            data,
+          ) as unknown as FakeUser;
           db.users[index] = updated;
 
           if (data.meta?.update) {
@@ -354,7 +361,7 @@ export class FakeDb {
           include,
         }: {
           where?: { OR?: Array<Record<string, { contains?: string }>> };
-          orderBy?: { createdAt: "asc" | "desc" };
+          orderBy?: { createdAt: 'asc' | 'desc' };
           skip?: number;
           take?: number;
           include?: { role?: boolean };
@@ -374,7 +381,7 @@ export class FakeDb {
           }
 
           items.sort((a, b) =>
-            orderBy?.createdAt === "asc"
+            orderBy?.createdAt === 'asc'
               ? a.createdAt.getTime() - b.createdAt.getTime()
               : b.createdAt.getTime() - a.createdAt.getTime(),
           );
@@ -418,7 +425,11 @@ export class FakeDb {
       },
 
       userSession: {
-        create: async ({ data }: { data: Omit<FakeUserSession, "id" | "createdAt" | "revokedAt" | "replacedBySessionId"> }) => {
+        create: async ({
+          data,
+        }: {
+          data: Omit<FakeUserSession, 'id' | 'createdAt' | 'revokedAt' | 'replacedBySessionId'>;
+        }) => {
           const session: FakeUserSession = {
             id: allocId(),
             createdAt: new Date(),
@@ -525,7 +536,10 @@ export class FakeDb {
         }) => {
           const index = db.admins.findIndex((a) => a.id === where.id);
           if (index === -1) throw new Error(`FakeDb: admin ${where.id} not found`);
-          const updated = applyIncrements(db.admins[index] as unknown as Record<string, unknown>, data) as unknown as FakeAdmin;
+          const updated = applyIncrements(
+            db.admins[index] as unknown as Record<string, unknown>,
+            data,
+          ) as unknown as FakeAdmin;
           db.admins[index] = updated;
           if (select) return project(updated as unknown as Record<string, unknown>, select);
           if (include?.role) return withRole(updated, db.roles);
@@ -561,7 +575,11 @@ export class FakeDb {
       },
 
       adminSession: {
-        create: async ({ data }: { data: Omit<FakeAdminSession, "id" | "createdAt" | "revokedAt" | "replacedBySessionId"> }) => {
+        create: async ({
+          data,
+        }: {
+          data: Omit<FakeAdminSession, 'id' | 'createdAt' | 'revokedAt' | 'replacedBySessionId'>;
+        }) => {
           const session: FakeAdminSession = {
             id: allocId(),
             createdAt: new Date(),
@@ -638,7 +656,13 @@ export class FakeDb {
         findUnique: async ({
           where,
         }: {
-          where: { transport_target_purpose: { transport: OtpTransport; target: string; purpose: OtpPurpose } };
+          where: {
+            transport_target_purpose: {
+              transport: OtpTransport;
+              target: string;
+              purpose: OtpPurpose;
+            };
+          };
         }) => {
           const { transport, target, purpose } = where.transport_target_purpose;
           const found = db.otps.find(
@@ -651,8 +675,14 @@ export class FakeDb {
           create,
           update,
         }: {
-          where: { transport_target_purpose: { transport: OtpTransport; target: string; purpose: OtpPurpose } };
-          create: Omit<FakeOtp, "id" | "createdAt" | "updatedAt">;
+          where: {
+            transport_target_purpose: {
+              transport: OtpTransport;
+              target: string;
+              purpose: OtpPurpose;
+            };
+          };
+          create: Omit<FakeOtp, 'id' | 'createdAt' | 'updatedAt'>;
           update: Partial<FakeOtp>;
         }) => {
           const { transport, target, purpose } = where.transport_target_purpose;
@@ -672,22 +702,24 @@ export class FakeDb {
           const index = db.otps.findIndex((o) => o.id === where.id);
           if (index === -1) throw new Error(`FakeDb: otp ${where.id} not found`);
           const current = db.otps[index];
-          const merged = applyIncrements(current as unknown as Record<string, unknown>, data) as unknown as FakeOtp;
+          const merged = applyIncrements(
+            current as unknown as Record<string, unknown>,
+            data,
+          ) as unknown as FakeOtp;
           db.otps[index] = merged;
           return { ...merged };
         },
       },
 
       auditLog: {
-        create: async ({ data }: { data: Omit<FakeAuditLog, "id" | "createdAt"> }) => {
+        create: async ({ data }: { data: Omit<FakeAuditLog, 'id' | 'createdAt'> }) => {
           const record: FakeAuditLog = { id: allocId(), createdAt: new Date(), ...data };
           db.auditLogs.push(record);
           return { ...record };
         },
       },
 
-      $queryRaw: async () => [{ "?column?": 1 }],
+      $queryRaw: async () => [{ '?column?': 1 }],
     };
   }
 }
-

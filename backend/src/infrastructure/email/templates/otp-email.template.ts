@@ -1,4 +1,4 @@
-import { escapeHtml } from "@/infrastructure/email/templates/html-escape.util.js";
+import { escapeHtml } from '@/infrastructure/email/templates/html-escape.util.js';
 
 export interface OtpEmailData {
   firstName: string;
@@ -18,13 +18,13 @@ export const renderOtpEmail = (data: OtpEmailData): RenderedEmail => {
 
   const text = [
     `Hi ${data.firstName},`,
-    "",
+    '',
     `Your ${data.purposeLabel} code is ${data.code}.`,
     `This code expires in ${data.expiresInMinutes} minutes and can only be used once.`,
     "If you didn't request this, you can safely ignore this email.",
-    "",
-    "- CareerCopilot",
-  ].join("\n");
+    '',
+    '- CareerCopilot',
+  ].join('\n');
 
   const html = `
   <div style="font-family: Arial, Helvetica, sans-serif; max-width: 480px; margin: 0 auto; color: #1f2937;">

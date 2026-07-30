@@ -1,4 +1,4 @@
-import type { PrincipalType } from "@/shared/security/jwt.util.js";
+import type { PrincipalType } from '@/shared/security/jwt.util.js';
 
 /**
  * Decoded access-token principal attached to `req.user` by

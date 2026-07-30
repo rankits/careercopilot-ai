@@ -1,20 +1,23 @@
-import { Request, Response } from "express";
-import * as authService from "@/modules/auth/services/auth.service.js";
-import { AppError } from "@/shared/utils/errors/AppError.js";
-import { catchAsync } from "@/shared/utils/catchAsync.js";
-import { successResponse } from "@/shared/utils/response.js";
-import { toSafeUserResponse } from "@/modules/auth/utils/auth.mapper.js";
-import { REFRESH_TOKEN_COOKIE_KEY } from "@/modules/auth/constants/auth.constant.js";
-import { clearRefreshCookieOptions, refreshCookieOptions } from "@/modules/auth/config/cookies.conf.js";
-import type { AuthSession, AuthTokens, RequestContext } from "@/modules/auth/types/auth.types.js";
+import { Request, Response } from 'express';
+import * as authService from '@/modules/auth/services/auth.service.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+import { catchAsync } from '@/shared/utils/catchAsync.js';
+import { successResponse } from '@/shared/utils/response.js';
+import { toSafeUserResponse } from '@/modules/auth/utils/auth.mapper.js';
+import { REFRESH_TOKEN_COOKIE_KEY } from '@/modules/auth/constants/auth.constant.js';
+import {
+  clearRefreshCookieOptions,
+  refreshCookieOptions,
+} from '@/modules/auth/config/cookies.conf.js';
+import type { AuthSession, AuthTokens, RequestContext } from '@/modules/auth/types/auth.types.js';
 
 const getRequestContext = (req: Request): RequestContext => ({
   ipAddress: req.ip,
-  userAgent: req.headers["user-agent"],
+  userAgent: req.headers['user-agent'],
 });
 
 const requirePrincipalId = (req: Request): string => {
-  if (!req.user) throw new AppError("Authentication required", 401);
+  if (!req.user) throw new AppError('Authentication required', 401);
   return req.user.principalId;
 };
 
@@ -61,12 +64,12 @@ export const resendOtpController = catchAsync(async (req: Request, res: Response
 
 export const verifyRegistrationOtpController = catchAsync(async (req: Request, res: Response) => {
   const session = await authService.verifyRegistrationOtp(req.body, getRequestContext(req));
-  return sendSession(res, session, "Email verified successfully");
+  return sendSession(res, session, 'Email verified successfully');
 });
 
 export const loginController = catchAsync(async (req: Request, res: Response) => {
   const session = await authService.login(req.body, getRequestContext(req));
-  return sendSession(res, session, "Login successful");
+  return sendSession(res, session, 'Login successful');
 });
 
 export const requestLoginOtpController = catchAsync(async (req: Request, res: Response) => {
@@ -76,7 +79,7 @@ export const requestLoginOtpController = catchAsync(async (req: Request, res: Re
 
 export const verifyLoginOtpController = catchAsync(async (req: Request, res: Response) => {
   const session = await authService.verifyLoginOtp(req.body, getRequestContext(req));
-  return sendSession(res, session, "Login successful");
+  return sendSession(res, session, 'Login successful');
 });
 
 export const forgotPasswordController = catchAsync(async (req: Request, res: Response) => {
@@ -101,10 +104,10 @@ export const changePasswordController = catchAsync(async (req: Request, res: Res
 export const refreshController = catchAsync(async (req: Request, res: Response) => {
   const refreshToken = getRefreshTokenFromRequest(req);
   if (!refreshToken) {
-    throw new AppError("A valid refresh token is required", 401, "TOKEN_MISSING");
+    throw new AppError('A valid refresh token is required', 401, 'TOKEN_MISSING');
   }
   const tokens = await authService.refreshSession(refreshToken, getRequestContext(req));
-  return sendTokens(res, tokens, "Session refreshed");
+  return sendTokens(res, tokens, 'Session refreshed');
 });
 
 export const logoutController = catchAsync(async (req: Request, res: Response) => {
@@ -122,7 +125,7 @@ export const logoutAllController = catchAsync(async (req: Request, res: Response
 
 export const meController = catchAsync(async (req: Request, res: Response) => {
   const user = await authService.getCurrentUser(requirePrincipalId(req));
-  return res.status(200).json(successResponse("Current session", toSafeUserResponse(user)));
+  return res.status(200).json(successResponse('Current session', toSafeUserResponse(user)));
 });
 
 export default {

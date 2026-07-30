@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from 'vitest';
 
 /**
  * `pdf-parse` pulls in `pdfjs-dist`, which expects browser DOM globals
@@ -9,10 +9,10 @@ import { vi } from "vitest";
  * regardless of what it actually tests. None of the auth/user/admin specs
  * exercise resume parsing, so this is a pure "don't crash on import" stub.
  */
-vi.mock("pdf-parse", () => ({
+vi.mock('pdf-parse', () => ({
   PDFParse: class {
     async getText() {
-      return { text: "" };
+      return { text: '' };
     }
     async destroy() {}
   },

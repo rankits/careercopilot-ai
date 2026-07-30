@@ -1,4 +1,4 @@
-import { vi } from "vitest";
+import { vi } from 'vitest';
 
 /**
  * Stubs the message bus so tests never touch a real RabbitMQ broker.
@@ -10,9 +10,9 @@ import { vi } from "vitest";
  * Kept self-contained (no outer variable references) for the same
  * hoisting reason as prisma-mock.ts.
  */
-vi.mock("@/infrastructure/messaging/index.js", async () => {
-  const actual = await vi.importActual<typeof import("@/infrastructure/messaging/index.js")>(
-    "@/infrastructure/messaging/index.js",
+vi.mock('@/infrastructure/messaging/index.js', async () => {
+  const actual = await vi.importActual<typeof import('@/infrastructure/messaging/index.js')>(
+    '@/infrastructure/messaging/index.js',
   );
   return {
     ...actual,
@@ -26,19 +26,22 @@ vi.mock("@/infrastructure/messaging/index.js", async () => {
   };
 });
 
-import { messageBus } from "@/infrastructure/messaging/index.js";
+import { messageBus } from '@/infrastructure/messaging/index.js';
 
 export const publishEventMock = messageBus.publishEvent as unknown as ReturnType<typeof vi.fn>;
 
 export interface CapturedEmailJob {
-  type: "OTP" | "WELCOME" | "SECURITY_ALERT";
+  type: 'OTP' | 'WELCOME' | 'SECURITY_ALERT';
   to: string;
   code?: string;
   [key: string]: unknown;
 }
 
 /** Returns the most recently queued email job matching `to` (and, if given, `type`). */
-export const findQueuedEmail = (to: string, type?: CapturedEmailJob["type"]): CapturedEmailJob | undefined => {
+export const findQueuedEmail = (
+  to: string,
+  type?: CapturedEmailJob['type'],
+): CapturedEmailJob | undefined => {
   const calls = publishEventMock.mock.calls as unknown as Array<[string, string, CapturedEmailJob]>;
   return [...calls]
     .reverse()

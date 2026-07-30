@@ -1,5 +1,5 @@
-import { Status, type PrismaClient } from "@prisma/client";
-import { PasswordUtil } from "../../src/shared/security/password.util.js";
+import { Status, type PrismaClient } from '@prisma/client';
+import { PasswordUtil } from '../../src/shared/security/password.util.js';
 
 /**
  * Bootstraps a default Admin account from ADMIN_DEFAULT_EMAIL /
@@ -14,7 +14,7 @@ export async function seedDefaultAdmin(prisma: PrismaClient, adminRoleId: number
 
   if (!email || !password) {
     console.log(
-      "ADMIN_DEFAULT_EMAIL / ADMIN_DEFAULT_PASSWORD not set - skipping default admin bootstrap",
+      'ADMIN_DEFAULT_EMAIL / ADMIN_DEFAULT_PASSWORD not set - skipping default admin bootstrap',
     );
     return;
   }
@@ -26,8 +26,8 @@ export async function seedDefaultAdmin(prisma: PrismaClient, adminRoleId: number
   }
 
   const credentials = await PasswordUtil.hash(password);
-  const firstName = process.env.ADMIN_DEFAULT_FIRST_NAME?.trim() || "Platform";
-  const lastName = process.env.ADMIN_DEFAULT_LAST_NAME?.trim() || "Admin";
+  const firstName = process.env.ADMIN_DEFAULT_FIRST_NAME?.trim() || 'Platform';
+  const lastName = process.env.ADMIN_DEFAULT_LAST_NAME?.trim() || 'Admin';
 
   await prisma.admin.create({
     data: {

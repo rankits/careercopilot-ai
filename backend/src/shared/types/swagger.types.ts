@@ -8,7 +8,7 @@
 
 export interface PathParameter {
   name: string;
-  in: "path";
+  in: 'path';
   required: true;
   schema: Record<string, unknown>;
   description?: string;
@@ -16,7 +16,7 @@ export interface PathParameter {
 
 export interface QueryParameter {
   name: string;
-  in: "query";
+  in: 'query';
   required?: boolean;
   schema: Record<string, unknown>;
   description?: string;

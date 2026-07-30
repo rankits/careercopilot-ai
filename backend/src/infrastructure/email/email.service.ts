@@ -1,6 +1,6 @@
-import nodemailer, { type Transporter } from "nodemailer";
-import { mailerConfig } from "@/shared/config/mailer.conf.js";
-import { logger } from "@/shared/logger/logger.js";
+import nodemailer, { type Transporter } from 'nodemailer';
+import { mailerConfig } from '@/shared/config/mailer.conf.js';
+import { logger } from '@/shared/logger/logger.js';
 
 export interface SendMailInput {
   to: string;
@@ -34,11 +34,11 @@ export const sendMail = async (input: SendMailInput): Promise<void> => {
   });
   logger.info(
     { to: input.to, subject: input.subject, messageId: info.messageId },
-    "Email dispatched",
+    'Email dispatched',
   );
 };
 
 export const verifyMailerConnection = async (): Promise<void> => {
   await getTransporter().verify();
-  logger.info("SMTP connection verified");
+  logger.info('SMTP connection verified');
 };

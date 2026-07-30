@@ -1,5 +1,5 @@
-import jwt, { type SignOptions } from "jsonwebtoken";
-import { jwtConfig } from "@/shared/config/jwt.conf.js";
+import jwt, { type SignOptions } from 'jsonwebtoken';
+import { jwtConfig } from '@/shared/config/jwt.conf.js';
 
 /**
  * Stateless JWT access-token helpers, deliberately kept out of any single
@@ -8,7 +8,7 @@ import { jwtConfig } from "@/shared/config/jwt.conf.js";
  * tokens are NOT JWTs - they are opaque, DB-backed, revocable tokens; see
  * each module's `token.service.ts`.
  */
-export type PrincipalType = "ADMIN" | "USER";
+export type PrincipalType = 'ADMIN' | 'USER';
 
 export interface AccessTokenPayload {
   /** The principal's `publicId` - never the internal sequential db id. */
@@ -20,7 +20,7 @@ export interface AccessTokenPayload {
 }
 
 const accessTokenSignOptions: SignOptions = {
-  expiresIn: jwtConfig.accessExpiresIn as SignOptions["expiresIn"],
+  expiresIn: jwtConfig.accessExpiresIn as SignOptions['expiresIn'],
   issuer: jwtConfig.issuer,
   audience: jwtConfig.audience,
   algorithm: jwtConfig.algorithm,

@@ -1,13 +1,13 @@
-import type { PrismaClient } from "@prisma/client";
+import type { PrismaClient } from '@prisma/client';
 import {
   ROLE_PERMISSION_MAP,
   SYSTEM_ROLES,
   type SystemRole,
-} from "../../src/shared/rbac/permission.catalog.js";
+} from '../../src/shared/rbac/permission.catalog.js';
 
 const ROLE_DESCRIPTIONS: Record<SystemRole, string> = {
-  ADMIN: "Full platform access, including user and role management",
-  USER: "Standard authenticated user with self-service access to their own resources",
+  ADMIN: 'Full platform access, including user and role management',
+  USER: 'Standard authenticated user with self-service access to their own resources',
 };
 
 /**

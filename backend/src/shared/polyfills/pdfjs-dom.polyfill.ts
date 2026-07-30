@@ -28,12 +28,12 @@ class Path2DStub {
   constructor(..._args: unknown[]) {}
 }
 
-if (typeof globalThis.DOMMatrix === "undefined") {
+if (typeof globalThis.DOMMatrix === 'undefined') {
   (globalThis as Record<string, unknown>).DOMMatrix = DOMMatrixStub;
 }
-if (typeof globalThis.ImageData === "undefined") {
+if (typeof globalThis.ImageData === 'undefined') {
   (globalThis as Record<string, unknown>).ImageData = ImageDataStub;
 }
-if (typeof globalThis.Path2D === "undefined") {
+if (typeof globalThis.Path2D === 'undefined') {
   (globalThis as Record<string, unknown>).Path2D = Path2DStub;
 }
