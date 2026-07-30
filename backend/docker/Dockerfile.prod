@@ -2,13 +2,14 @@
 
 # --- Stage 1: Base ---
 FROM node:20-alpine AS base
-RUN apk add --no-cache openssl curl
+RUN apk add --no-cache openssl curl su-exec
 WORKDIR /app
 
 # --- Stage 2: Dependencies & Prisma Generation ---
 FROM base AS deps
 COPY package*.json ./
 COPY prisma ./prisma
+COPY prisma.config.ts ./prisma.config.ts
 RUN npm ci && npx prisma generate
 
 # --- Stage 3: TypeScript Build ---
@@ -19,22 +20,26 @@ RUN npm run build
 # --- Stage 4: Minimal Production Runtime ---
 FROM base AS production
 
-ENV NODE_ENV=production
-ENV PORT=5001
-
 COPY package*.json ./
 COPY prisma ./prisma
-RUN npm ci --omit=dev --ignore-scripts && npx prisma generate
+COPY prisma.config.ts ./prisma.config.ts
+COPY docker/entrypoint.sh ./docker/entrypoint.sh
+RUN npm ci --include=dev && npx prisma generate
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma/migrations ./prisma/migrations
 
-RUN chown -R node:node /app
-USER node
+RUN mkdir -p /app/storage/resumes \
+  && chown -R node:node /app \
+  && chmod +x docker/entrypoint.sh
+
+ENV NODE_ENV=production
+ENV PORT=5001
 
 EXPOSE 5001
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD curl -f http://localhost:5001/api/v1/status || exit 1
 
+ENTRYPOINT ["/app/docker/entrypoint.sh"]
 CMD ["node", "dist/server.js"]

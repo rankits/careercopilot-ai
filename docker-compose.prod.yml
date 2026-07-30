@@ -1,20 +1,22 @@
-version: "3.8"
-
 services:
-  postgres_prod:
+  postgres:
     image: postgres:16-alpine
     container_name: career_copilot_pg_prod
     restart: always
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password is required in .env}
-      POSTGRES_DB: ${POSTGRES_DB:-careercopilot_prod}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "127.0.0.1:5432:5432" # Securely bind only to localhost
+      - '127.0.0.1:5432:5432'
     volumes:
       - pg_prod_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-careercopilot_prod}"]
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-careercopilot_prod}',
+        ]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -22,25 +24,25 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
+          cpus: '1.0'
           memory: 1G
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "20m"
-        max-file: "3"
+        max-size: '20m'
+        max-file: '3'
 
-  redis_prod:
+  redis:
     image: redis:7-alpine
     container_name: career_copilot_redis_prod
     restart: always
-    command: redis-server --requirepass "${REDIS_PASSWORD:-}"
+    command: redis-server --requirepass "${REDIS_PASSWORD}"
     ports:
-      - "127.0.0.1:6379:6379"
+      - '127.0.0.1:6379:6379'
     volumes:
       - redis_prod_data:/data
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a \"${REDIS_PASSWORD:-}\" ping"]
+      test: ['CMD-SHELL', 'redis-cli -a "${REDIS_PASSWORD:-}" ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -48,27 +50,27 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "0.5"
+          cpus: '0.5'
           memory: 512M
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "20m"
-        max-file: "3"
+        max-size: '20m'
+        max-file: '3'
 
-  rabbitmq_prod:
+  rabbitmq:
     image: rabbitmq:3.13-alpine
     container_name: career_copilot_rabbitmq_prod
     restart: always
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RabbitMQ password is required in .env}
     ports:
-      - "127.0.0.1:5672:5672" # Securely bind AMQP only to localhost
+      - '127.0.0.1:5672:5672'
     volumes:
       - rabbitmq_prod_data:/var/lib/rabbitmq
     healthcheck:
-      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      test: ['CMD', 'rabbitmq-diagnostics', '-q', 'ping']
       interval: 10s
       timeout: 5s
       retries: 5
@@ -76,53 +78,107 @@ services:
     deploy:
       resources:
         limits:
-          cpus: "1.0"
+          cpus: '1.0'
           memory: 1G
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "20m"
-        max-file: "3"
+        max-size: '20m'
+        max-file: '3'
 
-  backend_prod:
+  backend:
     build:
       context: ./backend
       dockerfile: docker/Dockerfile.prod
     container_name: career_copilot_backend_prod
     restart: always
     ports:
-      - "5001:5001"
+      - '5001:5001'
     environment:
-      NODE_ENV: production
-      PORT: 5001
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD}@postgres_prod:5432/${POSTGRES_DB:-careercopilot_prod}?schema=public
+      NODE_ENV: ${NODE_ENV}
+      PORT: ${PORT}
+      BASE_URL: ${BASE_URL}
+      DATABASE_URL: ${DATABASE_URL}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT Access Secret is required in .env}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT Refresh Secret is required in .env}
-      CACHE_DRIVER: redis
-      REDIS_MODE: ${REDIS_MODE:-standalone}
-      REDIS_HOST: redis_prod
-      REDIS_PORT: 6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-}
-      RABBITMQ_URL: amqp://${RABBITMQ_USER:-guest}:${RABBITMQ_PASSWORD}@rabbitmq_prod:5672
+      CACHE_DRIVER: ${CACHE_DRIVER}
+      REDIS_MODE: ${REDIS_MODE}
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      LOGGING_ENABLED: ${LOGGING_ENABLED}
+      LOG_PRETTY: ${LOG_PRETTY}
+      LOG_LEVEL: ${LOG_LEVEL}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+      RESUME_STORAGE_DRIVER: ${RESUME_STORAGE_DRIVER}
+      RESUME_MAX_FILE_SIZE_MB: ${RESUME_MAX_FILE_SIZE_MB}
+      RESUME_LOCAL_STORAGE_DIR: ${RESUME_LOCAL_STORAGE_DIR}
+      PARSER_ENGINE: ${PARSER_ENGINE}
+      AI_RESUME_PARSER_PROVIDER: ${AI_RESUME_PARSER_PROVIDER}
+      AI_RESUME_PARSER_MODEL: ${AI_RESUME_PARSER_MODEL}
+      AI_RESUME_PARSER_TEMPERATURE: ${AI_RESUME_PARSER_TEMPERATURE}
+      AI_RESUME_PARSER_MAX_RETRIES: ${AI_RESUME_PARSER_MAX_RETRIES}
+      AWS_REGION: ${AWS_REGION}
+      RESUME_S3_PREFIX: ${RESUME_S3_PREFIX}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+    volumes:
+      - backend_prod_storage:/app/storage/resumes
     depends_on:
-      postgres_prod:
+      postgres:
         condition: service_healthy
-      redis_prod:
+      redis:
         condition: service_healthy
-      rabbitmq_prod:
+      rabbitmq:
         condition: service_healthy
     deploy:
       resources:
         limits:
-          cpus: "1.5"
+          cpus: '1.5'
           memory: 1G
     logging:
-      driver: "json-file"
+      driver: 'json-file'
       options:
-        max-size: "20m"
-        max-file: "5"
+        max-size: '20m'
+        max-file: '5'
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:5001/health || exit 1']
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: docker/Dockerfile.prod
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
+        VITE_APP_NAME: ${VITE_APP_NAME}
+    profiles:
+      - frontend
+    container_name: career_copilot_frontend_prod
+    restart: always
+    ports:
+      - '3000:80'
+    depends_on:
+      backend:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '20m'
+        max-file: '3'
 
 volumes:
   pg_prod_data:
   redis_prod_data:
   rabbitmq_prod_data:
+  backend_prod_storage:
