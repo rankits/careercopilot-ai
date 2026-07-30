@@ -234,9 +234,9 @@ export const ActionGroup = styled('div')({
 });
 
 export const SaveAction = styled(MuiButton)({
-  border: `0.0625rem solid ${colorTokens.actionPrimary}`,
+  border: `0.0625rem solid ${colorTokens.actionPrimaryActive}`,
   borderRadius: borderRadius.lg,
-  color: colorTokens.actionPrimary,
+  color: colorTokens.actionPrimaryActive,
   fontSize: fontSize.xs,
   fontWeight: fontWeight.bold,
   minHeight: spacing[8],

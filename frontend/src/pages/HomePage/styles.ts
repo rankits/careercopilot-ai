@@ -48,7 +48,7 @@ export const DashboardTitle = styled('h2')({
 });
 
 export const ViewAllButton = styled(MuiButton)({
-  color: colorTokens.actionPrimary,
+  color: colorTokens.actionPrimaryActive,
   cursor: 'pointer',
   fontSize: fontSize.sm,
   fontWeight: fontWeight.bold,
