@@ -10,15 +10,23 @@ export interface FilterDropdownOption {
 }
 
 export interface FilterDropdownProps {
+  fullWidth?: boolean;
   label: string;
   onChange: (value: string) => void;
   options: FilterDropdownOption[];
   value: string;
 }
 
-export function FilterDropdown({ label, onChange, options, value }: FilterDropdownProps) {
+export function FilterDropdown({
+  fullWidth = false,
+  label,
+  onChange,
+  options,
+  value,
+}: FilterDropdownProps) {
   const menuId = useId();
   const [anchorElement, setAnchorElement] = useState<HTMLElement | null>(null);
+  const menuWidth = anchorElement?.offsetWidth;
   const selectedOption = options.find((option) => option.value === value);
   const isOpen = Boolean(anchorElement);
 
@@ -41,14 +49,27 @@ export function FilterDropdown({ label, onChange, options, value }: FilterDropdo
         aria-controls={isOpen ? menuId : undefined}
         aria-expanded={isOpen}
         aria-haspopup="menu"
+        fullWidth={fullWidth}
         onClick={handleOpen}
         type="button"
       >
-        {selectedOption?.value === 'all' ? label : selectedOption?.label}
+        <span>{selectedOption?.value === 'all' ? label : selectedOption?.label}</span>
         <KeyboardArrowDownIcon fontSize="small" />
       </DropdownButton>
 
-      <Menu anchorEl={anchorElement} id={menuId} onClose={handleClose} open={isOpen}>
+      <Menu
+        anchorEl={anchorElement}
+        id={menuId}
+        onClose={handleClose}
+        open={isOpen}
+        slotProps={{
+          paper: {
+            sx: {
+              minWidth: menuWidth,
+            },
+          },
+        }}
+      >
         {options.map((option) => (
           <MenuItem
             key={option.value}

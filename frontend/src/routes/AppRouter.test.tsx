@@ -51,6 +51,6 @@ describe('AppRouter auth routes', () => {
 
     expect(screen.getByRole('banner')).toBeInTheDocument();
     expect(screen.getByLabelText(/primary navigation/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/home page/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/dashboard page/i)).toBeInTheDocument();
   });
 });

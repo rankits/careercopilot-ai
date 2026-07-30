@@ -1,3 +1,4 @@
+import '@/shared/polyfills/pdfjs-dom.polyfill.js';
 import path from 'node:path';
 import mammoth from 'mammoth';
 import { PDFParse } from 'pdf-parse';
