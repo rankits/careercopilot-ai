@@ -9,8 +9,16 @@ export const jobFeedPageSx = {
   filters: {
     alignItems: 'center',
     display: 'flex',
-    flexWrap: 'wrap',
-    gap: spacing[3],
+    flexWrap: 'nowrap',
+    gap: spacing[2],
+
+    '& > [aria-label="Job filters"]': {
+      flex: '0 1 auto',
+    },
+
+    '@media (max-width: 78rem)': {
+      flexWrap: 'wrap',
+    },
   },
   list: {
     maxHeight: 'calc(100vh - 15rem)',
@@ -43,7 +51,7 @@ export const jobFeedPageSx = {
     display: 'grid',
     gap: spacing[5],
     marginInline: 'auto',
-    maxWidth: '70rem',
+    maxWidth: '82rem',
     width: '100%',
   },
   subtitle: {
