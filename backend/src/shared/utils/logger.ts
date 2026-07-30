@@ -1,23 +1,13 @@
-import pino from "pino";
-import { loggerConfig } from "@/shared/config/logger.conf.js";
+import { logger } from '@/shared/logger/logger.js';
 
-export const appLogger = pino({
-  name: "career-copilot",
-  level: loggerConfig.level,
-  enabled: loggerConfig.enabled,
-  transport: loggerConfig.pretty
-    ? {
-        target: "pino-pretty",
-        options: {
-          colorize: true,
-          singleLine: false,
-          translateTime: "SYS:standard",
-          ignore: "pid,hostname",
-        },
-      }
-    : undefined,
-});
-
-export const jobsLogger = appLogger.child({
-  scope: "jobs",
-});
+/**
+ * Compat shim: this used to be a separate pino instance (config via
+ * LOGGING_ENABLED/LOG_PRETTY) parallel to `shared/logger/logger.ts`'s
+ * validated-env, secret-redacting logger. Re-exporting the canonical
+ * logger here means every existing `appLogger`/`jobsLogger` call site
+ * (jobs/resumes modules, the response interceptor) keeps working
+ * unchanged, while the app has a single logging implementation and those
+ * modules gain secret redaction for free.
+ */
+export const appLogger = logger;
+export const jobsLogger = logger.child({ scope: 'jobs' });

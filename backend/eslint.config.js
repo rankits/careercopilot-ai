@@ -10,6 +10,9 @@ export default tseslint.config(
       sourceType: 'module',
       parser: tseslint.parser,
     },
+  },
+  {
+    files: ['src/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',

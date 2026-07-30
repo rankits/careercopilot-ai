@@ -1,4 +1,4 @@
-import { ICacheDriver } from "@/infrastructure/cache/cache.interface.js";
+import { ICacheDriver } from '@/infrastructure/cache/cache.interface.js';
 
 interface CacheEntry {
   value: unknown;
@@ -30,7 +30,7 @@ export class MemoryCacheDriver implements ICacheDriver {
   }
 
   async deleteByPrefix(prefix: string): Promise<number> {
-    const normalizedPrefix = prefix.endsWith("*") ? prefix.slice(0, -1) : prefix;
+    const normalizedPrefix = prefix.endsWith('*') ? prefix.slice(0, -1) : prefix;
     let count = 0;
 
     for (const key of this.store.keys()) {
@@ -46,6 +46,22 @@ export class MemoryCacheDriver implements ICacheDriver {
   async exists(key: string): Promise<boolean> {
     const value = await this.get(key);
     return value !== null;
+  }
+
+  async increment(key: string, ttlSeconds?: number): Promise<number> {
+    const current = await this.get<number>(key);
+    const next = (current ?? 0) + 1;
+
+    // TTL is only (re)applied on the increment that creates the key, to
+    // match a fixed-window counter's semantics.
+    if (current === null) {
+      await this.set(key, next, ttlSeconds);
+    } else {
+      const entry = this.store.get(key);
+      this.store.set(key, { value: next, expiresAt: entry?.expiresAt ?? null });
+    }
+
+    return next;
   }
 
   async ping(): Promise<boolean> {
