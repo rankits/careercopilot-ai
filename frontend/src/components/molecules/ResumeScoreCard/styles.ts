@@ -6,8 +6,9 @@ import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/toke
 export const ResumeScoreRoot = styled(Box)({
   '&::before': {
     animation: 'resume-card-shift 5s ease-in-out infinite alternate',
-    background:
-      'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.26), transparent 9rem), radial-gradient(circle at 88% 72%, rgba(24,104,219,0.3), transparent 10rem)',
+    // background:
+    // 'radial-gradient(circle at 20% 20%, rgba(255,255,255,0.26), transparent 9rem), radial-gradient(circle at 88% 72%, rgba(24,104,219,0.3), transparent 10rem)',
+    // 'radial-gradient(circle at 20% 20%, rgba(255, 255, 255, 0.26), transparent 9rem), radial-gradient(circle at 88% 72%, rgba(65, 105, 225, 0.3), transparent 10rem)',
     content: '""',
     inset: 0,
     position: 'absolute',
@@ -27,7 +28,7 @@ export const ResumeScoreRoot = styled(Box)({
   '@media (max-width: 36rem)': {
     padding: spacing[4],
   },
-  background: colorTokens.actionPrimaryGradient,
+  background: colorTokens.actionPrimaryActive,
   borderRadius: borderRadius.xl,
   color: colorTokens.textInverse,
   minHeight: '13rem',
@@ -79,7 +80,7 @@ export const ResumeScoreContent = styled(Box)({
 
 export const ScoreRing = styled(Box)({
   '&::before': {
-    background: colorTokens.actionPrimaryGradient,
+    background: colorTokens.actionPrimaryActive,
     borderRadius: borderRadius.full,
     content: '""',
     gridArea: '1 / 1',
@@ -158,7 +159,7 @@ export const ResumeScoreGrowth = styled(Typography)({
 
 export const ResumeScoreAction = styled(Button)({
   background: colorTokens.backgroundCard,
-  color: colorTokens.actionPrimary,
+  color: colorTokens.actionPrimaryActive,
   minWidth: '11.5rem',
 
   '&:hover': {

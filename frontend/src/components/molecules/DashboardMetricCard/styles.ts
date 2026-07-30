@@ -17,7 +17,7 @@ export const MetricIcon = styled(Box)({
   alignItems: 'center',
   background: colorTokens.actionPrimarySubtle,
   borderRadius: borderRadius.full,
-  color: colorTokens.actionPrimary,
+  color: colorTokens.actionPrimaryActive,
   display: 'grid',
   height: '3.25rem',
   justifyItems: 'center',

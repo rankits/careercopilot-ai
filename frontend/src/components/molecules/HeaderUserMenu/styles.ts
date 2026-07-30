@@ -20,7 +20,7 @@ export const UserMenuButton = styled('button')({
 });
 
 export const UserAvatar = styled(Avatar)({
-  background: colorTokens.actionPrimaryGradient,
+  background: colorTokens.actionPrimaryActive,
   color: colorTokens.textInverse,
   fontSize: fontSize.sm,
   fontWeight: fontWeight.extraBold,
@@ -46,7 +46,7 @@ export const UserMenuText = styled(Box)({
   },
 
   '& small': {
-    color: colorTokens.actionPrimary,
+    color: colorTokens.actionPrimaryActive,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.bold,
     lineHeight: 1.2,

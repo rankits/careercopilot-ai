@@ -14,18 +14,22 @@ const toneStyles: Record<
     base: colorTokens.actionDanger,
     hover: colorTokens.actionDangerHover,
     surface: colorTokens.actionDangerSurface,
+    // surface: colorTokens.actionPrimaryActive,
   },
   primary: {
     active: colorTokens.actionPrimaryActive,
     base: colorTokens.actionPrimary,
     hover: colorTokens.actionPrimaryHover,
+
     surface: colorTokens.actionPrimarySubtle,
+    // surface: colorTokens.actionPrimaryActive
   },
   success: {
     active: colorTokens.actionSuccessHover,
     base: colorTokens.actionSuccess,
     hover: colorTokens.actionSuccessHover,
     surface: colorTokens.actionSuccessSurface,
+    // surface: colorTokens.actionPrimaryActive
   },
 };
 
@@ -38,7 +42,7 @@ const sizeStyles: Record<ButtonSize, { fontSize: string; minHeight: string; padd
 };
 
 const primaryGradientBackground = {
-  background: colorTokens.actionPrimaryGradient,
+  background: colorTokens.actionPrimaryActive,
 };
 
 function getVariantStyles(tone: ButtonTone, variant: ButtonVariant): SystemStyleObject<Theme> {
