@@ -34,6 +34,10 @@ export class CacheService implements ICacheService {
     return this.driver.exists(key);
   }
 
+  async increment(key: string, ttlSeconds?: number): Promise<number> {
+    return this.driver.increment(key, ttlSeconds);
+  }
+
   async ping(): Promise<boolean> {
     return this.driver.ping();
   }
