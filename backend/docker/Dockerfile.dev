@@ -2,7 +2,7 @@
 FROM node:20-alpine
 
 # OpenSSL is required by Prisma query engine on Alpine Linux
-RUN apk add --no-cache openssl curl
+RUN apk add --no-cache openssl curl su-exec
 
 WORKDIR /app
 ENV NODE_ENV=development
