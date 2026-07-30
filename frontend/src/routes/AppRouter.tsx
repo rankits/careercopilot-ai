@@ -14,10 +14,10 @@ export function AppRouter() {
     <Routes>
       <Route element={<AppLayout />}>
         <Route path={ROUTES.HOME} element={<HomePage />} />
-        <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
         <Route path="/app" element={<Navigate to={ROUTES.PROFILE} replace />} />
         <Route path={ROUTES.JOB_FEED} element={<JobFeedPage />} />
       </Route>
+      <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
       <Route path={ROUTES.LOGIN} element={<LoginPage />} />
       <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       <Route path="*" element={<NotFoundPage />} />
