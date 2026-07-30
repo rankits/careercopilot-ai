@@ -71,7 +71,7 @@ export const SidebarToggle = styled(IconButton)({
   border: `0.0625rem solid ${colorTokens.borderDefault}`,
   borderRadius: borderRadius.lg,
   boxShadow: shadows.card,
-  color: colorTokens.actionPrimaryActive,
+  color: colorTokens.actionPrimary,
   height: spacing[10],
   position: 'absolute',
   right: '-1.5rem',
@@ -124,7 +124,7 @@ export const NavButton = styled(MuiButton, {
   return {
     '&:hover': {
       background: dark ? 'rgba(255,255,255,0.12)' : colorTokens.actionPrimarySurface,
-      color: dark ? colorTokens.textInverse : colorTokens.actionPrimaryActive,
+      color: dark ? colorTokens.textInverse : colorTokens.actionPrimary,
     },
     alignItems: 'center',
     background: active
@@ -133,7 +133,7 @@ export const NavButton = styled(MuiButton, {
         : colorTokens.actionPrimarySubtle
       : 'transparent',
     borderRadius: borderRadius.lg,
-    color: active ? (dark ? colorTokens.textInverse : colorTokens.actionPrimaryActive) : 'inherit',
+    color: active ? (dark ? colorTokens.textInverse : colorTokens.actionPrimary) : 'inherit',
     display: 'grid',
     fontSize: fontSize.sm,
     fontWeight: active ? fontWeight.bold : fontWeight.medium,
