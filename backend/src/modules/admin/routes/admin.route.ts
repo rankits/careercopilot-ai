@@ -9,7 +9,7 @@ import {
   systemStatsController,
 } from '@/modules/admin/controllers/admin.controller.js';
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
-import { requirePrincipalType, requireRole } from '@/shared/middlewares/rbac.middleware.js';
+import { requirePermission, requirePrincipalType } from '@/shared/middlewares/rbac.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
 import { authRateLimiter } from '@/shared/middlewares/rateLimiter.js';
 import {
@@ -21,9 +21,14 @@ import {
 
 const router = express.Router();
 
-// requirePrincipalType is a defense-in-depth belt to requireRole - see
-// shared/middlewares/rbac.middleware.ts for why both are applied.
-const requireAdmin = [authMiddleware, requirePrincipalType('ADMIN'), requireRole('ADMIN')];
+// Every protected route below pairs `requirePrincipalType('ADMIN')` (the
+// caller must be an Admin, not a User principal - a table-level guard,
+// independent of whatever permissions their role happens to carry) with
+// `requirePermission(...)` naming the ONE attribute that specific action
+// actually needs (see shared/rbac/permission.catalog.ts). No shared
+// "requireAdmin" blob: each route's authorization is declared where the
+// route itself is, so it's auditable action-by-action instead of
+// uniformly gating the whole file on role name alone.
 
 // --- Auth (no self-registration/OTP - admins are provisioned via seed) ---
 router.post('/auth/login', authRateLimiter, validateResource(adminLoginSchema), loginController);
@@ -34,16 +39,33 @@ router.post(
   refreshController,
 );
 router.post('/auth/logout', validateResource(adminLogoutSchema), logoutController);
-router.post('/auth/logout-all', ...requireAdmin, logoutAllController);
+
+router.post(
+  '/auth/logout-all',
+  authMiddleware,
+  requirePrincipalType('ADMIN'),
+  requirePermission('auth.session.manage.own'),
+  logoutAllController,
+);
 router.post(
   '/auth/change-password',
-  ...requireAdmin,
+  authMiddleware,
+  requirePrincipalType('ADMIN'),
+  requirePermission('auth.session.manage.own'),
   validateResource(adminChangePasswordSchema),
   changePasswordController,
 );
-router.get('/auth/me', ...requireAdmin, meController);
+// No permission attribute: reading one's own already-authenticated
+// identity isn't a permission-gated action (same precedent as GET /users/me).
+router.get('/auth/me', authMiddleware, requirePrincipalType('ADMIN'), meController);
 
 // --- Dashboard ---
-router.get('/stats', ...requireAdmin, systemStatsController);
+router.get(
+  '/stats',
+  authMiddleware,
+  requirePrincipalType('ADMIN'),
+  requirePermission('admin.dashboard.view'),
+  systemStatsController,
+);
 
 export default router;
