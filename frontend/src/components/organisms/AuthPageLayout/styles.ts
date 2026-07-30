@@ -47,7 +47,10 @@ const excludeSizeProp = {
   shouldForwardProp: (prop: PropertyKey) => prop !== 'size',
 };
 
-export const AuthRoot = styled(Box, excludeModeProp)<ModeProps>(({ mode, theme }) =>
+export const AuthRoot = styled(
+  Box,
+  excludeModeProp,
+)<ModeProps>(({ mode, theme }) =>
   theme.unstable_sx([
     {
       background: `radial-gradient(circle at 10% 12%, ${colorTokens.actionPrimarySubtle} 0, transparent ${sizing[26]}), ${colorTokens.backgroundApp}`,
@@ -74,7 +77,10 @@ export const AuthRoot = styled(Box, excludeModeProp)<ModeProps>(({ mode, theme }
   ]),
 );
 
-export const AuthHeader = styled(Box, excludeModeProp)<ModeProps>(({ mode, theme }) =>
+export const AuthHeader = styled(
+  Box,
+  excludeModeProp,
+)<ModeProps>(({ mode, theme }) =>
   theme.unstable_sx(
     mode === 'register'
       ? {
@@ -86,7 +92,10 @@ export const AuthHeader = styled(Box, excludeModeProp)<ModeProps>(({ mode, theme
   ),
 );
 
-export const LogoImage = styled('img', excludeModeProp)<ModeProps>(({ mode, theme }) =>
+export const LogoImage = styled(
+  'img',
+  excludeModeProp,
+)<ModeProps>(({ mode, theme }) =>
   theme.unstable_sx([
     {
       display: 'block',
@@ -112,7 +121,10 @@ export const HeaderLoginLink = styled(Link)({
   textDecoration: 'none',
 });
 
-export const AuthContent = styled(Box, excludeModeProp)<ModeProps>(({ mode, theme }) =>
+export const AuthContent = styled(
+  Box,
+  excludeModeProp,
+)<ModeProps>(({ mode, theme }) =>
   theme.unstable_sx([
     {
       ...grid,
@@ -131,14 +143,20 @@ export const AuthContent = styled(Box, excludeModeProp)<ModeProps>(({ mode, them
   ]),
 );
 
-export const FormColumn = styled(Box, excludeModeProp)<ModeProps>(({ mode, theme }) =>
+export const FormColumn = styled(
+  Box,
+  excludeModeProp,
+)<ModeProps>(({ mode, theme }) =>
   theme.unstable_sx([
     { ...flexCenter, minWidth: 0 },
     mode === 'register' && { alignItems: 'stretch', order: 1 },
   ]),
 );
 
-export const FormStack = styled(Box, excludeModeProp)<ModeProps>(({ mode, theme }) =>
+export const FormStack = styled(
+  Box,
+  excludeModeProp,
+)<ModeProps>(({ mode, theme }) =>
   theme.unstable_sx([
     {
       ...grid,
@@ -159,21 +177,21 @@ export const FormStack = styled(Box, excludeModeProp)<ModeProps>(({ mode, theme 
 );
 
 export const ErrorAlert = createStyledBox({
-    bgcolor: colorTokens.feedbackErrorSurface,
-    border: `${borderWidth.thin} solid ${colorTokens.feedbackError}`,
-    borderRadius: borderRadius.lg,
-    color: colorTokens.feedbackError,
-    px: spacing[4],
-    py: spacing[3],
+  bgcolor: colorTokens.feedbackErrorSurface,
+  border: `${borderWidth.thin} solid ${colorTokens.feedbackError}`,
+  borderRadius: borderRadius.lg,
+  color: colorTokens.feedbackError,
+  px: spacing[4],
+  py: spacing[3],
 });
 
 export const LoginHeroSection = createStyledBox({
-    ...grid,
-    gap: spacing[5],
-    gridTemplateRows: `auto auto minmax(${sizing[17]}, 1fr)`,
-    minWidth: 0,
-    paddingLeft: { lg: spacing[8], xl: spacing[16] },
-    paddingTop: spacing[22],
+  ...grid,
+  gap: spacing[5],
+  gridTemplateRows: `auto auto minmax(${sizing[17]}, 1fr)`,
+  minWidth: 0,
+  paddingLeft: { lg: spacing[8], xl: spacing[16] },
+  paddingTop: spacing[22],
 });
 
 export const HeroCopy = createStyledBox({
@@ -182,25 +200,25 @@ export const HeroCopy = createStyledBox({
 });
 
 export const AiBadge = createStyledBox({
-    ...alignCenter,
-    bgcolor: colorTokens.actionPrimarySubtle,
-    borderRadius: borderRadius.full,
-    color: colorTokens.actionPrimary,
-    display: 'inline-flex',
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    gap: spacing[2],
-    px: spacing[3],
-    py: spacing[2],
-    width: 'fit-content',
+  ...alignCenter,
+  bgcolor: colorTokens.actionPrimarySubtle,
+  borderRadius: borderRadius.full,
+  color: colorTokens.actionPrimary,
+  display: 'inline-flex',
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.bold,
+  gap: spacing[2],
+  px: spacing[3],
+  py: spacing[2],
+  width: 'fit-content',
 });
 
 export const HeroHeading = createStyledText({
-    ...headingBase,
-    fontSize: { md: fontSize['5xl'], xl: fontSize['7xl'] },
-    letterSpacing: '-0.045em',
-    lineHeight: 1.08,
-    maxWidth: sizing[30],
+  ...headingBase,
+  fontSize: { md: fontSize['5xl'], xl: fontSize['7xl'] },
+  letterSpacing: '-0.045em',
+  lineHeight: 1.08,
+  maxWidth: sizing[30],
 });
 
 export const AccentText = createStyledBox({
@@ -225,8 +243,11 @@ export const LoginFeatureItem = createStyledBox({
   gap: spacing[3],
 });
 
-export const FeatureIcon = styled(Box, excludeSizeProp)<FeatureIconProps>(
-  ({ size }) => createIconSurface(size === 'large' ? spacing[14] : spacing[10], size === 'small'),
+export const FeatureIcon = styled(
+  Box,
+  excludeSizeProp,
+)<FeatureIconProps>(({ size }) =>
+  createIconSurface(size === 'large' ? spacing[14] : spacing[10], size === 'small'),
 );
 
 export const FeatureTitle = createStyledText({
@@ -234,9 +255,9 @@ export const FeatureTitle = createStyledText({
 });
 
 export const FeatureDescription = createStyledText({
-    ...secondaryText,
-    fontSize: fontSize.xs,
-    mt: spacing[1],
+  ...secondaryText,
+  fontSize: fontSize.xs,
+  mt: spacing[1],
 });
 
 export const LoginVisual = createStyledBox({
@@ -256,12 +277,12 @@ export const LoginIllustration = createStyledImage({
 });
 
 export const TrustPanel = createStyledBox({
-    ...borderedCardSurface,
-    bgcolor: colorTokens.backgroundCardTranslucent,
-    display: { xs: 'none', lg: 'grid' },
-    gap: spacing[3],
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-    p: spacing[4],
+  ...borderedCardSurface,
+  bgcolor: colorTokens.backgroundCardTranslucent,
+  display: { xs: 'none', lg: 'grid' },
+  gap: spacing[3],
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  p: spacing[4],
 });
 
 export const TrustItem = createStyledBox({
@@ -272,22 +293,22 @@ export const TrustItem = createStyledBox({
 });
 
 export const RegisterPanel = createStyledBox({
-    ...borderedCardSurface,
-    display: { xs: 'none', lg: 'grid' },
-    gap: spacing[8],
-    gridTemplateRows: 'minmax(0, 1fr) auto',
-    order: 2,
-    p: { lg: spacing[8], xl: spacing[10] },
+  ...borderedCardSurface,
+  display: { xs: 'none', lg: 'grid' },
+  gap: spacing[8],
+  gridTemplateRows: 'minmax(0, 1fr) auto',
+  order: 2,
+  p: { lg: spacing[8], xl: spacing[10] },
 });
 
 export const RegisterHeroTop = createStyledBox({
-    ...grid,
-    gap: spacing[4],
-    gridTemplateColumns: {
-      lg: authLayout.mobileColumn,
-      xl: `minmax(${sizing[20]}, 1fr) minmax(${sizing[22]}, 1.35fr)`,
-    },
-    minHeight: 0,
+  ...grid,
+  gap: spacing[4],
+  gridTemplateColumns: {
+    lg: authLayout.mobileColumn,
+    xl: `minmax(${sizing[20]}, 1fr) minmax(${sizing[22]}, 1.35fr)`,
+  },
+  minHeight: 0,
 });
 
 export const RegisterCopy = createStyledBox({
@@ -297,9 +318,9 @@ export const RegisterCopy = createStyledBox({
 });
 
 export const RegisterHeading = createStyledText({
-    ...headingBase,
-    fontSize: { lg: fontSize['4xl'], xl: fontSize['6xl'] },
-    lineHeight: 1.25,
+  ...headingBase,
+  fontSize: { lg: fontSize['4xl'], xl: fontSize['6xl'] },
+  lineHeight: 1.25,
 });
 
 export const RegisterIllustration = createStyledImage({
@@ -309,24 +330,24 @@ export const RegisterIllustration = createStyledImage({
 });
 
 export const RegisterFeatureList = createStyledBox({
-    ...grid,
-    alignItems: 'end',
-    gap: spacing[4],
-    gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+  ...grid,
+  alignItems: 'end',
+  gap: spacing[4],
+  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
 });
 
 export const RegisterFeatureCard = createStyledBox({
-    ...elevatedSurface,
-    ...flex,
-    ...alignCenter,
-    boxSizing: 'border-box',
-    flexDirection: 'column',
-    gap: spacing[4],
-    height: sizing[12.5],
-    justifyContent: 'center',
-    minWidth: 0,
-    p: spacing[6],
-    textAlign: 'center',
+  ...elevatedSurface,
+  ...flex,
+  ...alignCenter,
+  boxSizing: 'border-box',
+  flexDirection: 'column',
+  gap: spacing[4],
+  height: sizing[12.5],
+  justifyContent: 'center',
+  minWidth: 0,
+  p: spacing[6],
+  textAlign: 'center',
 });
 
 export const RegisterFeatureDescription = createStyledText({

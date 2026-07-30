@@ -1,28 +1,37 @@
-import crypto from "node:crypto";
-import path from "node:path";
-import { ResumeStorageDriver } from "@prisma/client";
-import { AppError } from "@/shared/utils/errors/AppError.js";
-import { allowedResumeExtensions, allowedResumeMimeTypes } from "@/modules/resumes/config/resume.config.js";
-import { resumeRepository } from "@/modules/resumes/repositories/resume.repository.js";
-import { createResumeStorage } from "@/modules/resumes/storage/resume-storage.factory.js";
-import { ParsedResumeData } from "@/modules/resumes/types/resume.types.js";
-import { resumeProcessingService } from "@/modules/resumes/services/resume-processing.service.js";
-import { resumeParsingOrchestrator } from "@/modules/resumes/services/resume-parsing.orchestrator.js";
-import { ResumeParseStatus } from "@/modules/resumes/domain/resume-parser-status.js";
+import crypto from 'node:crypto';
+import path from 'node:path';
+import { ResumeStorageDriver } from '@prisma/client';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+import {
+  allowedResumeExtensions,
+  allowedResumeMimeTypes,
+} from '@/modules/resumes/config/resume.config.js';
+import { resumeRepository } from '@/modules/resumes/repositories/resume.repository.js';
+import { createResumeStorage } from '@/modules/resumes/storage/resume-storage.factory.js';
+import { ParsedResumeData } from '@/modules/resumes/types/resume.types.js';
+import { resumeProcessingService } from '@/modules/resumes/services/resume-processing.service.js';
+import { resumeParsingOrchestrator } from '@/modules/resumes/services/resume-parsing.orchestrator.js';
+import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
 
-const PUBLIC_USER_ID = "public";
+const PUBLIC_USER_ID = 'public';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const toParsedResumeData = (value: unknown): ParsedResumeData => {
   const data = isRecord(value) ? value : {};
 
   return {
     personalDetails: isRecord(data.personalDetails) ? data.personalDetails : {},
-    experience: Array.isArray(data.experience) ? (data.experience as Array<Record<string, unknown>>) : [],
-    education: Array.isArray(data.education) ? (data.education as Array<Record<string, unknown>>) : [],
-    skills: Array.isArray(data.skills) ? data.skills.filter((skill): skill is string => typeof skill === "string") : [],
+    experience: Array.isArray(data.experience)
+      ? (data.experience as Array<Record<string, unknown>>)
+      : [],
+    education: Array.isArray(data.education)
+      ? (data.education as Array<Record<string, unknown>>)
+      : [],
+    skills: Array.isArray(data.skills)
+      ? data.skills.filter((skill): skill is string => typeof skill === 'string')
+      : [],
     certifications: Array.isArray(data.certifications)
       ? (data.certifications as Array<Record<string, unknown>>)
       : [],
@@ -32,12 +41,15 @@ const toParsedResumeData = (value: unknown): ParsedResumeData => {
 export const resumeService = {
   async uploadResume(input: { file?: Express.Multer.File; userId?: string }) {
     if (!input.file) {
-      throw new AppError("Resume file is required", 400);
+      throw new AppError('Resume file is required', 400);
     }
 
     const extension = path.extname(input.file.originalname).toLowerCase();
-    if (!allowedResumeExtensions.has(extension) || !allowedResumeMimeTypes.has(input.file.mimetype)) {
-      throw new AppError("Only PDF, DOC, and DOCX resume files are allowed", 400);
+    if (
+      !allowedResumeExtensions.has(extension) ||
+      !allowedResumeMimeTypes.has(input.file.mimetype)
+    ) {
+      throw new AppError('Only PDF, DOC, and DOCX resume files are allowed', 400);
     }
 
     const resumeId = crypto.randomUUID();
@@ -60,7 +72,7 @@ export const resumeService = {
       sizeBytes: input.file.size,
       fileUrl: stored.url,
       storageKey: stored.key,
-      storageDriver: stored.driver === "S3" ? ResumeStorageDriver.S3 : ResumeStorageDriver.LOCAL,
+      storageDriver: stored.driver === 'S3' ? ResumeStorageDriver.S3 : ResumeStorageDriver.LOCAL,
     });
 
     setImmediate(() => {
@@ -79,7 +91,7 @@ export const resumeService = {
   async getResumeStatus(resumeId: string) {
     const resume = await resumeRepository.findResumeById(resumeId);
     if (!resume) {
-      throw new AppError("Resume not found", 404);
+      throw new AppError('Resume not found', 404);
     }
 
     return {
@@ -94,12 +106,12 @@ export const resumeService = {
   async getParsedData(resumeId: string) {
     const resume = await resumeRepository.findResumeById(resumeId);
     if (!resume) {
-      throw new AppError("Resume not found", 404);
+      throw new AppError('Resume not found', 404);
     }
 
     const parseRun = await resumeRepository.findLatestParseRun(resumeId);
     if (!parseRun) {
-      throw new AppError("Resume parsed data is not available yet", 404);
+      throw new AppError('Resume parsed data is not available yet', 404);
     }
 
     return {
@@ -116,24 +128,24 @@ export const resumeService = {
   async getParseStatus(resumeId: string) {
     const resume = await resumeRepository.findResumeById(resumeId);
     if (!resume) {
-      throw new AppError("Resume not found", 404);
+      throw new AppError('Resume not found', 404);
     }
 
     const parseRun = await resumeRepository.findLatestParseRun(resumeId);
     if (!parseRun) {
-      throw new AppError("Resume has not been parsed yet", 404);
+      throw new AppError('Resume has not been parsed yet', 404);
     }
 
     const stepByStatus: Record<ResumeParseStatus, string> = {
-      QUEUED: "QUEUED",
-      EXTRACTING_TEXT: "EXTRACTING_TEXT",
-      CHECKING_EXTRACTION: "CHECKING_EXTRACTION",
-      PARSING: "PARSING",
-      VALIDATING: "VALIDATING",
-      NORMALISING: "NORMALISING",
-      COMPLETED: "COMPLETED",
-      NEEDS_REVIEW: "NEEDS_REVIEW",
-      FAILED: "FAILED",
+      QUEUED: 'QUEUED',
+      EXTRACTING_TEXT: 'EXTRACTING_TEXT',
+      CHECKING_EXTRACTION: 'CHECKING_EXTRACTION',
+      PARSING: 'PARSING',
+      VALIDATING: 'VALIDATING',
+      NORMALISING: 'NORMALISING',
+      COMPLETED: 'COMPLETED',
+      NEEDS_REVIEW: 'NEEDS_REVIEW',
+      FAILED: 'FAILED',
     };
 
     const progressByStatus: Record<ResumeParseStatus, number> = {
@@ -166,12 +178,12 @@ export const resumeService = {
   async startParse(resumeId: string) {
     const resume = await resumeRepository.findResumeById(resumeId);
     if (!resume) {
-      throw new AppError("Resume not found", 404);
+      throw new AppError('Resume not found', 404);
     }
 
     const extraction = await resumeRepository.findLatestExtraction(resumeId);
     if (!extraction?.extractedText) {
-      throw new AppError("Resume parsed data is not available yet", 404);
+      throw new AppError('Resume parsed data is not available yet', 404);
     }
 
     const userId = resume.userId ?? PUBLIC_USER_ID;
@@ -182,7 +194,7 @@ export const resumeService = {
       void resumeParsingOrchestrator.parseExistingResume({
         resumeId,
         userId,
-        extractedText: extraction.extractedText ?? "",
+        extractedText: extraction.extractedText ?? '',
         mimeType,
         fileName,
       });
@@ -190,19 +202,19 @@ export const resumeService = {
 
     return {
       resumeId,
-      status: "QUEUED" as const,
+      status: 'QUEUED' as const,
     };
   },
 
   async reparseResume(resumeId: string, reason?: string) {
     const resume = await resumeRepository.findResumeById(resumeId);
     if (!resume) {
-      throw new AppError("Resume not found", 404);
+      throw new AppError('Resume not found', 404);
     }
 
     const extraction = await resumeRepository.findLatestExtraction(resumeId);
     if (!extraction?.extractedText) {
-      throw new AppError("Resume parsed data is not available yet", 404);
+      throw new AppError('Resume parsed data is not available yet', 404);
     }
 
     const userId = resume.userId ?? PUBLIC_USER_ID;
@@ -211,7 +223,7 @@ export const resumeService = {
       void resumeParsingOrchestrator.parseExistingResume({
         resumeId,
         userId,
-        extractedText: extraction.extractedText ?? "",
+        extractedText: extraction.extractedText ?? '',
         mimeType: resume.mimeType,
         fileName: resume.fileName,
         reason,
@@ -220,7 +232,7 @@ export const resumeService = {
 
     return {
       resumeId,
-      status: "QUEUED" as const,
+      status: 'QUEUED' as const,
       reason,
     };
   },
@@ -228,7 +240,7 @@ export const resumeService = {
   async confirmProfile(input: { userId: string; resumeId: string }) {
     const extraction = await resumeRepository.findLatestExtraction(input.resumeId);
     if (!extraction) {
-      throw new AppError("Resume parsed data is not available yet", 404);
+      throw new AppError('Resume parsed data is not available yet', 404);
     }
 
     return resumeRepository.upsertCandidateProfile({

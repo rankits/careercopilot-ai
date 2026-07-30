@@ -1,5 +1,8 @@
-import { resumeNormaliserService } from "@/modules/resumes/normalisation/resume-normaliser.service.js";
-import { OnboardingProfilePayload, ParsedResumeData } from "@/modules/resumes/types/resume.types.js";
+import { resumeNormaliserService } from '@/modules/resumes/normalisation/resume-normaliser.service.js';
+import {
+  OnboardingProfilePayload,
+  ParsedResumeData,
+} from '@/modules/resumes/types/resume.types.js';
 
 export const resumeFieldMapper = {
   toOnboardingProfile(input: {

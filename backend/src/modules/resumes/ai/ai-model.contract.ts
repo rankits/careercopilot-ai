@@ -1,4 +1,4 @@
-import type { ZodType } from "zod";
+import type { ZodType } from 'zod';
 
 export interface StructuredAiExtractionRequest<T> {
   systemPrompt: string;
@@ -15,5 +15,4 @@ export interface StructuredAiModel {
   extract<T>(request: StructuredAiExtractionRequest<T>): Promise<T>;
 }
 
-export type ResumeAiProviderName = "google" | "openai" | "ollama";
-
+export type ResumeAiProviderName = 'google' | 'openai' | 'ollama';

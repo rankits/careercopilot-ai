@@ -78,7 +78,9 @@ describe('LoginPage', () => {
     expect(screen.getByRole('heading', { name: /find the right opportunities/i })).toHaveStyle({
       maxWidth: '30rem',
     });
-    expect(screen.getByRole('heading', { name: /find the right opportunities/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /find the right opportunities/i }),
+    ).toBeInTheDocument();
     expect(screen.getByText(/^smart job matching$/i)).toBeInTheDocument();
     expect(screen.getByText(/^ai-powered guidance$/i)).toBeInTheDocument();
     expect(screen.getByText(/^application tracking$/i)).toBeInTheDocument();
@@ -134,7 +136,9 @@ describe('LoginPage', () => {
     );
     expect(store.getState().auth.isAuthenticated).toBe(true);
     expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe(JSON.stringify('token'));
-    expect(await screen.findByRole('heading', { name: /profile destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
     expect(
       queryClient.getMutationCache().find({ mutationKey: ['auth', 'login'] })?.state.status,
     ).toBe('success');
@@ -168,12 +172,10 @@ describe('LoginPage', () => {
 
   it('shows a safe API error and permits retry', async () => {
     const user = userEvent.setup();
-    loginMock
-      .mockRejectedValueOnce(new Error('Sensitive server detail'))
-      .mockResolvedValueOnce({
-        accessToken: 'token',
-        user: { email: 'ada@example.com', id: '1', name: 'Ada', role: 'user' },
-      });
+    loginMock.mockRejectedValueOnce(new Error('Sensitive server detail')).mockResolvedValueOnce({
+      accessToken: 'token',
+      user: { email: 'ada@example.com', id: '1', name: 'Ada', role: 'user' },
+    });
     renderPage();
 
     await completeValidForm(user);
@@ -187,6 +189,8 @@ describe('LoginPage', () => {
     await user.click(screen.getByRole('button', { name: /^login$/i }));
 
     expect(loginMock).toHaveBeenCalledTimes(2);
-    expect(await screen.findByRole('heading', { name: /profile destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
   });
 });

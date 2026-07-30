@@ -16,11 +16,7 @@ export interface JobSearchPagination {
   limit: number;
 }
 
-export type JobSortBy =
-  | "relevance"
-  | "newest"
-  | "salaryHighToLow"
-  | "salaryLowToHigh";
+export type JobSortBy = 'relevance' | 'newest' | 'salaryHighToLow' | 'salaryLowToHigh';
 
 export interface JobSearchOptions {
   filters: JobSearchFilters;

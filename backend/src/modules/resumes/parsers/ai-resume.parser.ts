@@ -1,7 +1,7 @@
-import { createAiModel } from "@/modules/resumes/ai/ai-model.factory.js";
-import { RESUME_PARSER_SYSTEM_PROMPT } from "@/modules/resumes/ai/prompts/resume-parser.prompt.js";
-import { ExpandedCanonicalResumeSchema } from "@/modules/resumes/schemas/canonical-resume.schema.js";
-import { resumeNormaliserService } from "@/modules/resumes/normalisation/resume-normaliser.service.js";
+import { createAiModel } from '@/modules/resumes/ai/ai-model.factory.js';
+import { RESUME_PARSER_SYSTEM_PROMPT } from '@/modules/resumes/ai/prompts/resume-parser.prompt.js';
+import { ExpandedCanonicalResumeSchema } from '@/modules/resumes/schemas/canonical-resume.schema.js';
+import { resumeNormaliserService } from '@/modules/resumes/normalisation/resume-normaliser.service.js';
 import {
   CanonicalResume,
   LanguageProficiency,
@@ -12,12 +12,12 @@ import {
   ResumeParser,
   ResumeParserInput,
   ResumeParserResult,
-} from "@/modules/resumes/types/resume.types.js";
+} from '@/modules/resumes/types/resume.types.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
-  typeof value === "object" && value !== null && !Array.isArray(value);
+  typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const toText = (value: unknown): string => (typeof value === "string" ? value.trim() : "");
+const toText = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
 const toNullableText = (value: unknown): string | null => {
   const text = toText(value);
@@ -34,18 +34,18 @@ const ensureUrl = (value: string | null | undefined): string | null => {
 };
 
 const MONTHS: Record<string, string> = {
-  jan: "01",
-  feb: "02",
-  mar: "03",
-  apr: "04",
-  may: "05",
-  jun: "06",
-  jul: "07",
-  aug: "08",
-  sep: "09",
-  oct: "10",
-  nov: "11",
-  dec: "12",
+  jan: '01',
+  feb: '02',
+  mar: '03',
+  apr: '04',
+  may: '05',
+  jun: '06',
+  jul: '07',
+  aug: '08',
+  sep: '09',
+  oct: '10',
+  nov: '11',
+  dec: '12',
 };
 
 const normaliseResumeDate = (value: string | null | undefined): string | null => {
@@ -78,22 +78,22 @@ const normaliseResumeDate = (value: string | null | undefined): string | null =>
 
 const normaliseProficiency = (
   value: string | null | undefined,
-): "NATIVE" | "BASIC" | "CONVERSATIONAL" | "PROFESSIONAL" | "FLUENT" | null => {
+): 'NATIVE' | 'BASIC' | 'CONVERSATIONAL' | 'PROFESSIONAL' | 'FLUENT' | null => {
   switch (value?.trim().toLowerCase()) {
-    case "native":
-      return "NATIVE";
-    case "basic":
-    case "beginner":
-      return "BASIC";
-    case "conversational":
-    case "intermediate":
-      return "CONVERSATIONAL";
-    case "professional":
-    case "working proficiency":
-      return "PROFESSIONAL";
-    case "fluent":
-    case "advanced":
-      return "FLUENT";
+    case 'native':
+      return 'NATIVE';
+    case 'basic':
+    case 'beginner':
+      return 'BASIC';
+    case 'conversational':
+    case 'intermediate':
+      return 'CONVERSATIONAL';
+    case 'professional':
+    case 'working proficiency':
+      return 'PROFESSIONAL';
+    case 'fluent':
+    case 'advanced':
+      return 'FLUENT';
     default:
       return null;
   }
@@ -109,7 +109,7 @@ const normalizeStringArray = (value: unknown): string[] => {
   const unique = new Map<string, string>();
 
   for (const item of value) {
-    if (typeof item === "string") {
+    if (typeof item === 'string') {
       const text = toText(item);
       if (!text) {
         continue;
@@ -146,7 +146,7 @@ const normalizeRecordArray = (value: unknown): Array<Record<string, unknown>> =>
   return value.filter(isRecord);
 };
 
-const normalizeLinks = (value: unknown): CanonicalResume["links"] => {
+const normalizeLinks = (value: unknown): CanonicalResume['links'] => {
   const source = Array.isArray(value)
     ? value
     : isRecord(value) && Array.isArray(value.other)
@@ -171,7 +171,7 @@ const normalizeLinks = (value: unknown): CanonicalResume["links"] => {
   };
 
   for (const item of source) {
-    if (typeof item === "string") {
+    if (typeof item === 'string') {
       const url = ensureUrl(item);
       if (url) {
         result.other.push({ platform: null, label: null, url });
@@ -191,33 +191,33 @@ const normalizeLinks = (value: unknown): CanonicalResume["links"] => {
     }
 
     switch (platform) {
-      case "linkedin":
+      case 'linkedin':
         result.linkedIn = url;
         break;
-      case "github":
+      case 'github':
         result.github = url;
         break;
-      case "portfolio":
+      case 'portfolio':
         result.portfolio = url;
         break;
-      case "website":
-      case "personal website":
+      case 'website':
+      case 'personal website':
         result.website = url;
         break;
-      case "stackoverflow":
-      case "stack overflow":
+      case 'stackoverflow':
+      case 'stack overflow':
         result.stackoverflow = url;
         break;
-      case "leetcode":
+      case 'leetcode':
         result.leetcode = url;
         break;
-      case "hackerrank":
+      case 'hackerrank':
         result.hackerrank = url;
         break;
-      case "behance":
+      case 'behance':
         result.behance = url;
         break;
-      case "dribbble":
+      case 'dribbble':
         result.dribbble = url;
         break;
       default:
@@ -232,14 +232,16 @@ const normalizeLinks = (value: unknown): CanonicalResume["links"] => {
   return result;
 };
 
-const mapProfessionalLinksToLegacy = (value: CanonicalResume["links"]): Record<string, unknown> => ({
+const mapProfessionalLinksToLegacy = (
+  value: CanonicalResume['links'],
+): Record<string, unknown> => ({
   linkedIn: value.linkedIn,
   github: value.github,
   portfolio: value.portfolio,
   other: value.other.map((link) => link.url),
 });
 
-const mapLocation = (value: unknown): CanonicalResume["personalInformation"]["location"] => {
+const mapLocation = (value: unknown): CanonicalResume['personalInformation']['location'] => {
   if (isRecord(value)) {
     return {
       city: toNullableText(value.city ?? value.town ?? value.locality),
@@ -258,7 +260,7 @@ const mapLocation = (value: unknown): CanonicalResume["personalInformation"]["lo
   };
 };
 
-const mapPersonalInformation = (value: unknown): CanonicalResume["personalInformation"] => {
+const mapPersonalInformation = (value: unknown): CanonicalResume['personalInformation'] => {
   const data = isRecord(value) ? value : {};
   const links = normalizeLinks(firstDefined(data.links, data.socialLinks, data.urls));
   const location = isRecord(data.location) ? data.location : {};
@@ -279,19 +281,19 @@ const mapPersonalInformation = (value: unknown): CanonicalResume["personalInform
   };
 };
 
-const mapProfessionalLabels = (value: unknown): CanonicalResume["professionalLabels"] => {
+const mapProfessionalLabels = (value: unknown): CanonicalResume['professionalLabels'] => {
   const labels = Array.isArray(value) ? value : [];
 
   return labels.flatMap((item) => {
-    if (typeof item === "string") {
+    if (typeof item === 'string') {
       const label = toText(item);
       return label
         ? [
             {
               label,
-              category: "ROLE" as ProfessionalLabelCategory,
+              category: 'ROLE' as ProfessionalLabelCategory,
               confidence: 0.7,
-              source: "INFERRED" as ProfessionalLabelSource,
+              source: 'INFERRED' as ProfessionalLabelSource,
               evidence: [label],
             },
           ]
@@ -310,19 +312,19 @@ const mapProfessionalLabels = (value: unknown): CanonicalResume["professionalLab
     return [
       {
         label,
-        category: (toText(item.category).toUpperCase() || "ROLE") as ProfessionalLabelCategory,
+        category: (toText(item.category).toUpperCase() || 'ROLE') as ProfessionalLabelCategory,
         confidence:
-          typeof item.confidence === "number" && item.confidence >= 0 && item.confidence <= 1
+          typeof item.confidence === 'number' && item.confidence >= 0 && item.confidence <= 1
             ? item.confidence
             : 0.7,
-        source: (toText(item.source).toUpperCase() || "INFERRED") as ProfessionalLabelSource,
+        source: (toText(item.source).toUpperCase() || 'INFERRED') as ProfessionalLabelSource,
         evidence: normalizeStringArray(item.evidence),
       },
     ];
   });
 };
 
-const mapExperience = (value: unknown): CanonicalResume["employmentHistory"] => {
+const mapExperience = (value: unknown): CanonicalResume['employmentHistory'] => {
   const items = Array.isArray(value) ? value : [];
 
   return items.flatMap((item) => {
@@ -330,7 +332,9 @@ const mapExperience = (value: unknown): CanonicalResume["employmentHistory"] => 
       return [];
     }
 
-    const title = toNullableText(firstDefined(item.title, item.position, item.role, item.job_title));
+    const title = toNullableText(
+      firstDefined(item.title, item.position, item.role, item.job_title),
+    );
     const company = toNullableText(item.company);
 
     return [
@@ -338,12 +342,14 @@ const mapExperience = (value: unknown): CanonicalResume["employmentHistory"] => 
         company,
         title,
         location: toNullableText(item.location),
-        startDate: normaliseResumeDate(toNullableText(firstDefined(item.startDate, item.start_date))),
+        startDate: normaliseResumeDate(
+          toNullableText(firstDefined(item.startDate, item.start_date)),
+        ),
         endDate: normaliseResumeDate(toNullableText(firstDefined(item.endDate, item.end_date))),
         isCurrent:
           item.isCurrent === true ||
           item.current === true ||
-          toText(item.endDate ?? item.end_date).toLowerCase() === "present" ||
+          toText(item.endDate ?? item.end_date).toLowerCase() === 'present' ||
           (!item.endDate && !item.end_date) ||
           item.endDate === null ||
           item.end_date === null,
@@ -356,7 +362,7 @@ const mapExperience = (value: unknown): CanonicalResume["employmentHistory"] => 
   });
 };
 
-const mapProjects = (value: unknown): CanonicalResume["projects"] => {
+const mapProjects = (value: unknown): CanonicalResume['projects'] => {
   const items = Array.isArray(value) ? value : [];
 
   return items.flatMap((item) => {
@@ -374,12 +380,14 @@ const mapProjects = (value: unknown): CanonicalResume["projects"] => {
         name,
         role: toNullableText(item.role),
         company: toNullableText(item.company),
-        startDate: normaliseResumeDate(toNullableText(firstDefined(item.startDate, item.start_date))),
+        startDate: normaliseResumeDate(
+          toNullableText(firstDefined(item.startDate, item.start_date)),
+        ),
         endDate: normaliseResumeDate(toNullableText(firstDefined(item.endDate, item.end_date))),
         isCurrent:
           item.isCurrent === true ||
           item.current === true ||
-          toText(item.endDate ?? item.end_date).toLowerCase() === "present",
+          toText(item.endDate ?? item.end_date).toLowerCase() === 'present',
         description: toNullableText(item.description),
         responsibilities: normalizeStringArray(item.responsibilities),
         achievements: normalizeStringArray(item.achievements),
@@ -390,7 +398,7 @@ const mapProjects = (value: unknown): CanonicalResume["projects"] => {
   });
 };
 
-const mapEducation = (value: unknown): CanonicalResume["education"] => {
+const mapEducation = (value: unknown): CanonicalResume['education'] => {
   const items = Array.isArray(value) ? value : [];
 
   return items.flatMap((item) => {
@@ -401,9 +409,13 @@ const mapEducation = (value: unknown): CanonicalResume["education"] => {
     return [
       {
         institution: toNullableText(item.institution),
-        qualification: toNullableText(firstDefined(item.qualification, item.degree, item.job_title)),
+        qualification: toNullableText(
+          firstDefined(item.qualification, item.degree, item.job_title),
+        ),
         fieldOfStudy: toNullableText(firstDefined(item.fieldOfStudy, item.field_of_study)),
-        startDate: normaliseResumeDate(toNullableText(firstDefined(item.startDate, item.start_date))),
+        startDate: normaliseResumeDate(
+          toNullableText(firstDefined(item.startDate, item.start_date)),
+        ),
         endDate: normaliseResumeDate(toNullableText(firstDefined(item.endDate, item.end_date))),
         grade: toNullableText(item.grade),
         location: toNullableText(item.location),
@@ -412,7 +424,7 @@ const mapEducation = (value: unknown): CanonicalResume["education"] => {
   });
 };
 
-const mapCertifications = (value: unknown): CanonicalResume["certifications"] => {
+const mapCertifications = (value: unknown): CanonicalResume['certifications'] => {
   const items = Array.isArray(value) ? value : [];
 
   return items.flatMap((item) => {
@@ -424,8 +436,12 @@ const mapCertifications = (value: unknown): CanonicalResume["certifications"] =>
       {
         name: toNullableText(firstDefined(item.name, item.title)),
         issuer: toNullableText(item.issuer),
-        issueDate: normaliseResumeDate(toNullableText(firstDefined(item.issueDate, item.issue_date, item.year))),
-        expiryDate: normaliseResumeDate(toNullableText(firstDefined(item.expiryDate, item.expiry_date))),
+        issueDate: normaliseResumeDate(
+          toNullableText(firstDefined(item.issueDate, item.issue_date, item.year)),
+        ),
+        expiryDate: normaliseResumeDate(
+          toNullableText(firstDefined(item.expiryDate, item.expiry_date)),
+        ),
         credentialId: toNullableText(firstDefined(item.credentialId, item.credential_id)),
         credentialUrl: toNullableText(firstDefined(item.credentialUrl, item.credential_url)),
       },
@@ -433,11 +449,11 @@ const mapCertifications = (value: unknown): CanonicalResume["certifications"] =>
   });
 };
 
-const mapLanguages = (value: unknown): CanonicalResume["languages"] => {
+const mapLanguages = (value: unknown): CanonicalResume['languages'] => {
   const items = Array.isArray(value) ? value : [];
 
   return items.flatMap((item) => {
-    if (typeof item === "string") {
+    if (typeof item === 'string') {
       const name = toText(item);
       return name
         ? [
@@ -459,30 +475,32 @@ const mapLanguages = (value: unknown): CanonicalResume["languages"] => {
       return [];
     }
 
-    const proficiency = normaliseProficiency(toText(firstDefined(item.proficiency, item.level, item.fluency)));
+    const proficiency = normaliseProficiency(
+      toText(firstDefined(item.proficiency, item.level, item.fluency)),
+    );
 
     return [
       {
         name,
         proficiency,
-        isNative: item.isNative === true || proficiency === "NATIVE",
+        isNative: item.isNative === true || proficiency === 'NATIVE',
       },
     ];
   });
 };
 
-const mapSkills = (value: unknown): CanonicalResume["skills"] => {
+const mapSkills = (value: unknown): CanonicalResume['skills'] => {
   const data = isRecord(value) ? value : {};
 
   if (Array.isArray(value)) {
     const skills = normalizeStringArray(
       value.flatMap((item) => {
-        if (typeof item === "string") {
+        if (typeof item === 'string') {
           return [item];
         }
 
         if (isRecord(item)) {
-          return [item.name ?? item.label ?? item.skill ?? ""];
+          return [item.name ?? item.label ?? item.skill ?? ''];
         }
 
         return [];
@@ -532,11 +550,11 @@ const mapSkills = (value: unknown): CanonicalResume["skills"] => {
 };
 
 const calculateTotalExperienceMonths = (
-  experience: CanonicalResume["employmentHistory"],
+  experience: CanonicalResume['employmentHistory'],
   currentDate = new Date(),
 ): number => {
   const periods = experience
-    .filter((item) => typeof item.startDate === "string" && item.startDate.length > 0)
+    .filter((item) => typeof item.startDate === 'string' && item.startDate.length > 0)
     .map((item) => {
       const startMatch = /^(\d{4})-(\d{2})$/.exec(String(item.startDate));
       if (!startMatch) {
@@ -544,12 +562,13 @@ const calculateTotalExperienceMonths = (
       }
 
       const start = new Date(Number(startMatch[1]), Number(startMatch[2]) - 1, 1);
-      const end = item.isCurrent || !item.endDate
-        ? currentDate
-        : (() => {
-            const endMatch = /^(\d{4})-(\d{2})$/.exec(String(item.endDate));
-            return endMatch ? new Date(Number(endMatch[1]), Number(endMatch[2]) - 1, 1) : null;
-          })();
+      const end =
+        item.isCurrent || !item.endDate
+          ? currentDate
+          : (() => {
+              const endMatch = /^(\d{4})-(\d{2})$/.exec(String(item.endDate));
+              return endMatch ? new Date(Number(endMatch[1]), Number(endMatch[2]) - 1, 1) : null;
+            })();
 
       if (!end) {
         return null;
@@ -560,7 +579,10 @@ const calculateTotalExperienceMonths = (
         end: new Date(end.getFullYear(), end.getMonth(), 1),
       };
     })
-    .filter((period): period is { start: Date; end: Date } => period !== null && period.end >= period.start)
+    .filter(
+      (period): period is { start: Date; end: Date } =>
+        period !== null && period.end >= period.start,
+    )
     .sort((a, b) => a.start.getTime() - b.start.getTime());
 
   if (periods.length === 0) {
@@ -595,33 +617,33 @@ const calculateTotalExperienceMonths = (
 
 const deriveSeniorityLevel = (months: number): ProfessionalSeniorityLevel => {
   if (months <= 0) {
-    return "UNKNOWN";
+    return 'UNKNOWN';
   }
 
   if (months < 12) {
-    return "ENTRY";
+    return 'ENTRY';
   }
 
   if (months < 36) {
-    return "JUNIOR";
+    return 'JUNIOR';
   }
 
   if (months < 72) {
-    return "MID";
+    return 'MID';
   }
 
   if (months < 144) {
-    return "SENIOR";
+    return 'SENIOR';
   }
 
-  return "UNKNOWN";
+  return 'UNKNOWN';
 };
 
 const deriveProfessionalLabels = (
-  experience: CanonicalResume["employmentHistory"],
-  skills: CanonicalResume["skills"],
+  experience: CanonicalResume['employmentHistory'],
+  skills: CanonicalResume['skills'],
   currentTitle: string | null,
-): CanonicalResume["professionalLabels"] => {
+): CanonicalResume['professionalLabels'] => {
   const evidence = normalizeStringArray([
     ...(currentTitle ? [currentTitle] : []),
     ...skills.technical,
@@ -631,22 +653,22 @@ const deriveProfessionalLabels = (
     ...skills.domains,
   ]);
 
-  const labels: CanonicalResume["professionalLabels"] = [];
+  const labels: CanonicalResume['professionalLabels'] = [];
 
   if (currentTitle) {
     labels.push({
       label: currentTitle,
-      category: "ROLE",
+      category: 'ROLE',
       confidence: 0.8,
-      source: "INFERRED",
+      source: 'INFERRED',
       evidence: currentTitle ? [currentTitle] : [],
     });
   } else if (experience.length > 0 && experience[0].title) {
     labels.push({
       label: String(experience[0].title),
-      category: "ROLE",
+      category: 'ROLE',
       confidence: 0.72,
-      source: "INFERRED",
+      source: 'INFERRED',
       evidence: [String(experience[0].title)],
     });
   }
@@ -657,10 +679,10 @@ const deriveProfessionalLabels = (
 
   if (skillEvidence.length > 0) {
     labels.push({
-      label: "QA Automation Engineer",
-      category: "SPECIALISATION",
+      label: 'QA Automation Engineer',
+      category: 'SPECIALISATION',
       confidence: 0.88,
-      source: "INFERRED",
+      source: 'INFERRED',
       evidence: skillEvidence.slice(0, 5),
     });
   }
@@ -672,16 +694,17 @@ const deriveProfessionalProfile = (input: {
   headline: string | null;
   professionalSummary: string | null;
   currentPosition: { title: string | null; company: string | null };
-  experience: CanonicalResume["employmentHistory"];
-  skills: CanonicalResume["skills"];
-  labels: CanonicalResume["professionalLabels"];
-}): CanonicalResume["professionalProfile"] => {
+  experience: CanonicalResume['employmentHistory'];
+  skills: CanonicalResume['skills'];
+  labels: CanonicalResume['professionalLabels'];
+}): CanonicalResume['professionalProfile'] => {
   const totalExperienceMonths = calculateTotalExperienceMonths(input.experience);
   const totalExperienceYears = Number((totalExperienceMonths / 12).toFixed(1));
-  const currentTitle = input.currentPosition.title ?? input.experience.find((item) => item.isCurrent)?.title ?? null;
+  const currentTitle =
+    input.currentPosition.title ?? input.experience.find((item) => item.isCurrent)?.title ?? null;
   const primaryRole =
-    input.labels.find((label) => label.category === "ROLE")?.label ??
-    input.labels.find((label) => label.category === "SPECIALISATION")?.label ??
+    input.labels.find((label) => label.category === 'ROLE')?.label ??
+    input.labels.find((label) => label.category === 'SPECIALISATION')?.label ??
     currentTitle;
 
   return {
@@ -697,7 +720,11 @@ const deriveProfessionalProfile = (input: {
 
 const buildCanonicalResume = (value: unknown): CanonicalResume => {
   const data = isRecord(value) ? value : {};
-  const personalInformationRaw = firstDefined(data.personal_information, data.personalInformation, data.personal_info);
+  const personalInformationRaw = firstDefined(
+    data.personal_information,
+    data.personalInformation,
+    data.personal_info,
+  );
   const personalInformation = mapPersonalInformation(personalInformationRaw);
   const personalInfoRecord = isRecord(personalInformationRaw) ? personalInformationRaw : {};
   const links = normalizeLinks(
@@ -708,11 +735,22 @@ const buildCanonicalResume = (value: unknown): CanonicalResume => {
       personalInfoRecord.urls,
     ),
   );
-  const employmentHistory = mapExperience(firstDefined(data.employmentHistory, data.work_experience, data.workExperience, data.experience));
+  const employmentHistory = mapExperience(
+    firstDefined(
+      data.employmentHistory,
+      data.work_experience,
+      data.workExperience,
+      data.experience,
+    ),
+  );
   const education = mapEducation(firstDefined(data.education, data.academics, data.qualifications));
-  const certifications = mapCertifications(firstDefined(data.certifications, data.certificates, data.licenses));
+  const certifications = mapCertifications(
+    firstDefined(data.certifications, data.certificates, data.licenses),
+  );
   const skills = mapSkills(firstDefined(data.skills, data.skillBlocks, data.skillset));
-  const projects = mapProjects(firstDefined(data.projects, data.projectHighlights, data.project_history));
+  const projects = mapProjects(
+    firstDefined(data.projects, data.projectHighlights, data.project_history),
+  );
   const languages = mapLanguages(firstDefined(data.languages, data.spokenLanguages));
   const professionalSummary = toNullableText(
     firstDefined(
@@ -735,7 +773,9 @@ const buildCanonicalResume = (value: unknown): CanonicalResume => {
   const currentPosition = {
     title: toNullableText(
       firstDefined(
-        data.currentPosition && isRecord(data.currentPosition) ? data.currentPosition.title : undefined,
+        data.currentPosition && isRecord(data.currentPosition)
+          ? data.currentPosition.title
+          : undefined,
         personalInfoRecord.current_title,
         personalInfoRecord.headline,
         data.currentTitle,
@@ -745,7 +785,9 @@ const buildCanonicalResume = (value: unknown): CanonicalResume => {
     ),
     company: toNullableText(
       firstDefined(
-        data.currentPosition && isRecord(data.currentPosition) ? data.currentPosition.company : undefined,
+        data.currentPosition && isRecord(data.currentPosition)
+          ? data.currentPosition.company
+          : undefined,
         personalInfoRecord.current_company,
         data.currentCompany,
         data.current_company,
@@ -769,10 +811,10 @@ const buildCanonicalResume = (value: unknown): CanonicalResume => {
     experience: employmentHistory,
     skills,
     labels: professionalLabels,
-  }) as NonNullable<CanonicalResume["professionalProfile"]>;
+  }) as NonNullable<CanonicalResume['professionalProfile']>;
 
   return ExpandedCanonicalResumeSchema.parse({
-    schemaVersion: "resume-schema-v2",
+    schemaVersion: 'resume-schema-v2',
     personalInformation,
     professionalSummary,
     currentPosition,
@@ -791,22 +833,24 @@ const buildCanonicalResume = (value: unknown): CanonicalResume => {
     totalExperienceYears: professionalProfile.totalExperienceYears,
     parseQuality: {
       overallConfidence:
-        typeof data.parseQuality === "object" && data.parseQuality !== null && typeof (data.parseQuality as Record<string, unknown>).overallConfidence === "number"
+        typeof data.parseQuality === 'object' &&
+        data.parseQuality !== null &&
+        typeof (data.parseQuality as Record<string, unknown>).overallConfidence === 'number'
           ? ((data.parseQuality as Record<string, unknown>).overallConfidence as number)
           : 0.7,
       requiresReview:
-        typeof data.parseQuality === "object" &&
+        typeof data.parseQuality === 'object' &&
         data.parseQuality !== null &&
-        typeof (data.parseQuality as Record<string, unknown>).requiresReview === "boolean"
+        typeof (data.parseQuality as Record<string, unknown>).requiresReview === 'boolean'
           ? ((data.parseQuality as Record<string, unknown>).requiresReview as boolean)
           : professionalProfile.totalExperienceMonths === 0 || professionalLabels.length === 0,
       missingImportantFields: normalizeStringArray(
-        typeof data.parseQuality === "object" && data.parseQuality !== null
+        typeof data.parseQuality === 'object' && data.parseQuality !== null
           ? (data.parseQuality as Record<string, unknown>).missingImportantFields
           : [],
       ),
       warnings: normalizeStringArray(
-        typeof data.parseQuality === "object" && data.parseQuality !== null
+        typeof data.parseQuality === 'object' && data.parseQuality !== null
           ? (data.parseQuality as Record<string, unknown>).warnings
           : [],
       ),
@@ -816,37 +860,37 @@ const buildCanonicalResume = (value: unknown): CanonicalResume => {
 
 const toParsedResumeData = (canonical: CanonicalResume) =>
   ({
-  personalDetails: {
-    fullName: canonical.personalInformation.fullName,
-    firstName: canonical.personalInformation.firstName,
-    lastName: canonical.personalInformation.lastName,
-    email: canonical.personalInformation.email,
-    phone: canonical.personalInformation.phone,
-    location: canonical.personalInformation.location.city,
-    links: mapProfessionalLinksToLegacy(canonical.links),
-    summary: canonical.professionalProfile?.summary ?? canonical.professionalSummary,
-    currentTitle: canonical.professionalProfile?.currentTitle ?? canonical.currentPosition.title,
-    primaryRole: canonical.professionalProfile?.primaryRole ?? null,
-    seniorityLevel: canonical.professionalProfile?.seniorityLevel ?? null,
-  },
-  professionalProfile: canonical.professionalProfile ?? undefined,
-  professionalLabels: canonical.professionalLabels,
-    experience: canonical.employmentHistory as unknown as ParsedResumeData["experience"],
-  projects: canonical.projects,
-  education: canonical.education,
-  skills: [
-    ...canonical.skills.technical,
-    ...canonical.skills.tools,
-    ...canonical.skills.frameworks,
-    ...canonical.skills.softSkills,
-    ...canonical.skills.domains,
-  ],
-  certifications: canonical.certifications,
-  languages: canonical.languages,
-  links: canonical.links,
+    personalDetails: {
+      fullName: canonical.personalInformation.fullName,
+      firstName: canonical.personalInformation.firstName,
+      lastName: canonical.personalInformation.lastName,
+      email: canonical.personalInformation.email,
+      phone: canonical.personalInformation.phone,
+      location: canonical.personalInformation.location.city,
+      links: mapProfessionalLinksToLegacy(canonical.links),
+      summary: canonical.professionalProfile?.summary ?? canonical.professionalSummary,
+      currentTitle: canonical.professionalProfile?.currentTitle ?? canonical.currentPosition.title,
+      primaryRole: canonical.professionalProfile?.primaryRole ?? null,
+      seniorityLevel: canonical.professionalProfile?.seniorityLevel ?? null,
+    },
+    professionalProfile: canonical.professionalProfile ?? undefined,
+    professionalLabels: canonical.professionalLabels,
+    experience: canonical.employmentHistory as unknown as ParsedResumeData['experience'],
+    projects: canonical.projects,
+    education: canonical.education,
+    skills: [
+      ...canonical.skills.technical,
+      ...canonical.skills.tools,
+      ...canonical.skills.frameworks,
+      ...canonical.skills.softSkills,
+      ...canonical.skills.domains,
+    ],
+    certifications: canonical.certifications,
+    languages: canonical.languages,
+    links: canonical.links,
     totalExperienceMonths: canonical.totalExperienceMonths,
     totalExperienceYears: canonical.totalExperienceYears,
-  } as unknown as ParsedResumeData);
+  }) as unknown as ParsedResumeData;
 
 export class AiResumeParser implements ResumeParser {
   async parseResume(input: ResumeParserInput): Promise<ResumeParserResult> {
@@ -859,16 +903,16 @@ export class AiResumeParser implements ResumeParser {
         parse: (value: unknown) => value,
       } as never,
       metadata: {
-        promptVersion: "resume-parser-v2",
-        schemaVersion: "resume-schema-v2",
+        promptVersion: 'resume-parser-v2',
+        schemaVersion: 'resume-schema-v2',
       },
     });
-    const parsed = typeof response === "string" ? JSON.parse(response) : response;
+    const parsed = typeof response === 'string' ? JSON.parse(response) : response;
     const canonical = buildCanonicalResume(parsed);
     const parsedData = resumeNormaliserService.normalize(toParsedResumeData(canonical));
 
     return {
-      parserVersion: "ai-resume-v3",
+      parserVersion: 'ai-resume-v3',
       confidenceScore: canonical.parseQuality.overallConfidence,
       data: parsedData,
     };
