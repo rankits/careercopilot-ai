@@ -37,6 +37,10 @@ const sizeStyles: Record<ButtonSize, { fontSize: string; minHeight: string; padd
   small: { fontSize: fontSize.xs, minHeight: spacing[8], paddingX: spacing[5] },
 };
 
+const primaryGradientBackground = {
+  background: colorTokens.actionPrimaryGradient,
+};
+
 function getVariantStyles(tone: ButtonTone, variant: ButtonVariant): SystemStyleObject<Theme> {
   const colors = toneStyles[tone];
 
@@ -72,6 +76,29 @@ function getVariantStyles(tone: ButtonTone, variant: ButtonVariant): SystemStyle
     };
   }
 
+  if (tone === 'primary') {
+    return {
+      '&:active': {
+        ...primaryGradientBackground,
+        boxShadow: '0 0.25rem 0.75rem rgba(89, 30, 194, 0.28)',
+        transform: 'translateY(0.0625rem)',
+      },
+      '&:focus-visible': {
+        ...primaryGradientBackground,
+        boxShadow: `${colorTokens.actionPrimarySubtle} 0 0 0 0.25rem, 0 0.625rem 1.125rem rgba(89, 30, 194, 0.26)`,
+      },
+      '&:hover': {
+        ...primaryGradientBackground,
+        boxShadow: '0 0.875rem 1.5rem rgba(89, 30, 194, 0.32)',
+        transform: 'translateY(-0.0625rem)',
+      },
+      ...primaryGradientBackground,
+      borderColor: 'transparent',
+      boxShadow: '0 0.625rem 1.125rem rgba(89, 30, 194, 0.26)',
+      color: colorTokens.textInverse,
+    };
+  }
+
   return {
     '&:active': {
       bgcolor: colors.active,
@@ -96,13 +123,14 @@ function getBaseStyles(size: ButtonSize, variant: ButtonVariant): SystemStyleObj
     },
     borderRadius: borderRadius.lg,
     borderStyle: 'solid',
-    borderWidth: variant === 'ghost' ? 0 : '0.0625rem',
+    borderWidth: variant === 'ghost' || variant === 'solid' ? 0 : '0.0625rem',
     fontSize: selectedSize.fontSize,
     fontWeight: fontWeight.bold,
     gap: spacing[2],
     minHeight: selectedSize.minHeight,
     px: selectedSize.paddingX,
     textTransform: 'none',
+    transition: 'transform 160ms ease, box-shadow 160ms ease, background 160ms ease',
   };
 }
 

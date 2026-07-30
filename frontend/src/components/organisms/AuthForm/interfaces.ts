@@ -5,8 +5,8 @@ import type { AnyObjectSchema } from 'yup';
 import type { SvgIconComponent } from '@/lib/material';
 
 export type AuthFormMode = 'login' | 'register';
-export type AuthFieldType = 'email' | 'password' | 'text';
-export type AuthFieldIcon = 'email' | 'lock' | 'person' | 'visibilityOff';
+export type AuthFieldType = 'email' | 'password' | 'tel' | 'text';
+export type AuthFieldIcon = 'email' | 'lock' | 'person' | 'phone' | 'visibilityOff';
 
 export interface AuthFormContent {
   footerActionLabel: string;

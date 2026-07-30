@@ -1,19 +1,20 @@
-import type { AuthResponse, LoginPayload } from '@/features/auth/types/auth.types';
-
-const MOCK_DELAY = 500;
+import type {
+  AuthResponse,
+  LoginPayload,
+  RegisterPayload,
+} from '@/features/auth/types/auth.types';
+import { httpClient } from '@/services/httpClient';
 
 export const authService = {
-  async login(payload: LoginPayload): Promise<AuthResponse> {
-    await new Promise((resolve) => setTimeout(resolve, MOCK_DELAY));
+  async register(payload: RegisterPayload): Promise<AuthResponse> {
+    const { data } = await httpClient.post<AuthResponse>('/auth/register', payload);
 
-    return {
-      accessToken: 'demo-access-token',
-      user: {
-        id: '1',
-        name: payload.email.split('@')[0] || 'User',
-        email: payload.email,
-        role: 'user',
-      },
-    };
+    return data;
+  },
+
+  async login(payload: LoginPayload): Promise<AuthResponse> {
+    const { data } = await httpClient.post<AuthResponse>('/auth/login', payload);
+
+    return data;
   },
 };

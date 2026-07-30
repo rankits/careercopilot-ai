@@ -5,6 +5,27 @@ const rootFontSize = 16;
 const remToPx = (value: string) => Number.parseFloat(value) * rootFontSize;
 
 export const appTheme = createTheme({
+  components: {
+    MuiMenu: {
+      defaultProps: {
+        anchorOrigin: {
+          horizontal: 'right',
+          vertical: 'bottom',
+        },
+        slotProps: {
+          paper: {
+            sx: {
+              mt: 0.75,
+            },
+          },
+        },
+        transformOrigin: {
+          horizontal: 'right',
+          vertical: 'top',
+        },
+      },
+    },
+  },
   palette: {
     background: {
       default: colorTokens.backgroundApp,

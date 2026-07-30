@@ -1,10 +1,10 @@
 export const palette = {
   blue50: '#f4f7ff',
   blue100: '#ede9ff',
-  blue500: '#886cff',
-  blue600: '#635bff',
-  blue700: '#4f46e5',
-  blue800: '#3f2bc2',
+  blue500: '#C190F6',
+  blue600: '#8230F0',
+  blue700: '#591EC2',
+  blue800: '#3F168C',
   green50: '#f0fdf4',
   green100: '#dcfce7',
   green600: '#16a34a',
@@ -30,6 +30,7 @@ export const palette = {
 
 export const colorTokens = {
   actionPrimary: palette.blue600,
+  actionPrimaryGradient: 'linear-gradient(135deg, #591EC2 0%, #8230F0 55%, #C190F6 100%)',
   actionPrimaryHover: palette.blue700,
   actionPrimaryActive: palette.blue800,
   actionPrimarySurface: palette.blue50,
@@ -43,6 +44,7 @@ export const colorTokens = {
   actionSuccessSurface: palette.green50,
   backgroundApp: '#f5f8ff',
   backgroundCard: palette.gray0,
+  backgroundCardTranslucent: 'rgba(255, 255, 255, 0.82)',
   borderDefault: '#e2e8f0',
   borderFocus: palette.blue600,
   borderHover: palette.blue500,
@@ -60,6 +62,22 @@ export const colorTokens = {
   textInverse: palette.gray0,
 } as const;
 
+export const jobFeedTokens = {
+  badgeBackground: palette.gray100,
+  badgeText: palette.gray700,
+  companyLogoSurface: palette.gray50,
+  filterActiveBackground: colorTokens.actionPrimaryGradient,
+  filterBackground: colorTokens.backgroundCard,
+  jobCardAccent: colorTokens.actionPrimary,
+  matchBackground: colorTokens.feedbackSuccessSurface,
+  matchText: colorTokens.feedbackSuccess,
+  scrollbarThumb: palette.gray300,
+  scrollbarTrack: palette.gray100,
+  skillBackground: palette.gray100,
+  skillText: palette.gray700,
+  verifiedIcon: '#1868db',
+} as const;
+
 export const spacing = {
   0: '0rem',
   1: '0.25rem',
@@ -73,6 +91,9 @@ export const spacing = {
   12: '3rem',
   14: '3.5rem',
   16: '4rem',
+  22: '5.5rem',
+  28: '7rem',
+  36: '9rem',
 } as const;
 
 export const fontFamily = {
@@ -87,6 +108,10 @@ export const fontSize = {
   xl: '1.25rem',
   '2xl': '1.5rem',
   '3xl': '1.875rem',
+  '4xl': '2.5rem',
+  '5xl': '2.75rem',
+  '6xl': '3rem',
+  '7xl': '3.25rem',
 } as const;
 
 export const fontWeight = {
@@ -106,6 +131,26 @@ export const borderRadius = {
   full: '9999px',
 } as const;
 
+export const borderWidth = {
+  thin: '0.0625rem',
+} as const;
+
+export const sizing = {
+  12: '12rem',
+  12.5: '12.5rem',
+  15: '15rem',
+  17: '17rem',
+  20: '20rem',
+  22: '22rem',
+  26: '26rem',
+  28: '28rem',
+  30: '30rem',
+  34: '34rem',
+  38: '38rem',
+  40: '40rem',
+  100: '100rem',
+} as const;
+
 export const shadows = {
   card: '0 20px 70px rgba(33, 83, 166, 0.1)',
   focus: '0 0 0 3px rgba(43, 105, 220, 0.15)',
@@ -113,12 +158,15 @@ export const shadows = {
 
 export const tokens = {
   borderRadius,
+  borderWidth,
   color: colorTokens,
   fontFamily,
   fontSize,
   fontWeight,
+  jobFeed: jobFeedTokens,
   palette,
   shadows,
+  sizing,
   spacing,
 } as const;
 

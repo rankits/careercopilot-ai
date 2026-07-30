@@ -1,0 +1,17 @@
+// Prisma schema for the CareerCopilot backend.
+//
+// This file only declares the generator + datasource. Actual models live in
+// domain-specific files alongside it (auth.prisma, jobs.prisma, resumes.prisma,
+// events.prisma, search.prisma) - see prisma.config.ts's `schema: "prisma"`
+// folder pointer, which merges every *.prisma file in this directory into one
+// schema at generate/migrate time. Add new domains as their own file here
+// rather than growing this one.
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
