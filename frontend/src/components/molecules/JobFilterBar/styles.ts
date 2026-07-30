@@ -12,7 +12,7 @@ import {
 export const FilterRoot = styled('div')({
   display: 'flex',
   flexWrap: 'wrap',
-  gap: spacing[3],
+  gap: spacing[2],
 });
 
 export const FilterButton = styled('button', {
@@ -41,6 +41,6 @@ export const FilterButton = styled('button', {
   fontWeight: fontWeight.bold,
   gap: spacing[2],
   minHeight: spacing[10],
-  paddingInline: spacing[5],
+  paddingInline: spacing[4],
   transition: 'transform 160ms ease, box-shadow 160ms ease, background 160ms ease',
 }));
