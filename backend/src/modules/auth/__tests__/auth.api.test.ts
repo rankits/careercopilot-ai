@@ -23,7 +23,7 @@ beforeEach(async () => {
 describe('POST /auth/register', () => {
   describe('Given no account exists with this email', () => {
     describe('When a valid registration request is submitted', () => {
-      it('Then a pending account is created and a verification code is emailed', async () => {
+      it('Then the account is created active/verified and a session is issued immediately, no OTP involved', async () => {
         const email = 'new.user@example.com';
 
         const res = await request(app).post(`${API}/register`).send({
@@ -35,16 +35,19 @@ describe('POST /auth/register', () => {
 
         expect(res.status).toBe(201);
         expect(res.body.status).toBe('success');
-        expect(res.body.data.email).toBe(email);
+        expect(res.body.data.user.email).toBe(email);
+        expect(res.body.data.user.isEmailVerified).toBe(true);
+        expect(res.body.data.user.status).toBe(Status.Active);
+        expect(res.body.accessToken).toEqual(expect.any(String));
+        expect(extractCookie(res.headers['set-cookie'], REFRESH_COOKIE)).toBeDefined();
 
         const created = fakeDb.users.find((u) => u.email === email);
         expect(created).toBeDefined();
-        expect(created?.isEmailVerified).toBe(false);
-        expect(created?.status).toBe(Status.PendingVerification);
+        expect(created?.isEmailVerified).toBe(true);
+        expect(created?.status).toBe(Status.Active);
 
-        const otpEmail = findQueuedEmail(email, 'OTP');
-        expect(otpEmail).toBeDefined();
-        expect(otpEmail?.code).toMatch(/^\d{6}$/);
+        expect(findQueuedEmail(email, 'OTP')).toBeUndefined();
+        expect(findQueuedEmail(email, 'WELCOME')).toBeDefined();
       });
     });
 
@@ -85,7 +88,7 @@ describe('POST /auth/register', () => {
 
   describe('Given an unverified pending account already exists with this email', () => {
     describe('When registering again with updated details', () => {
-      it('Then the pending account is updated in place rather than duplicated', async () => {
+      it('Then the pending account is updated in place, activated, and a session is issued', async () => {
         const user = await seedUnverifiedUser({ email: 'pending@example.com', firstName: 'Old' });
 
         const res = await request(app).post(`${API}/register`).send({
@@ -96,30 +99,42 @@ describe('POST /auth/register', () => {
         });
 
         expect(res.status).toBe(201);
+        expect(res.body.accessToken).toEqual(expect.any(String));
         expect(fakeDb.users).toHaveLength(1);
         expect(fakeDb.users[0]?.firstName).toBe('Updated');
+        expect(fakeDb.users[0]?.isEmailVerified).toBe(true);
+        expect(fakeDb.users[0]?.status).toBe(Status.Active);
+      });
+    });
+  });
+
+  describe('Given a freshly registered user', () => {
+    describe('When immediately logging in with the same credentials', () => {
+      it('Then login succeeds without needing any verification step', async () => {
+        const email = 'register-then-login@example.com';
+
+        const registerRes = await request(app).post(`${API}/register`).send({
+          email,
+          password: VALID_PASSWORD,
+          firstName: 'Register',
+          lastName: 'ThenLogin',
+        });
+        expect(registerRes.status).toBe(201);
+
+        const loginRes = await request(app)
+          .post(`${API}/login`)
+          .send({ email, password: VALID_PASSWORD });
+
+        expect(loginRes.status).toBe(200);
+        expect(loginRes.body.data.user.email).toBe(email);
+        expect(loginRes.body.accessToken).toEqual(expect.any(String));
+        expect(extractCookie(loginRes.headers['set-cookie'], REFRESH_COOKIE)).toBeDefined();
       });
     });
   });
 });
 
 describe('POST /auth/otp/resend', () => {
-  describe('Given a registered but unverified account', () => {
-    describe('When resending the registration code', () => {
-      it('Then a fresh code is issued and the generic confirmation message is returned', async () => {
-        const user = await seedUnverifiedUser({ email: 'resend@example.com' });
-
-        const res = await request(app)
-          .post(`${API}/otp/resend`)
-          .send({ email: user.email, purpose: OtpPurpose.Registration });
-
-        expect(res.status).toBe(200);
-        expect(res.body.status).toBe('success');
-        expect(findQueuedEmail(user.email, 'OTP')).toBeDefined();
-      });
-    });
-  });
-
   describe('Given no account exists with this email', () => {
     describe('When resending any purpose of code', () => {
       it('Then the generic confirmation message is still returned, without leaking account existence', async () => {
@@ -134,75 +149,17 @@ describe('POST /auth/otp/resend', () => {
     });
   });
 
-  describe('Given an already-verified account', () => {
-    describe('When requesting another registration code for it', () => {
-      it('Then a 409 conflict is returned', async () => {
-        const user = await seedVerifiedUser({ email: 'already-verified@example.com' });
+  describe('Given a registration purpose (no longer supported)', () => {
+    describe('When requesting a resend for it', () => {
+      it('Then a 400 validation error is returned', async () => {
+        const user = await seedUnverifiedUser({ email: 'legacy-pending@example.com' });
 
         const res = await request(app)
           .post(`${API}/otp/resend`)
           .send({ email: user.email, purpose: OtpPurpose.Registration });
-
-        expect(res.status).toBe(409);
-        expect(res.body.code).toBe('CONFLICT');
-      });
-    });
-  });
-});
-
-describe('POST /auth/otp/verify-registration', () => {
-  describe('Given a pending account with a freshly issued registration code', () => {
-    describe('When the correct code is submitted', () => {
-      it('Then the account becomes active/verified and a session is issued via cookie', async () => {
-        const user = await seedUnverifiedUser({ email: 'verify-me@example.com' });
-        await request(app)
-          .post(`${API}/otp/resend`)
-          .send({ email: user.email, purpose: OtpPurpose.Registration });
-        const code = findQueuedEmail(user.email, 'OTP')?.code as string;
-
-        const res = await request(app)
-          .post(`${API}/otp/verify-registration`)
-          .send({ email: user.email, code });
-
-        expect(res.status).toBe(200);
-        expect(res.body.data.user.isEmailVerified).toBe(true);
-        expect(res.body.data.user.status).toBe(Status.Active);
-        expect(res.body.accessToken).toEqual(expect.any(String));
-        expect(extractCookie(res.headers['set-cookie'], REFRESH_COOKIE)).toBeDefined();
-
-        const stored = fakeDb.users.find((u) => u.publicId === res.body.data.user.id);
-        expect(stored?.isEmailVerified).toBe(true);
-      });
-    });
-
-    describe('When an incorrect code is submitted', () => {
-      it('Then a 400 error is returned and the account remains unverified', async () => {
-        const user = await seedUnverifiedUser({ email: 'wrong-code@example.com' });
-        await request(app)
-          .post(`${API}/otp/resend`)
-          .send({ email: user.email, purpose: OtpPurpose.Registration });
-
-        const res = await request(app)
-          .post(`${API}/otp/verify-registration`)
-          .send({ email: user.email, code: '000000' });
 
         expect(res.status).toBe(400);
-        expect(fakeDb.users.find((u) => u.email === user.email)?.isEmailVerified).toBe(false);
-      });
-    });
-  });
-
-  describe('Given an already-verified account', () => {
-    describe('When submitting a registration code for it anyway', () => {
-      it('Then a 409 conflict is returned', async () => {
-        const user = await seedVerifiedUser({ email: 'double-verify@example.com' });
-
-        const res = await request(app)
-          .post(`${API}/otp/verify-registration`)
-          .send({ email: user.email, code: '123456' });
-
-        expect(res.status).toBe(409);
-        expect(res.body.code).toBe('CONFLICT');
+        expect(res.body.status).toBe('error');
       });
     });
   });
