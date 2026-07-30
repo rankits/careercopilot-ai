@@ -1,23 +1,24 @@
-import { authSwagger } from "@/modules/auth/swagger/index.js";
-import { userSwagger } from "@/modules/user/swagger/index.js";
-import { adminSwagger } from "@/modules/admin/swagger/index.js";
-import { env } from "@/shared/config/env.conf.js";
+import { authSwagger } from '@/modules/auth/swagger/index.js';
+import { userSwagger } from '@/modules/user/swagger/index.js';
+import { adminSwagger } from '@/modules/admin/swagger/index.js';
+import { applicationSwagger } from '@/modules/application-management/swagger/index.js';
+import { env } from '@/shared/config/env.conf.js';
 
 /**
  * Aggregated OpenAPI 3.0 document, served at `/api-docs` (see `app.ts`).
  * Each implemented module owns its own `swagger/*.swagger.ts` fragment
  * (paths only) built via `shared/swagger/factory.ts`; this file only
  * merges them under one spec. Modules that are still placeholder scaffolds
- * (resume, jobs, applications, ...) have no routes yet and therefore
+ * (resume, jobs, ...) have no routes yet and therefore
  * contribute nothing here - add their import + spread once they gain real
  * endpoints.
  */
 export const swaggerSpec = {
-  openapi: "3.0.0",
+  openapi: '3.0.0',
   info: {
-    title: "CareerCopilot API",
-    version: "1.0.0",
-    description: "API documentation for the CareerCopilot backend.",
+    title: 'CareerCopilot API',
+    version: '1.0.0',
+    description: 'API documentation for the CareerCopilot backend.',
   },
   servers: [
     {
@@ -28,9 +29,9 @@ export const swaggerSpec = {
   components: {
     securitySchemes: {
       BearerAuth: {
-        type: "http",
-        scheme: "bearer",
-        bearerFormat: "JWT",
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
       },
     },
   },
@@ -39,5 +40,6 @@ export const swaggerSpec = {
     ...authSwagger,
     ...userSwagger,
     ...adminSwagger,
+    ...applicationSwagger,
   },
 };

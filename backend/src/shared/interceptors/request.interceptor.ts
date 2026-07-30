@@ -1,7 +1,7 @@
-import { randomUUID } from "node:crypto";
-import { NextFunction, Request, Response } from "express";
+import { randomUUID } from 'node:crypto';
+import { NextFunction, Request, Response } from 'express';
 
-const REQUEST_ID_HEADER = "x-request-id";
+const REQUEST_ID_HEADER = 'x-request-id';
 
 /**
  * Assigns a correlation id to every request (reusing an upstream
@@ -11,8 +11,8 @@ const REQUEST_ID_HEADER = "x-request-id";
  */
 export const requestInterceptor = (req: Request, res: Response, next: NextFunction) => {
   const incoming = req.headers[REQUEST_ID_HEADER];
-  req.id = typeof incoming === "string" && incoming.trim() !== "" ? incoming : randomUUID();
-  res.setHeader("X-Request-Id", req.id);
+  req.id = typeof incoming === 'string' && incoming.trim() !== '' ? incoming : randomUUID();
+  res.setHeader('X-Request-Id', req.id);
 
   req.startTime = Date.now();
   next();

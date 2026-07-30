@@ -1,26 +1,28 @@
-version: '3.8'
-
 services:
-  postgres_dev:
+  postgres:
     image: postgres:16-alpine
     container_name: career_copilot_pg_dev
     restart: unless-stopped
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres_password
-      POSTGRES_DB: careercopilot_dev
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres_password}
+      POSTGRES_DB: ${POSTGRES_DB:-careercopilot_dev}
     ports:
       - '5432:5432'
     volumes:
       - pg_dev_data:/var/lib/postgresql/data
     healthcheck:
-      test: ['CMD-SHELL', 'pg_isready -U postgres -d careercopilot_dev']
+      test:
+        [
+          'CMD-SHELL',
+          'pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-careercopilot_dev}',
+        ]
       interval: 5s
       timeout: 5s
       retries: 5
       start_period: 5s
 
-  redis_dev:
+  redis:
     image: redis:7-alpine
     container_name: career_copilot_redis_dev
     restart: unless-stopped
@@ -35,16 +37,16 @@ services:
       retries: 5
       start_period: 5s
 
-  rabbitmq_dev:
+  rabbitmq:
     image: rabbitmq:3.13-management-alpine
     container_name: career_copilot_rabbitmq_dev
     restart: unless-stopped
     ports:
-      - '5672:5672' # AMQP protocol port
-      - '15672:15672' # Management UI port
+      - '5672:5672'
+      - '15672:15672'
     environment:
-      RABBITMQ_DEFAULT_USER: guest
-      RABBITMQ_DEFAULT_PASS: guest
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-guest}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:-guest}
     volumes:
       - rabbitmq_dev_data:/var/lib/rabbitmq
     healthcheck:
@@ -54,7 +56,7 @@ services:
       retries: 5
       start_period: 15s
 
-  backend_dev:
+  backend:
     build:
       context: ./backend
       dockerfile: docker/Dockerfile.dev
@@ -65,33 +67,76 @@ services:
     environment:
       CHOKIDAR_USEPOLLING: 'true'
       WATCHPACK_POLLING: 'true'
-      NODE_ENV: development
-      PORT: 5001
-      DATABASE_URL: postgresql://postgres:postgres_password@postgres_dev:5432/careercopilot_dev?schema=public
-      RUN_MIGRATIONS: 'true'
-      JWT_ACCESS_SECRET: dev_access_secret_change_in_production
-      JWT_REFRESH_SECRET: dev_refresh_secret_change_in_production
-      CACHE_DRIVER: redis
-      REDIS_MODE: standalone
-      REDIS_HOST: redis_dev
-      REDIS_PORT: 6379
-      RABBITMQ_URL: amqp://guest:guest@rabbitmq_dev:5672
-      LOGGING_ENABLED: 'true'
-      LOG_PRETTY: 'true'
+      NODE_ENV: '${NODE_ENV:-development}'
+      PORT: '${PORT:-5001}'
+      BASE_URL: '${BASE_URL:-http://backend:5001}'
+      DATABASE_URL: '${DATABASE_URL:-postgresql://postgres:postgres_password@postgres:5432/careercopilot_dev?schema=public}'
+      RUN_MIGRATIONS: '${RUN_MIGRATIONS:-true}'
+      JWT_ACCESS_SECRET: '${JWT_ACCESS_SECRET:-dev_access_secret_change_in_production}'
+      JWT_REFRESH_SECRET: '${JWT_REFRESH_SECRET:-dev_refresh_secret_change_in_production}'
+      CACHE_DRIVER: '${CACHE_DRIVER:-redis}'
+      REDIS_MODE: '${REDIS_MODE:-standalone}'
+      REDIS_HOST: '${REDIS_HOST:-redis}'
+      REDIS_PORT: '${REDIS_PORT:-6379}'
+      REDIS_PASSWORD: '${REDIS_PASSWORD:-}'
+      REDIS_KEY_PREFIX: '${REDIS_KEY_PREFIX:-careercopilot:}'
+      RABBITMQ_URL: '${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}'
+      LOGGING_ENABLED: '${LOGGING_ENABLED:-true}'
+      LOG_PRETTY: '${LOG_PRETTY:-true}'
+      LOG_LEVEL: '${LOG_LEVEL:-info}'
+      CORS_ORIGIN: '${CORS_ORIGIN:-http://localhost:3000,http://127.0.0.1:3000}'
+      RESUME_STORAGE_DRIVER: '${RESUME_STORAGE_DRIVER:-LOCAL}'
+      RESUME_MAX_FILE_SIZE_MB: '${RESUME_MAX_FILE_SIZE_MB:-10}'
+      RESUME_LOCAL_STORAGE_DIR: '${RESUME_LOCAL_STORAGE_DIR:-/app/storage/resumes}'
+      PARSER_ENGINE: '${PARSER_ENGINE:-RULE_BASED}'
+      AI_RESUME_PARSER_PROVIDER: '${AI_RESUME_PARSER_PROVIDER:-google}'
+      AI_RESUME_PARSER_MODEL: '${AI_RESUME_PARSER_MODEL:-gemini-3.5-flash}'
+      AI_RESUME_PARSER_TEMPERATURE: '${AI_RESUME_PARSER_TEMPERATURE:-0}'
+      AI_RESUME_PARSER_MAX_RETRIES: '${AI_RESUME_PARSER_MAX_RETRIES:-2}'
+      AWS_REGION: '${AWS_REGION:-us-east-1}'
+      RESUME_S3_PREFIX: '${RESUME_S3_PREFIX:-users}'
     volumes:
-      # Mount local backend code for tsx hot-reloading
       - ./backend:/app
-      # Anonymous volume to preserve container node_modules from being overwritten by Windows host
+      - /app/node_modules
+      - backend_dev_storage:/app/storage/resumes
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:5001/health || exit 1']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: docker/Dockerfile.dev
+    profiles:
+      - frontend
+    container_name: career_copilot_frontend_dev
+    restart: unless-stopped
+    ports:
+      - '3000:3000'
+    environment:
+      VITE_API_BASE_URL: '/api/v1'
+      VITE_APP_NAME: CareerCopilot
+      VITE_DEV_PROXY_TARGET: 'http://backend:5001'
+      CHOKIDAR_USEPOLLING: 'true'
+    volumes:
+      - ./frontend:/app
       - /app/node_modules
     depends_on:
-      postgres_dev:
-        condition: service_healthy
-      redis_dev:
-        condition: service_healthy
-      rabbitmq_dev:
+      backend:
         condition: service_healthy
 
 volumes:
   pg_dev_data:
   redis_dev_data:
   rabbitmq_dev_data:
+  backend_dev_storage:

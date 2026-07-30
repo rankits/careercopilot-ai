@@ -1,7 +1,7 @@
-import type { NextFunction, Request, RequestHandler, Response } from "express";
-import type { PrincipalType } from "@/shared/security/jwt.util.js";
-import { AppError } from "@/shared/utils/errors/AppError.js";
-import { PermissionCache } from "@/shared/rbac/permission-cache.service.js";
+import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import type { PrincipalType } from '@/shared/security/jwt.util.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+import { PermissionCache } from '@/shared/rbac/permission-cache.service.js';
 
 /**
  * Defense-in-depth guard for routes that must only ever be reachable by
@@ -13,11 +13,11 @@ import { PermissionCache } from "@/shared/rbac/permission-cache.service.js";
 export const requirePrincipalType = (...allowedTypes: PrincipalType[]): RequestHandler => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
-      next(new AppError("Authentication required", 401));
+      next(new AppError('Authentication required', 401));
       return;
     }
     if (!allowedTypes.includes(req.user.principalType)) {
-      next(new AppError("This action is not available for this account type", 403));
+      next(new AppError('This action is not available for this account type', 403));
       return;
     }
     next();
@@ -31,13 +31,13 @@ export const requirePrincipalType = (...allowedTypes: PrincipalType[]): RequestH
 export const requireRole = (...allowedRoles: string[]): RequestHandler => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
-      next(new AppError("Authentication required", 401));
+      next(new AppError('Authentication required', 401));
       return;
     }
     if (!allowedRoles.includes(req.user.role)) {
       next(
         new AppError(
-          `This action requires one of the following roles: ${allowedRoles.join(", ")}`,
+          `This action requires one of the following roles: ${allowedRoles.join(', ')}`,
           403,
         ),
       );
@@ -56,7 +56,7 @@ export const requireRole = (...allowedRoles: string[]): RequestHandler => {
 export const requirePermission = (...requiredPermissions: string[]): RequestHandler => {
   return (req: Request, _res: Response, next: NextFunction): void => {
     if (!req.user) {
-      next(new AppError("Authentication required", 401));
+      next(new AppError('Authentication required', 401));
       return;
     }
 
@@ -65,7 +65,7 @@ export const requirePermission = (...requiredPermissions: string[]): RequestHand
       .then((granted) => {
         const missing = requiredPermissions.filter((permission) => !granted.includes(permission));
         if (missing.length > 0) {
-          next(new AppError(`Missing required permission(s): ${missing.join(", ")}`, 403));
+          next(new AppError(`Missing required permission(s): ${missing.join(', ')}`, 403));
           return;
         }
         next();

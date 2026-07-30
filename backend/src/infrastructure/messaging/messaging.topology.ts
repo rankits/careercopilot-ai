@@ -1,20 +1,20 @@
-import { SubscribeOptions } from "@/infrastructure/messaging/messaging.interface.js";
+import { SubscribeOptions } from '@/infrastructure/messaging/messaging.interface.js';
 
 export const MessageExchanges = {
-  DOMAIN_EVENTS: "careercopilot.events",
-  NOTIFICATIONS: "careercopilot.notifications",
+  DOMAIN_EVENTS: 'careercopilot.events',
+  NOTIFICATIONS: 'careercopilot.notifications',
 } as const;
 
 export const MessageQueues = {
-  AUTH_USER_SIGNED_IN: "careercopilot.auth.user_signed_in",
-  EMAIL_SEND: "careercopilot.email.send",
+  AUTH_USER_SIGNED_IN: 'careercopilot.auth.user_signed_in',
+  EMAIL_SEND: 'careercopilot.email.send',
 } as const;
 
 export const MessageRoutingKeys = {
-  AUTH_SIGNIN: "auth.signin",
-  AUTH_UPDATED: "auth.updated",
-  USER_REGISTERED: "user.registered",
-  EMAIL_SEND: "email.send",
+  AUTH_SIGNIN: 'auth.signin',
+  AUTH_UPDATED: 'auth.updated',
+  USER_REGISTERED: 'user.registered',
+  EMAIL_SEND: 'email.send',
 } as const;
 
 export const QoSPresets: Record<string, SubscribeOptions> = {

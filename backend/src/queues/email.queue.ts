@@ -2,7 +2,7 @@ import {
   messageBus,
   MessageExchanges,
   MessageRoutingKeys,
-} from "@/infrastructure/messaging/index.js";
+} from '@/infrastructure/messaging/index.js';
 
 export interface SendOtpEmailInput {
   to: string;
@@ -25,9 +25,9 @@ export interface SendSecurityAlertEmailInput {
 }
 
 export type EmailJob =
-  | ({ type: "OTP" } & SendOtpEmailInput)
-  | ({ type: "WELCOME" } & SendWelcomeEmailInput)
-  | ({ type: "SECURITY_ALERT" } & SendSecurityAlertEmailInput);
+  | ({ type: 'OTP' } & SendOtpEmailInput)
+  | ({ type: 'WELCOME' } & SendWelcomeEmailInput)
+  | ({ type: 'SECURITY_ALERT' } & SendSecurityAlertEmailInput);
 
 /**
  * Producer-side API for email delivery. Callers (currently the `auth`
@@ -38,17 +38,29 @@ export type EmailJob =
  */
 export const EmailQueue = {
   async sendOtpEmail(input: SendOtpEmailInput): Promise<void> {
-    const job: EmailJob = { type: "OTP", ...input };
-    await messageBus.publishEvent(MessageExchanges.NOTIFICATIONS, MessageRoutingKeys.EMAIL_SEND, job);
+    const job: EmailJob = { type: 'OTP', ...input };
+    await messageBus.publishEvent(
+      MessageExchanges.NOTIFICATIONS,
+      MessageRoutingKeys.EMAIL_SEND,
+      job,
+    );
   },
 
   async sendWelcomeEmail(input: SendWelcomeEmailInput): Promise<void> {
-    const job: EmailJob = { type: "WELCOME", ...input };
-    await messageBus.publishEvent(MessageExchanges.NOTIFICATIONS, MessageRoutingKeys.EMAIL_SEND, job);
+    const job: EmailJob = { type: 'WELCOME', ...input };
+    await messageBus.publishEvent(
+      MessageExchanges.NOTIFICATIONS,
+      MessageRoutingKeys.EMAIL_SEND,
+      job,
+    );
   },
 
   async sendSecurityAlertEmail(input: SendSecurityAlertEmailInput): Promise<void> {
-    const job: EmailJob = { type: "SECURITY_ALERT", ...input };
-    await messageBus.publishEvent(MessageExchanges.NOTIFICATIONS, MessageRoutingKeys.EMAIL_SEND, job);
+    const job: EmailJob = { type: 'SECURITY_ALERT', ...input };
+    await messageBus.publishEvent(
+      MessageExchanges.NOTIFICATIONS,
+      MessageRoutingKeys.EMAIL_SEND,
+      job,
+    );
   },
 };

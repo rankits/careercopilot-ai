@@ -1,24 +1,28 @@
-import { randomBytes, randomUUID, createHash } from "node:crypto";
-import { AuditAction } from "@prisma/client";
-import { prisma } from "@/shared/config/db.conf.js";
+import { randomBytes, randomUUID, createHash } from 'node:crypto';
+import { AuditAction } from '@prisma/client';
+import { prisma } from '@/shared/config/db.conf.js';
 import {
   signAccessToken,
   getAccessTokenTtlSeconds,
   parseDurationSeconds,
-} from "@/shared/security/jwt.util.js";
-import { setCachedTokenVersion } from "@/shared/security/token-version.cache.js";
-import { jwtConfig } from "@/shared/config/jwt.conf.js";
-import { securityConfig } from "@/shared/config/security.conf.js";
-import { AppError } from "@/shared/utils/errors/AppError.js";
-import { AuditService } from "@/shared/audit/audit.service.js";
-import type { AuthTokens, RequestContext, UserTokenContext } from "@/modules/auth/types/auth.types.js";
+} from '@/shared/security/jwt.util.js';
+import { setCachedTokenVersion } from '@/shared/security/token-version.cache.js';
+import { jwtConfig } from '@/shared/config/jwt.conf.js';
+import { securityConfig } from '@/shared/config/security.conf.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+import { AuditService } from '@/shared/audit/audit.service.js';
+import type {
+  AuthTokens,
+  RequestContext,
+  UserTokenContext,
+} from '@/modules/auth/types/auth.types.js';
 
 const FULL_SESSION_TTL_SECONDS = parseDurationSeconds(
   jwtConfig.refreshExpiresIn,
   60 * 60 * 24 * 30,
 );
 
-const hashToken = (raw: string): string => createHash("sha256").update(raw).digest("hex");
+const hashToken = (raw: string): string => createHash('sha256').update(raw).digest('hex');
 
 const sessionTtlSeconds = (rememberMe: boolean): number =>
   rememberMe ? FULL_SESSION_TTL_SECONDS : securityConfig.sessions.shortSessionTtlSeconds;
@@ -28,7 +32,7 @@ const generateAccessToken = (
 ): { token: string; expiresInSeconds: number } => ({
   token: signAccessToken({
     sub: user.publicId,
-    principalType: "USER",
+    principalType: 'USER',
     email: user.email,
     role: user.role,
     tokenVersion: user.tokenVersion,
@@ -40,7 +44,7 @@ const generateAccessToken = (
 async function enforceMaxSessions(userId: number): Promise<void> {
   const activeSessions = await prisma.userSession.findMany({
     where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
-    orderBy: { createdAt: "asc" },
+    orderBy: { createdAt: 'asc' },
     select: { id: true },
   });
 
@@ -60,7 +64,7 @@ async function createSessionAndPair(
   context: RequestContext,
   rememberMe: boolean,
 ): Promise<{ tokens: AuthTokens; sessionIdHash: string }> {
-  const rawRefreshToken = randomBytes(64).toString("hex");
+  const rawRefreshToken = randomBytes(64).toString('hex');
   const sessionIdHash = hashToken(rawRefreshToken);
   const expiresAt = new Date(Date.now() + sessionTtlSeconds(rememberMe) * 1000);
 
@@ -109,7 +113,7 @@ async function handleReuseDetected(
     data: { tokenVersion: { increment: 1 } },
     select: { tokenVersion: true, publicId: true },
   });
-  await setCachedTokenVersion("USER", updated.publicId, updated.tokenVersion);
+  await setCachedTokenVersion('USER', updated.publicId, updated.tokenVersion);
   await AuditService.write({
     userId,
     action: AuditAction.TokenReuseDetected,
@@ -138,20 +142,20 @@ export const TokenService = {
     const existing = await prisma.userSession.findUnique({ where: { sessionId: sessionIdHash } });
 
     if (!existing) {
-      throw new AppError("Invalid refresh token", 401, "TOKEN_INVALID");
+      throw new AppError('Invalid refresh token', 401, 'TOKEN_INVALID');
     }
 
     if (existing.revokedAt) {
       await handleReuseDetected(existing.familyId, existing.userId, context);
       throw new AppError(
-        "This session is no longer valid. All sessions have been signed out as a precaution.",
+        'This session is no longer valid. All sessions have been signed out as a precaution.',
         401,
-        "TOKEN_REUSE_DETECTED",
+        'TOKEN_REUSE_DETECTED',
       );
     }
 
     if (existing.expiresAt.getTime() < Date.now()) {
-      throw new AppError("Refresh token has expired, please sign in again", 401, "TOKEN_EXPIRED");
+      throw new AppError('Refresh token has expired, please sign in again', 401, 'TOKEN_EXPIRED');
     }
 
     const dbUser = await prisma.user.findUnique({
@@ -159,7 +163,7 @@ export const TokenService = {
       include: { role: true },
     });
     if (!dbUser) {
-      throw new AppError("Account no longer exists", 401, "ACCOUNT_NOT_FOUND");
+      throw new AppError('Account no longer exists', 401, 'ACCOUNT_NOT_FOUND');
     }
 
     const { tokens, sessionIdHash: newSessionIdHash } = await createSessionAndPair(
@@ -212,7 +216,7 @@ export const TokenService = {
       data: { tokenVersion: { increment: 1 } },
       select: { tokenVersion: true, publicId: true },
     });
-    await setCachedTokenVersion("USER", updated.publicId, updated.tokenVersion);
+    await setCachedTokenVersion('USER', updated.publicId, updated.tokenVersion);
     return updated.tokenVersion;
   },
 };

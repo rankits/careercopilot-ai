@@ -1,5 +1,5 @@
-import pino from "pino";
-import { env, isProduction } from "@/shared/config/env.conf.js";
+import pino from 'pino';
+import { env, isProduction } from '@/shared/config/env.conf.js';
 
 /**
  * Application-wide structured logger. Secrets/credentials are redacted so
@@ -10,29 +10,29 @@ export const logger = pino({
   level: env.LOG_LEVEL,
   redact: {
     paths: [
-      "req.headers.authorization",
-      "req.headers.cookie",
-      "req.body.password",
-      "req.body.currentPassword",
-      "req.body.newPassword",
-      "req.body.code",
-      "req.body.refreshToken",
-      "res.headers[\"set-cookie\"]",
-      "*.passwordHash",
-      "*.passwordSalt",
-      "*.password",
-      "*.accessToken",
-      "*.refreshToken",
+      'req.headers.authorization',
+      'req.headers.cookie',
+      'req.body.password',
+      'req.body.currentPassword',
+      'req.body.newPassword',
+      'req.body.code',
+      'req.body.refreshToken',
+      'res.headers["set-cookie"]',
+      '*.passwordHash',
+      '*.passwordSalt',
+      '*.password',
+      '*.accessToken',
+      '*.refreshToken',
     ],
-    censor: "[REDACTED]",
+    censor: '[REDACTED]',
   },
   transport: !isProduction
     ? {
-        target: "pino-pretty",
+        target: 'pino-pretty',
         options: {
           colorize: true,
-          translateTime: "SYS:standard",
-          ignore: "pid,hostname",
+          translateTime: 'SYS:standard',
+          ignore: 'pid,hostname',
         },
       }
     : undefined,

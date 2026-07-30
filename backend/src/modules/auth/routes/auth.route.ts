@@ -1,4 +1,4 @@
-import express from "express";
+import express from 'express';
 import {
   changePasswordController,
   forgotPasswordController,
@@ -13,10 +13,10 @@ import {
   resetPasswordController,
   verifyLoginOtpController,
   verifyRegistrationOtpController,
-} from "@/modules/auth/controllers/auth.controller.js";
-import { authMiddleware } from "@/shared/middlewares/auth.middleware.js";
-import { validateResource } from "@/shared/middlewares/validateResource.js";
-import { authRateLimiter, otpRateLimiter } from "@/shared/middlewares/rateLimiter.js";
+} from '@/modules/auth/controllers/auth.controller.js';
+import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
+import { validateResource } from '@/shared/middlewares/validateResource.js';
+import { authRateLimiter, otpRateLimiter } from '@/shared/middlewares/rateLimiter.js';
 import {
   changePasswordSchema,
   forgotPasswordSchema,
@@ -29,30 +29,30 @@ import {
   resendOtpSchema,
   resetPasswordSchema,
   verifyRegistrationOtpSchema,
-} from "@/modules/auth/validations/auth.schema.js";
+} from '@/modules/auth/validations/auth.schema.js';
 
 const router = express.Router();
 
 // --- Registration & email verification ---
-router.post("/register", otpRateLimiter, validateResource(registerSchema), registerController);
-router.post("/otp/resend", otpRateLimiter, validateResource(resendOtpSchema), resendOtpController);
+router.post('/register', otpRateLimiter, validateResource(registerSchema), registerController);
+router.post('/otp/resend', otpRateLimiter, validateResource(resendOtpSchema), resendOtpController);
 router.post(
-  "/otp/verify-registration",
+  '/otp/verify-registration',
   authRateLimiter,
   validateResource(verifyRegistrationOtpSchema),
   verifyRegistrationOtpController,
 );
 
 // --- Login (password & OTP) ---
-router.post("/login", authRateLimiter, validateResource(loginSchema), loginController);
+router.post('/login', authRateLimiter, validateResource(loginSchema), loginController);
 router.post(
-  "/login/otp/request",
+  '/login/otp/request',
   otpRateLimiter,
   validateResource(loginOtpRequestSchema),
   requestLoginOtpController,
 );
 router.post(
-  "/login/otp/verify",
+  '/login/otp/verify',
   authRateLimiter,
   validateResource(loginOtpVerifySchema),
   verifyLoginOtpController,
@@ -60,13 +60,13 @@ router.post(
 
 // --- Forgot / reset password ---
 router.post(
-  "/forgot-password",
+  '/forgot-password',
   otpRateLimiter,
   validateResource(forgotPasswordSchema),
   forgotPasswordController,
 );
 router.post(
-  "/reset-password",
+  '/reset-password',
   authRateLimiter,
   validateResource(resetPasswordSchema),
   resetPasswordController,
@@ -74,21 +74,21 @@ router.post(
 
 // --- Session lifecycle ---
 router.post(
-  "/refresh-token",
+  '/refresh-token',
   authRateLimiter,
   validateResource(refreshTokenSchema),
   refreshController,
 );
-router.post("/logout", validateResource(logoutSchema), logoutController);
-router.post("/logout-all", authMiddleware, logoutAllController);
+router.post('/logout', validateResource(logoutSchema), logoutController);
+router.post('/logout-all', authMiddleware, logoutAllController);
 
 // --- Authenticated self-service ---
 router.post(
-  "/change-password",
+  '/change-password',
   authMiddleware,
   validateResource(changePasswordSchema),
   changePasswordController,
 );
-router.get("/me", authMiddleware, meController);
+router.get('/me', authMiddleware, meController);
 
 export default router;

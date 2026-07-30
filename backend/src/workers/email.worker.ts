@@ -4,19 +4,19 @@ import {
   MessageQueues,
   MessageRoutingKeys,
   QoSPresets,
-} from "@/infrastructure/messaging/index.js";
-import { sendMail } from "@/infrastructure/email/index.js";
+} from '@/infrastructure/messaging/index.js';
+import { sendMail } from '@/infrastructure/email/index.js';
 import {
   renderOtpEmail,
   renderWelcomeEmail,
   renderSecurityAlertEmail,
-} from "@/infrastructure/email/index.js";
-import { logger } from "@/shared/logger/logger.js";
-import type { EmailJob } from "@/queues/email.queue.js";
+} from '@/infrastructure/email/index.js';
+import { logger } from '@/shared/logger/logger.js';
+import type { EmailJob } from '@/queues/email.queue.js';
 
 const processEmailJob = async (job: EmailJob): Promise<void> => {
   switch (job.type) {
-    case "OTP": {
+    case 'OTP': {
       const { subject, html, text } = renderOtpEmail({
         firstName: job.firstName,
         code: job.code,
@@ -26,12 +26,12 @@ const processEmailJob = async (job: EmailJob): Promise<void> => {
       await sendMail({ to: job.to, subject, html, text });
       return;
     }
-    case "WELCOME": {
+    case 'WELCOME': {
       const { subject, html, text } = renderWelcomeEmail({ firstName: job.firstName });
       await sendMail({ to: job.to, subject, html, text });
       return;
     }
-    case "SECURITY_ALERT": {
+    case 'SECURITY_ALERT': {
       const { subject, html, text } = renderSecurityAlertEmail({
         firstName: job.firstName,
         eventLabel: job.eventLabel,
@@ -66,5 +66,5 @@ export const startEmailWorker = async (): Promise<void> => {
     },
     QoSPresets.DEFAULT,
   );
-  logger.info("Email worker started consuming");
+  logger.info('Email worker started consuming');
 };

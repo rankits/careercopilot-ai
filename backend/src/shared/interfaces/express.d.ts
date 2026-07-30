@@ -1,5 +1,5 @@
-import "express";
-import type { AuthenticatedPrincipal } from "@/shared/interfaces/auth-principal.interface.js";
+import 'express';
+import type { AuthenticatedPrincipal } from '@/shared/interfaces/auth-principal.interface.js';
 
 declare global {
   namespace Express {

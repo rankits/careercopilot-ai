@@ -1,5 +1,5 @@
-import "dotenv/config";
-import { z } from "zod";
+import 'dotenv/config';
+import { z } from 'zod';
 
 // Loaded here, as the first thing this module does, rather than relying on
 // the entrypoint (server.ts) to call `dotenv.config()` first: ES module
@@ -18,59 +18,59 @@ const booleanFromString = (defaultValue: boolean) =>
     .string()
     .optional()
     .transform((value) => {
-      if (value === undefined || value === "") return defaultValue;
-      return ["true", "1", "yes", "on"].includes(value.trim().toLowerCase());
+      if (value === undefined || value === '') return defaultValue;
+      return ['true', '1', 'yes', 'on'].includes(value.trim().toLowerCase());
     });
 
 const envSchema = z
   .object({
     // Application
-    NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
+    NODE_ENV: z.enum(['development', 'test', 'production']).default('development'),
     PORT: z.coerce.number().int().positive().default(5001),
     BASE_URL: z.string().optional(),
-    APP_NAME: z.string().min(1).default("CareerCopilot"),
+    APP_NAME: z.string().min(1).default('CareerCopilot'),
 
     // Database (PostgreSQL / Prisma)
-    DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
+    DATABASE_URL: z.string().min(1, 'DATABASE_URL is required'),
 
     // Caching layer
-    CACHE_DRIVER: z.enum(["memory", "redis"]).default("memory"),
-    REDIS_MODE: z.enum(["standalone", "sentinel", "cluster"]).default("standalone"),
-    REDIS_HOST: z.string().default("127.0.0.1"),
+    CACHE_DRIVER: z.enum(['memory', 'redis']).default('memory'),
+    REDIS_MODE: z.enum(['standalone', 'sentinel', 'cluster']).default('standalone'),
+    REDIS_HOST: z.string().default('127.0.0.1'),
     REDIS_PORT: z.coerce.number().int().positive().default(6379),
     REDIS_PASSWORD: z.string().optional(),
-    REDIS_KEY_PREFIX: z.string().default("careercopilot:"),
+    REDIS_KEY_PREFIX: z.string().default('careercopilot:'),
 
     // Messaging layer (RabbitMQ)
-    RABBITMQ_URL: z.string().default("amqp://guest:guest@localhost:5672"),
+    RABBITMQ_URL: z.string().default('amqp://guest:guest@localhost:5672'),
 
     // JWT
     JWT_ACCESS_SECRET: z
       .string()
-      .min(16, "JWT_ACCESS_SECRET must be at least 16 characters")
-      .default("default_access_secret_for_development_change_in_production"),
-    JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
+      .min(16, 'JWT_ACCESS_SECRET must be at least 16 characters')
+      .default('default_access_secret_for_development_change_in_production'),
+    JWT_ACCESS_EXPIRES_IN: z.string().default('15m'),
     JWT_REFRESH_SECRET: z
       .string()
-      .min(16, "JWT_REFRESH_SECRET must be at least 16 characters")
-      .default("default_refresh_secret_for_development_change_in_production"),
-    JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
-    JWT_ISSUER: z.string().default("careercopilot-api"),
-    JWT_AUDIENCE: z.string().default("careercopilot-client"),
+      .min(16, 'JWT_REFRESH_SECRET must be at least 16 characters')
+      .default('default_refresh_secret_for_development_change_in_production'),
+    JWT_REFRESH_EXPIRES_IN: z.string().default('7d'),
+    JWT_ISSUER: z.string().default('careercopilot-api'),
+    JWT_AUDIENCE: z.string().default('careercopilot-client'),
 
     // Logger
     LOG_LEVEL: z
-      .enum(["fatal", "error", "warn", "info", "debug", "trace", "silent"])
-      .default("info"),
+      .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
+      .default('info'),
 
     // Mailer (SMTP) - defaults target a local Mailpit-style dev container
-    SMTP_HOST: z.string().default("localhost"),
+    SMTP_HOST: z.string().default('localhost'),
     SMTP_PORT: z.coerce.number().int().positive().default(1025),
     SMTP_SECURE: booleanFromString(false),
     SMTP_USER: z.string().optional(),
     SMTP_PASS: z.string().optional(),
-    MAIL_FROM_NAME: z.string().default("CareerCopilot"),
-    MAIL_FROM_ADDRESS: z.string().email().default("no-reply@careercopilot.dev"),
+    MAIL_FROM_NAME: z.string().default('CareerCopilot'),
+    MAIL_FROM_ADDRESS: z.string().email().default('no-reply@careercopilot.dev'),
 
     // Security / auth tuning
     OTP_LENGTH: z.coerce.number().int().min(4).max(10).default(6),
@@ -98,38 +98,40 @@ const envSchema = z
     // Default admin bootstrap (consumed by prisma/seed/admin.seed.ts)
     ADMIN_DEFAULT_EMAIL: z.string().email().optional(),
     ADMIN_DEFAULT_PASSWORD: z.string().min(8).optional(),
-    ADMIN_DEFAULT_FIRST_NAME: z.string().default("Platform"),
-    ADMIN_DEFAULT_LAST_NAME: z.string().default("Admin"),
+    ADMIN_DEFAULT_FIRST_NAME: z.string().default('Platform'),
+    ADMIN_DEFAULT_LAST_NAME: z.string().default('Admin'),
   })
   .superRefine((value, ctx) => {
-    if (value.NODE_ENV !== "production") return;
+    if (value.NODE_ENV !== 'production') return;
 
     const insecureDefaults = new Set([
-      "default_access_secret_for_development_change_in_production",
-      "default_refresh_secret_for_development_change_in_production",
+      'default_access_secret_for_development_change_in_production',
+      'default_refresh_secret_for_development_change_in_production',
     ]);
 
     if (insecureDefaults.has(value.JWT_ACCESS_SECRET) || value.JWT_ACCESS_SECRET.length < 32) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["JWT_ACCESS_SECRET"],
-        message: "JWT_ACCESS_SECRET must be a strong, non-default secret (>=32 chars) in production",
+        path: ['JWT_ACCESS_SECRET'],
+        message:
+          'JWT_ACCESS_SECRET must be a strong, non-default secret (>=32 chars) in production',
       });
     }
 
     if (insecureDefaults.has(value.JWT_REFRESH_SECRET) || value.JWT_REFRESH_SECRET.length < 32) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["JWT_REFRESH_SECRET"],
-        message: "JWT_REFRESH_SECRET must be a strong, non-default secret (>=32 chars) in production",
+        path: ['JWT_REFRESH_SECRET'],
+        message:
+          'JWT_REFRESH_SECRET must be a strong, non-default secret (>=32 chars) in production',
       });
     }
 
     if (value.JWT_ACCESS_SECRET === value.JWT_REFRESH_SECRET) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ["JWT_REFRESH_SECRET"],
-        message: "JWT_REFRESH_SECRET must differ from JWT_ACCESS_SECRET",
+        path: ['JWT_REFRESH_SECRET'],
+        message: 'JWT_REFRESH_SECRET must differ from JWT_ACCESS_SECRET',
       });
     }
   });
@@ -140,8 +142,8 @@ const parsed = envSchema.safeParse(process.env);
 
 if (!parsed.success) {
   const formatted = parsed.error.issues
-    .map((issue) => `  - ${issue.path.join(".") || "(root)"}: ${issue.message}`)
-    .join("\n");
+    .map((issue) => `  - ${issue.path.join('.') || '(root)'}: ${issue.message}`)
+    .join('\n');
 
   // Logger is intentionally not used here: logger config itself depends on
   // env being valid, so we fail fast with a plain stderr write and a
@@ -152,6 +154,6 @@ if (!parsed.success) {
 
 export const env: Env = parsed.data;
 
-export const isProduction = env.NODE_ENV === "production";
-export const isDevelopment = env.NODE_ENV === "development";
-export const isTest = env.NODE_ENV === "test";
+export const isProduction = env.NODE_ENV === 'production';
+export const isDevelopment = env.NODE_ENV === 'development';
+export const isTest = env.NODE_ENV === 'test';

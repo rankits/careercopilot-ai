@@ -1,5 +1,5 @@
-import { Redis, Cluster, RedisOptions, ClusterNode } from "ioredis";
-import { ICacheDriver } from "@/infrastructure/cache/cache.interface.js";
+import { Redis, Cluster, RedisOptions, ClusterNode } from 'ioredis';
+import { ICacheDriver } from '@/infrastructure/cache/cache.interface.js';
 
 type RedisClientType = Redis | Cluster;
 
@@ -11,9 +11,9 @@ export class RedisCacheDriver implements ICacheDriver {
   }
 
   private createClient(): RedisClientType {
-    const mode = (process.env.REDIS_MODE || "standalone").toLowerCase();
+    const mode = (process.env.REDIS_MODE || 'standalone').toLowerCase();
     const password = process.env.REDIS_PASSWORD || undefined;
-    const keyPrefix = process.env.REDIS_KEY_PREFIX || "";
+    const keyPrefix = process.env.REDIS_KEY_PREFIX || '';
 
     const commonOptions: RedisOptions = {
       password,
@@ -22,10 +22,10 @@ export class RedisCacheDriver implements ICacheDriver {
       maxRetriesPerRequest: 3,
     };
 
-    if (mode === "cluster") {
-      const nodesEnv = process.env.REDIS_CLUSTER_NODES || "127.0.0.1:6379";
-      const clusterNodes: ClusterNode[] = nodesEnv.split(",").map((node) => {
-        const [host, port] = node.trim().split(":");
+    if (mode === 'cluster') {
+      const nodesEnv = process.env.REDIS_CLUSTER_NODES || '127.0.0.1:6379';
+      const clusterNodes: ClusterNode[] = nodesEnv.split(',').map((node) => {
+        const [host, port] = node.trim().split(':');
         return { host, port: Number(port) || 6379 };
       });
 
@@ -34,22 +34,22 @@ export class RedisCacheDriver implements ICacheDriver {
       });
     }
 
-    if (mode === "sentinel") {
-      const sentinelsEnv = process.env.REDIS_SENTINELS || "127.0.0.1:26379";
-      const sentinels = sentinelsEnv.split(",").map((s) => {
-        const [host, port] = s.trim().split(":");
+    if (mode === 'sentinel') {
+      const sentinelsEnv = process.env.REDIS_SENTINELS || '127.0.0.1:26379';
+      const sentinels = sentinelsEnv.split(',').map((s) => {
+        const [host, port] = s.trim().split(':');
         return { host, port: Number(port) || 26379 };
       });
 
       return new Redis({
         ...commonOptions,
         sentinels,
-        name: process.env.REDIS_SENTINEL_MASTER || "mymaster",
+        name: process.env.REDIS_SENTINEL_MASTER || 'mymaster',
       });
     }
 
     // Default: Standalone mode
-    const host = process.env.REDIS_HOST || "127.0.0.1";
+    const host = process.env.REDIS_HOST || '127.0.0.1';
     const port = Number(process.env.REDIS_PORT) || 6379;
 
     return new Redis({
@@ -72,7 +72,7 @@ export class RedisCacheDriver implements ICacheDriver {
   async set<T>(key: string, value: T, ttlSeconds?: number): Promise<void> {
     const serialized = JSON.stringify(value);
     if (ttlSeconds && ttlSeconds > 0) {
-      await this.client.set(key, serialized, "EX", ttlSeconds);
+      await this.client.set(key, serialized, 'EX', ttlSeconds);
     } else {
       await this.client.set(key, serialized);
     }
@@ -84,17 +84,17 @@ export class RedisCacheDriver implements ICacheDriver {
   }
 
   async deleteByPrefix(prefix: string): Promise<number> {
-    const matchPattern = prefix.endsWith("*") ? prefix : `${prefix}*`;
-    let cursor = "0";
+    const matchPattern = prefix.endsWith('*') ? prefix : `${prefix}*`;
+    let cursor = '0';
     let deletedCount = 0;
 
     do {
       const [nextCursor, keys] = await this.client.scan(
         cursor,
-        "MATCH",
+        'MATCH',
         matchPattern,
-        "COUNT",
-        "100"
+        'COUNT',
+        '100',
       );
       cursor = nextCursor;
 
@@ -102,7 +102,7 @@ export class RedisCacheDriver implements ICacheDriver {
         const removed = await this.client.del(...keys);
         deletedCount += removed;
       }
-    } while (cursor !== "0");
+    } while (cursor !== '0');
 
     return deletedCount;
   }
@@ -123,7 +123,7 @@ export class RedisCacheDriver implements ICacheDriver {
   async ping(): Promise<boolean> {
     try {
       const res = await this.client.ping();
-      return res === "PONG";
+      return res === 'PONG';
     } catch {
       return false;
     }

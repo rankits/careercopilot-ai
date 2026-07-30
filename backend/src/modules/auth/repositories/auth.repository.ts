@@ -1,8 +1,8 @@
-import { Status, type User } from "@prisma/client";
-import { prisma } from "@/shared/config/db.conf.js";
-import { securityConfig } from "@/shared/config/security.conf.js";
-import { AppError } from "@/shared/utils/errors/AppError.js";
-import { DEFAULT_USER_ROLE_NAME } from "@/modules/auth/constants/auth.constant.js";
+import { Status, type User } from '@prisma/client';
+import { prisma } from '@/shared/config/db.conf.js';
+import { securityConfig } from '@/shared/config/security.conf.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+import { DEFAULT_USER_ROLE_NAME } from '@/modules/auth/constants/auth.constant.js';
 
 export type UserWithRole = User & { role: { name: string } };
 

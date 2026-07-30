@@ -1,4 +1,4 @@
-import { z, ZodTypeAny } from "zod";
+import { z, ZodTypeAny } from 'zod';
 
 const withEnvelope = (body: ZodTypeAny, query: ZodTypeAny = z.object({}).optional()) =>
   z.object({ body, query, params: z.object({}).optional() });
@@ -11,19 +11,19 @@ export const updateProfileSchema = withEnvelope(
       phone: z
         .string()
         .trim()
-        .regex(/^\+?[1-9]\d{7,14}$/, "Phone must be a valid E.164 number, e.g. +14155552671")
+        .regex(/^\+?[1-9]\d{7,14}$/, 'Phone must be a valid E.164 number, e.g. +14155552671')
         .nullable()
         .optional(),
       profileImage: z
         .string()
         .trim()
-        .url("Profile image must be a valid URL")
+        .url('Profile image must be a valid URL')
         .nullable()
         .optional(),
-      bio: z.string().trim().max(500, "Bio must be 500 characters or fewer").nullable().optional(),
+      bio: z.string().trim().max(500, 'Bio must be 500 characters or fewer').nullable().optional(),
     })
     .refine((data) => Object.keys(data).length > 0, {
-      message: "At least one field must be provided",
+      message: 'At least one field must be provided',
     }),
 );
 
@@ -35,5 +35,5 @@ const listUsersQueryBody = z.object({
 
 export const listUsersQuerySchema = withEnvelope(z.object({}).optional(), listUsersQueryBody);
 
-export type UpdateProfileInput = z.infer<typeof updateProfileSchema>["body"];
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>['body'];
 export type ListUsersQuery = z.infer<typeof listUsersQueryBody>;

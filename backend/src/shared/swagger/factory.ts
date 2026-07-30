@@ -4,9 +4,9 @@ import type {
   AuthGetApiConfig,
   PathParameter,
   QueryParameter,
-} from "@/shared/types/swagger.types.js";
+} from '@/shared/types/swagger.types.js';
 
-type HttpMethod = "get" | "post" | "put" | "patch" | "delete";
+type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
 /**
  * Documents this API's actual success envelope (see
@@ -20,16 +20,16 @@ export const successSchema = (
   data?: Record<string, unknown>,
   extra?: Record<string, unknown>,
 ) => ({
-  type: "object",
+  type: 'object',
   properties: {
-    status: { type: "string", example: "success" },
-    message: { type: "string", example: message },
+    status: { type: 'string', example: 'success' },
+    message: { type: 'string', example: message },
     ...(data && {
       data:
-        data.type && typeof data.type === "string"
+        data.type && typeof data.type === 'string'
           ? data
           : {
-              type: "object",
+              type: 'object',
               properties: data,
             },
     }),
@@ -43,11 +43,11 @@ export const successSchema = (
  * `{ status: "error", message, code? }`.
  */
 export const errorSchema = (message: string, code?: string) => ({
-  type: "object",
+  type: 'object',
   properties: {
-    status: { type: "string", example: "error" },
-    message: { type: "string", example: message },
-    ...(code && { code: { type: "string", example: code } }),
+    status: { type: 'string', example: 'error' },
+    message: { type: 'string', example: message },
+    ...(code && { code: { type: 'string', example: code } }),
   },
 });
 
@@ -59,7 +59,7 @@ const buildResponses = (responses: ApiResponses): Record<string, unknown> => {
         description: response.description,
         ...(response.schema && {
           content: {
-            "application/json": {
+            'application/json': {
               schema: response.schema,
             },
           },
@@ -73,15 +73,15 @@ const buildResponses = (responses: ApiResponses): Record<string, unknown> => {
 };
 
 /** Builds the OpenAPI `requestBody` object (POST / PUT / PATCH) from our shorthand config. */
-const buildRequestBody = (body?: AuthApiConfig["body"]) => {
+const buildRequestBody = (body?: AuthApiConfig['body']) => {
   if (!body) return undefined;
 
   return {
     required: true,
     content: {
-      "application/json": {
+      'application/json': {
         schema: {
-          type: "object",
+          type: 'object',
           ...(body.required && { required: body.required }),
           properties: body.properties,
         },
@@ -116,7 +116,7 @@ export const createApiMethod = (
   secure: boolean,
   tags: string[],
 ): Record<string, Record<string, unknown>> => {
-  const hasBody = method !== "get" && method !== "delete";
+  const hasBody = method !== 'get' && method !== 'delete';
   const paths = Array.isArray(path) ? path : [path];
 
   const result: Record<string, Record<string, unknown>> = {};
@@ -131,10 +131,10 @@ export const createApiMethod = (
         summary: config.summary,
         ...(config.description && { description: config.description }),
         ...(security && { security }),
-        ...(hasBody && "body" in config && { requestBody: buildRequestBody(config.body) }),
+        ...(hasBody && 'body' in config && { requestBody: buildRequestBody(config.body) }),
         parameters: buildParameters(
           filteredPathParams,
-          "queryParams" in config ? config.queryParams : undefined,
+          'queryParams' in config ? config.queryParams : undefined,
         ),
         responses: buildResponses(config.responses),
       },
@@ -144,20 +144,40 @@ export const createApiMethod = (
   return result;
 };
 
-export const createApiPost = (path: string | string[], config: AuthApiConfig, secure: boolean, tags: string[]) =>
-  createApiMethod("post", path, config, secure, tags);
+export const createApiPost = (
+  path: string | string[],
+  config: AuthApiConfig,
+  secure: boolean,
+  tags: string[],
+) => createApiMethod('post', path, config, secure, tags);
 
-export const createApiGet = (path: string | string[], config: AuthGetApiConfig, secure: boolean, tags: string[]) =>
-  createApiMethod("get", path, config, secure, tags);
+export const createApiGet = (
+  path: string | string[],
+  config: AuthGetApiConfig,
+  secure: boolean,
+  tags: string[],
+) => createApiMethod('get', path, config, secure, tags);
 
-export const createApiPut = (path: string | string[], config: AuthApiConfig, secure: boolean, tags: string[]) =>
-  createApiMethod("put", path, config, secure, tags);
+export const createApiPut = (
+  path: string | string[],
+  config: AuthApiConfig,
+  secure: boolean,
+  tags: string[],
+) => createApiMethod('put', path, config, secure, tags);
 
-export const createApiPatch = (path: string | string[], config: AuthApiConfig, secure: boolean, tags: string[]) =>
-  createApiMethod("patch", path, config, secure, tags);
+export const createApiPatch = (
+  path: string | string[],
+  config: AuthApiConfig,
+  secure: boolean,
+  tags: string[],
+) => createApiMethod('patch', path, config, secure, tags);
 
-export const createApiDelete = (path: string | string[], config: AuthGetApiConfig, secure: boolean, tags: string[]) =>
-  createApiMethod("delete", path, config, secure, tags);
+export const createApiDelete = (
+  path: string | string[],
+  config: AuthGetApiConfig,
+  secure: boolean,
+  tags: string[],
+) => createApiMethod('delete', path, config, secure, tags);
 
 /**
  * Declares every HTTP method mounted on a single path at once - the usual
@@ -180,8 +200,14 @@ export const createApiEndpoint = (
   (Object.entries(methods) as Array<[HttpMethod, (typeof methods)[keyof typeof methods]]>).forEach(
     ([method, options]) => {
       if (!options) return;
-      const result = createApiMethod(method, "_temp", options.config, options.secure ?? false, tags);
-      const methodConfig = result["_temp"]?.[method];
+      const result = createApiMethod(
+        method,
+        '_temp',
+        options.config,
+        options.secure ?? false,
+        tags,
+      );
+      const methodConfig = result['_temp']?.[method];
       if (methodConfig) endpoint[method] = methodConfig;
     },
   );

@@ -1,4 +1,4 @@
-import { env } from "@/shared/config/env.conf.js";
+import { env } from '@/shared/config/env.conf.js';
 
 /**
  * JWT configuration.
@@ -16,5 +16,5 @@ export const jwtConfig = {
   refreshExpiresIn: env.JWT_REFRESH_EXPIRES_IN,
   issuer: env.JWT_ISSUER,
   audience: env.JWT_AUDIENCE,
-  algorithm: "HS256" as const,
+  algorithm: 'HS256' as const,
 };

@@ -1,15 +1,15 @@
-import { createHash, randomInt } from "node:crypto";
-import { OtpPurpose, OtpTransport } from "@prisma/client";
-import { prisma } from "@/shared/config/db.conf.js";
-import { securityConfig } from "@/shared/config/security.conf.js";
-import { AppError } from "@/shared/utils/errors/AppError.js";
+import { createHash, randomInt } from 'node:crypto';
+import { OtpPurpose, OtpTransport } from '@prisma/client';
+import { prisma } from '@/shared/config/db.conf.js';
+import { securityConfig } from '@/shared/config/security.conf.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
 
-const hashCode = (code: string): string => createHash("sha256").update(code).digest("hex");
+const hashCode = (code: string): string => createHash('sha256').update(code).digest('hex');
 
 const generateCode = (length: number): string => {
   const min = 10 ** (length - 1);
   const max = 10 ** length - 1;
-  return String(randomInt(min, max + 1)).padStart(length, "0");
+  return String(randomInt(min, max + 1)).padStart(length, '0');
 };
 
 /**
@@ -32,9 +32,9 @@ export const OtpService = {
 
     if (existing?.blocked) {
       throw new AppError(
-        "This address has been blocked from requesting codes. Contact support.",
+        'This address has been blocked from requesting codes. Contact support.',
         429,
-        "TOO_MANY_REQUESTS",
+        'TOO_MANY_REQUESTS',
       );
     }
 
@@ -42,12 +42,9 @@ export const OtpService = {
       const cooldownEndsAt =
         existing.lastSentAt.getTime() + securityConfig.otp.resendCooldownSeconds * 1000;
       if (cooldownEndsAt > Date.now()) {
-        throw new AppError(
-          "Please wait before requesting another code",
-          429,
-          "TOO_MANY_REQUESTS",
-          { retryAfterSeconds: Math.ceil((cooldownEndsAt - Date.now()) / 1000) },
-        );
+        throw new AppError('Please wait before requesting another code', 429, 'TOO_MANY_REQUESTS', {
+          retryAfterSeconds: Math.ceil((cooldownEndsAt - Date.now()) / 1000),
+        });
       }
     }
 
@@ -55,9 +52,9 @@ export const OtpService = {
     if (existing && nextAttempt > securityConfig.otp.maxResendCount) {
       await prisma.otp.update({ where: { id: existing.id }, data: { blocked: true } });
       throw new AppError(
-        "Too many codes requested for this address. Please contact support.",
+        'Too many codes requested for this address. Please contact support.',
         429,
-        "TOO_MANY_REQUESTS",
+        'TOO_MANY_REQUESTS',
       );
     }
 
@@ -104,9 +101,9 @@ export const OtpService = {
     if (!record) return false; // never issued
     if (record.blocked) {
       throw new AppError(
-        "This address has been blocked from verifying codes. Contact support.",
+        'This address has been blocked from verifying codes. Contact support.',
         429,
-        "TOO_MANY_REQUESTS",
+        'TOO_MANY_REQUESTS',
       );
     }
     if (record.lastCodeVerified) return false; // single-use: this code was already consumed
@@ -115,9 +112,9 @@ export const OtpService = {
     if (record.retries >= securityConfig.otp.maxAttempts) {
       await prisma.otp.update({ where: { id: record.id }, data: { blocked: true } });
       throw new AppError(
-        "Too many incorrect attempts. Please request a new code.",
+        'Too many incorrect attempts. Please request a new code.',
         429,
-        "TOO_MANY_REQUESTS",
+        'TOO_MANY_REQUESTS',
       );
     }
 

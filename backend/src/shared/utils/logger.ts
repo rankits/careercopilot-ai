@@ -1,4 +1,4 @@
-import { logger } from "@/shared/logger/logger.js";
+import { logger } from '@/shared/logger/logger.js';
 
 /**
  * Compat shim: this used to be a separate pino instance (config via
@@ -10,4 +10,4 @@ import { logger } from "@/shared/logger/logger.js";
  * modules gain secret redaction for free.
  */
 export const appLogger = logger;
-export const jobsLogger = logger.child({ scope: "jobs" });
+export const jobsLogger = logger.child({ scope: 'jobs' });

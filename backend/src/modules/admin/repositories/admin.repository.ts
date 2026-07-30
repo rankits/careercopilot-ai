@@ -1,8 +1,8 @@
-import { Status, type Admin, type Prisma } from "@prisma/client";
-import { prisma } from "@/shared/config/db.conf.js";
-import { securityConfig } from "@/shared/config/security.conf.js";
-import { AuditService, type WriteAuditLogInput } from "@/shared/audit/audit.service.js";
-import type { SystemStats } from "@/modules/admin/types/admin.types.js";
+import { Status, type Admin, type Prisma } from '@prisma/client';
+import { prisma } from '@/shared/config/db.conf.js';
+import { securityConfig } from '@/shared/config/security.conf.js';
+import { AuditService, type WriteAuditLogInput } from '@/shared/audit/audit.service.js';
+import type { SystemStats } from '@/modules/admin/types/admin.types.js';
 
 export type AdminWithRole = Admin & { role: { name: string } };
 
@@ -63,7 +63,7 @@ export const adminRepository = {
 
   /** Delegates to the shared, principal-agnostic audit writer - kept as a
    * repository method so callers don't need to know `AuditService` exists. */
-  async writeAuditLog(entry: Omit<WriteAuditLogInput, "userId">): Promise<void> {
+  async writeAuditLog(entry: Omit<WriteAuditLogInput, 'userId'>): Promise<void> {
     await AuditService.write(entry);
   },
 

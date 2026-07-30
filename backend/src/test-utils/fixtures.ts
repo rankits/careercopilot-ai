@@ -1,11 +1,11 @@
-import { Status } from "@prisma/client";
-import type { FakeAdmin, FakeUser } from "@/test-utils/fake-prisma.js";
-import { fakeDb } from "@/test-utils/prisma-mock.js";
-import { PasswordUtil } from "@/shared/security/password.util.js";
-import { signAccessToken } from "@/shared/security/jwt.util.js";
+import { Status } from '@prisma/client';
+import type { FakeAdmin, FakeUser } from '@/test-utils/fake-prisma.js';
+import { fakeDb } from '@/test-utils/prisma-mock.js';
+import { PasswordUtil } from '@/shared/security/password.util.js';
+import { signAccessToken } from '@/shared/security/jwt.util.js';
 
 /** Meets the app's password policy: upper + lower + digit + symbol, 8+ chars. */
-export const VALID_PASSWORD = "Str0ng!Passw0rd";
+export const VALID_PASSWORD = 'Str0ng!Passw0rd';
 
 export const seedVerifiedUser = async (
   overrides: Partial<FakeUser> = {},
@@ -53,18 +53,18 @@ export const seedAdmin = async (
 export const accessTokenForUser = (user: FakeUser): string =>
   signAccessToken({
     sub: user.publicId,
-    principalType: "USER",
+    principalType: 'USER',
     email: user.email,
-    role: fakeDb.roles.get(user.roleId)?.name ?? "USER",
+    role: fakeDb.roles.get(user.roleId)?.name ?? 'USER',
     tokenVersion: user.tokenVersion,
   });
 
 export const accessTokenForAdmin = (admin: FakeAdmin): string =>
   signAccessToken({
     sub: admin.publicId,
-    principalType: "ADMIN",
+    principalType: 'ADMIN',
     email: admin.email,
-    role: fakeDb.roles.get(admin.roleId)?.name ?? "ADMIN",
+    role: fakeDb.roles.get(admin.roleId)?.name ?? 'ADMIN',
     tokenVersion: admin.tokenVersion,
   });
 
@@ -83,5 +83,5 @@ export const extractCookie = (
       ? [setCookieHeader]
       : [];
   const line = lines.find((c) => c.startsWith(`${name}=`));
-  return line?.split(";")[0]?.split("=").slice(1).join("=");
+  return line?.split(';')[0]?.split('=').slice(1).join('=');
 };

@@ -1,7 +1,7 @@
-import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { cacheService } from "@/infrastructure/cache/index.js";
-import { AppError } from "@/shared/utils/errors/AppError.js";
-import { securityConfig } from "@/shared/config/security.conf.js";
+import type { NextFunction, Request, RequestHandler, Response } from 'express';
+import { cacheService } from '@/infrastructure/cache/index.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+import { securityConfig } from '@/shared/config/security.conf.js';
 
 interface RateLimiterOptions {
   windowMinutes: number;
@@ -11,7 +11,7 @@ interface RateLimiterOptions {
   keyGenerator?: (req: Request) => string;
 }
 
-const defaultKeyGenerator = (req: Request): string => req.ip ?? "unknown";
+const defaultKeyGenerator = (req: Request): string => req.ip ?? 'unknown';
 
 /**
  * Keys by client IP + the email in the request body, when present, so a
@@ -20,8 +20,8 @@ const defaultKeyGenerator = (req: Request): string => req.ip ?? "unknown";
  */
 const emailAwareKeyGenerator = (req: Request): string => {
   const email = (req.body as { email?: unknown } | undefined)?.email;
-  const emailKey = typeof email === "string" && email.length > 0 ? email.toLowerCase() : "unknown";
-  return `${req.ip ?? "unknown"}:${emailKey}`;
+  const emailKey = typeof email === 'string' && email.length > 0 ? email.toLowerCase() : 'unknown';
+  return `${req.ip ?? 'unknown'}:${emailKey}`;
 };
 
 /**
@@ -41,7 +41,7 @@ const buildLimiter = (options: RateLimiterOptions): RequestHandler => {
       .increment(cacheKey, windowSeconds)
       .then((count) => {
         if (count > options.max) {
-          next(new AppError("Too many requests, please try again later", 429, "TOO_MANY_REQUESTS"));
+          next(new AppError('Too many requests, please try again later', 429, 'TOO_MANY_REQUESTS'));
           return;
         }
         next();
@@ -54,14 +54,14 @@ const buildLimiter = (options: RateLimiterOptions): RequestHandler => {
 export const globalRateLimiter = buildLimiter({
   windowMinutes: securityConfig.rateLimit.global.windowMinutes,
   max: securityConfig.rateLimit.global.max,
-  prefix: "global",
+  prefix: 'global',
 });
 
 /** Applied to login / password endpoints. */
 export const authRateLimiter = buildLimiter({
   windowMinutes: securityConfig.rateLimit.auth.windowMinutes,
   max: securityConfig.rateLimit.auth.max,
-  prefix: "auth",
+  prefix: 'auth',
   keyGenerator: emailAwareKeyGenerator,
 });
 
@@ -69,6 +69,6 @@ export const authRateLimiter = buildLimiter({
 export const otpRateLimiter = buildLimiter({
   windowMinutes: securityConfig.rateLimit.otp.windowMinutes,
   max: securityConfig.rateLimit.otp.max,
-  prefix: "otp",
+  prefix: 'otp',
   keyGenerator: emailAwareKeyGenerator,
 });
