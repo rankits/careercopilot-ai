@@ -4,9 +4,10 @@ import {
   errorSchema,
   successSchema,
 } from '@/shared/swagger/factory.js';
-import { commonSecureResponses } from '@/shared/swagger/schemas.js';
+import { commonSecureResponses, paginatedSchema } from '@/shared/swagger/schemas.js';
 import {
   RECOMMENDATION_CATEGORY_VALUES,
+  RECOMMENDATION_FEEDBACK_ACTION_VALUES,
   RECOMMENDATION_MATCH_TYPE_VALUES,
   RECOMMENDATION_SCORE_COMPONENT_VALUES,
 } from '@/modules/recommendations/types/recommendations.types.js';
@@ -157,7 +158,7 @@ export const recommendationsSwagger = {
     {
       summary: 'Generate recommendations from an authorized source',
       description:
-        'Supports PROFILE, RESUME, and JOB today. CAREER_GOAL and SAVED_SEARCH remain unimplemented. Uses PGVECTOR retrieval and heuristic scoring; results are ephemeral until Prisma recommendation models land.',
+        'Supports PROFILE, RESUME, and JOB today. CAREER_GOAL and SAVED_SEARCH remain unimplemented. Uses PGVECTOR retrieval and heuristic scoring; results are persisted durably.',
       body: {
         required: ['sourceType'],
         properties: {
@@ -262,6 +263,115 @@ export const recommendationsSwagger = {
           schema: successSchema('Similar jobs retrieved', {
             type: 'array',
             items: similarJobItemSchema,
+          }),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  ...createApiGet(
+    BASE_URL,
+    {
+      summary: 'List persisted recommendations for the current user',
+      queryParams: [
+        {
+          name: 'page',
+          in: 'query',
+          required: false,
+          schema: { type: 'integer', minimum: 1, default: 1 },
+        },
+        {
+          name: 'limit',
+          in: 'query',
+          required: false,
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Recommendations retrieved',
+          schema: successSchema(
+            'Recommendations retrieved',
+            paginatedSchema(recommendationItemSchema),
+          ),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  ...createApiGet(
+    `${BASE_URL}/{recommendationId}`,
+    {
+      summary: 'Get a persisted recommendation by id',
+      params: [
+        {
+          name: 'recommendationId',
+          in: 'path',
+          required: true,
+          schema: {
+            type: 'string',
+            format: 'uuid',
+            example: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Recommendation retrieved',
+          schema: successSchema('Recommendation retrieved', recommendationItemSchema),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  ...createApiPost(
+    `${BASE_URL}/{recommendationId}/feedback`,
+    {
+      summary: 'Upsert feedback for a recommendation',
+      params: [
+        {
+          name: 'recommendationId',
+          in: 'path',
+          required: true,
+          schema: {
+            type: 'string',
+            format: 'uuid',
+            example: 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',
+          },
+        },
+      ],
+      body: {
+        required: ['action'],
+        properties: {
+          action: {
+            type: 'string',
+            enum: [...RECOMMENDATION_FEEDBACK_ACTION_VALUES],
+            example: 'SAVED',
+          },
+          note: { type: 'string', maxLength: 1000 },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Recommendation feedback saved',
+          schema: successSchema('Recommendation feedback saved', {
+            type: 'object',
+            properties: {
+              id: { type: 'string', format: 'uuid' },
+              recommendationId: { type: 'string', format: 'uuid' },
+              action: { type: 'string', enum: [...RECOMMENDATION_FEEDBACK_ACTION_VALUES] },
+              note: { type: 'string', nullable: true },
+              createdAt: { type: 'string', format: 'date-time' },
+            },
           }),
         },
         ...commonRecommendationErrors,

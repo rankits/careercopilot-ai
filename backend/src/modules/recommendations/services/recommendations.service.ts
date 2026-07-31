@@ -16,6 +16,7 @@ import { applyRecommendationFilters } from '@/modules/recommendations/utils/appl
 import type {
   BuildRecommendationContextInput,
   JobRecommendationRecord,
+  RecommendationPage,
   RetrievalBackend,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import type {
@@ -138,6 +139,31 @@ export class RecommendationsService {
       );
       throw error;
     }
+  }
+
+  async listForUser(
+    userId: string,
+    pagination: { page: number; limit: number },
+  ): Promise<RecommendationPage> {
+    const dependencies = this.requireOrchestration();
+    return dependencies.unitOfWork.execute(({ recommendations }) =>
+      recommendations.listByUser(userId, pagination),
+    );
+  }
+
+  async getForUser(userId: string, recommendationId: string): Promise<JobRecommendationRecord> {
+    const dependencies = this.requireOrchestration();
+    const record = await dependencies.unitOfWork.execute(({ recommendations }) =>
+      recommendations.findById(userId, recommendationId),
+    );
+    if (!record) {
+      throw new RecommendationError(
+        'Recommendation was not found',
+        404,
+        RECOMMENDATION_ERROR_CODES.RECOMMENDATION_NOT_FOUND,
+      );
+    }
+    return record;
   }
 
   private requireOrchestration(): RecommendationOrchestrationDependencies {

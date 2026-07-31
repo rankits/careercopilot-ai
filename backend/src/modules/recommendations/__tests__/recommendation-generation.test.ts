@@ -290,6 +290,43 @@ describe('RecommendationsService generation', () => {
     expect(records[0]?.runId).toBeTruthy();
   });
 
+  it('lists and loads persisted recommendations for the user', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+          ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const created = await service.createFromText('user-1', {
+      targetText: 'Backend engineer TypeScript',
+    });
+    const page = await service.listForUser('user-1', { page: 1, limit: 20 });
+    const detail = await service.getForUser('user-1', created[0]!.id);
+
+    expect(page.total).toBe(1);
+    expect(page.items[0]?.id).toBe(created[0]?.id);
+    expect(detail.job.id).toBe('job-high');
+  });
+
   it('drops stretch/related categories when includeStretchOpportunities is false', async () => {
     const retrievalService = {
       retrieve: vi.fn().mockResolvedValue([

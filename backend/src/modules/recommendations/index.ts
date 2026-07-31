@@ -19,7 +19,8 @@ import { PgVectorCandidateRetrievalProvider } from '@/modules/recommendations/pr
 import { RecommendationScoringEngine } from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
 import { HEURISTIC_SCORE_CALCULATORS } from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
 import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
-import { InMemoryRecommendationUnitOfWork } from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
+import { PrismaRecommendationUnitOfWork } from '@/modules/recommendations/repositories/prisma-recommendation.unit-of-work.js';
+import { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
 import { createResumeRecommendationSourceLoader } from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
 import { jobEmbeddingRepository } from '@/modules/job-embeddings/index.js';
 import { prismaJobSearchRepository } from '@/modules/job-listing/index.js';
@@ -60,13 +61,24 @@ export const recommendationSourceAuthorizationService =
     prismaJobSearchRepository,
     recommendationSourceLoader,
   );
-export const recommendationUnitOfWork = new InMemoryRecommendationUnitOfWork();
+export const recommendationUnitOfWork = new PrismaRecommendationUnitOfWork(
+  prismaJobSearchRepository,
+);
 export const recommendationsService = new RecommendationsService(recommendationsLogger, {
   contextService: recommendationContextService,
   retrievalService: recommendationRetrievalService,
   scoringService: recommendationScoringService,
   unitOfWork: recommendationUnitOfWork,
   sourceAuthorization: recommendationSourceAuthorizationService,
+});
+export const recommendationFeedbackService = new RecommendationFeedbackService({
+  upsert: (input) => recommendationUnitOfWork.execute(({ feedback }) => feedback.upsert(input)),
+  findByRecommendation: (userId, recommendationId) =>
+    recommendationUnitOfWork.execute(({ feedback }) =>
+      feedback.findByRecommendation(userId, recommendationId),
+    ),
+  listByJob: (userId, jobId) =>
+    recommendationUnitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
 });
 export const similarJobsService = new SimilarJobsService(
   recommendationSourceAuthorizationService,
@@ -77,6 +89,7 @@ export const similarJobsService = new SimilarJobsService(
 export const recommendationsRoutes = createRecommendationsRouter(
   recommendationsService,
   similarJobsService,
+  recommendationFeedbackService,
 );
 
 export * from '@/modules/recommendations/types/recommendations.types.js';
@@ -92,6 +105,7 @@ export * from '@/modules/recommendations/matching/recommendation-access.js';
 export * from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
 export * from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
 export * from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
+export * from '@/modules/recommendations/repositories/prisma-recommendation.unit-of-work.js';
 export * from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
 export * from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 export * from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
