@@ -21,6 +21,12 @@ export const resumeReparseSchema = z.object({
   }),
 });
 
+export const candidateProfileParamsSchema = z.object({
+  params: z.object({
+    userId: z.string().min(1),
+  }),
+});
+
 export const confirmProfileSchema = z.object({
   params: z.object({
     userId: z.string().min(1),

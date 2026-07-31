@@ -3,6 +3,9 @@ import { Outlet, useLocation } from 'react-router-dom';
 
 import type { SidebarVariant } from '@/components/organisms/Sidebar/interfaces';
 
+import { useLogout } from '@/features/auth/hooks/useLogout';
+import { useAppSelector } from '@/hooks/redux';
+
 import { AppHeader, Sidebar } from '@/components';
 import { ROUTES } from '@/constants/routes';
 import { useMediaQuery } from '@/lib/material';
@@ -12,6 +15,10 @@ export function AppLayout() {
   const { pathname } = useLocation();
   const [sidebarVariant, setSidebarVariant] = useState<SidebarVariant>('open');
   const activeItemId = pathname === ROUTES.JOB_FEED ? 'jobs-feed' : 'dashboard';
+  const { isLoggingOut, logout } = useLogout();
+  const user = useAppSelector((state) => state.auth.user);
+  const userName = user?.name ?? user?.email ?? 'User';
+  const userRoleLabel = user?.role === 'admin' || user?.role === 'ADMIN' ? 'Admin' : undefined;
 
   return (
     <div className="app-shell">
@@ -22,7 +29,16 @@ export function AppLayout() {
         variant={sidebarVariant}
       />
       <div className="content-shell">
-        <AppHeader />
+        <AppHeader
+          onLogoutClick={() => {
+            if (!isLoggingOut) {
+              void logout();
+            }
+          }}
+          userAvatarUrl={user?.profileImage ?? undefined}
+          userName={userName}
+          userRoleLabel={userRoleLabel}
+        />
         <main className="main-content">
           <Outlet />
         </main>

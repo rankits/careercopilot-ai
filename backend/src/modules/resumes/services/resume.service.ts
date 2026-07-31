@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { ResumeStorageDriver } from '@prisma/client';
+import { authRepository } from '@/modules/auth/repositories/auth.repository.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import {
   allowedResumeExtensions,
@@ -237,16 +238,34 @@ export const resumeService = {
     };
   },
 
+  async getCandidateProfile(userId: string) {
+    const profile = await resumeRepository.findCandidateProfileByUserId(userId);
+    if (!profile) {
+      throw new AppError('Candidate profile not found', 404);
+    }
+
+    return {
+      userId: profile.userId,
+      sourceResumeId: profile.sourceResumeId,
+      confirmedAt: profile.confirmedAt,
+      isComplete: Boolean(profile.confirmedAt),
+    };
+  },
+
   async confirmProfile(input: { userId: string; resumeId: string }) {
     const extraction = await resumeRepository.findLatestExtraction(input.resumeId);
     if (!extraction) {
       throw new AppError('Resume parsed data is not available yet', 404);
     }
 
-    return resumeRepository.upsertCandidateProfile({
+    const profile = await resumeRepository.upsertCandidateProfile({
       userId: input.userId,
       sourceResumeId: input.resumeId,
       ...toParsedResumeData(extraction.extractedData),
     });
+
+    await authRepository.markProfileCreated(input.userId);
+
+    return profile;
   },
 };
