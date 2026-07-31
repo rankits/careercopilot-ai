@@ -95,7 +95,7 @@ router.post(
   '/auth/logout-all',
   authMiddleware,
   requirePrincipalType('ADMIN'),
-  requirePermission('auth.session.manage.own'),
+  requirePermission('auth.session.update.own'),
   logoutAllController,
 );
 ```

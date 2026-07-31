@@ -12,6 +12,7 @@ import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
 import { requirePermission, requirePrincipalType } from '@/shared/middlewares/rbac.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
 import { authRateLimiter } from '@/shared/middlewares/rateLimiter.js';
+import { ADMIN_PERMISSIONS, AUTH_PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
 import {
   adminChangePasswordSchema,
   adminLoginSchema,
@@ -44,14 +45,14 @@ router.post(
   '/auth/logout-all',
   authMiddleware,
   requirePrincipalType('ADMIN'),
-  requirePermission('auth.session.manage.own'),
+  requirePermission(AUTH_PERMISSIONS.UPDATE_SESSION_OWN),
   logoutAllController,
 );
 router.post(
   '/auth/change-password',
   authMiddleware,
   requirePrincipalType('ADMIN'),
-  requirePermission('auth.session.manage.own'),
+  requirePermission(AUTH_PERMISSIONS.UPDATE_SESSION_OWN),
   validateResource(adminChangePasswordSchema),
   changePasswordController,
 );
@@ -64,7 +65,7 @@ router.get(
   '/stats',
   authMiddleware,
   requirePrincipalType('ADMIN'),
-  requirePermission('admin.dashboard.view'),
+  requirePermission(ADMIN_PERMISSIONS.VIEW_DASHBOARD),
   systemStatsController,
 );
 
