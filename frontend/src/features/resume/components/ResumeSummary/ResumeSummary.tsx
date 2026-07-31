@@ -12,8 +12,6 @@ export function ResumeSummary({ presentation, totalExperience }: ResumeSummaryPr
     ['Skills', presentation.counts.skills],
     ['Years experience', totalExperience || '—'],
     ['Companies', presentation.counts.companies],
-    ['Projects', presentation.counts.projects],
-    ['Education', presentation.counts.education || '—'],
     ['Certifications', presentation.counts.certifications],
   ] as const;
   const confidence =
