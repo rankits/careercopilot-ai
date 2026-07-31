@@ -306,4 +306,19 @@ describe('GET /admin/stats', () => {
       });
     });
   });
+
+  describe('Given the ADMIN role has been stripped of the admin.dashboard.view permission attribute', () => {
+    describe('When an otherwise-valid admin requests system statistics', () => {
+      it('Then a 403 is returned naming the missing permission (attribute-based RBAC gate)', async () => {
+        const admin = await seedAdmin({ email: 'admin-no-perm@example.com' });
+        const token = accessTokenForAdmin(admin);
+        fakeDb.setRolePermissions('ADMIN', []);
+
+        const res = await request(app).get(`${API}/stats`).set(authHeader(token));
+
+        expect(res.status).toBe(403);
+        expect(res.body.message).toMatch(/admin\.dashboard\.view/);
+      });
+    });
+  });
 });
