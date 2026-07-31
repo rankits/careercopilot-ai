@@ -28,19 +28,23 @@ export function useLogin() {
 
   const submit = async (values: LoginFormValues) => {
     if (loginMutation.isPending) {
-      return;
+      return false;
     }
 
-    await loginMutation
-      .mutateAsync({
-          email: values.email.trim().toLowerCase(),
-          password: values.password,
-      })
-      .catch(() => undefined);
+    try {
+      await loginMutation.mutateAsync({
+        email: values.email.trim().toLowerCase(),
+        password: values.password,
+        rememberMe: values.rememberMe,
+      });
+
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   return {
-    error: loginMutation.isError ? 'Unable to log in. Please try again.' : null,
     goToRegister,
     isSubmitting: loginMutation.isPending,
     submit,

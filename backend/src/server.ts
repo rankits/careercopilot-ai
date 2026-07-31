@@ -15,6 +15,22 @@ let shuttingDown = false;
 const bootstrap = async (): Promise<void> => {
   await connectDatabase();
 
+  // Optionally run database seeds automatically on startup. This is
+  // intended for local development/demo environments only and is
+  // controlled via the RUN_SEEDS_ON_STARTUP env var.
+  if (env.RUN_SEEDS_ON_STARTUP) {
+    try {
+      // Importing the seed entrypoint executes the orchestrator and
+      // returns once it's complete. Allow any errors to surface so
+      // startup fails loudly if seeding cannot complete.
+      await import('./seed.js');
+      logger.info('Database seeding complete (startup hook)');
+    } catch (err) {
+      logger.error({ err }, 'Database seeding failed during startup');
+      throw err;
+    }
+  }
+
   if (env.ENABLE_EMAIL_WORKER) {
     try {
       await startEmailWorker();

@@ -6,6 +6,8 @@ import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
 import { STORAGE_KEYS } from '@/constants/storage';
 import { authReducer } from '@/features/auth/authSlice';
 
@@ -31,13 +33,15 @@ function renderPage() {
     ...render(
       <QueryClientProvider client={queryClient}>
         <Provider store={testStore}>
-          <MemoryRouter initialEntries={['/login']}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/profile" element={<h1>Profile destination</h1>} />
-              <Route path="/register" element={<h1>Register destination</h1>} />
-            </Routes>
-          </MemoryRouter>
+          <ToastProvider>
+            <MemoryRouter initialEntries={['/login']}>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/profile" element={<h1>Profile destination</h1>} />
+                <Route path="/register" element={<h1>Register destination</h1>} />
+              </Routes>
+            </MemoryRouter>
+          </ToastProvider>
         </Provider>
       </QueryClientProvider>,
     ),
@@ -132,6 +136,7 @@ describe('LoginPage', () => {
       expect(loginMock).toHaveBeenCalledWith({
         email: 'ada@example.com',
         password: 'password123',
+        rememberMe: true,
       }),
     );
     expect(store.getState().auth.isAuthenticated).toBe(true);

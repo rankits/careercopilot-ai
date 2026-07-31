@@ -1,20 +1,30 @@
 export interface User {
   id: string;
-  name: string;
   email: string;
-  role: 'user' | 'admin';
+  firstName?: string;
+  lastName?: string;
+  phone?: string;
+  profileImage?: string | null;
+  bio?: string | null;
+  status?: string;
+  isEmailVerified?: boolean;
+  role: 'USER' | 'ADMIN' | 'user' | 'admin';
+  createdAt?: string;
+  name?: string;
 }
 
 export interface LoginPayload {
   email: string;
   password: string;
+  rememberMe?: boolean;
 }
 
 export interface RegisterPayload {
   email: string;
-  name: string;
+  firstName: string;
+  lastName: string;
   password: string;
-  phoneNumber: string;
+  phone: string;
 }
 
 export interface AuthResponse {
