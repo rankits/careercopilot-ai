@@ -17,6 +17,12 @@ export const resumeConfig = {
     model: process.env.AI_RESUME_PARSER_MODEL || 'gemini-3.5-flash',
     temperature: Number(process.env.AI_RESUME_PARSER_TEMPERATURE ?? '0'),
     maxRetries: toPositiveInt(process.env.AI_RESUME_PARSER_MAX_RETRIES, 2),
+    openrouter: {
+      apiKey: process.env.OPENROUTER_API_KEY || '',
+      model: process.env.OPENROUTER_MODEL || 'anthropic/claude-3.7-sonnet',
+      baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+      timeoutMs: toPositiveInt(process.env.OPENROUTER_TIMEOUT_MS, 60000),
+    },
   },
   localStorageDir:
     process.env.RESUME_LOCAL_STORAGE_DIR || path.resolve(process.cwd(), 'storage', 'resumes'),
