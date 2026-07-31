@@ -240,6 +240,27 @@ export class PrismaJobEmbeddingRepository implements JobEmbeddingRepository {
       }
       conditions.push(Prisma.sql`COALESCE(j."salary_max", j."salary_min") >= ${filters.minSalary}`);
     }
+    if (filters?.maxSalary !== undefined) {
+      if (!Number.isFinite(filters.maxSalary) || filters.maxSalary < 0) {
+        throw new AppError(
+          'maxSalary must be a non-negative finite number',
+          422,
+          'INVALID_JOB_EMBEDDING_SEARCH_FILTER',
+        );
+      }
+      conditions.push(Prisma.sql`COALESCE(j."salary_min", j."salary_max") <= ${filters.maxSalary}`);
+    }
+    if (filters?.currency) {
+      const currency = filters.currency.trim().toUpperCase();
+      if (!/^[A-Z]{3}$/.test(currency)) {
+        throw new AppError(
+          'currency must be a 3-letter ISO code',
+          422,
+          'INVALID_JOB_EMBEDDING_SEARCH_FILTER',
+        );
+      }
+      conditions.push(Prisma.sql`UPPER(j."currency") = ${currency}`);
+    }
 
     const rows = await this.sql.query<SearchResultRow>(Prisma.sql`
       SELECT

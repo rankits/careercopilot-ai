@@ -289,4 +289,48 @@ describe('RecommendationsService generation', () => {
     );
     expect(records[0]?.runId).toBeTruthy();
   });
+
+  it('drops stretch/related categories when includeStretchOpportunities is false', async () => {
+    const retrievalService = {
+      retrieve: vi.fn().mockResolvedValue([
+        { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+        {
+          job: jobList('job-low', {
+            title: 'Marketing Manager',
+            skills: ['SEO'],
+            salary: { minimum: 40000, maximum: 50000, currency: 'USD' },
+          }),
+          retrievalScore: 0.1,
+        },
+      ]),
+    } as unknown as RecommendationRetrievalService;
+
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Backend engineer with TypeScript and PostgreSQL',
+      filters: { includeStretchOpportunities: false },
+    });
+
+    expect(records.every((item) => ['BEST_MATCH', 'GOOD_MATCH'].includes(item.category))).toBe(
+      true,
+    );
+    expect(records.some((item) => item.job.id === 'job-high')).toBe(true);
+  });
 });

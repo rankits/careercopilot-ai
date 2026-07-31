@@ -1,7 +1,6 @@
 import { createEmbeddingProvider } from '@/modules/ai-embeddings/index.js';
 import type { EmbeddingProvider } from '@/modules/ai-embeddings/contracts/embedding-provider.js';
 import type { IJobSearchRepository } from '@/modules/job-listing/contracts/IJobSearchRepository.js';
-import type { JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
 import type { JobEmbeddingRepository } from '@/modules/job-embeddings/contracts/job-embedding.repository.js';
 import type {
   CandidateRetrievalProvider,
@@ -12,27 +11,9 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import { passesCandidateJobFilters } from '@/modules/recommendations/utils/candidate-job-filters.js';
 import { buildRecommendationQueryText } from '@/modules/recommendations/utils/recommendation-query-text.js';
 import type { RetrievalBackend } from '@/modules/recommendations/types/recommendations.types.js';
-
-const normalizeToken = (value: string): string => value.trim().toLowerCase();
-
-const matchesEmploymentType = (job: JobListDto, allowed: readonly string[]): boolean => {
-  if (!allowed.length) return true;
-  if (!job.employmentType) return false;
-  const current = normalizeToken(job.employmentType);
-  return allowed.some((value) => normalizeToken(value) === current);
-};
-
-const isExcludedCompany = (job: JobListDto, excluded: readonly string[]): boolean => {
-  if (!excluded.length) return false;
-  const companyName = normalizeToken(job.company.name);
-  const companySlug = normalizeToken(job.company.slug);
-  return excluded.some((value) => {
-    const token = normalizeToken(value);
-    return token === companyName || token === companySlug;
-  });
-};
 
 export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalProvider {
   readonly supportedBackends: readonly RetrievalBackend[] = ['PGVECTOR'];
@@ -80,24 +61,22 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
       provider: provider.provider,
       model: provider.model,
       embedding: queryEmbedding,
-      // Over-fetch so post-filters for employment type / excluded companies can
-      // still return up to the requested candidate limit.
-      limit: Math.min(request.limit * 3, 200),
+      // Over-fetch so location/employment/company post-filters can still fill the limit.
+      limit: Math.min(request.limit * 4, 200),
       filters: {
         excludeJobIds: request.excludeJobIds,
         remoteTypes,
         minSalary: request.context.salaryExpectation.minimum,
+        maxSalary: request.context.salaryExpectation.maximum,
+        currency: request.context.salaryExpectation.currency,
       },
     });
 
     const jobs = await this.jobs.findByIds(nearest.map((result) => result.jobId));
     const scoreByJobId = new Map(nearest.map((result) => [result.jobId, result.similarity]));
-    const employmentTypes = request.context.employmentTypes;
-    const excludedCompanies = request.context.excludedCompanies;
 
     const filtered = jobs
-      .filter((job) => matchesEmploymentType(job, employmentTypes))
-      .filter((job) => !isExcludedCompany(job, excludedCompanies))
+      .filter((job) => passesCandidateJobFilters(job, request.context))
       .slice(0, request.limit);
 
     const retrievalScores = Object.fromEntries(
