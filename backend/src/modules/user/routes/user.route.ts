@@ -7,6 +7,7 @@ import {
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
 import { requirePermission } from '@/shared/middlewares/rbac.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
+import { USER_PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
 import {
   listUsersQuerySchema,
   updateProfileSchema,
@@ -14,11 +15,16 @@ import {
 
 const router = express.Router();
 
-router.get('/me', authMiddleware, requirePermission('user.profile.read.own'), meController);
+router.get(
+  '/me',
+  authMiddleware,
+  requirePermission(USER_PERMISSIONS.READ_PROFILE_OWN),
+  meController,
+);
 router.patch(
   '/me',
   authMiddleware,
-  requirePermission('user.profile.update.own'),
+  requirePermission(USER_PERMISSIONS.UPDATE_PROFILE_OWN),
   validateResource(updateProfileSchema),
   updateMeController,
 );
@@ -29,7 +35,7 @@ router.patch(
 router.get(
   '/',
   authMiddleware,
-  requirePermission('user.manage.any'),
+  requirePermission(USER_PERMISSIONS.MANAGE_ANY),
   validateResource(listUsersQuerySchema),
   listUsersController,
 );
