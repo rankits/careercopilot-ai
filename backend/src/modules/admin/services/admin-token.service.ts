@@ -31,7 +31,7 @@ const generateAccessToken = (
   admin: AdminTokenContext,
 ): { token: string; expiresInSeconds: number } => ({
   token: signAccessToken({
-    sub: admin.publicId,
+    sub: admin.id,
     principalType: 'ADMIN',
     email: admin.email,
     role: admin.role,
@@ -105,9 +105,9 @@ async function handleReuseDetected(
   const updated = await prisma.admin.update({
     where: { id: adminId },
     data: { tokenVersion: { increment: 1 } },
-    select: { tokenVersion: true, publicId: true },
+    select: { tokenVersion: true },
   });
-  await setCachedTokenVersion('ADMIN', updated.publicId, updated.tokenVersion);
+  await setCachedTokenVersion('ADMIN', adminId, updated.tokenVersion);
   await AuditService.write({
     adminId,
     action: AuditAction.TokenReuseDetected,
@@ -164,7 +164,6 @@ export const AdminTokenService = {
     const { tokens, sessionIdHash: newSessionIdHash } = await createSessionAndPair(
       {
         id: dbAdmin.id,
-        publicId: dbAdmin.publicId,
         email: dbAdmin.email,
         role: dbAdmin.role.name,
         tokenVersion: dbAdmin.tokenVersion,
@@ -208,9 +207,9 @@ export const AdminTokenService = {
     const updated = await prisma.admin.update({
       where: { id: adminId },
       data: { tokenVersion: { increment: 1 } },
-      select: { tokenVersion: true, publicId: true },
+      select: { tokenVersion: true },
     });
-    await setCachedTokenVersion('ADMIN', updated.publicId, updated.tokenVersion);
+    await setCachedTokenVersion('ADMIN', adminId, updated.tokenVersion);
     return updated.tokenVersion;
   },
 };

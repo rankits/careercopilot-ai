@@ -22,7 +22,6 @@ export interface FakeRole {
 
 export interface FakeUser {
   id: number;
-  publicId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -63,7 +62,6 @@ export interface FakeUserSession {
 
 export interface FakeAdmin {
   id: number;
-  publicId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -208,7 +206,6 @@ export class FakeDb {
     const now = new Date();
     const user: FakeUser = {
       id: allocId(),
-      publicId: randomUUID(),
       firstName: 'Jane',
       lastName: 'Doe',
       email: `user${Date.now()}${Math.random()}@example.com`,
@@ -242,7 +239,6 @@ export class FakeDb {
     const now = new Date();
     const admin: FakeAdmin = {
       id: allocId(),
-      publicId: randomUUID(),
       firstName: 'Ada',
       lastName: 'Admin',
       email: `admin${Date.now()}${Math.random()}@example.com`,
@@ -303,15 +299,12 @@ export class FakeDb {
           select,
           include,
         }: {
-          where: { id?: number; email?: string; publicId?: string };
+          where: { id?: number; email?: string };
           select?: Record<string, boolean>;
           include?: { role?: boolean };
         }) => {
           const found = db.users.find(
-            (u) =>
-              (where.id !== undefined && u.id === where.id) ||
-              (where.email !== undefined && u.email === where.email) ||
-              (where.publicId !== undefined && u.publicId === where.publicId),
+            (u) => (where.id !== undefined && u.id === where.id) || (where.email !== undefined && u.email === where.email),
           );
           if (!found) return null;
           if (select) return project(found, select);
@@ -332,7 +325,6 @@ export class FakeDb {
           const { meta, ...userData } = data;
           const user: FakeUser = {
             id: allocId(),
-            publicId: randomUUID(),
             phone: null,
             profileImage: null,
             bio: null,
@@ -542,15 +534,12 @@ export class FakeDb {
           select,
           include,
         }: {
-          where: { id?: number; email?: string; publicId?: string };
+          where: { id?: number; email?: string };
           select?: Record<string, boolean>;
           include?: { role?: boolean };
         }) => {
           const found = db.admins.find(
-            (a) =>
-              (where.id !== undefined && a.id === where.id) ||
-              (where.email !== undefined && a.email === where.email) ||
-              (where.publicId !== undefined && a.publicId === where.publicId),
+            (a) => (where.id !== undefined && a.id === where.id) || (where.email !== undefined && a.email === where.email),
           );
           if (!found) return null;
           if (select) return project(found, select);

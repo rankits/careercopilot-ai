@@ -21,7 +21,7 @@ const passwordField = {
   description: 'Must include an uppercase letter, a lowercase letter, a digit and a symbol.',
   example: 'Str0ng!Passw0rd',
 };
-const otpCodeField = { type: 'string', pattern: '^\\d{6}$', example: '482913' };
+const otpCodeField = { type: 'string', pattern: '^\\d{6}$', example: '000000' };
 const rememberMeField = {
   type: 'boolean',
   default: false,
