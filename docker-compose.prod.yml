@@ -153,6 +153,30 @@ services:
       start_period: 10s
       retries: 3
 
+  outbox-relay:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.prod
+    container_name: career_copilot_outbox_relay_prod
+    restart: always
+    command: npm run worker:outbox:build
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: ${DATABASE_URL}
+      RABBITMQ_URL: ${RABBITMQ_URL}
+      RUN_MIGRATIONS: 'false'
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-50}
+      OUTBOX_MAX_ATTEMPTS: ${OUTBOX_MAX_ATTEMPTS:-10}
+      OUTBOX_LOCK_TIMEOUT_MS: ${OUTBOX_LOCK_TIMEOUT_MS:-60000}
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+      OUTBOX_RETRY_BASE_DELAY_MS: ${OUTBOX_RETRY_BASE_DELAY_MS:-5000}
+      LOG_LEVEL: ${LOG_LEVEL}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
   frontend:
     build:
       context: ./frontend
