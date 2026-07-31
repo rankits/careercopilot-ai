@@ -21,6 +21,7 @@ vi.mock('@/infrastructure/messaging/index.js', async () => {
       publish: vi.fn(async () => true),
       publishEvent: vi.fn(async () => true),
       subscribe: vi.fn(async () => {}),
+      ensureQueue: vi.fn(async () => {}),
       close: vi.fn(async () => {}),
     },
   };

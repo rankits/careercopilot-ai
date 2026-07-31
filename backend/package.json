@@ -10,6 +10,8 @@
     "start": "node dist/server.js",
     "worker:email": "tsx src/workers/run-email-worker.ts",
     "worker:email:build": "node dist/workers/run-email-worker.js",
+    "worker:outbox": "tsx src/workers/run-outbox-relay.ts",
+    "worker:outbox:build": "node dist/workers/run-outbox-relay.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
