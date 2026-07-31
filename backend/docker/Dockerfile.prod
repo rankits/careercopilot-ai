@@ -8,6 +8,7 @@ WORKDIR /app
 # --- Stage 2: Dependencies & Prisma Generation ---
 FROM base AS deps
 COPY package*.json ./
+COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./prisma.config.ts
 RUN npm ci && npx prisma generate
@@ -17,14 +18,20 @@ FROM deps AS build
 COPY . .
 RUN npm run build
 
-# --- Stage 4: Minimal Production Runtime ---
+# --- Stage 4: Production Dependencies ---
+FROM deps AS production-deps
+RUN npm prune --omit=dev
+
+# --- Stage 5: Minimal Production Runtime ---
 FROM base AS production
 
 COPY package*.json ./
+COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY prisma.config.ts ./prisma.config.ts
 COPY docker/entrypoint.sh ./docker/entrypoint.sh
 RUN npm ci --include=dev && npx prisma generate
+COPY --from=production-deps /app/node_modules ./node_modules
 
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma/migrations ./prisma/migrations

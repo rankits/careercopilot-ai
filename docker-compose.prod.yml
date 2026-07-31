@@ -1,3 +1,5 @@
+# version: "3.8"
+
 services:
   postgres:
     image: postgres:16-alpine
@@ -8,7 +10,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password is required in .env}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - '127.0.0.1:5432:5432'
+      - '127.0.0.1:5432:5432' # Securely bind only to localhost
     volumes:
       - pg_prod_data:/var/lib/postgresql/data
     healthcheck:
@@ -66,7 +68,7 @@ services:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RabbitMQ password is required in .env}
     ports:
-      - '127.0.0.1:5672:5672'
+      - '127.0.0.1:5672:5672' # Securely bind AMQP only to localhost
     volumes:
       - rabbitmq_prod_data:/var/lib/rabbitmq
     healthcheck:

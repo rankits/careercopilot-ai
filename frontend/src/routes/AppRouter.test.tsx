@@ -53,4 +53,14 @@ describe('AppRouter auth routes', () => {
     expect(screen.getByLabelText(/primary navigation/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/dashboard page/i)).toBeInTheDocument();
   });
+
+  it('renders profile onboarding without dashboard navigation', () => {
+    renderRoute('/profile');
+
+    expect(
+      screen.getByRole('heading', { name: /let's build your professional profile/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/primary navigation/i)).not.toBeInTheDocument();
+  });
 });
