@@ -16,13 +16,13 @@ import type {
  * `userRepository`, so the "external-facing shape" mapping stays in one
  * place.
  */
-export const getUserProfile = async (publicId: string): Promise<UserProfile | null> => {
-  const user = await userRepository.findByPublicId(publicId);
+export const getUserProfile = async (userId: number): Promise<UserProfile | null> => {
+  const user = await userRepository.findById(userId);
   return user ? toUserProfile(user) : null;
 };
 
-export const getMyProfile = async (publicId: string): Promise<UserProfile> => {
-  const user = await userRepository.findByPublicId(publicId);
+export const getMyProfile = async (userId: number): Promise<UserProfile> => {
+  const user = await userRepository.findById(userId);
   if (!user) {
     throw new AppError('Account not found', 404);
   }
@@ -30,11 +30,11 @@ export const getMyProfile = async (publicId: string): Promise<UserProfile> => {
 };
 
 export const updateMyProfile = async (
-  publicId: string,
+  userId: number,
   input: UpdateProfileInput,
   context: RequestContext,
 ): Promise<UserProfile> => {
-  const existing = await userRepository.findByPublicId(publicId);
+  const existing = await userRepository.findById(userId);
   if (!existing) {
     throw new AppError('Account not found', 404);
   }

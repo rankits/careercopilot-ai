@@ -52,7 +52,7 @@ export const seedAdmin = async (
  * straight to an authenticated state without re-exercising /login each time. */
 export const accessTokenForUser = (user: FakeUser): string =>
   signAccessToken({
-    sub: user.publicId,
+    sub: user.id,
     principalType: 'USER',
     email: user.email,
     role: fakeDb.roles.get(user.roleId)?.name ?? 'USER',
@@ -61,7 +61,7 @@ export const accessTokenForUser = (user: FakeUser): string =>
 
 export const accessTokenForAdmin = (admin: FakeAdmin): string =>
   signAccessToken({
-    sub: admin.publicId,
+    sub: admin.id,
     principalType: 'ADMIN',
     email: admin.email,
     role: fakeDb.roles.get(admin.roleId)?.name ?? 'ADMIN',

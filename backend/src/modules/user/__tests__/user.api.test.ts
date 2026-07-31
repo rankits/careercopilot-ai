@@ -28,7 +28,7 @@ describe('GET /users/me', () => {
         expect(res.body.data.email).toBe(user.email);
         expect(res.body.data.firstName).toBe('Priya');
         expect(res.body.data.bio).toBe('Backend engineer');
-        expect(res.body.data.id).toBe(user.publicId);
+        expect(res.body.data.id).toBe(user.id);
       });
     });
   });
@@ -62,7 +62,7 @@ describe('GET /users/me', () => {
       it('Then permission resolution fails closed with a 403, never a bypass', async () => {
         const user = await seedVerifiedUser({ email: 'ghost-role@example.com' });
         const token = signAccessToken({
-          sub: user.publicId,
+          sub: user.id,
           principalType: 'USER',
           email: user.email,
           role: 'DELETED_ROLE',
@@ -97,7 +97,7 @@ describe('PATCH /users/me', () => {
         expect(res.body.data.firstName).toBe('Changed');
         expect(res.body.data.lastName).toBe('Name');
 
-        const stored = fakeDb.users.find((u) => u.publicId === user.publicId);
+        const stored = fakeDb.users.find((u) => u.id === user.id);
         expect(stored?.firstName).toBe('Changed');
         expect(stored?.lastName).toBe('Name');
       });
@@ -143,7 +143,7 @@ describe('PATCH /users/me', () => {
           .send({ phone: 'not-a-phone-number' });
 
         expect(res.status).toBe(400);
-        expect(fakeDb.users.find((u) => u.publicId === user.publicId)?.phone).toBeNull();
+        expect(fakeDb.users.find((u) => u.id === user.id)?.phone).toBeNull();
       });
     });
   });
@@ -170,7 +170,7 @@ describe('PATCH /users/me', () => {
           .send({ firstName: 'ShouldNotApply' });
 
         expect(res.status).toBe(403);
-        expect(fakeDb.users.find((u) => u.publicId === user.publicId)?.firstName).not.toBe(
+        expect(fakeDb.users.find((u) => u.id === user.id)?.firstName).not.toBe(
           'ShouldNotApply',
         );
       });

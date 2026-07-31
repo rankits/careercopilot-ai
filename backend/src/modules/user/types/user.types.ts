@@ -5,9 +5,9 @@ export interface RequestContext {
   userAgent?: string | undefined;
 }
 
-/** External-facing shape - `id` is always the `publicId`, never the internal db id. */
+/** External-facing shape - `id` is the internal auto-increment database id. */
 export interface UserProfile {
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;
@@ -22,7 +22,7 @@ export interface UserProfile {
 }
 
 export interface UserListItem {
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;
