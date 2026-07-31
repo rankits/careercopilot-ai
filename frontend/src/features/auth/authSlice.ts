@@ -2,19 +2,24 @@ import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/tool
 
 import { STORAGE_KEYS } from '@/constants/storage';
 import { authService } from '@/features/auth/services/auth.service';
-import type { AuthResponse, AuthState, LoginPayload, User } from '@/features/auth/types/auth.types';
+import type { AuthResponse, AuthState, LoginPayload } from '@/features/auth/types/auth.types';
+import {
+  clearAuthSession,
+  getAccessToken,
+  getStoredUser,
+  hasAuthSession,
+  persistAuthSession,
+} from '@/features/auth/utils/authSession';
 import { storage } from '@/utils/storage';
 
-const storedToken = storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN);
-const storedUser = storage.get<User>(STORAGE_KEYS.USER);
 const storedProfileComplete = storage.get<boolean>(STORAGE_KEYS.PROFILE_COMPLETE) ?? false;
 
 const initialState: AuthState = {
-  user: storedUser,
-  accessToken: storedToken,
-  isAuthenticated: Boolean(storedToken && storedUser),
+  user: getStoredUser(),
+  accessToken: getAccessToken(),
+  isAuthenticated: hasAuthSession(),
   isProfileComplete: storedProfileComplete,
-  isSessionResolved: !storedToken || !storedUser,
+  isSessionResolved: !getAccessToken() || !getStoredUser(),
   isLoading: false,
   error: null,
 };
@@ -38,8 +43,7 @@ const authSlice = createSlice({
       state.isProfileComplete = false;
       state.isSessionResolved = true;
       state.error = null;
-      storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
-      storage.remove(STORAGE_KEYS.USER);
+      clearAuthSession();
       storage.remove(STORAGE_KEYS.PROFILE_COMPLETE);
     },
     setProfileComplete(state, action: PayloadAction<boolean>) {
@@ -69,8 +73,7 @@ const authSlice = createSlice({
         state.isAuthenticated = true;
         state.isProfileComplete = isProfileComplete;
         state.isSessionResolved = true;
-        storage.set(STORAGE_KEYS.ACCESS_TOKEN, action.payload.accessToken);
-        storage.set(STORAGE_KEYS.USER, action.payload.user);
+        persistAuthSession(action.payload.accessToken, action.payload.user);
         persistProfileComplete(isProfileComplete);
       })
       .addCase(login.rejected, (state) => {

@@ -67,7 +67,7 @@ describe('Sidebar', () => {
     renderSidebar(<Sidebar mobileMode="bottomNav" />);
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(2);
-    expect(screen.getAllByRole('button')).toHaveLength(3);
+    expect(screen.getAllByRole('link')).toHaveLength(3);
+    expect(screen.getAllByRole('button')).toHaveLength(2);
   });
 });
