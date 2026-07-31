@@ -41,10 +41,18 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
   ],
   register: [
     {
-      autoComplete: 'name',
-      label: 'Full name',
-      name: 'name',
-      placeholder: 'John Doe',
+      autoComplete: 'given-name',
+      label: 'First name',
+      name: 'firstName',
+      placeholder: 'Jane',
+      startIcon: 'person',
+      type: 'text',
+    },
+    {
+      autoComplete: 'family-name',
+      label: 'Last name',
+      name: 'lastName',
+      placeholder: 'Doe',
       startIcon: 'person',
       type: 'text',
     },
@@ -59,7 +67,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'tel',
       label: 'Phone number',
-      name: 'phoneNumber',
+      name: 'phone',
       placeholder: '+1 555 123 4567',
       startIcon: 'phone',
       type: 'tel',
@@ -97,12 +105,17 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
       .oneOf([yup.ref('password')], 'Passwords must match')
       .required('Confirm password is required'),
     email: yup.string().email('Enter a valid email address').required('Email is required'),
-    name: yup.string().trim().required('Full name is required'),
+    firstName: yup.string().trim().required('First name is required'),
+    lastName: yup.string().trim().required('Last name is required'),
     password: yup
       .string()
+      .required('Password is required')
       .min(8, 'Password must be at least 8 characters')
-      .required('Password is required'),
-    phoneNumber: yup
+      .matches(/[A-Z]/, 'Password must include an uppercase letter')
+      .matches(/[a-z]/, 'Password must include a lowercase letter')
+      .matches(/\d/, 'Password must include a number')
+      .matches(/[^A-Za-z0-9]/, 'Password must include a symbol'),
+    phone: yup
       .string()
       .required('Phone number is required')
       .matches(/^\+?(?=(?:\D*\d){10,15}\D*$)[\d\s()-]+$/, {

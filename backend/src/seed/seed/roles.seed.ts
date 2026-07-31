@@ -3,7 +3,7 @@ import {
   ROLE_PERMISSION_MAP,
   SYSTEM_ROLES,
   type SystemRole,
-} from '../../src/shared/rbac/permission.catalog.js';
+} from '@/shared/rbac/permission.catalog.js';
 
 const ROLE_DESCRIPTIONS: Record<SystemRole, string> = {
   ADMIN: 'Full platform access, including user and role management',
