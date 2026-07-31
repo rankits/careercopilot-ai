@@ -28,7 +28,6 @@ import type {
   RegisterInput,
   ResendOtpInput,
   ResetPasswordInput,
-  VerifyRegistrationOtpInput,
 } from '@/modules/auth/validations/auth.schema.js';
 import type {
   AuthSession,
@@ -129,7 +128,7 @@ const publishAuthUpdated = async (
 export const register = async (
   input: RegisterInput,
   context: RequestContext,
-): Promise<{ message: string; email: string }> => {
+): Promise<AuthSession> => {
   const existing = await authRepository.findUserByEmail(input.email);
 
   if (existing?.isEmailVerified) {
@@ -153,65 +152,15 @@ export const register = async (
         phone: input.phone,
       });
 
-  await issueAndSendOtp(user, OtpPurpose.Registration, context);
+  const verifiedUser = await authRepository.markEmailVerified(user.id);
   await AuditService.write({ userId: user.id, action: AuditAction.Register, context });
 
-  return {
-    message: 'Registration initiated. Please verify the code sent to your email.',
-    email: user.email,
-  };
-};
-
-export const resendOtp = async (
-  input: ResendOtpInput,
-  context: RequestContext,
-): Promise<{ message: string }> => {
-  const user = await authRepository.findUserByEmail(input.email);
-  if (!user) {
-    // Registration is the one flow where account existence is already
-    // knowable from the register form itself, so we keep this specific;
-    // every other purpose intentionally stays generic (see below).
-    return { message: GENERIC_OTP_SENT_MESSAGE };
-  }
-
-  if (input.purpose === OtpPurpose.Registration && user.isEmailVerified) {
-    throw new AppError('This email is already verified. Please sign in.', 409, 'CONFLICT');
-  }
-  if (input.purpose !== OtpPurpose.Registration && !user.isEmailVerified) {
-    return { message: GENERIC_OTP_SENT_MESSAGE };
-  }
-
-  await issueAndSendOtp(user, input.purpose, context);
-  return { message: GENERIC_OTP_SENT_MESSAGE };
-};
-
-export const verifyRegistrationOtp = async (
-  input: VerifyRegistrationOtpInput,
-  context: RequestContext,
-): Promise<AuthSession> => {
-  const user = await authRepository.findUserByEmail(input.email);
-  if (!user) {
-    throw new AppError('Invalid email or verification code', 400);
-  }
-  if (user.isEmailVerified) {
-    throw new AppError('This email is already verified. Please sign in.', 409, 'CONFLICT');
-  }
-
-  await consumeOtpOrThrow(
-    OtpPurpose.Registration,
-    user,
-    input.code,
-    context,
-    'Invalid or expired verification code',
-  );
-
-  const verifiedUser = await authRepository.markEmailVerified(user.id);
-  await authRepository.recordSuccessfulLogin(user.id, context.ipAddress);
+  await authRepository.recordSuccessfulLogin(verifiedUser.id, context.ipAddress);
   await AuditService.write({
-    userId: user.id,
+    userId: verifiedUser.id,
     action: AuditAction.LoginSuccess,
     context,
-    metadata: { via: 'REGISTRATION_VERIFIED' },
+    metadata: { via: 'REGISTERED' },
   });
 
   const tokens = await TokenService.issueSession(toTokenContext(verifiedUser), context);
@@ -221,6 +170,19 @@ export const verifyRegistrationOtp = async (
   const safeUser = toSafeUser(verifiedUser);
   await cacheUserSession(safeUser);
   return { user: safeUser, tokens };
+};
+
+export const resendOtp = async (
+  input: ResendOtpInput,
+  context: RequestContext,
+): Promise<{ message: string }> => {
+  const user = await authRepository.findUserByEmail(input.email);
+  if (!user || !user.isEmailVerified) {
+    return { message: GENERIC_OTP_SENT_MESSAGE };
+  }
+
+  await issueAndSendOtp(user, input.purpose, context);
+  return { message: GENERIC_OTP_SENT_MESSAGE };
 };
 
 export const login = async (input: LoginInput, context: RequestContext): Promise<AuthSession> => {
@@ -451,7 +413,6 @@ export const getCurrentUser = async (principalId: string): Promise<SafeUser> => 
 export default {
   register,
   resendOtp,
-  verifyRegistrationOtp,
   login,
   requestLoginOtp,
   verifyLoginOtp,
