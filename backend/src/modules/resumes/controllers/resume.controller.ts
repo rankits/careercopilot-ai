@@ -82,13 +82,26 @@ export const reparseResumeController = async (req: Request, res: Response, next:
   }
 };
 
+export const getCandidateProfileController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const profile = await resumeService.getCandidateProfile(String(req.params.userId));
+    return res.status(200).json(successResponse('Candidate profile retrieved', profile));
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const confirmProfileController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const profile = await resumeService.confirmProfile({
+    await resumeService.confirmProfile({
       userId: String(req.params.userId),
       resumeId: req.body.resumeId,
     });
-    return res.status(200).json(successResponse('Candidate profile confirmed', profile));
+    return res.status(200).json(successResponse('Profile created successfully'));
   } catch (error) {
     return next(error);
   }

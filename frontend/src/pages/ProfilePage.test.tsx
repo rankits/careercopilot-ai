@@ -1,9 +1,14 @@
+import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
+import { authReducer } from '@/features/auth/authSlice';
 import type {
   ResumeParseCallbacks,
   ResumeProfileFormValues,
@@ -41,15 +46,20 @@ function renderPage(onSave = vi.fn()) {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
+  const store = configureStore({ reducer: { auth: authReducer } });
   render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
-        <ProfilePage onSave={onSave} />
-        <LocationDisplay />
-      </MemoryRouter>
+      <Provider store={store}>
+        <ToastProvider>
+          <MemoryRouter>
+            <ProfilePage onSave={onSave} />
+            <LocationDisplay />
+          </MemoryRouter>
+        </ToastProvider>
+      </Provider>
     </QueryClientProvider>,
   );
-  return { onSave };
+  return { onSave, store };
 }
 
 async function uploadResume(user: ReturnType<typeof userEvent.setup>, name = 'resume.pdf') {
@@ -63,7 +73,7 @@ async function uploadResume(user: ReturnType<typeof userEvent.setup>, name = 're
 describe('ProfilePage resume parsing', () => {
   beforeEach(() => {
     confirmProfileMock.mockReset();
-    confirmProfileMock.mockResolvedValue({});
+    confirmProfileMock.mockResolvedValue({ message: 'Profile created successfully' });
     parseMock.mockReset();
   });
 
@@ -144,13 +154,13 @@ describe('ProfilePage resume parsing', () => {
     );
   }, 30_000);
 
-  it('confirms a parsed profile and navigates to the next onboarding step', async () => {
+  it('confirms a parsed profile and navigates to the job feed', async () => {
     const user = userEvent.setup();
     parseMock.mockImplementationOnce((_file: File, callbacks: ResumeParseCallbacks) => {
       callbacks.onUploaded?.('resume-1');
       return Promise.resolve(parsed);
     });
-    const { onSave } = renderPage();
+    const { onSave, store } = renderPage();
 
     await uploadResume(user);
     await user.click(screen.getByRole('button', { name: /save profile/i }));
@@ -163,9 +173,11 @@ describe('ProfilePage resume parsing', () => {
       }),
     );
     expect(onSave).toHaveBeenCalled();
+    expect(await screen.findByText(/profile created successfully/i)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/jobs-feed'), {
       timeout: 1500,
     });
+    expect(store.getState().auth.isProfileComplete).toBe(true);
   });
 
   it('cancels profile confirmation without submitting', async () => {

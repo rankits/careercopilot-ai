@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   confirmProfileController,
+  getCandidateProfileController,
   getParseStatusController,
   getParsedDataController,
   getResumeStatusController,
@@ -11,6 +12,7 @@ import {
 } from '@/modules/resumes/controllers/resume.controller.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
 import {
+  candidateProfileParamsSchema,
   confirmProfileSchema,
   resumeIdParamsSchema,
   resumeParseActionParamsSchema,
@@ -20,6 +22,11 @@ import {
 const router = express.Router();
 
 router.post('/upload', resumeUploadMiddleware, uploadResumeController);
+router.get(
+  '/profiles/:userId',
+  validateResource(candidateProfileParamsSchema),
+  getCandidateProfileController,
+);
 router.get('/:resumeId/status', validateResource(resumeIdParamsSchema), getResumeStatusController);
 router.get(
   '/:resumeId/parsed-data',
@@ -38,10 +45,6 @@ router.post(
   startParseController,
 );
 router.post('/:resumeId/reparse', validateResource(resumeReparseSchema), reparseResumeController);
-router.post(
-  '/profiles/:userId/confirm',
-  validateResource(confirmProfileSchema),
-  confirmProfileController,
-);
+router.post('/profile/:userId', validateResource(confirmProfileSchema), confirmProfileController);
 
 export default router;

@@ -31,6 +31,7 @@ export interface FakeUser {
   bio: string | null;
   status: Status;
   isEmailVerified: boolean;
+  isProfileCreated: boolean;
   roleId: number;
   tokenVersion: number;
   failedLoginAttempts: number;
@@ -126,6 +127,20 @@ export interface FakeAuditLog {
   createdAt: Date;
 }
 
+export interface FakeCandidateProfile {
+  id: string;
+  userId: string;
+  personalDetails: unknown;
+  experience: unknown;
+  education: unknown;
+  skills: unknown;
+  certifications: unknown;
+  sourceResumeId: string | null;
+  confirmedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 const withRole = <T extends { roleId: number }>(record: T, roles: Map<number, FakeRole>) => ({
   ...record,
   role: { name: roles.get(record.roleId)?.name ?? 'USER' },
@@ -183,6 +198,7 @@ export class FakeDb {
   users: FakeUser[] = [];
   userMetas: FakeUserMeta[] = [];
   userSessions: FakeUserSession[] = [];
+  candidateProfiles: FakeCandidateProfile[] = [];
   admins: FakeAdmin[] = [];
   adminMetas: FakeAdminMeta[] = [];
   adminSessions: FakeAdminSession[] = [];
@@ -193,6 +209,7 @@ export class FakeDb {
     this.users = [];
     this.userMetas = [];
     this.userSessions = [];
+    this.candidateProfiles = [];
     this.admins = [];
     this.adminMetas = [];
     this.adminSessions = [];
@@ -217,6 +234,7 @@ export class FakeDb {
       bio: null,
       status: Status.Active,
       isEmailVerified: true,
+      isProfileCreated: false,
       roleId: 1,
       tokenVersion: 0,
       failedLoginAttempts: 0,
@@ -338,6 +356,7 @@ export class FakeDb {
             bio: null,
             status: Status.PendingVerification,
             isEmailVerified: false,
+            isProfileCreated: false,
             tokenVersion: 0,
             failedLoginAttempts: 0,
             lockedUntil: null,
@@ -360,22 +379,30 @@ export class FakeDb {
           select,
           include,
         }: {
-          where: { id: number };
+          where: { id?: number; publicId?: string };
           data: Record<string, unknown> & {
             meta?: { create?: FakeUserMeta; update?: Partial<FakeUserMeta> };
           };
           select?: Record<string, boolean>;
           include?: { role?: boolean };
         }) => {
-          const index = db.users.findIndex((u) => u.id === where.id);
-          if (index === -1) throw new Error(`FakeDb: user ${where.id} not found`);
+          const index = db.users.findIndex((u) =>
+            where.id !== undefined
+              ? u.id === where.id
+              : where.publicId !== undefined
+                ? u.publicId === where.publicId
+                : false,
+          );
+          if (index === -1) {
+            throw new Error(`FakeDb: user ${where.id ?? where.publicId ?? 'unknown'} not found`);
+          }
           const updated = applyIncrements(
             db.users[index] as unknown as Record<string, unknown>,
             data,
           ) as unknown as FakeUser;
           db.users[index] = updated;
 
-          if (data.meta?.update) {
+          if (data.meta?.update && where.id !== undefined) {
             const metaIndex = db.userMetas.findIndex((m) => m.userId === where.id);
             if (metaIndex !== -1) {
               db.userMetas[metaIndex] = { ...db.userMetas[metaIndex], ...data.meta.update };
@@ -455,6 +482,13 @@ export class FakeDb {
           if (index === -1) throw new Error(`FakeDb: userMeta ${where.userId} not found`);
           db.userMetas[index] = { ...db.userMetas[index], ...data };
           return { ...db.userMetas[index] };
+        },
+      },
+
+      candidateProfile: {
+        findUnique: async ({ where }: { where: { userId: string } }) => {
+          const found = db.candidateProfiles.find((profile) => profile.userId === where.userId);
+          return found ? { ...found } : null;
         },
       },
 
