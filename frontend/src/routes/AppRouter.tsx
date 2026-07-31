@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Route, Routes } from 'react-router-dom';
 
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
@@ -8,18 +8,34 @@ import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { RegisterPage } from '@/pages/RegisterPage';
+import {
+  GuestRoute,
+  OnboardingRoute,
+  ProtectedRoute,
+  RootRedirect,
+} from '@/routes/guards/AuthGuards';
 
 export function AppRouter() {
   return (
     <Routes>
-      <Route element={<AppLayout />}>
-        <Route path={ROUTES.HOME} element={<HomePage />} />
-        <Route path="/app" element={<Navigate to={ROUTES.PROFILE} replace />} />
-        <Route path={ROUTES.JOB_FEED} element={<JobFeedPage />} />
+      <Route path={ROUTES.HOME} element={<RootRedirect />} />
+
+      <Route element={<GuestRoute />}>
+        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
+        <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
       </Route>
-      <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
-      <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-      <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
+
+      <Route element={<OnboardingRoute />}>
+        <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
+      </Route>
+
+      <Route element={<ProtectedRoute />}>
+        <Route element={<AppLayout />}>
+          <Route path={ROUTES.DASHBOARD} element={<HomePage />} />
+          <Route path={ROUTES.JOB_FEED} element={<JobFeedPage />} />
+        </Route>
+      </Route>
+
       <Route path="*" element={<NotFoundPage />} />
     </Routes>
   );

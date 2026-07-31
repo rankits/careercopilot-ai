@@ -11,6 +11,7 @@ const normalizeUser = (user: User) => {
 
   return {
     ...user,
+    isProfileCreated: user.isProfileCreated === true,
     name: user.name ?? (fullName || user.email),
     role: user.role === 'USER' ? 'user' : user.role === 'ADMIN' ? 'admin' : user.role,
   };
@@ -41,6 +42,16 @@ export const authService = {
       accessToken: data.accessToken,
       accessTokenExpiresInSeconds: data.accessTokenExpiresInSeconds,
       user: normalizeUser(user),
+    };
+  },
+
+  async logout(): Promise<{ message: string }> {
+    const { data } = await httpClient.post<{ message?: string }>('/auth/logout', {});
+    return {
+      message:
+        typeof data.message === 'string' && data.message.length > 0
+          ? data.message
+          : 'Logged out successfully',
     };
   },
 };

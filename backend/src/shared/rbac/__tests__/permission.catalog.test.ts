@@ -11,7 +11,7 @@ import {
   RESUME_PERMISSIONS,
   ROLE_PERMISSION_MAP,
   USER_PERMISSIONS,
-} from '../permission.catalog.js';
+} from '@/shared/rbac/permission.catalog.js';
 
 describe('permission catalog constants', () => {
   it('exposes module-scoped permission constants for each permission key', () => {
@@ -48,7 +48,9 @@ describe('permission catalog constants', () => {
   it('uses the shared constants in the role permission map', () => {
     expect(ROLE_PERMISSION_MAP.USER).toContain(USER_PERMISSIONS.READ_PROFILE_OWN);
     expect(ROLE_PERMISSION_MAP.ADMIN).toContain(ADMIN_PERMISSIONS.MANAGE_SYSTEM);
-    expect(PERMISSIONS.some((permission) => permission.key === AUTH_PERMISSIONS.READ_SESSION_OWN)).toBe(true);
+    expect(
+      PERMISSIONS.some((permission) => permission.key === AUTH_PERMISSIONS.READ_SESSION_OWN),
+    ).toBe(true);
   });
 
   it('applies the critical admin and user RBAC edge cases', () => {
