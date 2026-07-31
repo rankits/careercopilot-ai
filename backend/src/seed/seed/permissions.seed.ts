@@ -1,5 +1,5 @@
 import type { PrismaClient } from '@prisma/client';
-import { PERMISSIONS } from '@/shared/rbac/permission.catalog';
+import { PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
 
 /** Upserts the permission catalog; returns permission key -> id for roles.seed.ts to assign. */
 export async function seedPermissions(prisma: PrismaClient): Promise<Map<string, number>> {

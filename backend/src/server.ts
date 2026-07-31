@@ -1,9 +1,9 @@
 import type { Server } from 'node:http';
-import app from '@/app';
-import { env } from '@/shared/config/env.conf';
-import { logger } from '@/shared/logger/logger';
-import { connectDatabase, disconnectDatabase } from '@/shared/config/db.conf';
-import { startEmailWorker } from '@/workers/email.worker';
+import app from '@/app.js';
+import { env } from '@/shared/config/env.conf.js';
+import { logger } from '@/shared/logger/logger.js';
+import { connectDatabase, disconnectDatabase } from '@/shared/config/db.conf.js';
+import { startEmailWorker } from '@/workers/email.worker.js';
 
 const PORT = env.PORT;
 const BASE_URL = env.BASE_URL || `http://localhost:${PORT}`;
@@ -23,7 +23,7 @@ const bootstrap = async (): Promise<void> => {
       // Importing the seed entrypoint executes the orchestrator and
       // returns once it's complete. Allow any errors to surface so
       // startup fails loudly if seeding cannot complete.
-      await import('./seed');
+      await import('./seed.js');
       logger.info('Database seeding complete (startup hook)');
     } catch (err) {
       logger.error({ err }, 'Database seeding failed during startup');

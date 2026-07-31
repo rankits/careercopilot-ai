@@ -1,5 +1,5 @@
 import { Status, type PrismaClient } from '@prisma/client';
-import { PasswordUtil } from '@/shared/security/password.util';
+import { PasswordUtil } from '@/shared/security/password.util.js';
 
 /**
  * Bootstraps a default Admin account from ADMIN_DEFAULT_EMAIL /
