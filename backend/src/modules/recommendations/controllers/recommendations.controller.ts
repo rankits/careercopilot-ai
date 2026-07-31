@@ -1,4 +1,5 @@
 import type { Request, Response } from 'express';
+import { toRecommendationResponse } from '@/modules/recommendations/mappers/recommendation.mapper.js';
 import type { RecommendationsService } from '@/modules/recommendations/services/recommendations.service.js';
 import {
   createRecommendationFromTextSchema,
@@ -20,12 +21,16 @@ export const createRecommendationsController = (service: RecommendationsService)
   catchAsync(async (req: Request, res: Response) => {
     const input = createRecommendationSchema.shape.body.parse(req.body);
     const result = await service.createForSource(requireUserPrincipalId(req), input);
-    return res.status(202).json(successResponse('Recommendation generation started', result));
+    return res
+      .status(200)
+      .json(successResponse('Recommendations generated', result.map(toRecommendationResponse)));
   });
 
 export const createRecommendationsFromTextController = (service: RecommendationsService) =>
   catchAsync(async (req: Request, res: Response) => {
     const input = createRecommendationFromTextSchema.shape.body.parse(req.body);
     const result = await service.createFromText(requireUserPrincipalId(req), input);
-    return res.status(202).json(successResponse('Recommendation generation started', result));
+    return res
+      .status(200)
+      .json(successResponse('Recommendations generated', result.map(toRecommendationResponse)));
   });

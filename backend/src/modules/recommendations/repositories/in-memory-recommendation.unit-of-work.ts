@@ -1,0 +1,209 @@
+import { randomUUID } from 'node:crypto';
+import type {
+  JobRecommendationRepository,
+  RecommendationFeedbackRepository,
+  RecommendationRunRepository,
+  RecommendationUnitOfWork,
+} from '@/modules/recommendations/contracts/recommendation.repository.js';
+import {
+  RECOMMENDATION_ERROR_CODES,
+  RecommendationError,
+} from '@/modules/recommendations/errors/recommendation.error.js';
+import type {
+  JobRecommendationRecord,
+  RecommendationFeedbackRecord,
+  RecommendationPage,
+  RecommendationRunRecord,
+  RecommendationRunStatus,
+  RecommendationSourceType,
+  ScoredJobRecommendation,
+} from '@/modules/recommendations/types/recommendations.types.js';
+
+/**
+ * Process-local recommendation store used until Prisma recommendation models land.
+ * Not durable across restarts; list/detail HTTP routes stay unmounted.
+ */
+export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWork {
+  private readonly runs = new Map<string, RecommendationRunRecord>();
+  private readonly recommendations = new Map<string, JobRecommendationRecord>();
+
+  private readonly runRepository: RecommendationRunRepository = {
+    create: async (input: {
+      userId: string;
+      sourceType: RecommendationSourceType;
+      sourceId?: string;
+    }): Promise<RecommendationRunRecord> => {
+      const record: RecommendationRunRecord = {
+        id: randomUUID(),
+        userId: input.userId,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId ?? null,
+        status: 'PENDING',
+        candidateCount: 0,
+        failureCode: null,
+        createdAt: new Date(),
+        completedAt: null,
+      };
+      this.runs.set(record.id, record);
+      return { ...record };
+    },
+
+    updateStatus: async (
+      userId: string,
+      runId: string,
+      status: RecommendationRunStatus,
+    ): Promise<RecommendationRunRecord> => {
+      const run = this.requireRun(userId, runId);
+      run.status = status;
+      return { ...run };
+    },
+
+    updateCandidateCount: async (
+      userId: string,
+      runId: string,
+      candidateCount: number,
+    ): Promise<RecommendationRunRecord> => {
+      const run = this.requireRun(userId, runId);
+      run.candidateCount = candidateCount;
+      return { ...run };
+    },
+
+    markCompleted: async (userId: string, runId: string): Promise<RecommendationRunRecord> => {
+      const run = this.requireRun(userId, runId);
+      run.status = 'COMPLETED';
+      run.completedAt = new Date();
+      run.failureCode = null;
+      return { ...run };
+    },
+
+    markFailed: async (
+      userId: string,
+      runId: string,
+      failureCode: string,
+    ): Promise<RecommendationRunRecord> => {
+      const run = this.requireRun(userId, runId);
+      run.status = 'FAILED';
+      run.failureCode = failureCode;
+      run.completedAt = new Date();
+      return { ...run };
+    },
+
+    findById: async (userId: string, runId: string): Promise<RecommendationRunRecord | null> => {
+      const run = this.runs.get(runId);
+      if (!run || run.userId !== userId) return null;
+      return { ...run };
+    },
+  };
+
+  private readonly recommendationRepository: JobRecommendationRepository = {
+    createMany: async (
+      userId: string,
+      runId: string,
+      recommendations: readonly ScoredJobRecommendation[],
+    ): Promise<JobRecommendationRecord[]> => {
+      this.requireRun(userId, runId);
+      const ranked = [...recommendations].sort(
+        (left, right) => right.scoreResult.overallScore - left.scoreResult.overallScore,
+      );
+      const created = ranked.map((item, index): JobRecommendationRecord => {
+        const record: JobRecommendationRecord = {
+          id: randomUUID(),
+          runId,
+          userId,
+          rank: index + 1,
+          createdAt: new Date(),
+          ...item,
+        };
+        this.recommendations.set(record.id, record);
+        return { ...record, job: { ...record.job }, scoreResult: { ...record.scoreResult } };
+      });
+      return created;
+    },
+
+    findById: async (
+      userId: string,
+      recommendationId: string,
+    ): Promise<JobRecommendationRecord | null> => {
+      const record = this.recommendations.get(recommendationId);
+      if (!record || record.userId !== userId) return null;
+      return { ...record };
+    },
+
+    listByRun: async (
+      userId: string,
+      runId: string,
+      pagination: { page: number; limit: number },
+    ): Promise<RecommendationPage> => {
+      const items = [...this.recommendations.values()]
+        .filter((item) => item.userId === userId && item.runId === runId)
+        .sort((left, right) => left.rank - right.rank);
+      return paginate(items, pagination);
+    },
+
+    listByUser: async (
+      userId: string,
+      pagination: { page: number; limit: number },
+    ): Promise<RecommendationPage> => {
+      const items = [...this.recommendations.values()]
+        .filter((item) => item.userId === userId)
+        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+      return paginate(items, pagination);
+    },
+
+    existsByRunAndJob: async (userId: string, runId: string, jobId: string): Promise<boolean> =>
+      [...this.recommendations.values()].some(
+        (item) => item.userId === userId && item.runId === runId && item.job.id === jobId,
+      ),
+  };
+
+  private readonly feedbackRepository: RecommendationFeedbackRepository = {
+    upsert: async (): Promise<RecommendationFeedbackRecord> => {
+      throw new RecommendationError(
+        'Recommendation feedback persistence is not available until Prisma models land',
+        501,
+        RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
+      );
+    },
+    findByRecommendation: async () => null,
+    listByJob: async () => [],
+  };
+
+  async execute<T>(
+    operation: (repositories: {
+      runs: RecommendationRunRepository;
+      recommendations: JobRecommendationRepository;
+      feedback: RecommendationFeedbackRepository;
+    }) => Promise<T>,
+  ): Promise<T> {
+    return operation({
+      runs: this.runRepository,
+      recommendations: this.recommendationRepository,
+      feedback: this.feedbackRepository,
+    });
+  }
+
+  private requireRun(userId: string, runId: string): RecommendationRunRecord {
+    const run = this.runs.get(runId);
+    if (!run || run.userId !== userId) {
+      throw new RecommendationError(
+        'Recommendation run was not found',
+        404,
+        RECOMMENDATION_ERROR_CODES.RUN_NOT_FOUND,
+      );
+    }
+    return run;
+  }
+}
+
+const paginate = (
+  items: JobRecommendationRecord[],
+  pagination: { page: number; limit: number },
+): RecommendationPage => {
+  const start = (pagination.page - 1) * pagination.limit;
+  return {
+    items: items.slice(start, start + pagination.limit).map((item) => ({ ...item })),
+    page: pagination.page,
+    limit: pagination.limit,
+    total: items.length,
+  };
+};

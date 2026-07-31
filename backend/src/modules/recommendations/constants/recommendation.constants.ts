@@ -1,6 +1,7 @@
 import type {
   RecommendationCategory,
   RecommendationScoreComponentName,
+  RetrievalBackend,
 } from '@/modules/recommendations/types/recommendations.types.js';
 
 export const DEFAULT_RECOMMENDATION_WEIGHTS: Readonly<
@@ -16,6 +17,9 @@ export const DEFAULT_RECOMMENDATION_WEIGHTS: Readonly<
   salary: 0.05,
   qualifications: 0.03,
 });
+
+export const DEFAULT_RECOMMENDATION_LIMIT = 20;
+export const DEFAULT_RETRIEVAL_BACKEND: RetrievalBackend = 'PGVECTOR';
 
 export const assertValidRecommendationWeights = (
   weights: Readonly<Record<RecommendationScoreComponentName, number>>,
