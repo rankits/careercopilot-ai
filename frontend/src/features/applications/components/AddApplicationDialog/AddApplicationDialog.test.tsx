@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -105,10 +105,19 @@ describe('AddApplicationDialog', () => {
 
     renderDialog(onClose);
 
-    await user.type(screen.getByLabelText(/^job title/i), 'Senior Full Stack Engineer');
-    await user.type(screen.getByLabelText(/^company name/i), 'Acme Corp');
-    await user.type(screen.getByLabelText(/^location/i), 'San Francisco, CA');
-    await user.type(screen.getByLabelText(/^job url/i), 'https://acme.com/jobs/123');
+    fireEvent.change(screen.getByLabelText(/^job title/i), {
+      target: { value: 'Senior Full Stack Engineer' },
+    });
+    fireEvent.change(screen.getByLabelText(/^company name/i), {
+      target: { value: 'Acme Corp' },
+    });
+    fireEvent.change(screen.getByLabelText(/^location/i), {
+      target: { value: 'San Francisco, CA' },
+    });
+    fireEvent.change(screen.getByLabelText(/^job url/i), {
+      target: { value: 'https://acme.com/jobs/123' },
+    });
+
     await user.click(screen.getByRole('button', { name: /^add application$/i }));
 
     await waitFor(() => {
@@ -123,9 +132,10 @@ describe('AddApplicationDialog', () => {
           sourceType: 'MANUAL',
         }),
       );
-      expect(onClose).toHaveBeenCalledTimes(1);
     });
-  }, 10000);
+
+    expect(onClose).toHaveBeenCalledTimes(1);
+  });
 
   it('shows validation errors when submitting an empty manual form', async () => {
     const user = userEvent.setup();
