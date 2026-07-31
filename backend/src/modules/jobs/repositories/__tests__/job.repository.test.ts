@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { ProviderType } from '@prisma/client';
+import type { Prisma } from '@prisma/client';
 import type { NormalizedJob } from '@/modules/jobs/models/NormalizedJob.js';
+import { JOB_SEMANTIC_CONTENT_CHANGED_EVENT } from '@/modules/jobs/events/job.events.js';
 import {
   PrismaJobRepository,
   type CanonicalJobWrite,
@@ -17,6 +19,12 @@ class MemoryTransaction implements JobPersistenceTransaction {
   job: PersistedCanonicalJob | null = null;
   source: PersistedJobSource | null = null;
   sourceWrite: JobSourceWrite | null = null;
+  failOutbox = false;
+  outboxEvents: Array<{
+    aggregateId: string;
+    eventType: string;
+    payload: Prisma.InputJsonObject;
+  }> = [];
 
   async upsertCompany(_slug: string, name: string): Promise<{ previousName: string | null }> {
     const previousName = this.companyName;
@@ -64,6 +72,15 @@ class MemoryTransaction implements JobPersistenceTransaction {
       rawMetadata: input.rawMetadata,
       job: this.job,
     };
+  }
+
+  async createOutboxEvent(
+    aggregateId: string,
+    eventType: string,
+    payload: Prisma.InputJsonObject,
+  ): Promise<void> {
+    if (this.failOutbox) throw new Error('Outbox unavailable');
+    this.outboxEvents.push({ aggregateId, eventType, payload });
   }
 }
 
@@ -121,6 +138,18 @@ describe('PrismaJobRepository semantic persistence', () => {
         providerTier: ProviderTier.PUBLIC,
       },
     });
+    expect(runner.transaction.outboxEvents).toEqual([
+      {
+        aggregateId: 'canonical-job-id',
+        eventType: JOB_SEMANTIC_CONTENT_CHANGED_EVENT,
+        payload: {
+          jobId: 'canonical-job-id',
+          jobVersion: 1,
+          outcome: 'INSERTED',
+          occurredAt: expect.any(String),
+        },
+      },
+    ]);
   });
 
   it('classifies exact repeats as unchanged without incrementing version', async () => {
@@ -135,6 +164,7 @@ describe('PrismaJobRepository semantic persistence', () => {
       previousVersion: 1,
       newVersion: 1,
     });
+    expect(runner.transaction.outboxEvents).toHaveLength(1);
   });
 
   it('classifies apply URL changes as metadata-only without incrementing version', async () => {
@@ -151,6 +181,7 @@ describe('PrismaJobRepository semantic persistence', () => {
       previousVersion: 1,
       newVersion: 1,
     });
+    expect(runner.transaction.outboxEvents).toHaveLength(1);
   });
 
   it('increments version only when an embeddable canonical field changes', async () => {
@@ -169,6 +200,16 @@ describe('PrismaJobRepository semantic persistence', () => {
       previousVersion: 1,
       newVersion: 2,
       canonicalHash: 'hash-1',
+    });
+    expect(runner.transaction.outboxEvents).toHaveLength(2);
+    expect(runner.transaction.outboxEvents[1]).toMatchObject({
+      aggregateId: 'canonical-job-id',
+      eventType: JOB_SEMANTIC_CONTENT_CHANGED_EVENT,
+      payload: {
+        jobId: 'canonical-job-id',
+        jobVersion: 2,
+        outcome: 'SEMANTIC_CHANGED',
+      },
     });
   });
 
@@ -193,5 +234,19 @@ describe('PrismaJobRepository semantic persistence', () => {
       unchanged: 0,
       failed: 1,
     });
+  });
+
+  it('reports persistence failure when the transactional outbox write fails', async () => {
+    const runner = new MemoryRunner();
+    runner.transaction.failOutbox = true;
+    const repository = new PrismaJobRepository(runner);
+
+    const result = await repository.upsertMany([makeJob()]);
+
+    expect(result.outcomes[0]).toMatchObject({
+      outcome: 'FAILED',
+      failureCode: 'JOB_PERSISTENCE_FAILED',
+    });
+    expect(result.summary.failed).toBe(1);
   });
 });
