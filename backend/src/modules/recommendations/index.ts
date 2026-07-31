@@ -106,5 +106,6 @@ export * from '@/modules/recommendations/services/similar-jobs.service.js';
 export * from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 export * from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
 export * from '@/modules/recommendations/utils/apply-recommendation-filters.js';
+export * from '@/modules/recommendations/utils/candidate-job-filters.js';
 export * from '@/modules/recommendations/utils/recommendation-query-text.js';
 export * from '@/modules/recommendations/validations/recommendation.schema.js';
