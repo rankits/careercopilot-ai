@@ -70,7 +70,9 @@ export const CAREER_PERMISSIONS = {
 } as const;
 
 export const RECOMMENDATIONS_PERMISSIONS = {
+  CREATE_OWN: 'recommendations.create.own',
   READ_OWN: 'recommendations.read.own',
+  UPDATE_OWN: 'recommendations.update.own',
 } as const;
 
 export const NOTIFICATIONS_PERMISSIONS = {
@@ -294,10 +296,22 @@ export const PERMISSIONS: PermissionDefinition[] = [
 
   // Recommendations
   {
+    key: RECOMMENDATIONS_PERMISSIONS.CREATE_OWN,
+    resource: 'recommendations',
+    action: 'create.own',
+    description: 'Create own job recommendation runs',
+  },
+  {
     key: RECOMMENDATIONS_PERMISSIONS.READ_OWN,
     resource: 'recommendations',
     action: 'read.own',
     description: 'View own personalized recommendations',
+  },
+  {
+    key: RECOMMENDATIONS_PERMISSIONS.UPDATE_OWN,
+    resource: 'recommendations',
+    action: 'update.own',
+    description: 'Update own job recommendation feedback and saved searches',
   },
 
   // Notifications
