@@ -21,11 +21,7 @@ export interface ApplicationListPagination {
 }
 
 export type ApplicationSortBy =
-  | 'updatedAt:desc'
-  | 'updatedAt:asc'
-  | 'createdAt:desc'
-  | 'createdAt:asc'
-  | 'companyName:asc';
+  'updatedAt:desc' | 'updatedAt:asc' | 'createdAt:desc' | 'createdAt:asc' | 'companyName:asc';
 
 export interface ApplicationListOptions {
   userId: string;
@@ -66,12 +62,12 @@ export interface ApplicationDto {
   primarySourceType: ApplicationSourceType;
   priority: ApplicationPriority;
   interestLevel: number | null;
-  appliedAt: Date | null;
-  firstResponseAt: Date | null;
-  closedAt: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-  archivedAt: Date | null;
+  appliedAt: string | null;
+  firstResponseAt: string | null;
+  closedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+  archivedAt: string | null;
 }
 
 export interface ApplicationStatusHistoryDto {
