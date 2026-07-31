@@ -1,5 +1,4 @@
 import type { JobDetailDto, JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
-import type { CanonicalResume } from '@/modules/resumes/types/resume.types.js';
 
 export const RECOMMENDATION_SOURCE_TYPE_VALUES = [
   'PROFILE',
@@ -87,7 +86,8 @@ export interface CandidateProfileSourcePayload extends Partial<ExtractedRecommen
 
 export interface RecommendationSourcePayloadMap {
   PROFILE: CandidateProfileSourcePayload;
-  RESUME: CanonicalResume;
+  /** Mapped from owned ParsedResumeData / extraction JSON at authorization time. */
+  RESUME: CandidateProfileSourcePayload;
   JOB: JobDetailDto;
   TARGET_TEXT: string;
   CAREER_GOAL: CandidateProfileSourcePayload;

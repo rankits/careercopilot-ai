@@ -19,6 +19,7 @@ import { RecommendationScoringEngine } from '@/modules/recommendations/scoring/r
 import { HEURISTIC_SCORE_CALCULATORS } from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
 import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 import { InMemoryRecommendationUnitOfWork } from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
+import { createResumeRecommendationSourceLoader } from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
 import { jobEmbeddingRepository } from '@/modules/job-embeddings/index.js';
 import { prismaJobSearchRepository } from '@/modules/job-listing/index.js';
 import { createChildLogger } from '@/shared/logger/logger.js';
@@ -52,8 +53,12 @@ export const recommendationScoringEngine = new RecommendationScoringEngine(
 export const recommendationScoringService = new RecommendationScoringService(
   recommendationScoringEngine,
 );
+export const recommendationSourceLoader = createResumeRecommendationSourceLoader();
 export const recommendationSourceAuthorizationService =
-  new RecommendationSourceAuthorizationService(prismaJobSearchRepository);
+  new RecommendationSourceAuthorizationService(
+    prismaJobSearchRepository,
+    recommendationSourceLoader,
+  );
 export const recommendationUnitOfWork = new InMemoryRecommendationUnitOfWork();
 export const recommendationsService = new RecommendationsService(recommendationsLogger, {
   contextService: recommendationContextService,
@@ -69,6 +74,9 @@ export * from '@/modules/recommendations/constants/recommendation.constants.js';
 export * from '@/modules/recommendations/contracts/recommendation-provider.contracts.js';
 export * from '@/modules/recommendations/contracts/recommendation.repository.js';
 export * from '@/modules/recommendations/errors/recommendation.error.js';
+export * from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
+export * from '@/modules/recommendations/contracts/recommendation-source-loader.js';
+export * from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
 export * from '@/modules/recommendations/mappers/recommendation.mapper.js';
 export * from '@/modules/recommendations/matching/recommendation-access.js';
 export * from '@/modules/recommendations/providers/candidate-retrieval.registry.js';

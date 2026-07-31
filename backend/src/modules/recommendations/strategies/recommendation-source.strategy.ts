@@ -16,7 +16,7 @@ export interface RecommendationSourceStrategy {
 
 const profileContext = (
   userId: string,
-  sourceType: 'PROFILE' | 'CAREER_GOAL' | 'SAVED_SEARCH',
+  sourceType: 'PROFILE' | 'RESUME' | 'CAREER_GOAL' | 'SAVED_SEARCH',
   payload: CandidateProfileSourcePayload,
   sourceId?: string,
 ): RecommendationContext => ({
@@ -72,42 +72,12 @@ export class ResumeSourceStrategy extends TypedSourceStrategy {
 
   async buildContext(input: BuildRecommendationContextInput): Promise<RecommendationContext> {
     if (input.sourceType !== this.sourceType) return this.rejectWrongSource();
-    const resume = input.authorizedSourcePayload;
-    const skillGroups = resume.skills;
-    const location = resume.personalInformation.location;
-    const locationText = [location.city, location.state, location.country].filter(
-      (value): value is string => value !== null,
+    return profileContext(
+      input.userId,
+      this.sourceType,
+      input.authorizedSourcePayload,
+      input.sourceId,
     );
-    return {
-      userId: input.userId,
-      sourceType: this.sourceType,
-      sourceId: input.sourceId,
-      targetTitles: [resume.currentPosition.title, resume.professionalProfile?.primaryRole].filter(
-        (title): title is string => title !== null && title !== undefined,
-      ),
-      relatedTitles: resume.professionalLabels
-        .filter(({ category }) => category === 'ROLE' || category === 'SPECIALISATION')
-        .map(({ label }) => label),
-      requiredSkills: [...skillGroups.technical, ...skillGroups.tools, ...skillGroups.frameworks],
-      preferredSkills: [...skillGroups.softSkills, ...skillGroups.domains],
-      yearsOfExperience: resume.totalExperienceYears,
-      seniority: resume.professionalProfile?.seniorityLevel ?? undefined,
-      industries: skillGroups.domains,
-      locations: locationText.length > 0 ? [locationText.join(', ')] : [],
-      employmentTypes: [],
-      salaryExpectation: {},
-      education: resume.education
-        .map(({ qualification, fieldOfStudy }) =>
-          [qualification, fieldOfStudy].filter(Boolean).join(' '),
-        )
-        .filter(Boolean),
-      certifications: resume.certifications
-        .map(({ name }) => name)
-        .filter((name): name is string => name !== null),
-      excludedCompanies: [],
-      excludedSkills: [],
-      sourceText: resume.professionalSummary ?? undefined,
-    };
   }
 }
 

@@ -88,12 +88,17 @@ describe('heuristic scoring', () => {
 });
 
 describe('RecommendationSourceAuthorizationService', () => {
+  const emptyProfiles = {
+    findCandidateProfileByUserId: vi.fn(),
+    findOwnedResumeProfileSource: vi.fn(),
+  };
+
   it('authorizes JOB sources from the job catalog', async () => {
     const detail = jobDetail('11111111-1111-1111-1111-111111111111');
     const jobs = {
       findById: vi.fn().mockResolvedValue(detail),
     } as unknown as IJobSearchRepository;
-    const service = new RecommendationSourceAuthorizationService(jobs);
+    const service = new RecommendationSourceAuthorizationService(jobs, emptyProfiles);
 
     const authorized = await service.authorizeForSource('user-1', {
       sourceType: 'JOB',
@@ -109,9 +114,10 @@ describe('RecommendationSourceAuthorizationService', () => {
   });
 
   it('authorizes TARGET_TEXT from the request body', () => {
-    const service = new RecommendationSourceAuthorizationService({
-      findById: vi.fn(),
-    } as unknown as IJobSearchRepository);
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      emptyProfiles,
+    );
 
     expect(service.authorizeFromText('user-1', { targetText: '  Platform engineer  ' })).toEqual({
       userId: 'user-1',
@@ -120,13 +126,91 @@ describe('RecommendationSourceAuthorizationService', () => {
     });
   });
 
-  it('keeps PROFILE authorization unimplemented', async () => {
-    const service = new RecommendationSourceAuthorizationService({
-      findById: vi.fn(),
-    } as unknown as IJobSearchRepository);
+  it('authorizes PROFILE from candidate profile JSON', async () => {
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+          personalDetails: { currentTitle: 'Backend Engineer', summary: 'APIs' },
+          skills: ['TypeScript'],
+          experience: [{ title: 'Software Engineer' }],
+          education: [],
+          certifications: [],
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', { sourceType: 'PROFILE' });
+    expect(authorized.sourceType).toBe('PROFILE');
+    expect(authorized.authorizedSourcePayload).toMatchObject({
+      targetTitles: ['Backend Engineer', 'Software Engineer'],
+      requiredSkills: ['TypeScript'],
+      sourceText: 'APIs',
+    });
+  });
+
+  it('authorizes owned RESUME parse data', async () => {
+    const resumeId = '22222222-2222-2222-2222-222222222222';
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource: vi.fn().mockResolvedValue({
+          personalDetails: { primaryRole: 'Platform Engineer' },
+          skills: ['Go'],
+          experience: [],
+          education: [],
+          certifications: [],
+        }),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', {
+      sourceType: 'RESUME',
+      sourceId: resumeId,
+    });
+    expect(authorized).toMatchObject({
+      sourceType: 'RESUME',
+      sourceId: resumeId,
+      authorizedSourcePayload: {
+        targetTitles: ['Platform Engineer'],
+        requiredSkills: ['Go'],
+      },
+    });
+  });
+
+  it('rejects empty candidate profiles', async () => {
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+          personalDetails: {},
+          skills: [],
+          experience: [],
+          education: [],
+          certifications: [],
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+      },
+    );
 
     await expect(
       service.authorizeForSource('user-1', { sourceType: 'PROFILE' }),
+    ).rejects.toMatchObject({ statusCode: 422, code: 'RECOMMENDATION_CONTEXT_INVALID' });
+  });
+
+  it('keeps CAREER_GOAL authorization unimplemented', async () => {
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      emptyProfiles,
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', {
+        sourceType: 'CAREER_GOAL',
+        sourceId: '33333333-3333-3333-3333-333333333333',
+      }),
     ).rejects.toMatchObject({ statusCode: 501 });
   });
 });
@@ -174,9 +258,13 @@ describe('RecommendationsService generation', () => {
         new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
       ),
       unitOfWork: new InMemoryRecommendationUnitOfWork(),
-      sourceAuthorization: new RecommendationSourceAuthorizationService({
-        findById: vi.fn(),
-      } as unknown as IJobSearchRepository),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
     });
 
     const records = await service.createFromText('user-1', {
