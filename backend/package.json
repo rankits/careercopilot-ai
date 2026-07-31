@@ -12,6 +12,8 @@
     "worker:email:build": "node dist/workers/run-email-worker.js",
     "worker:outbox": "tsx src/workers/run-outbox-relay.ts",
     "worker:outbox:build": "node dist/workers/run-outbox-relay.js",
+    "worker:job-embeddings": "tsx src/workers/run-job-embedding-worker.ts",
+    "worker:job-embeddings:build": "node dist/workers/run-job-embedding-worker.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
