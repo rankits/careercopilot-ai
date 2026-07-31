@@ -5,6 +5,7 @@ import { RecommendationScoringEngine } from '@/modules/recommendations/scoring/r
 import { HEURISTIC_SCORE_CALCULATORS } from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
 import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 import { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
+import { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
 import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
 import { RecommendationsService } from '@/modules/recommendations/services/recommendations.service.js';
 import { RecommendationContextService } from '@/modules/recommendations/services/recommendation-context.service.js';
@@ -290,7 +291,7 @@ describe('RecommendationsService generation', () => {
     expect(records[0]?.runId).toBeTruthy();
   });
 
-  it('lists and loads persisted recommendations for the user', async () => {
+  it('lists, loads, and stores feedback for persisted recommendations', async () => {
     const unitOfWork = new InMemoryRecommendationUnitOfWork();
     const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
       contextService: new RecommendationContextService(
@@ -315,16 +316,36 @@ describe('RecommendationsService generation', () => {
         },
       ),
     });
+    const feedbackService = new RecommendationFeedbackService({
+      upsert: (input) => unitOfWork.execute(({ feedback }) => feedback.upsert(input)),
+      findByRecommendation: (userId, recommendationId) =>
+        unitOfWork.execute(({ feedback }) =>
+          feedback.findByRecommendation(userId, recommendationId),
+        ),
+      listByJob: (userId, jobId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+    });
 
     const created = await service.createFromText('user-1', {
       targetText: 'Backend engineer TypeScript',
     });
     const page = await service.listForUser('user-1', { page: 1, limit: 20 });
     const detail = await service.getForUser('user-1', created[0]!.id);
+    const feedback = await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: created[0]!.id,
+      jobId: created[0]!.job.id,
+      action: 'SAVED',
+      note: 'Strong match',
+    });
 
     expect(page.total).toBe(1);
     expect(page.items[0]?.id).toBe(created[0]?.id);
     expect(detail.job.id).toBe('job-high');
+    expect(feedback.action).toBe('SAVED');
+    await expect(
+      feedbackService.findForRecommendation('user-1', created[0]!.id),
+    ).resolves.toMatchObject({ action: 'SAVED', note: 'Strong match' });
   });
 
   it('drops stretch/related categories when includeStretchOpportunities is false', async () => {
