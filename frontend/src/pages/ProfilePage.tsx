@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/atoms';
+import { useToast } from '@/components/organisms/Toast/ToastContext';
 import {
   ProfileReviewSection,
   type ReviewField,
@@ -12,9 +13,11 @@ import { ResumeSummary } from '@/features/resume/components/ResumeSummary';
 import { ResumeUpload } from '@/features/resume/components/ResumeUpload';
 
 import { useResumeParser } from '@/features/resume/hooks/useResumeParser';
+import { useAppDispatch } from '@/hooks/redux';
 
 import { ROUTES } from '@/constants/routes';
 import { STORAGE_KEYS } from '@/constants/storage';
+import { setProfileComplete } from '@/features/auth/authSlice';
 import type { User } from '@/features/auth/types/auth.types';
 import { resumeService } from '@/features/resume/services/resume.service';
 import {
@@ -149,7 +152,9 @@ interface ProfilePageProps {
 type Notice = { message: string; severity: 'error' | 'success' } | null;
 
 export function ProfilePage({ onSave }: ProfilePageProps) {
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const userId = storage.get<User>(STORAGE_KEYS.USER)?.id ?? 'public';
   const [notice, setNotice] = useState<Notice>(null);
   const [hasParsedResume, setHasParsedResume] = useState(false);
@@ -186,23 +191,26 @@ export function ProfilePage({ onSave }: ProfilePageProps) {
     mutationFn: async (profile: ResumeProfileFormValues) => {
       if (onSave) await onSave(profile);
       if (parser.resumeId) {
-        await resumeService.confirmProfile({ resumeId: parser.resumeId, userId });
-      } else if (!onSave) {
+        return resumeService.confirmProfile({ resumeId: parser.resumeId, userId });
+      }
+      if (!onSave) {
         throw new Error('Upload and parse a resume before saving your profile.');
       }
+      return { message: 'Profile created successfully' };
     },
     mutationKey: ['resume', 'confirm-profile'],
     onError: (error) => {
-      setNotice({
+      showToast({
         message: error instanceof Error ? error.message : 'Unable to save your profile.',
         severity: 'error',
       });
     },
-    onSuccess: () => {
+    onSuccess: ({ message }) => {
+      dispatch(setProfileComplete(true));
       setPendingProfile(null);
       setSaveCompleted(true);
-      setNotice({ message: 'Your profile has been saved successfully.', severity: 'success' });
-      window.setTimeout(() => void navigate(ROUTES.JOB_FEED), 800);
+      showToast({ message, severity: 'success' });
+      window.setTimeout(() => void navigate(ROUTES.JOB_FEED, { replace: true }), 800);
     },
   });
 

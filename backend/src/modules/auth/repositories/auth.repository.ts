@@ -107,6 +107,13 @@ export const authRepository = {
     });
   },
 
+  async markProfileCreated(publicId: string): Promise<void> {
+    await prisma.user.update({
+      where: { publicId },
+      data: { isProfileCreated: true },
+    });
+  },
+
   async updatePassword(userId: number, credentials: PasswordCredentials): Promise<void> {
     await prisma.userMeta.update({ where: { userId }, data: credentials });
   },

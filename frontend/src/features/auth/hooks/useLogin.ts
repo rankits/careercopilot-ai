@@ -6,6 +6,7 @@ import { useAppDispatch } from '@/hooks/redux';
 import { ROUTES } from '@/constants/routes';
 import { login } from '@/features/auth/authSlice';
 import type { LoginPayload } from '@/features/auth/types/auth.types';
+import { getPostAuthRoute } from '@/features/auth/utils/getPostAuthRoute';
 
 export interface LoginFormValues extends LoginPayload {
   rememberMe: boolean;
@@ -17,8 +18,8 @@ export function useLogin() {
   const loginMutation = useMutation({
     mutationFn: (payload: LoginPayload) => dispatch(login(payload)).unwrap(),
     mutationKey: ['auth', 'login'],
-    onSuccess: () => {
-      void navigate(ROUTES.PROFILE, { replace: true });
+    onSuccess: ({ user }) => {
+      void navigate(getPostAuthRoute(user.isProfileCreated === true), { replace: true });
     },
   });
 

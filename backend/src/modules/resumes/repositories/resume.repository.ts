@@ -188,6 +188,10 @@ export const resumeRepository = {
     });
   },
 
+  findCandidateProfileByUserId(userId: string): Promise<CandidateProfile | null> {
+    return prisma.candidateProfile.findUnique({ where: { userId } });
+  },
+
   upsertCandidateProfile(payload: OnboardingProfilePayload): Promise<CandidateProfile> {
     return prisma.candidateProfile.upsert({
       where: { userId: payload.userId },

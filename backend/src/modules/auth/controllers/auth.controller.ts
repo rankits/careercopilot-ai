@@ -37,7 +37,9 @@ const clearRefreshTokenCookie = (res: Response): void => {
 const sendSession = (res: Response, session: AuthSession, message: string, statusCode = 200) => {
   setRefreshTokenCookie(res, session.tokens.refreshToken);
   return res.status(statusCode).json({
-    ...successResponse(message, { user: toSafeUserResponse(session.user) }),
+    ...successResponse(message, {
+      user: toSafeUserResponse(session.user),
+    }),
     accessToken: session.tokens.accessToken,
     accessTokenExpiresInSeconds: session.tokens.accessTokenExpiresInSeconds,
   });

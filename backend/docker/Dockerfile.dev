@@ -1,27 +1,45 @@
 # Development Dockerfile for @careercopilot/backend
-FROM node:20-alpine
+# Structure mirrors Dockerfile.prod (base → deps → runtime) so Prisma
+# generation, migrations, and storage permissions behave the same way.
 
-# OpenSSL is required by Prisma query engine on Alpine Linux
+# --- Stage 1: Base ---
+FROM node:20-alpine AS base
 RUN apk add --no-cache openssl curl su-exec
-
 WORKDIR /app
-ENV NODE_ENV=development
 
-# Cache dependency installation & Prisma client generation layer
+# --- Stage 2: Dependencies & Prisma Generation ---
+FROM base AS deps
 COPY package*.json ./
+COPY prisma.config.ts ./
 COPY prisma ./prisma
-COPY prisma.config.ts ./prisma.config.ts
-# COPY ENTRY POINT SCRIPT
-COPY docker/entrypoint.sh ./docker/entrypoint.sh
-
 RUN npm ci && npx prisma generate
 
-# Copy source code
+# --- Stage 3: Development Runtime ---
+FROM base AS development
+
+ENV NODE_ENV=development
+ENV PORT=5001
+
+COPY package*.json ./
+COPY prisma.config.ts ./
+COPY prisma ./prisma
+COPY --from=deps /app/node_modules ./node_modules
+
+# Install entrypoint outside /app so the compose bind-mount (./backend:/app)
+# cannot overwrite it with a non-executable host file.
+COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Source is bind-mounted in compose; COPY still needed for non-compose runs.
 COPY . .
 
-RUN chmod +x docker/entrypoint.sh
+RUN mkdir -p /app/storage/resumes \
+  && chown -R node:node /app \
+  && chmod +x /usr/local/bin/docker-entrypoint.sh
 
 EXPOSE 5001
 
-ENTRYPOINT ["/app/docker/entrypoint.sh"]
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
+  CMD curl -f http://localhost:5001/health || exit 1
+
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["npm", "run", "dev"]

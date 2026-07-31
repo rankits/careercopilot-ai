@@ -208,6 +208,7 @@ model User {
 
   status          Status  @default(PendingVerification)
   isEmailVerified Boolean @default(false) @map("is_email_verified")
+  isProfileCreated Boolean @default(false) @map("is_profile_created")
 
   roleId Int  @map("role_id")
   role   Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
