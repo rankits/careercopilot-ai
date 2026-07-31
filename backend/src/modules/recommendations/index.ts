@@ -13,6 +13,7 @@ import { RecommendationContextService } from '@/modules/recommendations/services
 import { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 import { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
 import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
+import { SimilarJobsService } from '@/modules/recommendations/services/similar-jobs.service.js';
 import { CandidateRetrievalRegistry } from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
 import { PgVectorCandidateRetrievalProvider } from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
 import { RecommendationScoringEngine } from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
@@ -67,7 +68,16 @@ export const recommendationsService = new RecommendationsService(recommendations
   unitOfWork: recommendationUnitOfWork,
   sourceAuthorization: recommendationSourceAuthorizationService,
 });
-export const recommendationsRoutes = createRecommendationsRouter(recommendationsService);
+export const similarJobsService = new SimilarJobsService(
+  recommendationSourceAuthorizationService,
+  recommendationContextService,
+  recommendationRetrievalService,
+  recommendationScoringService,
+);
+export const recommendationsRoutes = createRecommendationsRouter(
+  recommendationsService,
+  similarJobsService,
+);
 
 export * from '@/modules/recommendations/types/recommendations.types.js';
 export * from '@/modules/recommendations/constants/recommendation.constants.js';
