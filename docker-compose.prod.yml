@@ -2,7 +2,7 @@
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: career_copilot_pg_prod
     restart: always
     environment:

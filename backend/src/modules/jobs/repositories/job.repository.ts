@@ -14,6 +14,7 @@ import type {
   JobPersistenceOutcome,
   JobPersistenceResult,
 } from '@/modules/jobs/types/job-persistence.types.js';
+import { serializeJobSemanticContent } from '@/modules/jobs/utils/job-semantic-content.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
 
 export interface PersistedCanonicalJob {
@@ -245,38 +246,6 @@ const priorityForTier = (tier: ProviderTier): number => {
   return 60;
 };
 
-const stringArray = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
-
-const normalizedArray = (value: unknown): string[] =>
-  stringArray(value)
-    .map((item) => item.trim().toLowerCase())
-    .sort();
-
-const semanticSnapshot = (
-  job: Pick<
-    PersistedCanonicalJob,
-    | 'companySlug'
-    | 'companyName'
-    | 'title'
-    | 'descriptionText'
-    | 'remoteType'
-    | 'skills'
-    | 'tags'
-    | 'employmentType'
-  >,
-): string =>
-  JSON.stringify({
-    companySlug: job.companySlug.trim().toLowerCase(),
-    companyName: job.companyName.trim().toLowerCase(),
-    title: job.title.trim().toLowerCase(),
-    descriptionText: job.descriptionText.trim(),
-    remoteType: job.remoteType,
-    skills: normalizedArray(job.skills),
-    tags: normalizedArray(job.tags),
-    employmentType: job.employmentType,
-  });
-
 const metadataMatches = (
   source: PersistedJobSource | null,
   applyUrl: string,
@@ -374,7 +343,7 @@ export class PrismaJobRepository implements IJobRepository {
       const hashMatch = source ? null : await transaction.findJobByCanonicalHash(job.canonicalHash);
       const existing = source?.job ?? hashMatch;
 
-      const incomingSemantic = semanticSnapshot({
+      const incomingSemantic = serializeJobSemanticContent({
         companySlug: job.normalizedCompany,
         companyName: job.companyName,
         title: job.title,
@@ -384,7 +353,8 @@ export class PrismaJobRepository implements IJobRepository {
         tags,
         employmentType: null,
       });
-      const semanticChanged = existing !== null && semanticSnapshot(existing) !== incomingSemantic;
+      const semanticChanged =
+        existing !== null && serializeJobSemanticContent(existing) !== incomingSemantic;
       const sourceUnchanged = metadataMatches(source, job.applyUrl, priority, rawMetadata);
       const outcome: JobPersistenceOutcome =
         existing === null
