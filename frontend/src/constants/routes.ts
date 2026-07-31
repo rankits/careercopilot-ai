@@ -1,4 +1,5 @@
 export const ROUTES = {
+  APPLICATIONS: '/applications',
   HOME: '/',
   DASHBOARD: '/app',
   JOB_FEED: '/jobs-feed',
