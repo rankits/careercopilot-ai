@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Status, type OtpPurpose, type OtpTransport } from '@prisma/client';
+import { ROLE_PERMISSION_MAP, type SystemRole } from '@/shared/rbac/permission.catalog.js';
 
 /**
  * A small, purpose-built in-memory stand-in for PrismaClient, covering
@@ -13,6 +14,10 @@ import { Status, type OtpPurpose, type OtpTransport } from '@prisma/client';
 export interface FakeRole {
   id: number;
   name: string;
+  /** Permission keys granted to this role - mirrors `RolePermission` rows,
+   * seeded from the same `ROLE_PERMISSION_MAP` the real `prisma/seed/roles.seed.ts`
+   * uses, so `PermissionCache`-driven specs see the actual production catalog. */
+  permissions: string[];
 }
 
 export interface FakeUser {
@@ -160,9 +165,20 @@ const allocId = () => nextId++;
 
 export class FakeDb {
   roles = new Map<number, FakeRole>([
-    [1, { id: 1, name: 'USER' }],
-    [2, { id: 2, name: 'ADMIN' }],
+    [1, { id: 1, name: 'USER', permissions: ROLE_PERMISSION_MAP.USER }],
+    [2, { id: 2, name: 'ADMIN', permissions: ROLE_PERMISSION_MAP.ADMIN }],
   ]);
+
+  /** Test-only hook for permission-gate specs - e.g. `setRolePermissions('ADMIN', [])`
+   * to assert a role stripped of a permission gets a 403 from `requirePermission`. */
+  setRolePermissions(roleName: SystemRole, permissionKeys: string[]): void {
+    for (const role of this.roles.values()) {
+      if (role.name === roleName) {
+        role.permissions = permissionKeys;
+        return;
+      }
+    }
+  }
 
   users: FakeUser[] = [];
   userMetas: FakeUserMeta[] = [];
@@ -182,6 +198,8 @@ export class FakeDb {
     this.adminSessions = [];
     this.otps = [];
     this.auditLogs = [];
+    this.setRolePermissions('USER', ROLE_PERMISSION_MAP.USER);
+    this.setRolePermissions('ADMIN', ROLE_PERMISSION_MAP.ADMIN);
   }
 
   seedUser(
@@ -254,10 +272,26 @@ export class FakeDb {
 
     return {
       role: {
-        findUnique: async ({ where }: { where: { name?: string } }) => {
+        findUnique: async ({
+          where,
+          include,
+        }: {
+          where: { name?: string };
+          include?: { permissions?: { include?: { permission?: boolean } } };
+        }) => {
           if (where.name === undefined) return null;
           for (const role of db.roles.values()) {
-            if (role.name === where.name) return { ...role };
+            if (role.name !== where.name) continue;
+            const { permissions, ...rest } = role;
+            if (!include?.permissions) return { ...rest };
+            // Mirrors the real `RolePermission -> Permission` shape so
+            // `PermissionCache#getPermissionsForRole` (which reads
+            // `role.permissions.map((rp) => rp.permission.key)`) works
+            // unchanged against this fake.
+            return {
+              ...rest,
+              permissions: permissions.map((key) => ({ permission: { key } })),
+            };
           }
           return null;
         },
