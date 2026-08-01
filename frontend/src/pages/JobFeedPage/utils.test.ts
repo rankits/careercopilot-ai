@@ -10,10 +10,10 @@ describe('filterJobs', () => {
     );
   });
 
-  it('filters by job type', () => {
+  it('filters by job type tag', () => {
     const result = filterJobs(jobs, { experience: 'all', salary: 'all', type: 'remote' });
 
-    expect(result.map((job) => job.company)).toEqual(['Microsoft', 'Stripe', 'Netflix']);
+    expect(result.map((job) => job.company)).toEqual(['Microsoft', 'Stripe']);
   });
 
   it('combines type, salary, and experience filters', () => {
