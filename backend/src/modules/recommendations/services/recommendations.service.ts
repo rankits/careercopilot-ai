@@ -43,6 +43,7 @@ export class RecommendationsService {
     userId: string,
     input: CreateRecommendationInput,
   ): Promise<JobRecommendationRecord[]> {
+    // userId is String(User.id) from JWT principalId — same value persisted on runs/recommendations.
     this.logger.info(
       { userId, sourceType: input.sourceType, sourceId: input.sourceId },
       'Recommendation generation requested',

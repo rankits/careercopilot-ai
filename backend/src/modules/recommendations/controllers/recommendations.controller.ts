@@ -24,6 +24,7 @@ const requireUserPrincipalId = (req: Request): string => {
   if (req.user.principalType !== 'USER') {
     throw new AppError('Job recommendations are available only to user accounts', 403);
   }
+  // Matches RecommendationRun.userId / JobRecommendation.userId (String(User.id)), not User.publicId.
   return String(req.user.principalId);
 };
 

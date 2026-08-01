@@ -53,7 +53,7 @@ enum RecommendationScoreComponentName {
   qualifications
 }
 
-/// User-owned generation lifecycle. `userId` is User.publicId (no User FK).
+/// User-owned generation lifecycle. `userId` is `String(User.id)` matching JWT `principalId` (no User FK).
 model RecommendationRun {
   id                   String                   @id @default(uuid())
   userId               String                   @map("user_id")
