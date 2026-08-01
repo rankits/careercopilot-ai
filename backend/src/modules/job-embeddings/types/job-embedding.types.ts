@@ -39,3 +39,17 @@ export interface JobEmbeddingSearchResult {
   readonly jobId: string;
   readonly similarity: number;
 }
+
+export interface JobEmbeddingSource {
+  readonly jobId: string;
+  readonly version: number;
+  readonly status: string;
+  readonly companySlug: string;
+  readonly companyName: string;
+  readonly title: string;
+  readonly descriptionText: string;
+  readonly remoteType: string | null;
+  readonly employmentType: string | null;
+  readonly skills: unknown;
+  readonly tags: unknown;
+}

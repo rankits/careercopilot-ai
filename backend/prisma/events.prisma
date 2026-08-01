@@ -27,6 +27,9 @@ model ConsumedEvent {
   eventId      String   @map("event_id")
   consumerName String   @map("consumer_name")
   status       String   @default("PROCESSING")
+  lockedBy     String?  @map("locked_by")
+  lockedAt     DateTime? @map("locked_at")
+  attemptCount Int      @default(1) @map("attempt_count")
   processedAt  DateTime @default(now()) @map("processed_at")
 
   @@id([eventId, consumerName])

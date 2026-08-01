@@ -5,6 +5,7 @@ import type {
   RecommendationContext,
   RetrievalBackend,
 } from '@/modules/recommendations/types/recommendations.types.js';
+export type { EmbeddingProvider } from '@/modules/ai-embeddings/contracts/embedding-provider.js';
 
 export interface CandidateRetrievalRequest {
   userId: string;
@@ -23,11 +24,6 @@ export interface CandidateRetrievalResult {
 export interface CandidateRetrievalProvider {
   readonly supportedBackends: readonly RetrievalBackend[];
   retrieve(request: CandidateRetrievalRequest): Promise<CandidateRetrievalResult>;
-}
-
-export interface EmbeddingProvider {
-  generateEmbedding(text: string): Promise<number[]>;
-  generateEmbeddings(texts: string[]): Promise<number[][]>;
 }
 
 export interface RecommendationExtractionProvider {

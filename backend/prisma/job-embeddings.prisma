@@ -3,10 +3,10 @@ model JobEmbedding {
   jobId       String                      @map("job_id")
   provider    String                      @db.VarChar(100)
   model       String                      @db.VarChar(200)
-  dimensions  Int                         @default(1536)
+  dimensions  Int                         @default(768)
   contentHash String                      @map("content_hash") @db.Char(64)
   jobVersion  Int                         @map("job_version")
-  embedding   Unsupported("vector(1536)")
+  embedding   Unsupported("vector(768)")
   createdAt   DateTime                    @default(now()) @map("created_at")
   updatedAt   DateTime                    @updatedAt @map("updated_at")
 
