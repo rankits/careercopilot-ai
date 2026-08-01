@@ -47,3 +47,13 @@ Persist exclusions via `RecommendationFeedback` (and application tracker for app
 **Implementation:** JR-RET-001 (Wave 3); document now for retrieval work.
 
 ---
+
+## JR-PROD-004 — Profile vs resume precedence
+
+**Decision:** Option A — **PROFILE primary**. Frontend stays on PROFILE generate; resume remains a separate explicit source type when product adds UI.
+
+**Rationale:** Profile is the confirmed user-edited signal; resume parse is an alternate source, not a silent override.
+
+**Implementation:** JR-DATA-001 (Wave 2); FE already uses PROFILE only on For You.
+
+---
