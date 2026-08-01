@@ -17,10 +17,21 @@ export const jobProviderRegistry = new JobProviderRegistry();
 
 // 2. Instantiate and Register Providers
 const defaultGreenhouseProvider = new GreenhouseJobProvider({
-  boardToken: 'stripe',
-  companyName: 'Stripe',
+  // Boards probed live before wiring (404 boards omitted).
+  boards: [
+    { boardToken: 'stripe', companyName: 'Stripe' },
+    { boardToken: 'airbnb', companyName: 'Airbnb' },
+    { boardToken: 'coinbase', companyName: 'Coinbase' },
+    { boardToken: 'figma', companyName: 'Figma' },
+    { boardToken: 'datadog', companyName: 'Datadog' },
+    { boardToken: 'cloudflare', companyName: 'Cloudflare' },
+    { boardToken: 'discord', companyName: 'Discord' },
+    { boardToken: 'robinhood', companyName: 'Robinhood' },
+    { boardToken: 'brex', companyName: 'Brex' },
+  ],
   tier: ProviderTier.PUBLIC,
-  timeoutMs: 8000,
+  timeoutMs: 12000,
+  includeContent: true,
 });
 
 const defaultPublicFeedProvider = new OpenPublicFeedProvider();
@@ -45,19 +56,17 @@ const himalayasProvider = new HimalayasJobProvider({
   ],
   tier: ProviderTier.PUBLIC,
 });
+const remoteJobsOrgProvider = new RemoteJobsOrgProvider({
+  feeds: [{ category: 'programming', limit: 50 }, { category: 'design', limit: 30 }, { limit: 40 }],
+  tier: ProviderTier.PUBLIC,
+});
+const remoteOkProvider = new RemoteOkJobProvider({ tier: ProviderTier.PUBLIC });
 
 jobProviderRegistry.register(defaultGreenhouseProvider);
 jobProviderRegistry.register(defaultPublicFeedProvider);
 jobProviderRegistry.register(remotiveProvider);
 jobProviderRegistry.register(jobicyProvider);
-const remoteJobsOrgProvider = new RemoteJobsOrgProvider({
-  feeds: [{ category: 'programming', limit: 50 }, { category: 'design', limit: 30 }, { limit: 40 }],
-  tier: ProviderTier.PUBLIC,
-});
-
 jobProviderRegistry.register(himalayasProvider);
-const remoteOkProvider = new RemoteOkJobProvider({ tier: ProviderTier.PUBLIC });
-
 jobProviderRegistry.register(remoteJobsOrgProvider);
 jobProviderRegistry.register(remoteOkProvider);
 
