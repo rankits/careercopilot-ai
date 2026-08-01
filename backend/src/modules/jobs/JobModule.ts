@@ -7,6 +7,7 @@ import { RemotiveJobProvider } from '@/modules/jobs/providers/remotive/provider.
 import { JobicyJobProvider } from '@/modules/jobs/providers/jobicy/provider.js';
 import { HimalayasJobProvider } from '@/modules/jobs/providers/himalayas/provider.js';
 import { RemoteJobsOrgProvider } from '@/modules/jobs/providers/remotejobs-org/provider.js';
+import { RemoteOkJobProvider } from '@/modules/jobs/providers/remoteok/provider.js';
 import { JobsService } from '@/modules/jobs/services/jobs.service.js';
 import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
@@ -55,7 +56,10 @@ const remoteJobsOrgProvider = new RemoteJobsOrgProvider({
 });
 
 jobProviderRegistry.register(himalayasProvider);
+const remoteOkProvider = new RemoteOkJobProvider({ tier: ProviderTier.PUBLIC });
+
 jobProviderRegistry.register(remoteJobsOrgProvider);
+jobProviderRegistry.register(remoteOkProvider);
 
 jobsLogger.info(
   {
