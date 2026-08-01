@@ -167,6 +167,39 @@ export class ApplicationManagementService implements IApplicationManagementServi
     throw new AppError('Unsupported application source type', 400, 'UNSUPPORTED_SOURCE_TYPE');
   }
 
+  async savePlatformJob(
+    userId: string,
+    jobId: string,
+  ): Promise<{ application: ApplicationDto; created: boolean }> {
+    const existing = await this.repository.findByJobId(userId, jobId);
+    if (existing) {
+      return { application: existing, created: false };
+    }
+
+    const application = await this.createApplication(userId, {
+      sourceType: 'PLATFORM_JOB',
+      jobId,
+      currentStatus: ApplicationStatus.SAVED,
+    });
+    return { application, created: true };
+  }
+
+  async unsavePlatformJob(userId: string, jobId: string): Promise<void> {
+    const existing = await this.repository.findByJobId(userId, jobId);
+    if (!existing) return;
+
+    if (existing.currentStatus !== ApplicationStatus.SAVED) {
+      throw new AppError(
+        'Only SAVED applications can be unsaved from the job feed.',
+        409,
+        'APPLICATION_NOT_SAVED',
+        { applicationId: existing.id, currentStatus: existing.currentStatus },
+      );
+    }
+
+    await this.deleteApplication(userId, existing.id);
+  }
+
   async getApplications(
     options: ApplicationListOptions,
   ): Promise<PaginatedApplicationResult<ApplicationDto>> {

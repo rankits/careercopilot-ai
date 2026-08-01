@@ -7,7 +7,6 @@ export interface JobSearchFilters {
   skills?: string[];
   minSalary?: number;
   maxSalary?: number;
-  currency?: string;
   postedWithinDays?: number;
 }
 
@@ -16,7 +15,7 @@ export interface JobSearchPagination {
   limit: number;
 }
 
-export type JobSortBy = 'relevance' | 'newest' | 'salaryHighToLow' | 'salaryLowToHigh';
+export type JobSortBy = 'newest' | 'salaryHighToLow' | 'salaryLowToHigh';
 
 export interface JobSearchOptions {
   filters: JobSearchFilters;
@@ -36,6 +35,10 @@ export interface PaginatedJobResult<T> {
   };
 }
 
+/**
+ * Frozen public listing contract for GET /api/v1/jobs and shared fields on detail.
+ * Additive fields only; do not rename/remove without a versioned migration.
+ */
 export interface JobListDto {
   id: string;
   title: string;
@@ -57,7 +60,8 @@ export interface JobListDto {
   };
   skills: string[];
   publishedAt: string | null;
-  expiresAt: string | null;
+  /** Primary JobSource apply URL (priority desc); http(s) only, else null. */
+  applyUrl: string | null;
 }
 
 export interface JobDetailDto extends JobListDto {

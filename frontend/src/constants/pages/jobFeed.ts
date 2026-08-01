@@ -1,26 +1,31 @@
 import type { FilterDropdownOption, JobCardData, JobFilter } from '@/components/molecules';
 
+/** Work-mode filters mapped to GET /jobs remoteTypes / employmentTypes. */
 export const jobFilters: Omit<JobFilter, 'active'>[] = [
   { id: 'all', label: 'All Jobs' },
   { id: 'remote', label: 'Remote' },
+  { id: 'hybrid', label: 'Hybrid' },
+  { id: 'onsite', label: 'On-site' },
   { id: 'full-time', label: 'Full Time' },
   { id: 'internship', label: 'Internship' },
-  { id: 'hybrid', label: 'Hybrid' },
-  { icon: 'ai', id: 'ai', label: 'AI Recommended' },
 ];
 
 export const salaryOptions: FilterDropdownOption[] = [
   { label: 'All Salary', value: 'all' },
-  { label: 'Under 15 LPA', value: 'under-15' },
-  { label: '15 - 25 LPA', value: '15-25' },
-  { label: '25+ LPA', value: '25-plus' },
+  { label: 'Under 50k', value: 'under-50k' },
+  { label: '50k - 100k', value: '50-100k' },
+  { label: '100k+', value: '100k-plus' },
 ];
 
+export const sortOptions: FilterDropdownOption[] = [
+  { label: 'Newest', value: 'newest' },
+  { label: 'Salary: High to Low', value: 'salaryHighToLow' },
+  { label: 'Salary: Low to High', value: 'salaryLowToHigh' },
+];
+
+/** @deprecated Mock data retained for dashboard placeholders until Wave 3/4. */
 export const experienceOptions: FilterDropdownOption[] = [
   { label: 'All Experience', value: 'all' },
-  { label: '0 - 2 yrs', value: '0-2' },
-  { label: '3 - 4 yrs', value: '3-4' },
-  { label: '5+ yrs', value: '5-plus' },
 ];
 
 export const jobs: JobCardData[] = [
@@ -29,15 +34,13 @@ export const jobs: JobCardData[] = [
     company: 'Microsoft',
     experience: '5+ yrs',
     experienceBand: '5-plus',
-    isRecommended: true,
     location: 'Bangalore, India',
     logo: 'M',
-    match: 95,
     postedAt: 'Posted 2d ago',
     salary: 'Rs 18 - 28 LPA',
     salaryBand: '25-plus',
     skills: ['React', 'TypeScript', 'Next.js', 'Azure', '+2'],
-    tags: ['remote', 'ai'],
+    tags: ['remote'],
     title: 'Senior Frontend Engineer',
     type: 'Remote',
   },
@@ -46,15 +49,13 @@ export const jobs: JobCardData[] = [
     company: 'Google',
     experience: '4+ yrs',
     experienceBand: '3-4',
-    isRecommended: true,
     location: 'Bangalore, India',
     logo: 'G',
-    match: 92,
     postedAt: 'Posted 1d ago',
     salary: 'Rs 18 - 30 LPA',
     salaryBand: '25-plus',
     skills: ['React', 'TypeScript', 'Next.js', 'GraphQL', '+1'],
-    tags: ['full-time', 'ai'],
+    tags: ['full-time'],
     title: 'Senior Frontend Engineer',
     type: 'Full-time',
   },
@@ -65,7 +66,6 @@ export const jobs: JobCardData[] = [
     experienceBand: '3-4',
     location: 'Bangalore, India',
     logo: 'a',
-    match: 88,
     postedAt: 'Posted 3d ago',
     salary: 'Rs 12 - 22 LPA',
     salaryBand: '15-25',
@@ -81,7 +81,6 @@ export const jobs: JobCardData[] = [
     experienceBand: '0-2',
     location: 'Noida, India',
     logo: 'A',
-    match: 85,
     postedAt: 'Posted 4d ago',
     salary: 'Rs 9 - 18 LPA',
     salaryBand: 'under-15',
@@ -95,48 +94,24 @@ export const jobs: JobCardData[] = [
     company: 'Stripe',
     experience: '5+ yrs',
     experienceBand: '5-plus',
-    isRecommended: true,
     location: 'Bengaluru, India',
     logo: 'S',
-    match: 94,
     postedAt: 'Posted 1d ago',
     salary: 'Rs 22 - 40 LPA',
     salaryBand: '25-plus',
     skills: ['React', 'Node.js', 'PostgreSQL', 'AWS', '+2'],
-    tags: ['remote', 'ai'],
+    tags: ['remote'],
     title: 'Full Stack Developer',
     type: 'Remote',
   },
-  {
-    accent: 'danger',
-    company: 'Airbnb',
-    experience: '3-5 yrs',
-    experienceBand: '3-4',
-    location: 'Bangalore, India',
-    logo: 'A',
-    match: 90,
-    postedAt: 'Posted 5d ago',
-    salary: 'Rs 16 - 26 LPA',
-    salaryBand: '15-25',
-    skills: ['React', 'TypeScript', 'Next.js', 'GraphQL', '+1'],
-    tags: ['hybrid'],
-    title: 'Frontend Engineer',
-    type: 'Hybrid',
-  },
-  {
-    accent: 'primary',
-    company: 'Netflix',
-    experience: '0-1 yrs',
-    experienceBand: '0-2',
-    location: 'Remote, India',
-    logo: 'N',
-    match: 82,
-    postedAt: 'Posted 6d ago',
-    salary: 'Rs 6 - 10 LPA',
-    salaryBand: 'under-15',
-    skills: ['React', 'CSS', 'Testing', 'Git'],
-    tags: ['internship', 'remote'],
-    title: 'Frontend Intern',
-    type: 'Internship',
-  },
 ];
+
+export function salaryBandToApiRange(band: string): {
+  minSalary: number | undefined;
+  maxSalary: number | undefined;
+} {
+  if (band === 'under-50k') return { minSalary: undefined, maxSalary: 50_000 };
+  if (band === '50-100k') return { minSalary: 50_000, maxSalary: 100_000 };
+  if (band === '100k-plus') return { minSalary: 100_000, maxSalary: undefined };
+  return { minSalary: undefined, maxSalary: undefined };
+}

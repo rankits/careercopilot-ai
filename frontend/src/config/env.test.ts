@@ -10,6 +10,8 @@ describe('env', () => {
   });
 
   it('defaults to the local backend API URL when no VITE_API_BASE_URL is provided', async () => {
+    vi.stubEnv('VITE_API_BASE_URL', '');
+
     const { env } = await import('./env');
 
     expect(env.apiBaseUrl).toBe('http://localhost:5001/api/v1');

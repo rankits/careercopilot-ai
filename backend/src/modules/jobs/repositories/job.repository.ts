@@ -375,6 +375,9 @@ export class PrismaJobRepository implements IJobRepository {
       latestProvider: job.providerName,
       latestProviderTier: job.providerTier,
       semanticCompanyName: job.companyName,
+      ...(job.location.raw ? { locationRaw: job.location.raw } : {}),
+      ...(job.location.city ? { locationCity: job.location.city } : {}),
+      ...(job.location.country ? { locationCountry: job.location.country } : {}),
     };
     const skills: Prisma.InputJsonArray = [...job.tags];
     const tags: Prisma.InputJsonArray = [...job.tags];

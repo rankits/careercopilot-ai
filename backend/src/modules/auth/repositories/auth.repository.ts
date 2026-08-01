@@ -103,13 +103,9 @@ export const authRepository = {
     });
   },
 
-  async markProfileCreated(userId: string): Promise<void> {
-    const id = Number(userId);
-    if (!Number.isInteger(id)) {
-      throw new Error(`Invalid user id for markProfileCreated: ${userId}`);
-    }
+  async markProfileCreated(userId: number): Promise<void> {
     await prisma.user.update({
-      where: { id },
+      where: { id: userId },
       data: { isProfileCreated: true },
     });
   },

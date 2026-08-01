@@ -22,7 +22,7 @@ export const uploadResumeController = async (req: Request, res: Response, next: 
   try {
     const resume = await resumeService.uploadResume({
       file: req.file,
-      userId: typeof req.body.userId === 'string' ? req.body.userId : undefined,
+      userId: requirePrincipalId(req),
     });
 
     return res.status(201).json(
@@ -45,7 +45,10 @@ export const getResumeStatusController = async (
   next: NextFunction,
 ) => {
   try {
-    const status = await resumeService.getResumeStatus(String(req.params.resumeId));
+    const status = await resumeService.getResumeStatus(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
     return res.status(200).json(successResponse('Resume status retrieved', status));
   } catch (error) {
     return next(error);
@@ -54,7 +57,10 @@ export const getResumeStatusController = async (
 
 export const getParsedDataController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const parsedData = await resumeService.getParsedData(String(req.params.resumeId));
+    const parsedData = await resumeService.getParsedData(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
     return res.status(200).json(successResponse('Resume parsed data retrieved', parsedData));
   } catch (error) {
     return next(error);
@@ -63,7 +69,10 @@ export const getParsedDataController = async (req: Request, res: Response, next:
 
 export const getParseStatusController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const parseStatus = await resumeService.getParseStatus(String(req.params.resumeId));
+    const parseStatus = await resumeService.getParseStatus(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
     return res.status(200).json(successResponse('Resume parse status retrieved', parseStatus));
   } catch (error) {
     return next(error);
@@ -72,7 +81,10 @@ export const getParseStatusController = async (req: Request, res: Response, next
 
 export const startParseController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await resumeService.startParse(String(req.params.resumeId));
+    const result = await resumeService.startParse(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
     return res.status(202).json(successResponse('Resume parsing queued', result));
   } catch (error) {
     return next(error);
@@ -81,7 +93,11 @@ export const startParseController = async (req: Request, res: Response, next: Ne
 
 export const reparseResumeController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await resumeService.reparseResume(String(req.params.resumeId), req.body?.reason);
+    const result = await resumeService.reparseResume(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+      req.body?.reason,
+    );
     return res.status(202).json(successResponse('Resume reparse queued', result));
   } catch (error) {
     return next(error);
@@ -94,7 +110,12 @@ export const getCandidateProfileController = async (
   next: NextFunction,
 ) => {
   try {
-    const profile = await resumeService.getCandidateProfile(String(req.params.userId));
+    const principalId = requirePrincipalId(req);
+    const requestedUserId = String(req.params.userId);
+    if (requestedUserId !== principalId) {
+      throw new AppError('You do not have access to this profile', 403, 'PROFILE_ACCESS_DENIED');
+    }
+    const profile = await resumeService.getCandidateProfile(requestedUserId);
     return res.status(200).json(successResponse('Candidate profile retrieved', profile));
   } catch (error) {
     return next(error);
@@ -103,8 +124,13 @@ export const getCandidateProfileController = async (
 
 export const confirmProfileController = async (req: Request, res: Response, next: NextFunction) => {
   try {
+    const principalId = requirePrincipalId(req);
+    const requestedUserId = String(req.params.userId);
+    if (requestedUserId !== principalId) {
+      throw new AppError('You can only confirm your own profile', 403, 'PROFILE_ACCESS_DENIED');
+    }
     await resumeService.confirmProfile({
-      userId: String(req.params.userId),
+      userId: principalId,
       resumeId: req.body.resumeId,
     });
     return res.status(200).json(successResponse('Profile created successfully'));
