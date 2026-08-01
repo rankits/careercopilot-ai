@@ -151,9 +151,9 @@ const commonRecommendationErrors = {
     schema: errorSchema('No eligible jobs were found for this recommendation context'),
   },
   501: {
-    description: 'Unsupported source type or dependency not configured',
+    description: 'Dependency not configured',
     schema: errorSchema(
-      'CAREER_GOAL authorization is not available until its domain models exist',
+      'Recommendation repositories, retrieval, and scoring dependencies are not configured',
       'JOB_RECOMMENDATIONS_NOT_IMPLEMENTED',
     ),
   },
@@ -165,20 +165,19 @@ export const recommendationsSwagger = {
     {
       summary: 'Generate recommendations from an authorized source',
       description:
-        'Supports PROFILE, RESUME, and JOB today. CAREER_GOAL and SAVED_SEARCH remain unimplemented. Uses PGVECTOR retrieval and heuristic scoring; results are persisted durably.',
+        'Supports PROFILE, RESUME, and JOB. Uses PGVECTOR retrieval and hybrid scoring; results are persisted durably.',
       body: {
         required: ['sourceType'],
         properties: {
           sourceType: {
             type: 'string',
-            enum: ['PROFILE', 'RESUME', 'JOB', 'CAREER_GOAL', 'SAVED_SEARCH'],
+            enum: ['PROFILE', 'RESUME', 'JOB'],
             example: 'PROFILE',
           },
           sourceId: {
             type: 'string',
             format: 'uuid',
-            description:
-              'Required for RESUME, JOB, CAREER_GOAL, and SAVED_SEARCH. Forbidden for PROFILE.',
+            description: 'Required for RESUME and JOB. Forbidden for PROFILE.',
           },
           filters: filtersSchema,
         },

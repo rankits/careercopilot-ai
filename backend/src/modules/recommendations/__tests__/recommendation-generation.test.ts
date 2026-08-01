@@ -201,18 +201,15 @@ describe('RecommendationSourceAuthorizationService', () => {
     ).rejects.toMatchObject({ statusCode: 422, code: 'RECOMMENDATION_CONTEXT_INVALID' });
   });
 
-  it('keeps CAREER_GOAL authorization unimplemented', async () => {
-    const service = new RecommendationSourceAuthorizationService(
-      { findById: vi.fn() } as unknown as IJobSearchRepository,
-      emptyProfiles,
-    );
-
-    await expect(
-      service.authorizeForSource('user-1', {
-        sourceType: 'CAREER_GOAL',
-        sourceId: '33333333-3333-3333-3333-333333333333',
-      }),
-    ).rejects.toMatchObject({ statusCode: 501 });
+  it('rejects CAREER_GOAL at the API schema boundary', () => {
+    expect(
+      createRecommendationSchema.safeParse({
+        body: {
+          sourceType: 'CAREER_GOAL',
+          sourceId: '33333333-3333-3333-3333-333333333333',
+        },
+      }).success,
+    ).toBe(false);
   });
 });
 

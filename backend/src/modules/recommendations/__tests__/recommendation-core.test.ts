@@ -91,6 +91,16 @@ describe('recommendation module invariants', () => {
         body: { sourceType: 'TARGET_TEXT', sourceId: uuid },
       }).success,
     ).toBe(false);
+    expect(
+      createRecommendationSchema.safeParse({
+        body: { sourceType: 'CAREER_GOAL', sourceId: uuid },
+      }).success,
+    ).toBe(false);
+    expect(
+      createRecommendationSchema.safeParse({
+        body: { sourceType: 'SAVED_SEARCH', sourceId: uuid },
+      }).success,
+    ).toBe(false);
   });
 
   it('accepts every feedback action and rejects values outside the enum', () => {
