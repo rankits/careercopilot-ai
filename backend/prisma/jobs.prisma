@@ -54,6 +54,7 @@ model Job {
 
   company          Company   @relation(fields: [companySlug], references: [slug], onDelete: Cascade)
   sources          JobSource[]
+  embeddings       JobEmbedding[]
 
   @@index([status, lastSeen])
   @@index([companySlug, title])
