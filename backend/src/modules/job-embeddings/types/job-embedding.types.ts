@@ -25,6 +25,8 @@ export interface JobEmbeddingSearchFilters {
   readonly excludeJobIds?: readonly string[];
   readonly postedAfter?: Date;
   readonly minSalary?: number;
+  readonly maxSalary?: number;
+  readonly currency?: string;
 }
 
 export interface SearchJobEmbeddingsInput {

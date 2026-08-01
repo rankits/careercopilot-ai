@@ -4,6 +4,7 @@ import type {
   RecommendationContext,
   RecommendationFeedbackRecord,
   RecommendationSourceType,
+  ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
 
 export interface RecommendationContextMapper {
@@ -77,4 +78,12 @@ export const toRecommendationFeedbackResponse = (record: RecommendationFeedbackR
   action: record.action,
   note: record.note,
   createdAt: record.createdAt.toISOString(),
+});
+
+export const toSimilarJobResponse = (item: ScoredJobRecommendation, rank: number) => ({
+  rank,
+  job: item.job,
+  scoreResult: item.scoreResult,
+  category: item.category,
+  matchType: item.matchType,
 });

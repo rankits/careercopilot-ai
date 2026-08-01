@@ -1,8 +1,13 @@
 import type { IJobSearchRepository } from '@/modules/job-listing/contracts/IJobSearchRepository.js';
+import type { RecommendationSourceLoader } from '@/modules/recommendations/contracts/recommendation-source-loader.js';
 import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import {
+  hasRecommendationSignal,
+  toCandidateProfileSourcePayload,
+} from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
 import type { BuildRecommendationContextInput } from '@/modules/recommendations/types/recommendations.types.js';
 import type {
   CreateRecommendationFromTextInput,
@@ -14,7 +19,10 @@ import type {
  * Unsupported domain sources remain 501 until their modules exist.
  */
 export class RecommendationSourceAuthorizationService {
-  constructor(private readonly jobs: IJobSearchRepository) {}
+  constructor(
+    private readonly jobs: IJobSearchRepository,
+    private readonly profiles: RecommendationSourceLoader,
+  ) {}
 
   async authorizeForSource(
     userId: string,
@@ -44,13 +52,60 @@ export class RecommendationSourceAuthorizationService {
           authorizedSourcePayload: job,
         };
       }
-      case 'PROFILE':
-      case 'RESUME':
-        throw new RecommendationError(
-          `${input.sourceType} authorization requires owned candidate/resume payload mapping before generation can run`,
-          501,
-          RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
-        );
+      case 'PROFILE': {
+        const profile = await this.profiles.findCandidateProfileByUserId(userId);
+        if (!profile) {
+          throw new RecommendationError(
+            'Candidate profile was not found for this user',
+            404,
+            RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+          );
+        }
+        const payload = toCandidateProfileSourcePayload(profile);
+        if (!hasRecommendationSignal(payload)) {
+          throw new RecommendationError(
+            'Candidate profile does not contain titles, skills, or summary text for recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        return {
+          userId,
+          sourceType: 'PROFILE',
+          authorizedSourcePayload: payload,
+        };
+      }
+      case 'RESUME': {
+        if (!input.sourceId) {
+          throw new RecommendationError(
+            'sourceId is required for RESUME recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        const parsed = await this.profiles.findOwnedResumeProfileSource(userId, input.sourceId);
+        if (!parsed) {
+          throw new RecommendationError(
+            'Owned resume with completed parse data was not found',
+            404,
+            RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+          );
+        }
+        const payload = toCandidateProfileSourcePayload(parsed);
+        if (!hasRecommendationSignal(payload)) {
+          throw new RecommendationError(
+            'Resume parse data does not contain titles, skills, or summary text for recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        return {
+          userId,
+          sourceType: 'RESUME',
+          sourceId: input.sourceId,
+          authorizedSourcePayload: payload,
+        };
+      }
       case 'CAREER_GOAL':
       case 'SAVED_SEARCH':
         throw new RecommendationError(

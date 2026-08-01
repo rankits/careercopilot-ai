@@ -20,12 +20,13 @@ import type {
 } from '@/modules/recommendations/types/recommendations.types.js';
 
 /**
- * Process-local recommendation store used until Prisma recommendation models land.
- * Not durable across restarts; list/detail HTTP routes stay unmounted.
+ * Process-local recommendation store for unit tests and ephemeral local runs.
+ * Production DI uses {@link PrismaRecommendationUnitOfWork}.
  */
 export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWork {
   private readonly runs = new Map<string, RecommendationRunRecord>();
   private readonly recommendations = new Map<string, JobRecommendationRecord>();
+  private readonly feedback = new Map<string, RecommendationFeedbackRecord>();
 
   private readonly runRepository: RecommendationRunRepository = {
     create: async (input: {
@@ -157,15 +158,41 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
   };
 
   private readonly feedbackRepository: RecommendationFeedbackRepository = {
-    upsert: async (): Promise<RecommendationFeedbackRecord> => {
-      throw new RecommendationError(
-        'Recommendation feedback persistence is not available until Prisma models land',
-        501,
-        RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
-      );
+    upsert: async (input): Promise<RecommendationFeedbackRecord> => {
+      const recommendation = this.recommendations.get(input.recommendationId);
+      if (
+        !recommendation ||
+        recommendation.userId !== input.userId ||
+        recommendation.job.id !== input.jobId
+      ) {
+        throw new RecommendationError(
+          'Recommendation was not found',
+          404,
+          RECOMMENDATION_ERROR_CODES.RECOMMENDATION_NOT_FOUND,
+        );
+      }
+      const key = `${input.userId}:${input.recommendationId}`;
+      const existing = this.feedback.get(key);
+      const record: RecommendationFeedbackRecord = {
+        id: existing?.id ?? randomUUID(),
+        recommendationId: input.recommendationId,
+        jobId: input.jobId,
+        userId: input.userId,
+        action: input.action,
+        note: input.note ?? null,
+        createdAt: existing?.createdAt ?? new Date(),
+      };
+      this.feedback.set(key, record);
+      return { ...record };
     },
-    findByRecommendation: async () => null,
-    listByJob: async () => [],
+    findByRecommendation: async (userId, recommendationId) => {
+      const record = this.feedback.get(`${userId}:${recommendationId}`);
+      return record ? { ...record } : null;
+    },
+    listByJob: async (userId, jobId) =>
+      [...this.feedback.values()]
+        .filter((item) => item.userId === userId && item.jobId === jobId)
+        .map((item) => ({ ...item })),
   };
 
   async execute<T>(
