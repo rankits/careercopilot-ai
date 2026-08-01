@@ -32,6 +32,7 @@ import {
 
 export interface JobCardData {
   id?: string;
+  recommendationId?: string;
   accent: 'primary' | 'danger';
   /** Validated http(s) apply URL when available. */
   applyUrl?: string | null;
@@ -44,6 +45,7 @@ export interface JobCardData {
   location: string;
   /** Real recommendation score only — omit while mock/unwired. */
   match?: number;
+  matchSubtitle?: string;
   postedAt: string;
   isRecommended?: boolean;
   salary: string;
@@ -60,11 +62,21 @@ export interface JobCardProps {
   onApply?: (job: JobCardData) => void;
   onOpen?: (job: JobCardData) => void;
   onSave?: (job: JobCardData) => void;
+  onDismiss?: (job: JobCardData) => void;
+  onNotRelevant?: (job: JobCardData) => void;
 }
 
-export function JobCard({ job, isSaved = false, onApply, onOpen, onSave }: JobCardProps) {
+export function JobCard({
+  job,
+  isSaved = false,
+  onApply,
+  onOpen,
+  onSave,
+  onDismiss,
+  onNotRelevant,
+}: JobCardProps) {
   const showMatch = typeof job.match === 'number';
-  const showActions = Boolean(onApply || onSave);
+  const showActions = Boolean(onApply || onSave || onDismiss || onNotRelevant);
   const canApply = Boolean(job.applyUrl);
   const [logoFailed, setLogoFailed] = useState(false);
   const showLogoImage = Boolean(job.logoUrl) && !logoFailed;
@@ -114,8 +126,13 @@ export function JobCard({ job, isSaved = false, onApply, onOpen, onSave }: JobCa
             <Typography component="p">
               {job.company} <span>-</span> {job.location}
             </Typography>
+            {job.matchSubtitle ? (
+              <Typography component="p" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}>
+                {job.matchSubtitle}
+              </Typography>
+            ) : null}
           </div>
-          <VerifiedIcon fontSize="small" />
+          <VerifiedIcon fontSize="small" aria-hidden="true" />
         </TitleRow>
 
         <JobMeta>
@@ -145,10 +162,36 @@ export function JobCard({ job, isSaved = false, onApply, onOpen, onSave }: JobCa
       {showMatch || showActions ? (
         <JobActions>
           {showMatch ? (
-            <MatchPill>
+            <MatchPill aria-label={`${job.match} percent match`}>
               {job.match}% Match
               <MatchRing aria-hidden="true" />
             </MatchPill>
+          ) : null}
+          {onDismiss ? (
+            <Button
+              aria-label={`Dismiss ${job.title} recommendation`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onDismiss(job);
+              }}
+              size="small"
+              variant="text"
+            >
+              Dismiss
+            </Button>
+          ) : null}
+          {onNotRelevant ? (
+            <Button
+              aria-label={`Mark ${job.title} as not relevant`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onNotRelevant(job);
+              }}
+              size="small"
+              variant="text"
+            >
+              Not relevant
+            </Button>
           ) : null}
           {onSave ? (
             <SaveButton

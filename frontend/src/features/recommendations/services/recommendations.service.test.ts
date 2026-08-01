@@ -44,7 +44,11 @@ describe('recommendationsService', () => {
   it('posts PROFILE generate without auto sourceId', async () => {
     postMock.mockResolvedValue({ data: { data: [{ id: 'r1' }] } });
     const items = await recommendationsService.generateFromProfile();
-    expect(postMock).toHaveBeenCalledWith('/job-recommendations', { sourceType: 'PROFILE' });
+    expect(postMock).toHaveBeenCalledWith(
+      '/job-recommendations',
+      { sourceType: 'PROFILE' },
+      expect.objectContaining({ timeout: 60_000 }),
+    );
     expect(items).toHaveLength(1);
   });
 });
