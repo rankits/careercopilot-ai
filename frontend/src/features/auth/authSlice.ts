@@ -53,6 +53,10 @@ const authSlice = createSlice({
     setSessionResolved(state, action: PayloadAction<boolean>) {
       state.isSessionResolved = action.payload;
     },
+    setAccessToken(state, action: PayloadAction<string>) {
+      state.accessToken = action.payload;
+      state.isAuthenticated = true;
+    },
   },
   extraReducers: (builder) => {
     builder
@@ -81,5 +85,5 @@ const authSlice = createSlice({
   },
 });
 
-export const { logout, setProfileComplete, setSessionResolved } = authSlice.actions;
+export const { logout, setProfileComplete, setSessionResolved, setAccessToken } = authSlice.actions;
 export const authReducer = authSlice.reducer;
