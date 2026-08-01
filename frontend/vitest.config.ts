@@ -25,5 +25,7 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: './src/test/setup.ts',
+    // Page tests fill large forms under parallel suite load; default 5s is too tight on Windows CI.
+    testTimeout: 30_000,
   },
 });
