@@ -28,13 +28,15 @@ import {
 } from './styles';
 
 export interface JobCardData {
+  id?: string;
   accent: 'primary' | 'danger';
   company: string;
   experience: string;
   experienceBand: string;
   logo: string;
   location: string;
-  match: number;
+  /** Real recommendation score only — omit while mock/unwired. */
+  match?: number;
   postedAt: string;
   isRecommended?: boolean;
   salary: string;
@@ -52,6 +54,9 @@ export interface JobCardProps {
 }
 
 export function JobCard({ job, onApply, onSave }: JobCardProps) {
+  const showMatch = typeof job.match === 'number';
+  const showActions = Boolean(onApply || onSave);
+
   return (
     <JobCardRoot>
       <Accent tone={job.accent} />
@@ -97,18 +102,26 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
         </SkillList>
       </JobDetails>
 
-      <JobActions>
-        <MatchPill>
-          {job.match}% Match
-          <MatchRing aria-hidden="true" />
-        </MatchPill>
-        <SaveButton aria-label={`Save ${job.title}`} onClick={() => onSave?.(job)}>
-          <BookmarkBorderOutlinedIcon fontSize="small" />
-        </SaveButton>
-        <Button onClick={() => onApply?.(job)} size="small" variant="outline">
-          Apply Now
-        </Button>
-      </JobActions>
+      {showMatch || showActions ? (
+        <JobActions>
+          {showMatch ? (
+            <MatchPill>
+              {job.match}% Match
+              <MatchRing aria-hidden="true" />
+            </MatchPill>
+          ) : null}
+          {onSave ? (
+            <SaveButton aria-label={`Save ${job.title}`} onClick={() => onSave(job)}>
+              <BookmarkBorderOutlinedIcon fontSize="small" />
+            </SaveButton>
+          ) : null}
+          {onApply ? (
+            <Button onClick={() => onApply(job)} size="small" variant="outline">
+              Apply Now
+            </Button>
+          ) : null}
+        </JobActions>
+      ) : null}
     </JobCardRoot>
   );
 }
