@@ -3,7 +3,10 @@ import {
   buildJobEmbeddingDocument,
   createJobEmbeddingContentHash,
 } from '@/modules/job-embeddings/utils/job-embedding-content.js';
-import type { JobSemanticContent } from '@/modules/jobs/utils/job-semantic-content.js';
+import {
+  normalizeJobSemanticContent,
+  type JobSemanticContent,
+} from '@/modules/jobs/utils/job-semantic-content.js';
 
 const content = (overrides: Partial<JobSemanticContent> = {}): JobSemanticContent => ({
   companySlug: 'acme',
@@ -30,6 +33,16 @@ describe('job embedding content', () => {
         'Description: Build reliable systems.',
       ].join('\n'),
     );
+  });
+
+  it('strips HTML noise from description text before normalization', () => {
+    const normalized = normalizeJobSemanticContent(
+      content({
+        descriptionText: '<p>Build <strong>reliable</strong> systems.</p>&nbsp;Remote.',
+      }),
+    );
+
+    expect(normalized.descriptionText).toBe('Build reliable systems. Remote.');
   });
 
   it('keeps the checksum stable across normalized casing and array order', () => {
