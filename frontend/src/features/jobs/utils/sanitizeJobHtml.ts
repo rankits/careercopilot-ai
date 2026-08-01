@@ -1,14 +1,42 @@
+import DOMPurify from 'dompurify';
+
+const ALLOWED_TAGS = [
+  'a',
+  'b',
+  'blockquote',
+  'br',
+  'code',
+  'div',
+  'em',
+  'h1',
+  'h2',
+  'h3',
+  'h4',
+  'h5',
+  'h6',
+  'i',
+  'li',
+  'ol',
+  'p',
+  'pre',
+  'span',
+  'strong',
+  'u',
+  'ul',
+];
+
+const ALLOWED_ATTR = ['href', 'target', 'rel', 'class'];
+
 /**
- * Minimal HTML sanitizer for job descriptions until DOMPurify lands (JOB-SEC-002).
- * Strips scripts, event handlers, and javascript: URLs.
+ * Sanitize provider job-description HTML before dangerouslySetInnerHTML.
  */
 export function sanitizeJobHtml(html: string): string {
   if (!html) return '';
 
-  return html
-    .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
-    .replace(/<style[\s\S]*?>[\s\S]*?<\/style>/gi, '')
-    .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '')
-    .replace(/(href|src)\s*=\s*("|')\s*javascript:[^"']*\2/gi, '$1="#"')
-    .replace(/<\/?(iframe|object|embed|link|meta)[^>]*>/gi, '');
+  return DOMPurify.sanitize(html, {
+    ALLOWED_TAGS,
+    ALLOWED_ATTR,
+    ALLOW_DATA_ATTR: false,
+    ALLOWED_URI_REGEXP: /^(?:(?:https?|mailto):|[^a-z]|[a-z+.-]+(?:[^a-z+.\-:]|$))/i,
+  });
 }
