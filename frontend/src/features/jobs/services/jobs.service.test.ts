@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { JobNotFoundError, jobsService } from './jobs.service';
+import { JobNotFoundError, jobsService, normalizeJobsError } from './jobs.service';
 
 const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
 
@@ -88,10 +88,43 @@ describe('jobsService.listJobs', () => {
     await expect(jobsService.listJobs()).rejects.toThrow(/unexpected jobs response/i);
   });
 
-  it('propagates transport failures', async () => {
-    const failure = new Error('network down');
-    getMock.mockRejectedValue(failure);
-    await expect(jobsService.listJobs()).rejects.toBe(failure);
+  it('normalizes network failures into a user-facing message', async () => {
+    getMock.mockRejectedValue(
+      new axios.AxiosError('Network Error', 'ERR_NETWORK', undefined, undefined),
+    );
+    await expect(jobsService.listJobs()).rejects.toThrow(/unable to reach the jobs service/i);
+  });
+
+  it('normalizes 401 responses', async () => {
+    getMock.mockRejectedValue(
+      new axios.AxiosError('Unauthorized', 'ERR_BAD_REQUEST', undefined, undefined, {
+        status: 401,
+        statusText: 'Unauthorized',
+        headers: {},
+        config: {} as never,
+        data: {},
+      }),
+    );
+    await expect(jobsService.listJobs()).rejects.toThrow(/session has expired/i);
+  });
+});
+
+describe('normalizeJobsError', () => {
+  it('maps 5xx to a temporary unavailable message', () => {
+    const error = new axios.AxiosError('Boom', 'ERR_BAD_RESPONSE', undefined, undefined, {
+      status: 503,
+      statusText: 'Service Unavailable',
+      headers: {},
+      config: {} as never,
+      data: {},
+    });
+    expect(normalizeJobsError(error).message).toMatch(/temporarily unavailable/i);
+  });
+
+  it('preserves canceled requests', () => {
+    const canceled = new axios.AxiosError('canceled', 'ERR_CANCELED');
+    canceled.name = 'CanceledError';
+    expect(normalizeJobsError(canceled)).toBe(canceled);
   });
 });
 

@@ -13,13 +13,11 @@ const { getJobMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/features/jobs/services/jobs.service', async () => {
-  const actual = await vi.importActual<typeof import('@/features/jobs/services/jobs.service')>(
-    '@/features/jobs/services/jobs.service',
-  );
+  const actual = await vi.importActual('@/features/jobs/services/jobs.service');
   return {
-    ...actual,
+    ...(actual as object),
     jobsService: {
-      ...actual.jobsService,
+      ...(actual as { jobsService: object }).jobsService,
       getJob: getJobMock,
     },
   };
@@ -113,7 +111,44 @@ describe('JobDetailPage', () => {
 
     expect(await screen.findByRole('heading', { name: /job not found/i })).toBeInTheDocument();
     await waitFor(() => {
-      expect(screen.getByText(/no longer available/i)).toBeInTheDocument();
+      expect(screen.getByText(/may have expired/i)).toBeInTheDocument();
     });
+  });
+
+  it('renders extracted responsibilities, requirements, and benefits', async () => {
+    getJobMock.mockResolvedValue({
+      id: 'job-1',
+      title: 'Backend Engineer',
+      company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
+      location: { formatted: 'Remote', remoteType: 'REMOTE' },
+      employmentType: 'FULL_TIME',
+      salary: { minimum: null, maximum: null, currency: null },
+      skills: [],
+      publishedAt: null,
+      applyUrl: null,
+      descriptionHtml: '',
+      descriptionText: [
+        'Intro paragraph.',
+        '',
+        'Responsibilities',
+        '- Build APIs',
+        '',
+        'Requirements',
+        '- Go experience',
+      ].join('\n'),
+      benefits: ['Health insurance'],
+      tags: [],
+      companyIndustry: null,
+      companySize: null,
+    });
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', { name: /responsibilities/i })).toBeInTheDocument();
+    expect(screen.getByText(/build apis/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /requirements/i })).toBeInTheDocument();
+    expect(screen.getByText(/go experience/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /benefits/i })).toBeInTheDocument();
+    expect(screen.getByText(/health insurance/i)).toBeInTheDocument();
   });
 });
