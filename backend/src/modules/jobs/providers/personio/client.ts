@@ -15,33 +15,35 @@ const tagValue = (block: string, tag: string): string | undefined => {
 
 const parsePositions = (xml: string): PersonioPosition[] => {
   const blocks = xml.match(/<position>[\s\S]*?<\/position>/gi) ?? [];
-  return blocks
-    .map((block) => {
-      const id = tagValue(block, 'id');
-      const name = tagValue(block, 'name');
-      if (!id || !name) return null;
+  const positions: PersonioPosition[] = [];
 
-      const descriptionParts =
-        block.match(/<jobDescription>[\s\S]*?<\/jobDescription>/gi)?.map((part) => {
-          const sectionName = tagValue(part, 'name');
-          const value = tagValue(part, 'value');
-          return [sectionName, value].filter(Boolean).join('\n');
-        }) ?? [];
+  for (const block of blocks) {
+    const id = tagValue(block, 'id');
+    const name = tagValue(block, 'name');
+    if (!id || !name) continue;
 
-      return {
-        id,
-        name,
-        office: tagValue(block, 'office'),
-        department: tagValue(block, 'department'),
-        recruitingCategory: tagValue(block, 'recruitingCategory'),
-        employmentType: tagValue(block, 'employmentType'),
-        seniority: tagValue(block, 'seniority'),
-        schedule: tagValue(block, 'schedule'),
-        createdAt: tagValue(block, 'createdAt'),
-        descriptionHtml: descriptionParts.join('\n\n'),
-      } satisfies PersonioPosition;
-    })
-    .filter((position): position is PersonioPosition => position !== null);
+    const descriptionParts =
+      block.match(/<jobDescription>[\s\S]*?<\/jobDescription>/gi)?.map((part) => {
+        const sectionName = tagValue(part, 'name');
+        const value = tagValue(part, 'value');
+        return [sectionName, value].filter(Boolean).join('\n');
+      }) ?? [];
+
+    positions.push({
+      id,
+      name,
+      office: tagValue(block, 'office'),
+      department: tagValue(block, 'department'),
+      recruitingCategory: tagValue(block, 'recruitingCategory'),
+      employmentType: tagValue(block, 'employmentType'),
+      seniority: tagValue(block, 'seniority'),
+      schedule: tagValue(block, 'schedule'),
+      createdAt: tagValue(block, 'createdAt'),
+      descriptionHtml: descriptionParts.join('\n\n'),
+    });
+  }
+
+  return positions;
 };
 
 export class PersonioClient extends BaseProviderClient {
