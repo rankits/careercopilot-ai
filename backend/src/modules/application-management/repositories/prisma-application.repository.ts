@@ -44,12 +44,12 @@ export class PrismaApplicationRepository implements IApplicationRepository {
       primarySourceType: app.primarySourceType,
       priority: app.priority,
       interestLevel: app.interestLevel,
-      appliedAt: app.appliedAt,
-      firstResponseAt: app.firstResponseAt,
-      closedAt: app.closedAt,
-      createdAt: app.createdAt,
-      updatedAt: app.updatedAt,
-      archivedAt: app.archivedAt,
+      appliedAt: app.appliedAt ? app.appliedAt.toISOString() : null,
+      firstResponseAt: app.firstResponseAt ? app.firstResponseAt.toISOString() : null,
+      closedAt: app.closedAt ? app.closedAt.toISOString() : null,
+      createdAt: app.createdAt.toISOString(),
+      updatedAt: app.updatedAt.toISOString(),
+      archivedAt: app.archivedAt ? app.archivedAt.toISOString() : null,
     };
   }
 
@@ -94,7 +94,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
   async create(
     data: Prisma.ApplicationUncheckedCreateInput,
     source?: Prisma.ApplicationSourceUncheckedCreateWithoutApplicationInput,
-    initialHistoryNote?: string
+    initialHistoryNote?: string,
   ): Promise<ApplicationDto> {
     const created = await prisma.$transaction(async (tx) => {
       const app = await tx.application.create({
@@ -152,7 +152,10 @@ export class PrismaApplicationRepository implements IApplicationRepository {
     return app ? this.mapToDto(app) : null;
   }
 
-  async findByNormalisedUrl(userId: string, normalisedJobUrl: string): Promise<ApplicationDto | null> {
+  async findByNormalisedUrl(
+    userId: string,
+    normalisedJobUrl: string,
+  ): Promise<ApplicationDto | null> {
     const app = await prisma.application.findFirst({
       where: { userId, normalisedJobUrl },
     });
@@ -219,7 +222,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
   async update(
     userId: string,
     applicationId: string,
-    data: Prisma.ApplicationUncheckedUpdateInput
+    data: Prisma.ApplicationUncheckedUpdateInput,
   ): Promise<ApplicationDto> {
     const updated = await prisma.application.update({
       where: { id: applicationId, userId },
@@ -243,7 +246,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
       toStatus: ApplicationStatus;
       changedBy: StatusChangedBy;
       note?: string;
-    }
+    },
   ): Promise<ApplicationStatusHistoryDto> {
     const history = await prisma.applicationStatusHistory.create({
       data: {
@@ -261,7 +264,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
     userId: string,
     applicationId: string,
     type: NoteType,
-    content: string
+    content: string,
   ): Promise<ApplicationNoteDto> {
     // Verify parent ownership first
     const exists = await prisma.application.findFirst({
@@ -301,7 +304,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
       description?: string;
       type: TaskType;
       dueAt?: Date;
-    }
+    },
   ): Promise<ApplicationTaskDto> {
     // Verify parent ownership first
     const exists = await prisma.application.findFirst({
@@ -335,7 +338,7 @@ export class PrismaApplicationRepository implements IApplicationRepository {
       dueAt: Date | null;
       status: TaskStatus;
       completedAt: Date | null;
-    }>
+    }>,
   ): Promise<ApplicationTaskDto> {
     // Verify ownership
     const taskExists = await prisma.applicationTask.findFirst({
