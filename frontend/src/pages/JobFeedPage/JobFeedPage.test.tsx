@@ -79,7 +79,9 @@ describe('JobFeedPage', () => {
       expect.objectContaining({ page: 1, limit: 20, sortBy: 'newest' }),
     );
     expect(screen.getByText(/2 jobs found/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /apply now/i })).not.toBeInTheDocument();
+    const applyButtons = screen.getAllByRole('button', { name: /apply now/i });
+    expect(applyButtons[0]).toBeEnabled();
+    expect(applyButtons[1]).toBeDisabled();
   });
 
   it('updates workMode in the request when a filter is selected', async () => {

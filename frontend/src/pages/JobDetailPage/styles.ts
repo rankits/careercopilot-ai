@@ -30,6 +30,10 @@ export const jobDetailPageSx = {
     color: colorTokens.textSecondary,
     fontSize: fontSize.sm,
   } satisfies SxProps<Theme>,
+  actions: {
+    display: 'flex',
+    gap: spacing[2],
+  } satisfies SxProps<Theme>,
   muted: {
     color: colorTokens.textSecondary,
   } satisfies SxProps<Theme>,

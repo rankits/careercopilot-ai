@@ -64,4 +64,9 @@ describe('JobCard', () => {
     expect(screen.queryByText('React')).not.toBeInTheDocument();
     expect(screen.getByText(/not disclosed/i)).toBeInTheDocument();
   });
+
+  it('disables Apply when applyUrl is missing', () => {
+    render(<JobCard job={{ ...baseJob, applyUrl: null }} onApply={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /apply now/i })).toBeDisabled();
+  });
 });

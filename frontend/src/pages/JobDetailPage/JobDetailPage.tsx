@@ -4,6 +4,7 @@ import { Button } from '@/components/atoms/Button';
 import { ROUTES } from '@/constants/routes';
 import { JobNotFoundError } from '@/features/jobs/services/jobs.service';
 import { useJobDetail } from '@/features/jobs/hooks/useJobDetail';
+import { openExternalApply, toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
 import { sanitizeJobHtml } from '@/features/jobs/utils/sanitizeJobHtml';
 import { Box, CircularProgress, Typography } from '@/lib/material';
 
@@ -18,6 +19,7 @@ export function JobDetailPage() {
 
   const { data: job, isPending, isError, error, refetch, isFetching } = useJobDetail(jobId);
   const notFound = error instanceof JobNotFoundError;
+  const applyUrl = toSafeApplyUrl(job?.applyUrl);
 
   return (
     <Box component="section" sx={jobDetailPageSx.root}>
@@ -73,6 +75,16 @@ export function JobDetailPage() {
               .filter(Boolean)
               .join(' · ')}
           </Typography>
+
+          <Box sx={jobDetailPageSx.actions}>
+            <Button
+              disabled={!applyUrl}
+              onClick={() => openExternalApply(applyUrl)}
+              size="small"
+            >
+              Apply Now
+            </Button>
+          </Box>
 
           {job.skills.length ? (
             <Box sx={jobDetailPageSx.skills}>
