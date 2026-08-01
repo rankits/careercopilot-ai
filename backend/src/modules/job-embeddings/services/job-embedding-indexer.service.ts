@@ -11,6 +11,7 @@ import {
   createJobEmbeddingContentHash,
 } from '@/modules/job-embeddings/utils/job-embedding-content.js';
 import type { JobSemanticContentChangedEvent } from '@/modules/jobs/events/job.events.js';
+import { logJobEmbeddingIndexOutcome } from '@/modules/job-embeddings/observability/job-embedding-coverage.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
 export const JOB_EMBEDDING_CONSUMER_NAME = 'job-embedding-indexer.v1';
@@ -26,6 +27,11 @@ export class JobEmbeddingIndexerService {
     private readonly consumedEvents: ConsumedEventRepository = new PrismaConsumedEventRepository(),
     private readonly workerId = `job-embedding-${process.pid}-${randomUUID()}`,
     private readonly claimStaleAfterMs = 30_000,
+    private readonly onOutcome?: (input: {
+      jobId: string;
+      eventId: string;
+      outcome: JobEmbeddingIndexOutcome;
+    }) => void,
   ) {}
 
   async process(
@@ -53,6 +59,7 @@ export class JobEmbeddingIndexerService {
       if (!completed) {
         throw new AppError('Embedding event ownership was lost', 409, 'EMBEDDING_EVENT_LOCK_LOST');
       }
+      this.onOutcome?.({ jobId: event.jobId, eventId, outcome });
       return outcome;
     } catch (error) {
       await this.consumedEvents.release(eventId, JOB_EMBEDDING_CONSUMER_NAME, this.workerId);
