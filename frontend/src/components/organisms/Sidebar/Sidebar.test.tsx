@@ -12,7 +12,7 @@ function renderSidebar(ui: ReactNode) {
 }
 
 describe('Sidebar', () => {
-  it('renders the default desktop navigation', () => {
+  it('renders the default desktop navigation without dead Saved Jobs entry', () => {
     renderSidebar(<Sidebar />);
 
     expect(screen.getByLabelText(/primary navigation/i)).toBeInTheDocument();
@@ -21,6 +21,9 @@ describe('Sidebar', () => {
       'aria-current',
       'page',
     );
+    expect(screen.getByRole('link', { name: /jobs feed/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /saved jobs/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /saved jobs/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /upload now/i })).toBeInTheDocument();
   });
 
@@ -68,6 +71,7 @@ describe('Sidebar', () => {
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
     expect(screen.getAllByRole('link')).toHaveLength(2);
-    expect(screen.getAllByRole('button')).toHaveLength(3);
+    // AI Match + Applications remain as inert buttons until their routes ship.
+    expect(screen.getAllByRole('button')).toHaveLength(2);
   });
 });
