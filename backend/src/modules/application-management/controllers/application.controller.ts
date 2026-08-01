@@ -16,7 +16,7 @@ function requireUserPrincipalId(req: Request): string {
   if (req.user.principalType !== 'USER') {
     throw new AppError('Applications are available only to user accounts', 403, 'FORBIDDEN');
   }
-  return req.user.principalId;
+  return String(req.user.principalId);
 }
 
 function getParam(param: string | string[] | undefined, name: string): string {
@@ -50,12 +50,7 @@ export const savePlatformJobController = async (
     const { application, created } = await applicationService.savePlatformJob(userId, jobId);
     return res
       .status(created ? 201 : 200)
-      .json(
-        successResponse(
-          created ? 'Job saved successfully' : 'Job already saved',
-          application,
-        ),
-      );
+      .json(successResponse(created ? 'Job saved successfully' : 'Job already saved', application));
   } catch (error) {
     return next(error);
   }

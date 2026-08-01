@@ -27,10 +27,9 @@ describe('JOB-QA-002 application IDOR / authz regression', () => {
     ['POST', `${API}/saved-jobs`],
     ['DELETE', `${API}/saved-jobs/${APP_ID}`],
   ] as const)('%s %s returns 401 without auth (x-user-id ignored)', async (method, path) => {
-    const req = request(app)[method.toLowerCase() as 'get' | 'patch' | 'delete' | 'post'](path).set(
-      'x-user-id',
-      'spoofed-user',
-    );
+    const req = request(app)
+      [method.toLowerCase() as 'get' | 'patch' | 'delete' | 'post'](path)
+      .set('x-user-id', 'spoofed-user');
     const res =
       method === 'PATCH'
         ? await req.send({ jobTitle: 'X' })
@@ -49,20 +48,17 @@ describe('JOB-QA-002 application IDOR / authz regression', () => {
       created: false,
       application: {
         id: APP_ID,
-        userId: user.publicId,
+        userId: String(user.id),
         jobId,
         jobTitle: 'Engineer',
         companyName: 'Acme',
       } as never,
     });
 
-    const res = await request(app)
-      .post(`${API}/saved-jobs`)
-      .set(authHeader(token))
-      .send({ jobId });
+    const res = await request(app).post(`${API}/saved-jobs`).set(authHeader(token)).send({ jobId });
 
     expect(res.status).toBe(200);
-    expect(spy).toHaveBeenCalledWith(user.publicId, jobId);
+    expect(spy).toHaveBeenCalledWith(String(user.id), jobId);
   });
 
   it('owner can read their application (happy path)', async () => {
@@ -71,7 +67,7 @@ describe('JOB-QA-002 application IDOR / authz regression', () => {
 
     vi.spyOn(applicationService, 'getApplicationById').mockResolvedValue({
       id: APP_ID,
-      userId: user.publicId,
+      userId: String(user.id),
       jobTitle: 'Engineer',
       companyName: 'Acme',
     } as never);
@@ -79,7 +75,7 @@ describe('JOB-QA-002 application IDOR / authz regression', () => {
     const res = await request(app).get(`${API}/${APP_ID}`).set(authHeader(token));
 
     expect(res.status).toBe(200);
-    expect(applicationService.getApplicationById).toHaveBeenCalledWith(user.publicId, APP_ID);
+    expect(applicationService.getApplicationById).toHaveBeenCalledWith(String(user.id), APP_ID);
   });
 
   it('cross-user PATCH uses caller principal and surfaces not found', async () => {
@@ -98,7 +94,7 @@ describe('JOB-QA-002 application IDOR / authz regression', () => {
 
     expect(res.status).toBe(404);
     expect(applicationService.updateApplication).toHaveBeenCalledWith(
-      user.publicId,
+      String(user.id),
       APP_ID,
       expect.objectContaining({ jobTitle: 'Hijacked' }),
     );
@@ -118,7 +114,7 @@ describe('JOB-QA-002 application IDOR / authz regression', () => {
       .set('x-user-id', 'victim-public-id');
 
     expect(res.status).toBe(404);
-    expect(applicationService.deleteApplication).toHaveBeenCalledWith(user.publicId, APP_ID);
+    expect(applicationService.deleteApplication).toHaveBeenCalledWith(String(user.id), APP_ID);
   });
 
   it('rejects invalid sortBy with 400 (no Prisma injection path)', async () => {
@@ -126,9 +122,7 @@ describe('JOB-QA-002 application IDOR / authz regression', () => {
     const token = accessTokenForUser(user);
     const spy = vi.spyOn(applicationService, 'getApplications');
 
-    const res = await request(app)
-      .get(`${API}?sortBy=passwordHash:asc`)
-      .set(authHeader(token));
+    const res = await request(app).get(`${API}?sortBy=passwordHash:asc`).set(authHeader(token));
 
     expect(res.status).toBe(400);
     expect(spy).not.toHaveBeenCalled();
