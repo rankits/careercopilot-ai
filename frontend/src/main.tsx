@@ -7,9 +7,9 @@ import { BrowserRouter } from 'react-router-dom';
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
 import { App } from '@/app/App';
-import { logout } from '@/features/auth/authSlice';
+import { logout, setAccessToken } from '@/features/auth/authSlice';
 import { ThemeProvider } from '@/lib/material';
-import { setUnauthorizedHandler } from '@/services/httpClient';
+import { setTokenRefreshedHandler, setUnauthorizedHandler } from '@/services/httpClient';
 import { queryClient } from '@/services/queryClient';
 import { store } from '@/store';
 import { appTheme } from '@/theme';
@@ -17,6 +17,10 @@ import '@/styles/global.css';
 
 setUnauthorizedHandler(() => {
   store.dispatch(logout());
+});
+
+setTokenRefreshedHandler((accessToken) => {
+  store.dispatch(setAccessToken(accessToken));
 });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(

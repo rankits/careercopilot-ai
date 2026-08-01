@@ -1,21 +1,21 @@
-import amqplib, { Channel, ChannelModel, ConsumeMessage } from "amqplib";
+import amqplib, { ChannelModel, ConfirmChannel, ConsumeMessage } from 'amqplib';
 import {
   IMessageBusDriver,
   MessageHandler,
   MessageEnvelope,
   PublishOptions,
   SubscribeOptions,
-} from "@/infrastructure/messaging/messaging.interface.js";
-import { QoSPresets } from "@/infrastructure/messaging/messaging.topology.js";
+} from '@/infrastructure/messaging/messaging.interface.js';
+import { QoSPresets } from '@/infrastructure/messaging/messaging.topology.js';
 
 export class RabbitMQBusDriver implements IMessageBusDriver {
   private connection: ChannelModel | null = null;
-  private channel: Channel | null = null;
+  private channel: ConfirmChannel | null = null;
   private url: string;
   private isConnecting = false;
 
   constructor(url?: string) {
-    this.url = url || process.env.RABBITMQ_URL || "amqp://localhost:5672";
+    this.url = url || process.env.RABBITMQ_URL || 'amqp://localhost:5672';
   }
 
   async connect(): Promise<void> {
@@ -30,15 +30,15 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
     this.isConnecting = true;
     try {
       this.connection = await amqplib.connect(this.url);
-      this.channel = await this.connection.createChannel();
+      this.channel = await this.connection.createConfirmChannel();
 
-      this.connection.on("error", (err: Error) => {
-        console.error("[RabbitMQ] Connection error:", err.message);
+      this.connection.on('error', (err: Error) => {
+        console.error('[RabbitMQ] Connection error:', err.message);
         this.connection = null;
         this.channel = null;
       });
 
-      this.connection.on("close", () => {
+      this.connection.on('close', () => {
         this.connection = null;
         this.channel = null;
       });
@@ -50,12 +50,12 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
     }
   }
 
-  private async getChannel(): Promise<Channel> {
+  private async getChannel(): Promise<ConfirmChannel> {
     if (!this.channel) {
       await this.connect();
     }
     if (!this.channel) {
-      throw new Error("Failed to initialize RabbitMQ channel");
+      throw new Error('Failed to initialize RabbitMQ channel');
     }
     return this.channel;
   }
@@ -64,61 +64,63 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
     exchange: string,
     routingKey: string,
     message: T,
-    options?: PublishOptions
+    options?: PublishOptions,
   ): Promise<boolean> {
     try {
       const channel = await this.getChannel();
 
-      await channel.assertExchange(exchange, "topic", {
+      await channel.assertExchange(exchange, 'topic', {
         durable: true,
       });
 
       const buffer = Buffer.from(JSON.stringify(message));
       const persistent = options?.persistent ?? true;
 
-      return channel.publish(exchange, routingKey, buffer, {
+      channel.publish(exchange, routingKey, buffer, {
         persistent,
         headers: options?.headers,
         priority: options?.priority,
         expiration: options?.expiration ? String(options.expiration) : undefined,
+        messageId: options?.messageId,
+        timestamp: options?.timestamp,
       });
+      await channel.waitForConfirms();
+      return true;
     } catch {
       return false;
     }
   }
 
-  async subscribe<T>(
+  private async assertQueue(
     queue: string,
     exchange: string,
     routingKey: string,
-    handler: MessageHandler<T>,
-    options?: SubscribeOptions
-  ): Promise<void> {
+    options?: SubscribeOptions,
+  ): Promise<{ channel: ConfirmChannel; config: SubscribeOptions }> {
     const channel = await this.getChannel();
     const config = { ...QoSPresets.DEFAULT, ...options };
 
-    await channel.prefetch(config.prefetch || 10);
-    await channel.assertExchange(exchange, "topic", { durable: true });
+    await channel.assertExchange(exchange, 'topic', { durable: true });
 
     const queueArguments: Record<string, unknown> = {};
 
     if (config.quorum) {
-      queueArguments["x-queue-type"] = "quorum";
+      queueArguments['x-queue-type'] = 'quorum';
     }
 
     if (config.dlq) {
       const dlxName = `${queue}.dlx`;
       const dlqName = `${queue}.dlq`;
 
-      await channel.assertExchange(dlxName, "direct", { durable: true });
+      await channel.assertExchange(dlxName, 'direct', { durable: true });
       await channel.assertQueue(dlqName, {
         durable: true,
-        arguments: config.quorum ? { "x-queue-type": "quorum" } : undefined,
+        arguments: config.quorum ? { 'x-queue-type': 'quorum' } : undefined,
       });
       await channel.bindQueue(dlqName, dlxName, dlqName);
 
-      queueArguments["x-dead-letter-exchange"] = dlxName;
-      queueArguments["x-dead-letter-routing-key"] = dlqName;
+      queueArguments['x-dead-letter-exchange'] = dlxName;
+      queueArguments['x-dead-letter-routing-key'] = dlqName;
     }
 
     await channel.assertQueue(queue, {
@@ -126,6 +128,27 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
       arguments: Object.keys(queueArguments).length > 0 ? queueArguments : undefined,
     });
     await channel.bindQueue(queue, exchange, routingKey);
+    return { channel, config };
+  }
+
+  async ensureQueue(
+    queue: string,
+    exchange: string,
+    routingKey: string,
+    options?: SubscribeOptions,
+  ): Promise<void> {
+    await this.assertQueue(queue, exchange, routingKey, options);
+  }
+
+  async subscribe<T>(
+    queue: string,
+    exchange: string,
+    routingKey: string,
+    handler: MessageHandler<T>,
+    options?: SubscribeOptions,
+  ): Promise<void> {
+    const { channel, config } = await this.assertQueue(queue, exchange, routingKey, options);
+    await channel.prefetch(config.prefetch || 10);
 
     await channel.consume(
       queue,
@@ -133,12 +156,12 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
         if (!msg) return;
 
         const attempt =
-          typeof msg.properties.headers?.["x-attempt"] === "number"
-            ? (msg.properties.headers["x-attempt"] as number)
+          typeof msg.properties.headers?.['x-attempt'] === 'number'
+            ? (msg.properties.headers['x-attempt'] as number)
             : 1;
 
         try {
-          const payload = JSON.parse(msg.content.toString("utf8")) as T;
+          const payload = JSON.parse(msg.content.toString('utf8')) as T;
           const envelope: MessageEnvelope<T> = {
             id: msg.properties.messageId || `${Date.now()}`,
             timestamp: msg.properties.timestamp
@@ -165,18 +188,13 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
             setTimeout(async () => {
               try {
                 const retryChannel = await this.getChannel();
-                retryChannel.publish(
-                  exchange,
-                  routingKey,
-                  msg.content,
-                  {
-                    ...msg.properties,
-                    headers: {
-                      ...msg.properties.headers,
-                      "x-attempt": nextAttempt,
-                    },
-                  }
-                );
+                retryChannel.publish(exchange, routingKey, msg.content, {
+                  ...msg.properties,
+                  headers: {
+                    ...msg.properties.headers,
+                    'x-attempt': nextAttempt,
+                  },
+                });
               } catch {
                 // Ignore transient requeue error
               }
@@ -186,7 +204,7 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
           }
         }
       },
-      { noAck: config.autoAck ?? false }
+      { noAck: config.autoAck ?? false },
     );
   }
 
