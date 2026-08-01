@@ -10,6 +10,7 @@ import { RemoteJobsOrgProvider } from '@/modules/jobs/providers/remotejobs-org/p
 import { RemoteOkJobProvider } from '@/modules/jobs/providers/remoteok/provider.js';
 import { LeverJobProvider } from '@/modules/jobs/providers/lever/provider.js';
 import { AshbyJobProvider } from '@/modules/jobs/providers/ashby/provider.js';
+import { RecruiteeJobProvider } from '@/modules/jobs/providers/recruitee/provider.js';
 import { JobsService } from '@/modules/jobs/services/jobs.service.js';
 import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
@@ -90,7 +91,13 @@ const ashbyProvider = new AshbyJobProvider({
 });
 
 jobProviderRegistry.register(leverProvider);
+const recruiteeProvider = new RecruiteeJobProvider({
+  companies: [{ subdomain: 'olx', companyName: 'OLX' }],
+  tier: ProviderTier.PUBLIC,
+});
+
 jobProviderRegistry.register(ashbyProvider);
+jobProviderRegistry.register(recruiteeProvider);
 
 jobsLogger.info(
   {
