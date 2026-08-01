@@ -177,8 +177,23 @@ describe('POST /auth/login', () => {
 
         expect(res.status).toBe(200);
         expect(res.body.data.user.email).toBe(user.email);
+        expect(res.body.data.user.isProfileCreated).toBe(false);
         expect(res.body.accessToken).toEqual(expect.any(String));
         expect(extractCookie(res.headers['set-cookie'], REFRESH_COOKIE)).toBeDefined();
+      });
+
+      it('Then isProfileCreated is true when the user flag is set', async () => {
+        const user = await seedVerifiedUser({
+          email: 'login-with-profile@example.com',
+          isProfileCreated: true,
+        });
+
+        const res = await request(app)
+          .post(`${API}/login`)
+          .send({ email: user.email, password: VALID_PASSWORD });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.user.isProfileCreated).toBe(true);
       });
     });
 

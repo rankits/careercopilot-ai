@@ -72,4 +72,38 @@ describe('resumeService', () => {
       .mockResolvedValueOnce({ data: { data: { extractedData: null } } });
     await expect(resumeService.parse(file)).rejects.toThrow('empty response');
   });
+
+  it('reports profile completion status and treats missing profiles as incomplete', async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        data: {
+          confirmedAt: '2026-07-31T00:00:00.000Z',
+          isComplete: true,
+          sourceResumeId: 'resume-1',
+          userId: 'user-1',
+        },
+      },
+    });
+
+    await expect(resumeService.getProfileStatus('user-1')).resolves.toEqual({
+      confirmedAt: '2026-07-31T00:00:00.000Z',
+      isComplete: true,
+      sourceResumeId: 'resume-1',
+      userId: 'user-1',
+    });
+    expect(getMock).toHaveBeenCalledWith('/resumes/profiles/user-1');
+
+    const missingProfileError = Object.assign(new Error('Not found'), {
+      isAxiosError: true,
+      response: { status: 404 },
+    });
+    getMock.mockRejectedValueOnce(missingProfileError);
+
+    await expect(resumeService.getProfileStatus('user-2')).resolves.toEqual({
+      confirmedAt: null,
+      isComplete: false,
+      sourceResumeId: null,
+      userId: 'user-2',
+    });
+  });
 });

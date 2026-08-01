@@ -12,6 +12,7 @@ import { prisma } from '@/shared/config/db.conf.js';
 import {
   OnboardingProfilePayload,
   ParsedResumeData,
+  UpdateCandidateProfileInput,
 } from '@/modules/resumes/types/resume.types.js';
 import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
 
@@ -184,6 +185,26 @@ export const resumeRepository = {
         extractedData: input.extractedData as unknown as Prisma.InputJsonValue,
         parserVersion: input.parserVersion,
         confidenceScore: input.confidenceScore,
+      },
+    });
+  },
+
+  findCandidateProfileByUserId(userId: string): Promise<CandidateProfile | null> {
+    return prisma.candidateProfile.findUnique({ where: { userId } });
+  },
+
+  updateCandidateProfile(
+    userId: string,
+    data: UpdateCandidateProfileInput,
+  ): Promise<CandidateProfile> {
+    return prisma.candidateProfile.update({
+      where: { userId },
+      data: {
+        personalDetails: data.personalDetails as Prisma.InputJsonValue | undefined,
+        experience: data.experience as Prisma.InputJsonValue | undefined,
+        education: data.education as Prisma.InputJsonValue | undefined,
+        skills: data.skills as Prisma.InputJsonValue | undefined,
+        certifications: data.certifications as Prisma.InputJsonValue | undefined,
       },
     });
   },

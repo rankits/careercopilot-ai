@@ -1,11 +1,12 @@
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAppDispatch } from '@/hooks/redux';
 
 import { ROUTES } from '@/constants/routes';
 import { login } from '@/features/auth/authSlice';
 import type { LoginPayload } from '@/features/auth/types/auth.types';
+import { getPostAuthRoute } from '@/features/auth/utils/getPostAuthRoute';
 
 export interface LoginFormValues extends LoginPayload {
   rememberMe: boolean;
@@ -14,11 +15,21 @@ export interface LoginFormValues extends LoginPayload {
 export function useLogin() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const loginMutation = useMutation({
     mutationFn: (payload: LoginPayload) => dispatch(login(payload)).unwrap(),
     mutationKey: ['auth', 'login'],
-    onSuccess: () => {
-      void navigate(ROUTES.PROFILE, { replace: true });
+    onSuccess: ({ user }) => {
+      const returnTo =
+        (location.state as { from?: string } | null)?.from ??
+        new URLSearchParams(location.search).get('returnTo');
+
+      if (returnTo) {
+        void navigate(returnTo, { replace: true });
+        return;
+      }
+
+      void navigate(getPostAuthRoute(user.isProfileCreated === true), { replace: true });
     },
   });
 

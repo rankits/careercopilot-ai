@@ -57,3 +57,22 @@ export interface ConfirmProfileInput {
   resumeId: string;
   userId: string;
 }
+
+export interface CandidateProfileData {
+  certifications: Record<string, unknown>[];
+  education: Record<string, unknown>[];
+  experience: Record<string, unknown>[];
+  isComplete: boolean;
+  personalDetails: Record<string, unknown>;
+  skills: string[];
+  sourceResumeId: string | null;
+  userId: string;
+}
+
+export interface UpdateCandidateProfilePayload {
+  certifications?: Record<string, unknown>[];
+  education?: Record<string, unknown>[];
+  experience?: Record<string, unknown>[];
+  personalDetails?: Record<string, unknown>;
+  skills?: string[];
+}

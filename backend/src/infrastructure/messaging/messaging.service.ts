@@ -4,8 +4,8 @@ import {
   MessageHandler,
   PublishOptions,
   SubscribeOptions,
-} from "@/infrastructure/messaging/messaging.interface.js";
-import { RabbitMQBusDriver } from "@/infrastructure/messaging/drivers/rabbitmq.driver.js";
+} from '@/infrastructure/messaging/messaging.interface.js';
+import { RabbitMQBusDriver } from '@/infrastructure/messaging/drivers/rabbitmq.driver.js';
 
 export class MessageBusService implements IMessageBus {
   private driver: IMessageBusDriver;
@@ -22,7 +22,7 @@ export class MessageBusService implements IMessageBus {
     exchange: string,
     routingKey: string,
     message: T,
-    options?: PublishOptions
+    options?: PublishOptions,
   ): Promise<boolean> {
     return this.driver.publish(exchange, routingKey, message, options);
   }
@@ -32,9 +32,18 @@ export class MessageBusService implements IMessageBus {
     exchange: string,
     routingKey: string,
     handler: MessageHandler<T>,
-    options?: SubscribeOptions
+    options?: SubscribeOptions,
   ): Promise<void> {
     return this.driver.subscribe(queue, exchange, routingKey, handler, options);
+  }
+
+  async ensureQueue(
+    queue: string,
+    exchange: string,
+    routingKey: string,
+    options?: SubscribeOptions,
+  ): Promise<void> {
+    return this.driver.ensureQueue(queue, exchange, routingKey, options);
   }
 
   async close(): Promise<void> {
@@ -45,7 +54,7 @@ export class MessageBusService implements IMessageBus {
     exchange: string,
     routingKey: string,
     payload: T,
-    options?: PublishOptions
+    options?: PublishOptions,
   ): Promise<boolean> {
     return this.publish(exchange, routingKey, payload, options);
   }

@@ -11,7 +11,7 @@ import {
   RESUME_PERMISSIONS,
   ROLE_PERMISSION_MAP,
   USER_PERMISSIONS,
-} from '../permission.catalog.js';
+} from '@/shared/rbac/permission.catalog.js';
 
 describe('permission catalog constants', () => {
   it('exposes module-scoped permission constants for each permission key', () => {
@@ -36,7 +36,9 @@ describe('permission catalog constants', () => {
     expect(JOBS_PERMISSIONS.DELETE).toBe('jobs.delete');
     expect(CAREER_PERMISSIONS.READ_OWN).toBe('career.read.own');
     expect(CAREER_PERMISSIONS.UPDATE_OWN).toBe('career.update.own');
+    expect(RECOMMENDATIONS_PERMISSIONS.CREATE_OWN).toBe('recommendations.create.own');
     expect(RECOMMENDATIONS_PERMISSIONS.READ_OWN).toBe('recommendations.read.own');
+    expect(RECOMMENDATIONS_PERMISSIONS.UPDATE_OWN).toBe('recommendations.update.own');
     expect(NOTIFICATIONS_PERMISSIONS.READ_OWN).toBe('notifications.read.own');
     expect(NOTIFICATIONS_PERMISSIONS.UPDATE_OWN).toBe('notifications.update.own');
     expect(NOTIFICATIONS_PERMISSIONS.DELETE_OWN).toBe('notifications.delete.own');
@@ -48,7 +50,9 @@ describe('permission catalog constants', () => {
   it('uses the shared constants in the role permission map', () => {
     expect(ROLE_PERMISSION_MAP.USER).toContain(USER_PERMISSIONS.READ_PROFILE_OWN);
     expect(ROLE_PERMISSION_MAP.ADMIN).toContain(ADMIN_PERMISSIONS.MANAGE_SYSTEM);
-    expect(PERMISSIONS.some((permission) => permission.key === AUTH_PERMISSIONS.READ_SESSION_OWN)).toBe(true);
+    expect(
+      PERMISSIONS.some((permission) => permission.key === AUTH_PERMISSIONS.READ_SESSION_OWN),
+    ).toBe(true);
   });
 
   it('applies the critical admin and user RBAC edge cases', () => {
@@ -67,7 +71,7 @@ describe('permission catalog constants', () => {
 
   it('seeds one permission catalog entry per module group and one record per permission definition', () => {
     const moduleCount = new Set(PERMISSIONS.map((permission) => permission.resource)).size;
-    expect(moduleCount).toBe(10);
-    expect(PERMISSIONS).toHaveLength(31);
+    expect(moduleCount).toBe(11);
+    expect(PERMISSIONS).toHaveLength(41);
   });
 });

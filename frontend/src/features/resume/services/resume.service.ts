@@ -1,11 +1,13 @@
 import axios from 'axios';
 
 import type {
+  CandidateProfileData,
   ConfirmProfileInput,
   ResumeParseCallbacks,
   ResumeParseProgress,
   ResumeParseStatus,
   ResumeProcessingStatus,
+  UpdateCandidateProfilePayload,
 } from '@/features/resume/types/resume.types';
 import { httpClient } from '@/services/httpClient';
 
@@ -70,6 +72,30 @@ const parseStatus = (value: Record<string, unknown> | null): ResumeParseProgress
 
 const resolveCallbacks = (callbacks?: ResumeParseCallbacks | (() => void)): ResumeParseCallbacks =>
   typeof callbacks === 'function' ? { onParsing: callbacks } : (callbacks ?? {});
+
+export interface CandidateProfileStatus {
+  confirmedAt: string | null;
+  isComplete: boolean;
+  sourceResumeId: string | null;
+  userId: string;
+}
+
+const toStringArray = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
+
+const toRecordArray = (value: unknown): Record<string, unknown>[] =>
+  Array.isArray(value) ? value.filter(isRecord) : [];
+
+const toCandidateProfileData = (data: Record<string, unknown>): CandidateProfileData => ({
+  certifications: toRecordArray(data.certifications),
+  education: toRecordArray(data.education),
+  experience: toRecordArray(data.experience),
+  isComplete: data.isComplete === true,
+  personalDetails: isRecord(data.personalDetails) ? data.personalDetails : {},
+  skills: toStringArray(data.skills),
+  sourceResumeId: typeof data.sourceResumeId === 'string' ? data.sourceResumeId : null,
+  userId: typeof data.userId === 'string' ? data.userId : '',
+});
 
 export const resumeService = {
   async parse(
@@ -149,15 +175,74 @@ export const resumeService = {
     }
   },
 
-  async confirmProfile({
-    resumeId,
-    userId,
-  }: ConfirmProfileInput): Promise<Record<string, unknown>> {
+  async getProfileStatus(userId: string): Promise<CandidateProfileStatus> {
     try {
-      const response = await httpClient.post(`/resumes/profiles/${userId}/confirm`, { resumeId });
+      const response = await httpClient.get(`/resumes/profiles/${userId}`);
       const data = responseData(response);
-      if (!data) throw new Error('Profile confirmation returned an invalid response.');
-      return data;
+      if (!data || typeof data.userId !== 'string') {
+        throw new Error('Profile status returned an invalid response.');
+      }
+
+      return {
+        confirmedAt: typeof data.confirmedAt === 'string' ? data.confirmedAt : null,
+        isComplete: data.isComplete === true || Boolean(data.confirmedAt),
+        sourceResumeId: typeof data.sourceResumeId === 'string' ? data.sourceResumeId : null,
+        userId: data.userId,
+      };
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        return {
+          confirmedAt: null,
+          isComplete: false,
+          sourceResumeId: null,
+          userId,
+        };
+      }
+      throw normalizeError(error);
+    }
+  },
+
+  async confirmProfile({ resumeId, userId }: ConfirmProfileInput): Promise<{ message: string }> {
+    try {
+      const response = await httpClient.post<{ message?: string }>(`/resumes/profile/${userId}`, {
+        resumeId,
+      });
+      return {
+        message:
+          typeof response.data.message === 'string' && response.data.message.length > 0
+            ? response.data.message
+            : 'Profile created successfully',
+      };
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  async getMyProfile(): Promise<CandidateProfileData | null> {
+    try {
+      const response = await httpClient.get('/resumes/profile/me');
+      const data = responseData(response);
+      return data ? toCandidateProfileData(data) : null;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) return null;
+      throw normalizeError(error);
+    }
+  },
+
+  async updateProfile(
+    payload: UpdateCandidateProfilePayload,
+  ): Promise<{ message: string; profile: CandidateProfileData }> {
+    try {
+      const response = await httpClient.patch<{ message?: string }>('/resumes/profile/me', payload);
+      const data = responseData(response);
+      if (!data) throw new Error('Profile update returned an invalid response.');
+      return {
+        message:
+          typeof response.data.message === 'string' && response.data.message.length > 0
+            ? response.data.message
+            : 'Profile updated successfully',
+        profile: toCandidateProfileData(data),
+      };
     } catch (error) {
       throw normalizeError(error);
     }

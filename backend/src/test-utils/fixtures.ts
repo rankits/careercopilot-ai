@@ -1,5 +1,6 @@
 import { Status } from '@prisma/client';
-import type { FakeAdmin, FakeUser } from '@/test-utils/fake-prisma.js';
+import { randomUUID } from 'crypto';
+import type { FakeAdmin, FakeCandidateProfile, FakeUser } from '@/test-utils/fake-prisma.js';
 import { fakeDb } from '@/test-utils/prisma-mock.js';
 import { PasswordUtil } from '@/shared/security/password.util.js';
 import { signAccessToken } from '@/shared/security/jwt.util.js';
@@ -50,6 +51,27 @@ export const seedAdmin = async (
 
 /** Mints a real, verifiable access token for a seeded user - lets tests jump
  * straight to an authenticated state without re-exercising /login each time. */
+export const seedCandidateProfile = (
+  overrides: Partial<FakeCandidateProfile> & { userId: string },
+): FakeCandidateProfile => {
+  const now = new Date();
+  const profile: FakeCandidateProfile = {
+    id: randomUUID(),
+    personalDetails: {},
+    experience: [],
+    education: [],
+    skills: [],
+    certifications: [],
+    sourceResumeId: null,
+    confirmedAt: now,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+  fakeDb.candidateProfiles.push(profile);
+  return profile;
+};
+
 export const accessTokenForUser = (user: FakeUser): string =>
   signAccessToken({
     sub: user.id,
