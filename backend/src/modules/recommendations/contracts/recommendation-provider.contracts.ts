@@ -21,6 +21,9 @@ export interface CandidateRetrievalResult {
   totalCandidates?: number;
   /** Cosine similarity (or equivalent) keyed by job id when the backend provides one. */
   retrievalScores?: Readonly<Record<string, number>>;
+  metadata?: {
+    embeddingCacheHit?: boolean;
+  };
 }
 
 export interface CandidateRetrievalProvider {
