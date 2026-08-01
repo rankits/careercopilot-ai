@@ -6,7 +6,6 @@
 // uniformly across principal types.
 //
 // Internal primary keys are sequential integers (fast joins/indexes);
-// every principal additionally has a `publicId` (opaque UUID) which is
 // the ONLY identifier ever exposed externally (JWT `sub`, API responses,
 // route params) - this avoids enumeration of sequential ids while keeping
 // internal query performance.
@@ -116,8 +115,6 @@ model RolePermission {
 
 model Admin {
   id       Int    @id @default(autoincrement())
-  /// Opaque external identifier - the only id ever exposed via API/JWT.
-  publicId String @unique @default(uuid()) @map("public_id")
 
   firstName    String  @map("first_name")
   lastName     String  @map("last_name")
@@ -197,7 +194,6 @@ model AdminSession {
 
 model User {
   id       Int    @id @default(autoincrement())
-  publicId String @unique @default(uuid()) @map("public_id")
 
   firstName    String  @map("first_name")
   lastName     String  @map("last_name")

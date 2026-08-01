@@ -11,8 +11,8 @@ import { jwtConfig } from '@/shared/config/jwt.conf.js';
 export type PrincipalType = 'ADMIN' | 'USER';
 
 export interface AccessTokenPayload {
-  /** The principal's `publicId` - never the internal sequential db id. */
-  sub: string;
+  /** The principal's internal sequential db id. */
+  sub: number;
   principalType: PrincipalType;
   email: string;
   role: string;

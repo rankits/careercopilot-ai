@@ -10,7 +10,7 @@ import {
 import { listUsersQuerySchema } from '@/modules/user/validations/user.schema.js';
 import type { RequestContext } from '@/modules/user/types/user.types.js';
 
-const requirePrincipalId = (req: Request): string => {
+const requirePrincipalId = (req: Request): number => {
   if (!req.user) throw new AppError('Authentication required', 401);
   return req.user.principalId;
 };
