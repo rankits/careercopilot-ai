@@ -40,6 +40,7 @@ export interface MatchTypeClassifier {
 }
 
 export class RecommendationScoringEngine {
+  /** Heuristic calculator `reasons` are the persisted explanation source of truth. */
   private readonly calculators: ReadonlyMap<
     RecommendationScoreComponentName,
     RecommendationScoreCalculator

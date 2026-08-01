@@ -110,7 +110,6 @@ export * from '@/modules/recommendations/scoring/calculators/heuristic-score.cal
 export * from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 export * from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
 export * from '@/modules/recommendations/services/recommendation-context.service.js';
-export * from '@/modules/recommendations/services/recommendation-explanation.service.js';
 export * from '@/modules/recommendations/services/recommendation-feedback.service.js';
 export * from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 export * from '@/modules/recommendations/services/recommendation-scoring.service.js';
