@@ -30,12 +30,10 @@ export function parseAppliedAtDate(appliedAt: string): Date {
 }
 
 export function resolveAppliedAt(
-  appliedAt: string | undefined,
+  appliedAt: unknown,
   currentStatus: ApplicationStatus | undefined,
 ): Date | null {
-  console.log('appliedAt', appliedAt);
-  const normalized = appliedAt?.trim();
-  console.log('normalized', normalized);
+  const normalized = typeof appliedAt === 'string' ? appliedAt.trim() : '';
   if (normalized) {
     return parseAppliedAtDate(normalized);
   }

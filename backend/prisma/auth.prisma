@@ -5,10 +5,8 @@
 // Permission RBAC engine so `shared/middlewares/rbac.middleware.ts` works
 // uniformly across principal types.
 //
-// Internal primary keys are sequential integers (fast joins/indexes);
-// the ONLY identifier ever exposed externally (JWT `sub`, API responses,
-// route params) - this avoids enumeration of sequential ids while keeping
-// internal query performance.
+// Primary keys are sequential integers and are also used as JWT `sub`
+// (principalId). There is no separate public UUID column on Admin/User.
 
 // -----------------------------------------------------------------------
 // Enums

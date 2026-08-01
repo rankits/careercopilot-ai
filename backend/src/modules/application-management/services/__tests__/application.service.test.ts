@@ -124,7 +124,9 @@ describe('ApplicationManagementService', () => {
     });
 
     const callArgs = vi.mocked(mockRepo.create).mock.calls[0][0];
-    expect(callArgs.appliedAt?.toISOString()).toBe('2025-05-08T00:00:00.000Z');
+    expect(new Date(callArgs.appliedAt as string | Date).toISOString()).toBe(
+      '2025-05-08T00:00:00.000Z',
+    );
     expect(callArgs.currentStatus).toBe(ApplicationStatus.SAVED);
   });
 
