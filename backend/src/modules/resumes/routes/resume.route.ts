@@ -27,7 +27,13 @@ import {
 
 const router = express.Router();
 
-router.post('/upload', resumeUploadMiddleware, uploadResumeController);
+router.post(
+  '/upload',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.CREATE_OWN),
+  resumeUploadMiddleware,
+  uploadResumeController,
+);
 router.get(
   '/profile/me',
   authMiddleware,
@@ -43,27 +49,59 @@ router.patch(
 );
 router.get(
   '/profiles/:userId',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.READ_OWN),
   validateResource(candidateProfileParamsSchema),
   getCandidateProfileController,
 );
-router.get('/:resumeId/status', validateResource(resumeIdParamsSchema), getResumeStatusController);
+router.get(
+  '/:resumeId/status',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.READ_OWN),
+  validateResource(resumeIdParamsSchema),
+  getResumeStatusController,
+);
 router.get(
   '/:resumeId/parsed-data',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.READ_OWN),
   validateResource(resumeIdParamsSchema),
   getParsedDataController,
 );
-router.get('/:resumeId/parsed', validateResource(resumeIdParamsSchema), getParsedDataController);
+router.get(
+  '/:resumeId/parsed',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.READ_OWN),
+  validateResource(resumeIdParamsSchema),
+  getParsedDataController,
+);
 router.get(
   '/:resumeId/parse-status',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.READ_OWN),
   validateResource(resumeParseActionParamsSchema),
   getParseStatusController,
 );
 router.post(
   '/:resumeId/parse',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.UPDATE_OWN),
   validateResource(resumeParseActionParamsSchema),
   startParseController,
 );
-router.post('/:resumeId/reparse', validateResource(resumeReparseSchema), reparseResumeController);
-router.post('/profile/:userId', validateResource(confirmProfileSchema), confirmProfileController);
+router.post(
+  '/:resumeId/reparse',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.UPDATE_OWN),
+  validateResource(resumeReparseSchema),
+  reparseResumeController,
+);
+router.post(
+  '/profile/:userId',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.CREATE_OWN),
+  validateResource(confirmProfileSchema),
+  confirmProfileController,
+);
 
 export default router;
