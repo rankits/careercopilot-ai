@@ -32,26 +32,11 @@ import {
 const router = express.Router();
 
 // --- Registration ---
-router.post(
-  '/register',
-  // authRateLimiter,
-  validateResource(registerSchema),
-  registerController,
-);
-router.post(
-  '/otp/resend',
-  //  otpRateLimiter,
-  validateResource(resendOtpSchema),
-  resendOtpController,
-);
+router.post('/register', authRateLimiter, validateResource(registerSchema), registerController);
+router.post('/otp/resend', otpRateLimiter, validateResource(resendOtpSchema), resendOtpController);
 
 // --- Login (password & OTP) ---
-router.post(
-  '/login',
-  // authRateLimiter,
-  validateResource(loginSchema),
-  loginController,
-);
+router.post('/login', authRateLimiter, validateResource(loginSchema), loginController);
 router.post(
   '/login/otp/request',
   otpRateLimiter,
@@ -68,13 +53,13 @@ router.post(
 // --- Forgot / reset password ---
 router.post(
   '/forgot-password',
-  // otpRateLimiter,
+  otpRateLimiter,
   validateResource(forgotPasswordSchema),
   forgotPasswordController,
 );
 router.post(
   '/reset-password',
-  // authRateLimiter,
+  authRateLimiter,
   validateResource(resetPasswordSchema),
   resetPasswordController,
 );
@@ -82,7 +67,7 @@ router.post(
 // --- Session lifecycle ---
 router.post(
   '/refresh-token',
-  // authRateLimiter,
+  authRateLimiter,
   validateResource(refreshTokenSchema),
   refreshController,
 );
