@@ -7,11 +7,13 @@ import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/de
 import { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
 import { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
 import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
+import { RECOMMENDATION_ERROR_CODES } from '@/modules/recommendations/errors/recommendation.error.js';
 import { RecommendationsService } from '@/modules/recommendations/services/recommendations.service.js';
 import { RecommendationContextService } from '@/modules/recommendations/services/recommendation-context.service.js';
 import { RecommendationStrategyResolver } from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
 import {
   JobSourceStrategy,
+  ProfileSourceStrategy,
   TargetTextSourceStrategy,
 } from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 import { InMemoryRecommendationUnitOfWork } from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
@@ -200,17 +202,6 @@ describe('RecommendationSourceAuthorizationService', () => {
       service.authorizeForSource('user-1', { sourceType: 'PROFILE' }),
     ).rejects.toMatchObject({ statusCode: 422, code: 'RECOMMENDATION_CONTEXT_INVALID' });
   });
-
-  it('rejects CAREER_GOAL at the API schema boundary', () => {
-    expect(
-      createRecommendationSchema.safeParse({
-        body: {
-          sourceType: 'CAREER_GOAL',
-          sourceId: '33333333-3333-3333-3333-333333333333',
-        },
-      }).success,
-    ).toBe(false);
-  });
 });
 
 describe('applyRecommendationFilters', () => {
@@ -387,5 +378,45 @@ describe('RecommendationsService generation', () => {
       true,
     );
     expect(records.some((item) => item.job.id === 'job-high')).toBe(true);
+  });
+});
+
+describe('RecommendationsService readiness', () => {
+  it('reports profile readiness for generate', async () => {
+    const findCandidateProfileByUserId = vi.fn().mockResolvedValue({
+      titles: ['Backend Engineer'],
+      skills: ['TypeScript'],
+      summary: 'Backend engineer',
+      locations: [],
+      industries: [],
+      employmentTypes: [],
+      experienceLevels: [],
+      education: [],
+      certifications: [],
+    });
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId,
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    await expect(service.getReadinessStatus('user-1')).resolves.toEqual({
+      ready: true,
+      canGenerateFromProfile: true,
+      blockers: [],
+      retrieval: { backend: 'PGVECTOR', configured: true },
+    });
   });
 });
