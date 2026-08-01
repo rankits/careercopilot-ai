@@ -81,7 +81,7 @@ beforeEach(() => {
 const expectListJobsCalledWith = (params: Record<string, unknown>) => {
   expect(listJobsMock).toHaveBeenCalledWith(
     expect.objectContaining(params),
-    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    expect.objectContaining({ signal: expect.any(AbortSignal) as AbortSignal }),
   );
 };
 

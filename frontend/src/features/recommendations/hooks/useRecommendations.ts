@@ -1,9 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
-import { recommendationsService } from '@/features/recommendations/services/recommendations.service';
-import type { ListRecommendationsParams } from '@/features/recommendations/types/recommendation.types';
 import { formatRecommendationScorePercent } from '@/features/jobs/utils/formatRecommendationScore';
 import { mapJobListDtoToCard } from '@/features/jobs/utils/mapJobToCard';
+import { recommendationsService } from '@/features/recommendations/services/recommendations.service';
+import type { ListRecommendationsParams } from '@/features/recommendations/types/recommendation.types';
 
 export const recommendationsQueryKey = (params: ListRecommendationsParams) =>
   ['recommendations', 'list', params] as const;

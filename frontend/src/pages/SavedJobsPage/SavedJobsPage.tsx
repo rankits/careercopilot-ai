@@ -2,11 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
-import { ROUTES } from '@/constants/routes';
-import {
-  applicationsService,
-} from '@/features/applications/services/applications.service';
+
 import { savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
+
+import { ROUTES } from '@/constants/routes';
+import { applicationsService } from '@/features/applications/services/applications.service';
 import { Box, CircularProgress, Typography } from '@/lib/material';
 
 export function SavedJobsPage() {

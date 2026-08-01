@@ -12,13 +12,11 @@ const { getJobMock } = vi.hoisted(() => ({
 }));
 
 vi.mock('@/features/jobs/services/jobs.service', async () => {
-  const actual = await vi.importActual<typeof import('@/features/jobs/services/jobs.service')>(
-    '@/features/jobs/services/jobs.service',
-  );
+  const actual = await vi.importActual('@/features/jobs/services/jobs.service');
   return {
-    ...actual,
+    ...(actual as object),
     jobsService: {
-      ...actual.jobsService,
+      ...(actual as { jobsService: object }).jobsService,
       getJob: getJobMock,
     },
   };
@@ -36,7 +34,7 @@ describe('useJobDetail', () => {
     getJobMock.mockReset();
   });
 
-  it('does not fetch when jobId is missing', async () => {
+  it('does not fetch when jobId is missing', () => {
     const { result } = renderHook(() => useJobDetail(undefined), { wrapper });
     expect(result.current.fetchStatus).toBe('idle');
     expect(getJobMock).not.toHaveBeenCalled();
@@ -65,7 +63,7 @@ describe('useJobDetail', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(getJobMock).toHaveBeenCalledWith(
       'job-1',
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) as AbortSignal }),
     );
     expect(result.current.data?.title).toBe('Backend Engineer');
   });

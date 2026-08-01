@@ -44,7 +44,8 @@ const job = (overrides: Partial<JobListDto> & { id: string }): JobListDto => ({
   salary: overrides.salary ?? { minimum: 130000, maximum: 160000, currency: 'USD' },
   skills: overrides.skills ?? ['TypeScript'],
   publishedAt: overrides.publishedAt ?? null,
-  });
+  applyUrl: null,
+});
 
 describe('buildRecommendationQueryText', () => {
   it('formats populated context fields into a retrieval document', () => {

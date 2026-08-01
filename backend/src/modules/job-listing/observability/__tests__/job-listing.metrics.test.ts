@@ -5,7 +5,7 @@ import {
   recordJobListingRequest,
   resetJobListingMetricsForTests,
   setJobListingMetricsSinkForTests,
-} from '../job-listing.metrics.js';
+} from '@/modules/job-listing/observability/job-listing.metrics.js';
 
 afterEach(() => {
   resetJobListingMetricsForTests();

@@ -57,7 +57,7 @@ describe('useJobFeed', () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(listJobsMock).toHaveBeenCalledWith(
       { page: 1, sortBy: 'newest' },
-      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+      expect.objectContaining({ signal: expect.any(AbortSignal) as AbortSignal }),
     );
     expect(result.current.data?.cards[0]).toMatchObject({
       id: 'job-1',
