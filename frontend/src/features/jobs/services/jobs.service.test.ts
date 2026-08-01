@@ -59,6 +59,7 @@ describe('jobsService.listJobs', () => {
     ).resolves.toEqual(listEnvelope.data.data);
 
     expect(getMock).toHaveBeenCalledWith('/jobs', {
+      signal: undefined,
       params: {
         page: 2,
         limit: 10,
@@ -68,6 +69,18 @@ describe('jobsService.listJobs', () => {
         minSalary: 50_000,
       },
     });
+  });
+
+  it('forwards AbortSignal so React Query can cancel superseded requests', async () => {
+    getMock.mockResolvedValue(listEnvelope);
+    const controller = new AbortController();
+
+    await jobsService.listJobs({ page: 1 }, { signal: controller.signal });
+
+    expect(getMock).toHaveBeenCalledWith(
+      '/jobs',
+      expect.objectContaining({ signal: controller.signal }),
+    );
   });
 
   it('rejects unexpected response shapes', async () => {
@@ -100,7 +113,7 @@ describe('jobsService.getJob', () => {
     getMock.mockResolvedValue({ data: { data: detail } });
 
     await expect(jobsService.getJob('job-1')).resolves.toEqual(detail);
-    expect(getMock).toHaveBeenCalledWith('/jobs/job-1');
+    expect(getMock).toHaveBeenCalledWith('/jobs/job-1', { signal: undefined });
   });
 
   it('maps 404 responses to JobNotFoundError', async () => {

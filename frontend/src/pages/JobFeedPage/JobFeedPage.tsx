@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
@@ -11,12 +11,15 @@ import {
   useJobFeedSearchParams,
 } from '@/features/jobs/hooks/useJobFeedSearchParams';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
+import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
 import { jobFilters, salaryBandToApiRange, salaryOptions, sortOptions } from '@/constants/pages/jobFeed';
 import { jobDetailPath } from '@/constants/routes';
 import { Box, Chip, CircularProgress, Typography } from '@/lib/material';
 
 import { jobFeedPageSx } from './styles';
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 function salaryStateFromUrl(min?: number, max?: number): string {
   if (max === 50_000 && min === undefined) return 'under-50k';
@@ -34,6 +37,20 @@ export function JobFeedPage() {
   const location = useLocation();
   const { state, listParams, patch, clearAll } = useJobFeedSearchParams();
   const [searchDraft, setSearchDraft] = useState(state.query);
+  const debouncedSearch = useDebouncedValue(searchDraft, SEARCH_DEBOUNCE_MS);
+  const isSearchPending = searchDraft.trim() !== state.query;
+
+  useEffect(() => {
+    setSearchDraft(state.query);
+  }, [state.query]);
+
+  useEffect(() => {
+    const nextQuery = debouncedSearch.trim();
+    // Ignore stale debounce ticks after the draft was cleared/changed again.
+    if (nextQuery !== searchDraft.trim()) return;
+    if (nextQuery === state.query) return;
+    patch({ query: nextQuery }, { resetPage: true });
+  }, [debouncedSearch, patch, searchDraft, state.query]);
 
   const { data, isPending, isError, error, refetch, isFetching } = useJobFeed(listParams);
 
@@ -115,6 +132,7 @@ export function JobFeedPage() {
           }
         />
         <Input
+          aria-busy={isSearchPending || undefined}
           aria-label="Search jobs"
           onChange={(event) => setSearchDraft(event.target.value)}
           onKeyDown={(event) => {
@@ -180,7 +198,7 @@ export function JobFeedPage() {
       {!isPending && !isError ? (
         <Typography aria-live="polite" sx={{ px: 0.5 }}>
           {totalItems} job{totalItems === 1 ? '' : 's'} found
-          {isFetching ? ' · Updating…' : ''}
+          {isSearchPending ? ' · Searching…' : isFetching ? ' · Updating…' : ''}
         </Typography>
       ) : null}
 

@@ -63,7 +63,10 @@ describe('useJobDetail', () => {
 
     const { result } = renderHook(() => useJobDetail('job-1'), { wrapper });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(getJobMock).toHaveBeenCalledWith('job-1');
+    expect(getJobMock).toHaveBeenCalledWith(
+      'job-1',
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
     expect(result.current.data?.title).toBe('Backend Engineer');
   });
 

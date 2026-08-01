@@ -9,7 +9,7 @@ export const jobFeedQueryKey = (params: ListJobsParams) => ['jobs', 'feed', para
 export function useJobFeed(params: ListJobsParams = {}) {
   return useQuery({
     queryKey: jobFeedQueryKey(params),
-    queryFn: () => jobsService.listJobs(params),
+    queryFn: ({ signal }) => jobsService.listJobs(params, { signal }),
     select: (result) => ({
       ...result,
       cards: result.items.map((job, index) => mapJobListDtoToCard(job, index)),

@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -70,14 +70,19 @@ beforeEach(() => {
   listJobsMock.mockResolvedValue(apiJobs);
 });
 
+const expectListJobsCalledWith = (params: Record<string, unknown>) => {
+  expect(listJobsMock).toHaveBeenCalledWith(
+    expect.objectContaining(params),
+    expect.objectContaining({ signal: expect.any(AbortSignal) }),
+  );
+};
+
 describe('JobFeedPage', () => {
   it('loads jobs from the API with URL-driven params', async () => {
     renderPage();
 
     expect(await screen.findByText(/microsoft/i)).toBeInTheDocument();
-    expect(listJobsMock).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 1, limit: 20, sortBy: 'newest' }),
-    );
+    expectListJobsCalledWith({ page: 1, limit: 20, sortBy: 'newest' });
     expect(screen.getByText(/2 jobs found/i)).toBeInTheDocument();
     const applyButtons = screen.getAllByRole('button', { name: /apply now/i });
     expect(applyButtons[0]).toBeEnabled();
@@ -92,9 +97,7 @@ describe('JobFeedPage', () => {
     await user.click(screen.getByRole('button', { name: /^remote$/i }));
 
     await waitFor(() => {
-      expect(listJobsMock).toHaveBeenCalledWith(
-        expect.objectContaining({ remoteTypes: 'REMOTE', page: 1 }),
-      );
+      expectListJobsCalledWith({ remoteTypes: 'REMOTE', page: 1 });
     });
   });
 
@@ -117,12 +120,10 @@ describe('JobFeedPage', () => {
     renderPage('/jobs-feed?workMode=remote&sortBy=salaryHighToLow');
     await screen.findByText(/microsoft/i);
 
-    expect(listJobsMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        remoteTypes: 'REMOTE',
-        sortBy: 'salaryHighToLow',
-      }),
-    );
+    expectListJobsCalledWith({
+      remoteTypes: 'REMOTE',
+      sortBy: 'salaryHighToLow',
+    });
   });
 
   it('shows active filter chips and clears all filters', async () => {
@@ -138,10 +139,20 @@ describe('JobFeedPage', () => {
     await user.click(screen.getByRole('button', { name: /clear all/i }));
 
     await waitFor(() => {
-      expect(listJobsMock).toHaveBeenCalledWith(
-        expect.objectContaining({ page: 1, sortBy: 'newest' }),
-      );
+      expectListJobsCalledWith({ page: 1, sortBy: 'newest' });
     });
     expect(screen.queryByLabelText(/active filters/i)).not.toBeInTheDocument();
+  });
+
+  it('shows a searching indicator while the draft query differs from the URL', async () => {
+    renderPage();
+    await screen.findByText(/microsoft/i);
+
+    fireEvent.change(screen.getByPlaceholderText(/search title, company/i), {
+      target: { value: 'go' },
+    });
+
+    expect(screen.getByText(/searching/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/search jobs/i)).toHaveAttribute('aria-busy', 'true');
   });
 });
