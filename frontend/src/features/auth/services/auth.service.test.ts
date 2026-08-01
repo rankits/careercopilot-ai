@@ -15,10 +15,18 @@ describe('authService register', () => {
     postMock.mockReset();
   });
 
-  it('posts registration credentials and returns the response body', async () => {
+  it('posts registration credentials and returns the normalized auth response', async () => {
     const response = {
       accessToken: 'token',
-      user: { email: 'ada@example.com', id: '1', name: 'Ada', role: 'user' as const },
+      data: {
+        user: {
+          email: 'ada@example.com',
+          firstName: 'Ada',
+          id: '1',
+          lastName: 'Lovelace',
+          role: 'USER' as const,
+        },
+      },
     };
     postMock.mockResolvedValue({ data: response });
 
@@ -30,7 +38,19 @@ describe('authService register', () => {
         password: 'password123',
         phone: '+919876543210',
       }),
-    ).resolves.toEqual(response);
+    ).resolves.toEqual({
+      accessToken: 'token',
+      accessTokenExpiresInSeconds: undefined,
+      user: {
+        email: 'ada@example.com',
+        firstName: 'Ada',
+        id: '1',
+        isProfileCreated: false,
+        lastName: 'Lovelace',
+        name: 'Ada Lovelace',
+        role: 'user',
+      },
+    });
 
     expect(postMock).toHaveBeenCalledWith('/auth/register', {
       email: 'ada@example.com',

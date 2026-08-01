@@ -12,7 +12,17 @@ import type { SidebarNavItem } from './interfaces';
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
   { href: ROUTES.DASHBOARD, icon: HomeOutlinedIcon, id: 'dashboard', label: 'Dashboard' },
   { href: ROUTES.JOB_FEED, icon: SearchOutlinedIcon, id: 'jobs-feed', label: 'Jobs Feed' },
-  { href: ROUTES.SAVED_JOBS, icon: BookmarkBorderOutlinedIcon, id: 'saved-jobs', label: 'Saved Jobs' },
+  {
+    href: ROUTES.SAVED_JOBS,
+    icon: BookmarkBorderOutlinedIcon,
+    id: 'saved-jobs',
+    label: 'Saved Jobs',
+  },
   { href: ROUTES.FOR_YOU, icon: TuneOutlinedIcon, id: 'for-you', label: 'For You' },
-  { icon: BusinessCenterOutlinedIcon, id: 'applications', label: 'Applications' },
+  {
+    href: ROUTES.APPLICATIONS,
+    icon: BusinessCenterOutlinedIcon,
+    id: 'applications',
+    label: 'Applications',
+  },
 ];

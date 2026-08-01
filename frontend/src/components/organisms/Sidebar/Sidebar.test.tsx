@@ -27,6 +27,10 @@ describe('Sidebar', () => {
       '/saved-jobs',
     );
     expect(screen.getByRole('link', { name: /for you/i })).toHaveAttribute('href', '/for-you');
+    expect(screen.getByRole('link', { name: /applications/i })).toHaveAttribute(
+      'href',
+      '/applications',
+    );
     expect(screen.getByRole('button', { name: /upload now/i })).toBeInTheDocument();
   });
 
@@ -73,8 +77,6 @@ describe('Sidebar', () => {
     renderSidebar(<Sidebar mobileMode="bottomNav" />);
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(4);
-    // Applications remains an inert button until its route ships.
-    expect(screen.getAllByRole('button')).toHaveLength(1);
+    expect(screen.getAllByRole('link')).toHaveLength(5);
   });
 });

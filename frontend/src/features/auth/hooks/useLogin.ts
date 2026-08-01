@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { useAppDispatch } from '@/hooks/redux';
 
@@ -15,10 +15,20 @@ export interface LoginFormValues extends LoginPayload {
 export function useLogin() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const location = useLocation();
   const loginMutation = useMutation({
     mutationFn: (payload: LoginPayload) => dispatch(login(payload)).unwrap(),
     mutationKey: ['auth', 'login'],
     onSuccess: ({ user }) => {
+      const returnTo =
+        (location.state as { from?: string } | null)?.from ??
+        new URLSearchParams(location.search).get('returnTo');
+
+      if (returnTo) {
+        void navigate(returnTo, { replace: true });
+        return;
+      }
+
       void navigate(getPostAuthRoute(user.isProfileCreated === true), { replace: true });
     },
   });

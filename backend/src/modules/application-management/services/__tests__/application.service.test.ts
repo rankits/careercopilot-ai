@@ -40,8 +40,8 @@ describe('ApplicationManagementService', () => {
     appliedAt: null,
     firstResponseAt: null,
     closedAt: null,
-    createdAt: new Date('2026-01-01'),
-    updatedAt: new Date('2026-01-01'),
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
     archivedAt: null,
   };
 
@@ -85,11 +85,16 @@ describe('ApplicationManagementService', () => {
         companyName: 'Acme Corp',
         currentStatus: ApplicationStatus.SAVED,
         priority: ApplicationPriority.MEDIUM,
-      })
+      }),
     ).rejects.toThrowError(
-      new AppError('You are already tracking an application for this job URL.', 409, 'APPLICATION_EXISTS', {
-        existingApplicationId: 'app-1',
-      })
+      new AppError(
+        'You are already tracking an application for this job URL.',
+        409,
+        'APPLICATION_EXISTS',
+        {
+          existingApplicationId: 'app-1',
+        },
+      ),
     );
   });
 
@@ -108,13 +113,40 @@ describe('ApplicationManagementService', () => {
     expect(callArgs.currentStatus).toBe(ApplicationStatus.APPLIED);
   });
 
+  it('creates MANUAL application with an explicit appliedAt date', async () => {
+    await service.createApplication('user-1', {
+      sourceType: 'MANUAL',
+      jobTitle: 'Senior Full Stack Engineer',
+      companyName: 'Acme Corp',
+      appliedAt: '2025-05-08',
+      currentStatus: ApplicationStatus.SAVED,
+      priority: ApplicationPriority.MEDIUM,
+    });
+
+    const callArgs = vi.mocked(mockRepo.create).mock.calls[0][0];
+    expect(new Date(callArgs.appliedAt as string | Date).toISOString()).toBe(
+      '2025-05-08T00:00:00.000Z',
+    );
+    expect(callArgs.currentStatus).toBe(ApplicationStatus.SAVED);
+  });
+
+  it('updates appliedAt when patching an application', async () => {
+    await service.updateApplication('user-1', 'app-1', {
+      appliedAt: '2025-05-08',
+    });
+
+    expect(mockRepo.update).toHaveBeenCalledWith('user-1', 'app-1', {
+      appliedAt: new Date('2025-05-08T00:00:00.000Z'),
+    });
+  });
+
   it('throws 404 AppError if application is not found during transitionStatus', async () => {
     vi.mocked(mockRepo.findById).mockResolvedValue(null);
 
     await expect(
       service.transitionStatus('user-1', 'non-existent-id', {
         toStatus: ApplicationStatus.INTERVIEW,
-      })
+      }),
     ).rejects.toThrowError(new AppError('Application not found', 404, 'APPLICATION_NOT_FOUND'));
   });
 

@@ -27,6 +27,10 @@ import {
   UpdateTaskInput,
 } from '@/modules/application-management/validations/application.validation.js';
 import { normalizeJobUrl } from '@/modules/application-management/utils/url-normalizer.js';
+import {
+  parseAppliedAtDate,
+  resolveAppliedAt,
+} from '@/modules/application-management/utils/applied-at.util.js';
 
 export class ApplicationManagementService implements IApplicationManagementService {
   constructor(private readonly repository: IApplicationRepository) {}
@@ -35,9 +39,14 @@ export class ApplicationManagementService implements IApplicationManagementServi
     if (input.sourceType === 'PLATFORM_JOB' || input.sourceType === 'PLATFORM_APPLY') {
       const existing = await this.repository.findByJobId(userId, input.jobId);
       if (existing) {
-        throw new AppError('You are already tracking this job opportunity.', 409, 'APPLICATION_EXISTS', {
-          existingApplicationId: existing.id,
-        });
+        throw new AppError(
+          'You are already tracking this job opportunity.',
+          409,
+          'APPLICATION_EXISTS',
+          {
+            existingApplicationId: existing.id,
+          },
+        );
       }
 
       const job = await prisma.job.findUnique({
@@ -49,7 +58,6 @@ export class ApplicationManagementService implements IApplicationManagementServi
         throw new AppError('The referenced job listing does not exist.', 404, 'JOB_NOT_FOUND');
       }
 
-      const isApplied = input.currentStatus === ApplicationStatus.APPLIED;
       const initialStatus = input.currentStatus || ApplicationStatus.SAVED;
 
       return this.repository.create(
@@ -72,7 +80,7 @@ export class ApplicationManagementService implements IApplicationManagementServi
               ? ApplicationSourceType.PLATFORM_APPLY
               : ApplicationSourceType.PLATFORM_JOB,
           priority: input.priority || ApplicationPriority.MEDIUM,
-          appliedAt: isApplied ? new Date() : null,
+          appliedAt: resolveAppliedAt(input.appliedAt, input.currentStatus),
         },
         {
           sourceType:
@@ -81,7 +89,9 @@ export class ApplicationManagementService implements IApplicationManagementServi
               : ApplicationSourceType.PLATFORM_JOB,
           externalId: job.id,
         },
-        input.sourceType === 'PLATFORM_APPLY' ? 'Applied via platform' : 'Tracked from platform job catalog'
+        input.sourceType === 'PLATFORM_APPLY'
+          ? 'Applied via platform'
+          : 'Tracked from platform job catalog',
       );
     }
 
@@ -90,13 +100,16 @@ export class ApplicationManagementService implements IApplicationManagementServi
       if (normalisedUrl) {
         const existing = await this.repository.findByNormalisedUrl(userId, normalisedUrl);
         if (existing) {
-          throw new AppError('You are already tracking an application for this job URL.', 409, 'APPLICATION_EXISTS', {
-            existingApplicationId: existing.id,
-          });
+          throw new AppError(
+            'You are already tracking an application for this job URL.',
+            409,
+            'APPLICATION_EXISTS',
+            {
+              existingApplicationId: existing.id,
+            },
+          );
         }
       }
-
-      const isApplied = input.currentStatus === ApplicationStatus.APPLIED;
 
       return this.repository.create(
         {
@@ -113,18 +126,17 @@ export class ApplicationManagementService implements IApplicationManagementServi
           currentStatus: input.currentStatus || ApplicationStatus.SAVED,
           primarySourceType: ApplicationSourceType.EXTERNAL_JOB_URL,
           priority: input.priority || ApplicationPriority.MEDIUM,
-          appliedAt: isApplied ? new Date() : null,
+          appliedAt: resolveAppliedAt(input.appliedAt, input.currentStatus),
         },
         {
           sourceType: ApplicationSourceType.EXTERNAL_JOB_URL,
           externalUrl: input.originalJobUrl,
         },
-        'Tracked from external job URL'
+        'Tracked from external job URL',
       );
     }
 
     if (input.sourceType === 'MANUAL') {
-      const isApplied = input.currentStatus === ApplicationStatus.APPLIED;
       const normalisedUrl = normalizeJobUrl(input.originalJobUrl);
 
       return this.repository.create(
@@ -142,13 +154,13 @@ export class ApplicationManagementService implements IApplicationManagementServi
           currentStatus: input.currentStatus || ApplicationStatus.SAVED,
           primarySourceType: ApplicationSourceType.MANUAL,
           priority: input.priority || ApplicationPriority.MEDIUM,
-          appliedAt: isApplied ? new Date() : null,
+          appliedAt: resolveAppliedAt(input.appliedAt, input.currentStatus),
         },
         {
           sourceType: ApplicationSourceType.MANUAL,
           externalUrl: input.originalJobUrl || null,
         },
-        'Manually created application'
+        'Manually created application',
       );
     }
 
@@ -188,11 +200,16 @@ export class ApplicationManagementService implements IApplicationManagementServi
     await this.deleteApplication(userId, existing.id);
   }
 
-  async getApplications(options: ApplicationListOptions): Promise<PaginatedApplicationResult<ApplicationDto>> {
+  async getApplications(
+    options: ApplicationListOptions,
+  ): Promise<PaginatedApplicationResult<ApplicationDto>> {
     return this.repository.list(options);
   }
 
-  async getApplicationById(userId: string, applicationId: string): Promise<ApplicationDetailDto | null> {
+  async getApplicationById(
+    userId: string,
+    applicationId: string,
+  ): Promise<ApplicationDetailDto | null> {
     const app = await this.repository.findById(userId, applicationId);
     if (!app) {
       throw new AppError('Application not found', 404, 'APPLICATION_NOT_FOUND');
@@ -203,22 +220,27 @@ export class ApplicationManagementService implements IApplicationManagementServi
   async updateApplication(
     userId: string,
     applicationId: string,
-    input: UpdateApplicationInput
+    input: UpdateApplicationInput,
   ): Promise<ApplicationDto> {
     const exists = await this.repository.findById(userId, applicationId);
     if (!exists) {
       throw new AppError('Application not found', 404, 'APPLICATION_NOT_FOUND');
     }
 
+    const { appliedAt, ...rest } = input;
+
     return this.repository.update(userId, applicationId, {
-      ...input,
+      ...rest,
+      ...(appliedAt !== undefined && {
+        appliedAt: appliedAt === null ? null : parseAppliedAtDate(appliedAt),
+      }),
     });
   }
 
   async transitionStatus(
     userId: string,
     applicationId: string,
-    input: StatusTransitionInput
+    input: StatusTransitionInput,
   ): Promise<ApplicationDto> {
     const app = await this.repository.findById(userId, applicationId);
     if (!app) {
@@ -299,7 +321,11 @@ export class ApplicationManagementService implements IApplicationManagementServi
     return true;
   }
 
-  async addNote(userId: string, applicationId: string, input: CreateNoteInput): Promise<ApplicationNoteDto> {
+  async addNote(
+    userId: string,
+    applicationId: string,
+    input: CreateNoteInput,
+  ): Promise<ApplicationNoteDto> {
     const app = await this.repository.findById(userId, applicationId);
     if (!app) {
       throw new AppError('Application not found', 404, 'APPLICATION_NOT_FOUND');
@@ -315,7 +341,11 @@ export class ApplicationManagementService implements IApplicationManagementServi
     return true;
   }
 
-  async addTask(userId: string, applicationId: string, input: CreateTaskInput): Promise<ApplicationTaskDto> {
+  async addTask(
+    userId: string,
+    applicationId: string,
+    input: CreateTaskInput,
+  ): Promise<ApplicationTaskDto> {
     const app = await this.repository.findById(userId, applicationId);
     if (!app) {
       throw new AppError('Application not found', 404, 'APPLICATION_NOT_FOUND');
@@ -332,7 +362,7 @@ export class ApplicationManagementService implements IApplicationManagementServi
     userId: string,
     applicationId: string,
     taskId: string,
-    input: UpdateTaskInput
+    input: UpdateTaskInput,
   ): Promise<ApplicationTaskDto> {
     try {
       return await this.repository.updateTask(userId, applicationId, taskId, {

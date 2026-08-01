@@ -114,6 +114,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           const inputMode = isPhoneField ? 'tel' : undefined;
           const isVisible = Boolean(visibleFields[field.name]);
           const resolvedType = isPasswordField && isVisible ? 'text' : (field.type ?? 'text');
+          const registeredField = register(field.name as Path<TFormValues>);
 
           return (
             <Input
@@ -123,7 +124,9 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               inputMode={inputMode}
               key={field.name}
               label={field.label}
-              onBlur={() => {
+              {...registeredField}
+              onBlur={(event) => {
+                void registeredField.onBlur(event);
                 void trigger(field.name as Path<TFormValues>);
               }}
               onInput={
@@ -137,7 +140,6 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               placeholder={field.placeholder}
               startAdornment={renderIcon(field.startIcon)}
               type={resolvedType}
-              {...register(field.name as Path<TFormValues>)}
               endAdornment={
                 isPasswordField ? (
                   <button

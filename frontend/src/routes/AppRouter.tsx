@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom';
 
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
+import { ApplicationsPage } from '@/pages/ApplicationsPage';
 import { ForYouPage } from '@/pages/ForYouPage';
 import { HomePage } from '@/pages/HomePage';
 import { JobDetailPage } from '@/pages/JobDetailPage';
@@ -39,6 +40,7 @@ export function AppRouter() {
           <Route path={ROUTES.JOB_DETAIL} element={<JobDetailPage />} />
           <Route path={ROUTES.FOR_YOU} element={<ForYouPage />} />
           <Route path={ROUTES.SAVED_JOBS} element={<SavedJobsPage />} />
+          <Route path={ROUTES.APPLICATIONS} element={<ApplicationsPage />} />
           <Route path={ROUTES.PROFILE_EDIT} element={<ProfilePage mode="edit" />} />
         </Route>
       </Route>

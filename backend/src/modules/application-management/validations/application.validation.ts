@@ -7,6 +7,7 @@ import {
   TaskType,
   TaskStatus,
 } from '@prisma/client';
+import { getTodayDateInputValue } from '@/modules/application-management/utils/applied-at.util.js';
 
 export const SafeExternalUrlSchema = z
   .string()
@@ -21,8 +22,21 @@ export const SafeExternalUrlSchema = z
         return false;
       }
     },
-    { message: 'Only HTTP and HTTPS URLs are allowed' }
+    { message: 'Only HTTP and HTTPS URLs are allowed' },
   );
+
+const appliedAtSchema = z.preprocess(
+  (value) => (typeof value === 'string' ? value.trim() : value),
+  z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Applied date must be in YYYY-MM-DD format')
+    .refine((date) => date <= getTodayDateInputValue(), {
+      message: 'Applied date cannot be in the future',
+    }),
+);
+
+const appliedAtOptionalSchema = appliedAtSchema.optional();
+const appliedAtNullableSchema = appliedAtSchema.nullable().optional();
 
 const ManualApplicationSchema = z.object({
   sourceType: z.literal('MANUAL'),
@@ -30,6 +44,7 @@ const ManualApplicationSchema = z.object({
   companyName: z.string().trim().min(1, 'Company name is required').max(160),
   location: z.string().trim().max(128).optional(),
   originalJobUrl: SafeExternalUrlSchema.optional(),
+  appliedAt: appliedAtOptionalSchema,
   currentStatus: z.nativeEnum(ApplicationStatus).default(ApplicationStatus.SAVED),
   priority: z.nativeEnum(ApplicationPriority).default(ApplicationPriority.MEDIUM),
   salaryMin: z.number().positive().optional(),
@@ -41,6 +56,7 @@ const ManualApplicationSchema = z.object({
 const PlatformJobApplicationSchema = z.object({
   sourceType: z.enum(['PLATFORM_JOB', 'PLATFORM_APPLY']),
   jobId: z.string().uuid('Invalid job ID format'),
+  appliedAt: appliedAtOptionalSchema,
   currentStatus: z.nativeEnum(ApplicationStatus).default(ApplicationStatus.SAVED),
   priority: z.nativeEnum(ApplicationPriority).default(ApplicationPriority.MEDIUM),
 });
@@ -51,6 +67,7 @@ const ExternalUrlApplicationSchema = z.object({
   jobTitle: z.string().trim().min(1, 'Job title is required').max(160),
   companyName: z.string().trim().min(1, 'Company name is required').max(160),
   location: z.string().trim().max(128).optional(),
+  appliedAt: appliedAtOptionalSchema,
   currentStatus: z.nativeEnum(ApplicationStatus).default(ApplicationStatus.SAVED),
   priority: z.nativeEnum(ApplicationPriority).default(ApplicationPriority.MEDIUM),
   salaryMin: z.number().positive().optional(),
@@ -75,6 +92,7 @@ export const UpdateApplicationSchema = z.object({
   employmentType: z.string().trim().max(32).nullable().optional(),
   priority: z.nativeEnum(ApplicationPriority).optional(),
   interestLevel: z.number().int().min(1).max(5).nullable().optional(),
+  appliedAt: appliedAtNullableSchema,
   salaryMin: z.number().positive().nullable().optional(),
   salaryMax: z.number().positive().nullable().optional(),
   salaryCurrency: z.string().trim().length(3).nullable().optional(),
