@@ -96,6 +96,8 @@ describe('PrismaJobEmbeddingRepository', () => {
         excludeJobIds: ['excluded-job'],
         postedAfter: new Date('2026-01-01T00:00:00.000Z'),
         minSalary: 80_000,
+        maxSalary: 160_000,
+        currency: 'usd',
       },
     });
 
@@ -104,9 +106,13 @@ describe('PrismaJobEmbeddingRepository', () => {
     const queryText = statement.strings.join('');
     expect(queryText).toContain('je."job_version" = j."version"');
     expect(queryText).toContain('j."status" = ');
+    expect(queryText).toContain('salary_min');
+    expect(queryText).toContain('UPPER(j."currency")');
     expect(queryText).not.toContain('DELETE FROM jobs');
     expect(statement.values).toContain("acme'; DELETE FROM jobs; --");
     expect(statement.values).toContain(25);
+    expect(statement.values).toContain(160_000);
+    expect(statement.values).toContain('USD');
   });
 
   it('deletes embeddings for a job through a bound parameter', async () => {

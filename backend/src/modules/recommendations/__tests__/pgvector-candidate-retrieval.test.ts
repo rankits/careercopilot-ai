@@ -132,11 +132,13 @@ describe('PgVectorCandidateRetrievalProvider', () => {
         provider: 'google',
         model: 'text-embedding-004',
         embedding: [0.1, 0.2],
-        limit: 30,
+        limit: 40,
         filters: {
           excludeJobIds: ['job-x'],
           remoteTypes: ['REMOTE'],
           minSalary: 120000,
+          maxSalary: undefined,
+          currency: 'USD',
         },
       }),
     );

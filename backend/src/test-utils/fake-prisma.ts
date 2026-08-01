@@ -802,6 +802,44 @@ export class FakeDb {
         },
       },
 
+      // Minimal recommendation surfaces so list/detail smoke tests can hit the
+      // Prisma UoW against FakeDb without a live Postgres. Writes for generate
+      // are not fully modeled here.
+      recommendationRun: {
+        findFirst: async () => null,
+        create: async () => {
+          throw new Error('FakeDb: recommendationRun.create is not implemented');
+        },
+        updateMany: async () => ({ count: 0 }),
+      },
+      jobRecommendation: {
+        findFirst: async () => null,
+        findMany: async () => [],
+        count: async () => 0,
+        create: async () => {
+          throw new Error('FakeDb: jobRecommendation.create is not implemented');
+        },
+      },
+      recommendationFeedback: {
+        findFirst: async () => null,
+        findMany: async () => [],
+        upsert: async () => {
+          throw new Error('FakeDb: recommendationFeedback.upsert is not implemented');
+        },
+      },
+      job: {
+        findMany: async () => [],
+        findUnique: async () => null,
+      },
+
+      $transaction: async (arg: unknown) => {
+        const client = db.toPrismaClient();
+        if (typeof arg === 'function') {
+          return (arg as (tx: typeof client) => Promise<unknown>)(client);
+        }
+        throw new Error('FakeDb: only interactive $transaction callbacks are supported');
+      },
+
       $queryRaw: async () => [{ '?column?': 1 }],
     };
   }

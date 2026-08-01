@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import type { JobDetailDto } from '@/modules/job-listing/types/job-listing.types.js';
-import type { CanonicalResume } from '@/modules/resumes/types/resume.types.js';
 import {
   CareerGoalSourceStrategy,
   JobSourceStrategy,
@@ -11,57 +10,6 @@ import {
 } from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 import { RecommendationStrategyResolver } from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
 import { RECOMMENDATION_ERROR_CODES } from '@/modules/recommendations/errors/recommendation.error.js';
-
-const resume: CanonicalResume = {
-  schemaVersion: 'resume-schema-v2',
-  personalInformation: {
-    fullName: null,
-    firstName: null,
-    lastName: null,
-    email: null,
-    phone: null,
-    location: { city: null, state: null, country: null, postalCode: null },
-    links: { linkedin: null, github: null, portfolio: null, other: [] },
-  },
-  professionalSummary: null,
-  currentPosition: { title: 'Backend Engineer', company: null },
-  professionalProfile: null,
-  professionalLabels: [],
-  employmentHistory: [],
-  projects: [],
-  education: [],
-  skills: {
-    technical: ['TypeScript'],
-    tools: [],
-    frameworks: ['Express'],
-    softSkills: [],
-    domains: ['SaaS'],
-  },
-  certifications: [],
-  languages: [],
-  links: {
-    linkedIn: null,
-    github: null,
-    portfolio: null,
-    website: null,
-    stackoverflow: null,
-    leetcode: null,
-    hackerrank: null,
-    behance: null,
-    dribbble: null,
-    other: [],
-  },
-  awards: [],
-  publications: [],
-  totalExperienceMonths: 36,
-  totalExperienceYears: 3,
-  parseQuality: {
-    overallConfidence: 1,
-    requiresReview: false,
-    missingImportantFields: [],
-    warnings: [],
-  },
-};
 
 const job: JobDetailDto = {
   id: 'job-id',
@@ -129,12 +77,26 @@ describe('recommendation source strategies', () => {
     });
   });
 
-  it('normalizes canonical resume fields', async () => {
+  it('normalizes mapped resume profile payloads', async () => {
     const context = await new ResumeSourceStrategy().buildContext({
       userId: 'user-id',
       sourceType: 'RESUME',
       sourceId: 'resume-id',
-      authorizedSourcePayload: resume,
+      authorizedSourcePayload: {
+        targetTitles: ['Backend Engineer'],
+        requiredSkills: ['TypeScript', 'Express'],
+        preferredSkills: ['SaaS'],
+        yearsOfExperience: 3,
+        relatedTitles: [],
+        industries: [],
+        locations: [],
+        employmentTypes: [],
+        salaryExpectation: {},
+        education: [],
+        certifications: [],
+        excludedCompanies: [],
+        excludedSkills: [],
+      },
     });
     expect(context.requiredSkills).toEqual(['TypeScript', 'Express']);
     expect(context.preferredSkills).toEqual(['SaaS']);

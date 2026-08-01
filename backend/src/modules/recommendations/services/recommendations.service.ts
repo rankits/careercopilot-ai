@@ -16,6 +16,7 @@ import { applyRecommendationFilters } from '@/modules/recommendations/utils/appl
 import type {
   BuildRecommendationContextInput,
   JobRecommendationRecord,
+  RecommendationPage,
   RetrievalBackend,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import type {
@@ -109,13 +110,26 @@ export class RecommendationsService {
         await runs.updateStatus(input.userId, run.id, 'SCORING');
       });
       const scored = await dependencies.scoringService.score(context, candidates);
+      const eligible =
+        options.filters?.includeStretchOpportunities === false
+          ? scored.filter(
+              (item) => item.category === 'BEST_MATCH' || item.category === 'GOOD_MATCH',
+            )
+          : scored;
+      if (eligible.length === 0) {
+        throw new RecommendationError(
+          'No eligible jobs were found for this recommendation context',
+          404,
+          RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
+        );
+      }
       const records = await dependencies.unitOfWork.execute(async ({ recommendations, runs }) => {
-        const created = await recommendations.createMany(input.userId, run.id, scored);
+        const created = await recommendations.createMany(input.userId, run.id, eligible);
         await runs.markCompleted(input.userId, run.id);
         return created;
       });
       this.logger.info(
-        { userId: input.userId, runId: run.id, candidateCount: candidates.length },
+        { userId: input.userId, runId: run.id, candidateCount: eligible.length },
         'Recommendation generation completed',
       );
       return records;
@@ -125,6 +139,31 @@ export class RecommendationsService {
       );
       throw error;
     }
+  }
+
+  async listForUser(
+    userId: string,
+    pagination: { page: number; limit: number },
+  ): Promise<RecommendationPage> {
+    const dependencies = this.requireOrchestration();
+    return dependencies.unitOfWork.execute(({ recommendations }) =>
+      recommendations.listByUser(userId, pagination),
+    );
+  }
+
+  async getForUser(userId: string, recommendationId: string): Promise<JobRecommendationRecord> {
+    const dependencies = this.requireOrchestration();
+    const record = await dependencies.unitOfWork.execute(({ recommendations }) =>
+      recommendations.findById(userId, recommendationId),
+    );
+    if (!record) {
+      throw new RecommendationError(
+        'Recommendation was not found',
+        404,
+        RECOMMENDATION_ERROR_CODES.RECOMMENDATION_NOT_FOUND,
+      );
+    }
+    return record;
   }
 
   private requireOrchestration(): RecommendationOrchestrationDependencies {
