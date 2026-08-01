@@ -26,6 +26,7 @@ describe('Sidebar', () => {
       'href',
       '/saved-jobs',
     );
+    expect(screen.getByRole('link', { name: /for you/i })).toHaveAttribute('href', '/for-you');
     expect(screen.getByRole('button', { name: /upload now/i })).toBeInTheDocument();
   });
 
@@ -72,8 +73,8 @@ describe('Sidebar', () => {
     renderSidebar(<Sidebar mobileMode="bottomNav" />);
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(3);
-    // AI Match + Applications remain as inert buttons until their routes ship.
-    expect(screen.getAllByRole('button')).toHaveLength(2);
+    expect(screen.getAllByRole('link')).toHaveLength(4);
+    // Applications remains an inert button until its route ships.
+    expect(screen.getAllByRole('button')).toHaveLength(1);
   });
 });

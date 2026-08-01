@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
 import { HomePage } from '@/pages/HomePage';
+import { ForYouPage } from '@/pages/ForYouPage';
 import { JobDetailPage } from '@/pages/JobDetailPage';
 import { JobFeedPage } from '@/pages/JobFeedPage';
 import { LoginPage } from '@/pages/LoginPage';
@@ -36,6 +37,7 @@ export function AppRouter() {
           <Route path={ROUTES.DASHBOARD} element={<HomePage />} />
           <Route path={ROUTES.JOB_FEED} element={<JobFeedPage />} />
           <Route path={ROUTES.JOB_DETAIL} element={<JobDetailPage />} />
+          <Route path={ROUTES.FOR_YOU} element={<ForYouPage />} />
           <Route path={ROUTES.SAVED_JOBS} element={<SavedJobsPage />} />
           <Route path={ROUTES.PROFILE_EDIT} element={<ProfilePage mode="edit" />} />
         </Route>

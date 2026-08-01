@@ -18,9 +18,11 @@ export function AppLayout() {
   const activeItemId =
     pathname === ROUTES.SAVED_JOBS
       ? 'saved-jobs'
-      : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
-        ? 'jobs-feed'
-        : 'dashboard';
+      : pathname === ROUTES.FOR_YOU
+        ? 'for-you'
+        : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
+          ? 'jobs-feed'
+          : 'dashboard';
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);
   const userName = user?.name ?? user?.email ?? 'User';

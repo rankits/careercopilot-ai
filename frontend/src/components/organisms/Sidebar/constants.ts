@@ -13,6 +13,6 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
   { href: ROUTES.DASHBOARD, icon: HomeOutlinedIcon, id: 'dashboard', label: 'Dashboard' },
   { href: ROUTES.JOB_FEED, icon: SearchOutlinedIcon, id: 'jobs-feed', label: 'Jobs Feed' },
   { href: ROUTES.SAVED_JOBS, icon: BookmarkBorderOutlinedIcon, id: 'saved-jobs', label: 'Saved Jobs' },
-  { icon: TuneOutlinedIcon, id: 'ai-match', label: 'AI Match' },
+  { href: ROUTES.FOR_YOU, icon: TuneOutlinedIcon, id: 'for-you', label: 'For You' },
   { icon: BusinessCenterOutlinedIcon, id: 'applications', label: 'Applications' },
 ];

@@ -16,6 +16,14 @@ vi.mock('@/features/jobs/services/jobs.service', () => ({
   },
 }));
 
+vi.mock('@/features/applications/services/applications.service', () => ({
+  applicationsService: {
+    listSavedJobs: vi.fn().mockResolvedValue([]),
+    saveJob: vi.fn(),
+    unsaveJob: vi.fn(),
+  },
+}));
+
 function renderPage(initialEntry = '/jobs-feed') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
