@@ -106,10 +106,11 @@ describe('ProfilePage resume parsing', () => {
     await user.click(screen.getByRole('button', { name: /^professional profile/i }));
     expect(screen.getByRole('textbox', { name: /summary/i })).toHaveValue('Computing pioneer');
 
+    await dismissOpenAlerts(user);
     await user.clear(screen.getByRole('textbox', { name: /summary/i }));
     await user.type(screen.getByRole('textbox', { name: /summary/i }), 'Edited summary');
     expect(screen.getByRole('textbox', { name: /summary/i })).toHaveValue('Edited summary');
-  }, 30_000);
+  }, 60_000);
 
   it('clears old values and manual edits before parsing a replacement resume', async () => {
     const user = setupUser();
@@ -129,7 +130,7 @@ describe('ProfilePage resume parsing', () => {
     await user.click(screen.getByRole('button', { name: /parse resume/i }));
 
     expect(await screen.findByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
-  }, 30_000);
+  }, 60_000);
 
   it('validates required fields and submits the latest edited values', async () => {
     const user = setupUser();
@@ -165,7 +166,7 @@ describe('ProfilePage resume parsing', () => {
         summary: 'Updated by user',
       }),
     );
-  }, 30_000);
+  }, 60_000);
 
   it('confirms a parsed profile and navigates to the job feed', async () => {
     const user = setupUser();

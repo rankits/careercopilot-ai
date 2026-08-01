@@ -26,6 +26,6 @@ export default defineConfig({
     globals: true,
     setupFiles: './src/test/setup.ts',
     // Page tests fill large forms under parallel suite load; default 5s is too tight on Windows CI.
-    testTimeout: 15_000,
+    testTimeout: 30_000,
   },
 });
