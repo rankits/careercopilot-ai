@@ -1,7 +1,13 @@
 import type { SxProps, Theme } from '@/lib/material';
-import { borderRadius, colorTokens, fontSize, fontWeight, jobFeedTokens, spacing } from '@/tokens';
+import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const jobFeedPageSx = {
+  activeChips: {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[1],
+  },
   header: {
     display: 'grid',
     gap: spacing[1],
@@ -21,31 +27,9 @@ export const jobFeedPageSx = {
     },
   },
   list: {
-    maxHeight: 'calc(100vh - 15rem)',
+    display: 'grid',
+    gap: spacing[2],
     minHeight: 0,
-    overflowX: 'hidden',
-    overflowY: 'auto',
-    padding: `${spacing[1]} ${spacing[1]} ${spacing[2]} 0`,
-    scrollbarColor: `${jobFeedTokens.scrollbarThumb} ${jobFeedTokens.scrollbarTrack}`,
-    scrollbarWidth: 'thin',
-
-    '&::-webkit-scrollbar': {
-      width: spacing[2],
-    },
-
-    '&::-webkit-scrollbar-track': {
-      background: jobFeedTokens.scrollbarTrack,
-      borderRadius: borderRadius.full,
-    },
-
-    '&::-webkit-scrollbar-thumb': {
-      background: jobFeedTokens.scrollbarThumb,
-      borderRadius: borderRadius.full,
-    },
-
-    '@media (max-width: 48rem)': {
-      maxHeight: 'calc(100vh - 14rem)',
-    },
   },
   root: {
     display: 'grid',

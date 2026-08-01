@@ -1,0 +1,87 @@
+import type { JobCardData } from '@/components/molecules';
+
+import type { JobListDto } from '@/features/jobs/types/job.types';
+import { toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
+
+const companyInitial = (name: string): string => {
+  const trimmed = name.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
+};
+
+const formatSalary = (salary: JobListDto['salary']): string => {
+  const { minimum, maximum, currency } = salary;
+  if (minimum == null && maximum == null) return 'Not disclosed';
+  const code = currency?.toUpperCase() ?? '';
+  const unit = code === 'INR' ? 'LPA' : code;
+  if (minimum != null && maximum != null) {
+    return unit
+      ? `${unit} ${minimum.toLocaleString()} - ${maximum.toLocaleString()}`
+      : `${minimum.toLocaleString()} - ${maximum.toLocaleString()}`;
+  }
+  const value = (minimum ?? maximum) as number;
+  return unit ? `${unit} ${value.toLocaleString()}` : value.toLocaleString();
+};
+
+const formatPostedAt = (publishedAt: string | null): string => {
+  if (!publishedAt) return 'Posted recently';
+  const posted = new Date(publishedAt);
+  if (Number.isNaN(posted.getTime())) return 'Posted recently';
+  const days = Math.max(0, Math.floor((Date.now() - posted.getTime()) / (1000 * 60 * 60 * 24)));
+  if (days === 0) return 'Posted today';
+  if (days === 1) return 'Posted 1d ago';
+  return `Posted ${days}d ago`;
+};
+
+const remoteTag = (remoteType: string | null): string[] => {
+  if (!remoteType) return [];
+  const normalized = remoteType.toLowerCase().replace(/_/g, '-');
+  if (normalized.includes('remote')) return ['remote'];
+  if (normalized.includes('hybrid')) return ['hybrid'];
+  if (normalized.includes('onsite') || normalized.includes('on-site')) return ['onsite'];
+  return [normalized];
+};
+
+const employmentLabel = (employmentType: string | null, remoteType: string | null): string => {
+  const remote = remoteType?.toLowerCase() ?? '';
+  if (remote.includes('remote')) return 'Remote';
+  if (remote.includes('hybrid')) return 'Hybrid';
+  if (remote.includes('onsite') || remote.includes('on-site')) return 'On-site';
+  if (remote) return 'Work mode unknown';
+  if (!employmentType) return 'Full-time';
+  return employmentType
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join('-');
+};
+
+/** Maps API JobListDto → JobCard view model. Match/recommendation fields intentionally omitted. */
+export function mapJobListDtoToCard(job: JobListDto, index = 0): JobCardData {
+  const type = employmentLabel(job.employmentType, job.location.remoteType);
+  const tags = [
+    ...remoteTag(job.location.remoteType),
+    ...(job.employmentType ? [job.employmentType.toLowerCase().replace(/_/g, '-')] : []),
+  ];
+
+  return {
+    id: job.id,
+    accent: index % 2 === 0 ? 'primary' : 'danger',
+    applyUrl: toSafeApplyUrl(job.applyUrl),
+    company: job.company.name || 'Company not listed',
+    experience: 'Experience not listed',
+    experienceBand: 'all',
+    logo: companyInitial(job.company.name || '?'),
+    logoUrl: job.company.logoUrl ?? undefined,
+    location: job.location.formatted || 'Location not listed',
+    postedAt: formatPostedAt(job.publishedAt),
+    salary: formatSalary(job.salary),
+    salaryBand: 'all',
+    skills: job.skills?.length ? job.skills.slice(0, 6) : [],
+    tags,
+    title: job.title,
+    type,
+  };
+}
+
+/** @deprecated Prefer mapJobListDtoToCard */
+export const mapJobToCard = mapJobListDtoToCard;

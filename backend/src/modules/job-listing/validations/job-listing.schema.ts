@@ -1,17 +1,19 @@
 import { z } from 'zod';
 
+const stringOrStringArray = z.union([z.string(), z.array(z.string())]);
+
 export const jobSearchQuerySchema = z.object({
   query: z.object({
     query: z.string().trim().min(1).max(150).optional(),
     companySlug: z.string().trim().max(120).optional(),
     location: z.string().trim().max(150).optional(),
-    remoteTypes: z.union([z.string(), z.array(z.string())]).optional(),
-    employmentTypes: z.union([z.string(), z.array(z.string())]).optional(),
-    skills: z.union([z.string(), z.array(z.string())]).optional(),
+    remoteTypes: stringOrStringArray.optional(),
+    employmentTypes: stringOrStringArray.optional(),
+    skills: stringOrStringArray.optional(),
     minSalary: z.coerce.number().nonnegative().optional(),
     maxSalary: z.coerce.number().nonnegative().optional(),
-    currency: z.string().length(3).optional(),
-    sortBy: z.enum(['relevance', 'newest', 'salaryHighToLow', 'salaryLowToHigh']).default('newest'),
+    // currency removed (JOB-BE-002) — was validated but never applied
+    sortBy: z.enum(['newest', 'salaryHighToLow', 'salaryLowToHigh']).default('newest'),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),
   }),

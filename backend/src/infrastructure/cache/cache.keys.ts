@@ -12,10 +12,10 @@ export const CacheKeys = {
     USER_SESSION: (userId: string | number) => `careercopilot:auth:session:${userId}`,
     USER_PERMISSIONS: (userId: string | number) => `careercopilot:auth:permissions:${userId}`,
     FAILED_ATTEMPTS: (email: string) => `careercopilot:auth:failed_attempts:${email}`,
-    PREFIX: "careercopilot:auth:*",
+    PREFIX: 'careercopilot:auth:*',
   },
   USER: {
     PROFILE: (userId: string | number) => `careercopilot:user:profile:${userId}`,
-    PREFIX: "careercopilot:user:*",
+    PREFIX: 'careercopilot:user:*',
   },
 } as const;
