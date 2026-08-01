@@ -322,7 +322,9 @@ export class FakeDb {
           include?: { role?: boolean };
         }) => {
           const found = db.users.find(
-            (u) => (where.id !== undefined && u.id === where.id) || (where.email !== undefined && u.email === where.email),
+            (u) =>
+              (where.id !== undefined && u.id === where.id) ||
+              (where.email !== undefined && u.email === where.email),
           );
           if (!found) return null;
           if (select) return project(found, select);
@@ -371,7 +373,7 @@ export class FakeDb {
           select,
           include,
         }: {
-          where: { id?: number; publicId?: string };
+          where: { id?: number };
           data: Record<string, unknown> & {
             meta?: { create?: FakeUserMeta; update?: Partial<FakeUserMeta> };
           };
@@ -379,14 +381,10 @@ export class FakeDb {
           include?: { role?: boolean };
         }) => {
           const index = db.users.findIndex((u) =>
-            where.id !== undefined
-              ? u.id === where.id
-              : where.publicId !== undefined
-                ? u.publicId === where.publicId
-                : false,
+            where.id !== undefined ? u.id === where.id : false,
           );
           if (index === -1) {
-            throw new Error(`FakeDb: user ${where.id ?? where.publicId ?? 'unknown'} not found`);
+            throw new Error(`FakeDb: user ${where.id ?? 'unknown'} not found`);
           }
           const updated = applyIncrements(
             db.users[index] as unknown as Record<string, unknown>,
@@ -588,7 +586,9 @@ export class FakeDb {
           include?: { role?: boolean };
         }) => {
           const found = db.admins.find(
-            (a) => (where.id !== undefined && a.id === where.id) || (where.email !== undefined && a.email === where.email),
+            (a) =>
+              (where.id !== undefined && a.id === where.id) ||
+              (where.email !== undefined && a.email === where.email),
           );
           if (!found) return null;
           if (select) return project(found, select);
