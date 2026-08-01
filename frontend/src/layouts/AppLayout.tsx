@@ -15,7 +15,12 @@ export function AppLayout() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const [sidebarVariant, setSidebarVariant] = useState<SidebarVariant>('open');
-  const activeItemId = pathname === ROUTES.JOB_FEED ? 'jobs-feed' : 'dashboard';
+  const activeItemId =
+    pathname === ROUTES.JOB_FEED
+      ? 'jobs-feed'
+      : pathname === ROUTES.APPLICATIONS
+        ? 'applications'
+        : 'dashboard';
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);
   const userName = user?.name ?? user?.email ?? 'User';

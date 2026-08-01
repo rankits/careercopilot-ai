@@ -152,6 +152,7 @@ describe('LoginPage', () => {
     expect(store.getState().auth.isProfileComplete).toBe(false);
     expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe(JSON.stringify('token'));
     expect(localStorage.getItem(STORAGE_KEYS.PROFILE_COMPLETE)).toBe(JSON.stringify(false));
+    expect(localStorage.getItem(STORAGE_KEYS.USER_ID)).toBe(JSON.stringify('1'));
     expect(
       await screen.findByRole('heading', { name: /profile destination/i }),
     ).toBeInTheDocument();
