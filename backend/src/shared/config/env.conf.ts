@@ -103,7 +103,7 @@ const envSchema = z
     ENABLE_EMAIL_WORKER: booleanFromString(true),
     ENABLE_SWAGGER: booleanFromString(true),
     // Run database seeds automatically when the server starts (dev only)
-    RUN_SEEDS_ON_STARTUP: booleanFromString(false),
+    RUN_SEEDS_ON_STARTUP: booleanFromString(true),
 
     // Default admin bootstrap (consumed by prisma/seed/admin.seed.ts)
     ADMIN_DEFAULT_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),
