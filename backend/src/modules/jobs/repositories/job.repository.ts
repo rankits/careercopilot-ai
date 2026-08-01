@@ -14,6 +14,10 @@ import type {
   JobPersistenceOutcome,
   JobPersistenceResult,
 } from '@/modules/jobs/types/job-persistence.types.js';
+import {
+  JOB_SEMANTIC_CONTENT_CHANGED_EVENT,
+  type JobSemanticContentChangedEvent,
+} from '@/modules/jobs/events/job.events.js';
 import { serializeJobSemanticContent } from '@/modules/jobs/utils/job-semantic-content.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
 
@@ -73,6 +77,11 @@ export interface JobPersistenceTransaction {
   findJobByCanonicalHash(canonicalHash: string): Promise<PersistedCanonicalJob | null>;
   upsertJob(input: CanonicalJobWrite): Promise<{ id: string; version: number }>;
   upsertSource(input: JobSourceWrite): Promise<void>;
+  createOutboxEvent(
+    aggregateId: string,
+    eventType: string,
+    payload: Prisma.InputJsonObject,
+  ): Promise<void>;
 }
 
 export interface JobTransactionRunner {
@@ -217,6 +226,20 @@ class PrismaJobPersistenceTransaction implements JobPersistenceTransaction {
         priority: input.priority,
         applyUrl: input.applyUrl,
         rawMetadata: input.rawMetadata,
+      },
+    });
+  }
+
+  async createOutboxEvent(
+    aggregateId: string,
+    eventType: string,
+    payload: Prisma.InputJsonObject,
+  ): Promise<void> {
+    await this.transaction.outboxEvent.create({
+      data: {
+        aggregateId,
+        eventType,
+        payload,
       },
     });
   }
@@ -395,6 +418,17 @@ export class PrismaJobRepository implements IJobRepository {
         applyUrl: job.applyUrl,
         rawMetadata,
       });
+      if (outcome === 'INSERTED' || outcome === 'SEMANTIC_CHANGED') {
+        const event: JobSemanticContentChangedEvent = {
+          jobId: persisted.id,
+          jobVersion: persisted.version,
+          outcome,
+          occurredAt: now.toISOString(),
+        };
+        await transaction.createOutboxEvent(persisted.id, JOB_SEMANTIC_CONTENT_CHANGED_EVENT, {
+          ...event,
+        });
+      }
 
       return {
         providerInputId: job.providerJobId,

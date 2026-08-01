@@ -7,6 +7,7 @@ export * from '@/modules/jobs/interfaces/IJobProvider.js';
 export * from '@/modules/jobs/interfaces/IProviderManifest.js';
 export * from '@/modules/jobs/interfaces/IJobMapper.js';
 export * from '@/modules/jobs/interfaces/IJobRepository.js';
+export * from '@/modules/jobs/events/job.events.js';
 export * from '@/modules/jobs/utils/job-semantic-content.js';
 export * from '@/modules/jobs/errors/JobModuleError.js';
 export * from '@/modules/jobs/errors/ProviderFetchError.js';

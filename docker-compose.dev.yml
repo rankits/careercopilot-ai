@@ -113,6 +113,33 @@ services:
       retries: 5
       start_period: 30s
 
+  outbox-relay:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.dev
+    container_name: career_copilot_outbox_relay_dev
+    restart: unless-stopped
+    command: npm run worker:outbox
+    environment:
+      NODE_ENV: '${NODE_ENV:-development}'
+      DATABASE_URL: '${DATABASE_URL:-postgresql://postgres:postgres_password@postgres:5432/careercopilot_dev?schema=public}'
+      RABBITMQ_URL: '${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}'
+      RUN_MIGRATIONS: 'false'
+      OUTBOX_BATCH_SIZE: '${OUTBOX_BATCH_SIZE:-50}'
+      OUTBOX_MAX_ATTEMPTS: '${OUTBOX_MAX_ATTEMPTS:-10}'
+      OUTBOX_LOCK_TIMEOUT_MS: '${OUTBOX_LOCK_TIMEOUT_MS:-60000}'
+      OUTBOX_POLL_INTERVAL_MS: '${OUTBOX_POLL_INTERVAL_MS:-1000}'
+      OUTBOX_RETRY_BASE_DELAY_MS: '${OUTBOX_RETRY_BASE_DELAY_MS:-5000}'
+      LOG_LEVEL: '${LOG_LEVEL:-info}'
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
   frontend:
     build:
       context: ./frontend
