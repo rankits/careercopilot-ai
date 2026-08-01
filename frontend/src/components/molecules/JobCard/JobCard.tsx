@@ -50,15 +50,31 @@ export interface JobCardData {
 export interface JobCardProps {
   job: JobCardData;
   onApply?: (job: JobCardData) => void;
+  onOpen?: (job: JobCardData) => void;
   onSave?: (job: JobCardData) => void;
 }
 
-export function JobCard({ job, onApply, onSave }: JobCardProps) {
+export function JobCard({ job, onApply, onOpen, onSave }: JobCardProps) {
   const showMatch = typeof job.match === 'number';
   const showActions = Boolean(onApply || onSave);
 
   return (
-    <JobCardRoot>
+    <JobCardRoot
+      onClick={onOpen ? () => onOpen(job) : undefined}
+      onKeyDown={
+        onOpen
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onOpen(job);
+              }
+            }
+          : undefined
+      }
+      role={onOpen ? 'link' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      sx={onOpen ? { cursor: 'pointer' } : undefined}
+    >
       <Accent tone={job.accent} />
       <CompanyLogo>{job.logo}</CompanyLogo>
 

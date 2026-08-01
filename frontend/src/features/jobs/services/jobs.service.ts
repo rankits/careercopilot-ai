@@ -1,4 +1,11 @@
-import type { JobListDto, JobListResult, ListJobsParams } from '@/features/jobs/types/job.types';
+import axios from 'axios';
+
+import type {
+  JobDetailDto,
+  JobListDto,
+  JobListResult,
+  ListJobsParams,
+} from '@/features/jobs/types/job.types';
 import { httpClient } from '@/services/httpClient';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -25,6 +32,13 @@ const unwrapListPayload = (response: unknown): JobListResult => {
   return { items, pagination };
 };
 
+export class JobNotFoundError extends Error {
+  constructor(message = 'Job not found') {
+    super(message);
+    this.name = 'JobNotFoundError';
+  }
+}
+
 export const jobsService = {
   async listJobs(params: ListJobsParams = {}): Promise<JobListResult> {
     const response = await httpClient.get('/jobs', {
@@ -42,5 +56,20 @@ export const jobsService = {
       },
     });
     return unwrapListPayload(response);
+  },
+
+  async getJob(jobId: string): Promise<JobDetailDto> {
+    try {
+      const response = await httpClient.get(`/jobs/${jobId}`);
+      if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
+        throw new Error('Unexpected job detail response shape');
+      }
+      return response.data.data as JobDetailDto;
+    } catch (error) {
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        throw new JobNotFoundError();
+      }
+      throw error;
+    }
   },
 };
