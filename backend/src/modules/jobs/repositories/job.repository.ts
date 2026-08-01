@@ -258,9 +258,34 @@ class InvalidJobInputError extends Error {}
 
 const mapProvider = (providerName: string): ProviderType => {
   const normalized = providerName.trim().toLowerCase();
-  if (normalized === 'greenhouse') return ProviderType.GREENHOUSE;
-  if (normalized === 'arbeitnow') return ProviderType.ARBEITNOW;
-  throw new UnsupportedProviderError(`Unsupported job provider: ${providerName}`);
+  switch (normalized) {
+    case 'greenhouse':
+      return ProviderType.GREENHOUSE;
+    case 'lever':
+      return ProviderType.LEVER;
+    case 'arbeitnow':
+    case 'public_feed':
+      return ProviderType.ARBEITNOW;
+    case 'remotive':
+      return ProviderType.REMOTIVE;
+    case 'jobicy':
+      return ProviderType.JOBICY;
+    case 'himalayas':
+      return ProviderType.HIMALAYAS;
+    case 'remoteok':
+      return ProviderType.REMOTEOK;
+    case 'remotejobs_org':
+    case 'remotejobs.org':
+      return ProviderType.REMOTEJOBS_ORG;
+    case 'ashby':
+      return ProviderType.ASHBY;
+    case 'recruitee':
+      return ProviderType.RECRUITEE;
+    case 'personio':
+      return ProviderType.PERSONIO;
+    default:
+      throw new UnsupportedProviderError(`Unsupported job provider: ${providerName}`);
+  }
 };
 
 const priorityForTier = (tier: ProviderTier): number => {
