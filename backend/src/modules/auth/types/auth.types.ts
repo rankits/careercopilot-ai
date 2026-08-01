@@ -22,6 +22,7 @@ export interface SafeUser {
   bio: string | null;
   status: Status;
   isEmailVerified: boolean;
+  isProfileCreated: boolean;
   role: string;
   createdAt: Date;
 }

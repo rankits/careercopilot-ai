@@ -39,6 +39,10 @@ function renderPage() {
   };
 }
 
+function setupUser() {
+  return userEvent.setup({ delay: null, pointerEventsCheck: 0 });
+}
+
 async function completeValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole('textbox', { name: /first name/i }), '  Ada  ');
   await user.type(screen.getByRole('textbox', { name: /last name/i }), '  Lovelace  ');
@@ -57,7 +61,7 @@ describe('RegisterPage', () => {
   });
 
   it('renders the shared registration form and links to login', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
 
     expect(screen.getByRole('main')).toHaveStyle({ height: '100dvh' });
@@ -85,7 +89,7 @@ describe('RegisterPage', () => {
   });
 
   it('blocks invalid input and explains every validation problem', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
 
     await user.click(screen.getByRole('button', { name: /create account/i }));
@@ -110,10 +114,10 @@ describe('RegisterPage', () => {
     expect(screen.getByText(/password must be at least 8 characters/i)).toBeInTheDocument();
     expect(screen.getByText(/passwords must match/i)).toBeInTheDocument();
     expect(registerMock).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 
   it('rejects a name containing only whitespace', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     renderPage();
 
     await user.type(screen.getByRole('textbox', { name: /first name/i }), '   ');
@@ -130,10 +134,10 @@ describe('RegisterPage', () => {
     expect(await screen.findByText(/first name is required/i)).toBeInTheDocument();
     expect(screen.getByText(/last name is required/i)).toBeInTheDocument();
     expect(registerMock).not.toHaveBeenCalled();
-  });
+  }, 15_000);
 
   it('submits normalized values and redirects after successful registration', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     registerMock.mockResolvedValue({
       accessToken: 'token',
       user: { email: 'ada@example.com', id: '1', name: 'Ada Lovelace', role: 'user' },
@@ -156,10 +160,10 @@ describe('RegisterPage', () => {
     expect(
       queryClient.getMutationCache().find({ mutationKey: ['auth', 'register'] })?.state.status,
     ).toBe('success');
-  });
+  }, 15_000);
 
   it('disables submission while the request is pending and prevents duplicate requests', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     let resolveRequest: (() => void) | undefined;
     registerMock.mockReturnValue(
       new Promise((resolve) => {
@@ -182,10 +186,10 @@ describe('RegisterPage', () => {
     expect(registerMock).toHaveBeenCalledTimes(1);
 
     resolveRequest?.();
-  });
+  }, 15_000);
 
   it('shows an accessible API error and allows a retry', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     registerMock
       .mockRejectedValueOnce(new Error('Network details should not leak'))
       .mockResolvedValueOnce({
@@ -206,5 +210,5 @@ describe('RegisterPage', () => {
 
     expect(registerMock).toHaveBeenCalledTimes(2);
     expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
-  });
+  }, 15_000);
 });

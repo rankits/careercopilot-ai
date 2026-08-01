@@ -2,7 +2,13 @@ import { useId, useState, type MouseEvent } from 'react';
 
 import { KeyboardArrowDownIcon, Menu, MenuItem } from '@/lib/material';
 
-import { DropdownButton } from './styles';
+import {
+  DropdownButton,
+  DropdownButtonLabel,
+  DropdownButtonPrefix,
+  DropdownButtonValue,
+  FilterFieldRoot,
+} from './styles';
 
 export interface FilterDropdownOption {
   label: string;
@@ -14,6 +20,7 @@ export interface FilterDropdownProps {
   label: string;
   onChange: (value: string) => void;
   options: FilterDropdownOption[];
+  prefix?: string;
   value: string;
 }
 
@@ -22,12 +29,15 @@ export function FilterDropdown({
   label,
   onChange,
   options,
+  prefix,
   value,
 }: FilterDropdownProps) {
   const menuId = useId();
   const [anchorElement, setAnchorElement] = useState<HTMLElement | null>(null);
   const menuWidth = anchorElement?.offsetWidth;
   const selectedOption = options.find((option) => option.value === value);
+  const buttonText = selectedOption?.label ?? label;
+  const accessibleName = prefix ? `${prefix}: ${buttonText}` : buttonText;
   const isOpen = Boolean(anchorElement);
 
   const handleOpen = (event: MouseEvent<HTMLButtonElement>) => {
@@ -43,17 +53,26 @@ export function FilterDropdown({
     handleClose();
   };
 
-  return (
+  const control = (
     <>
       <DropdownButton
         aria-controls={isOpen ? menuId : undefined}
         aria-expanded={isOpen}
         aria-haspopup="menu"
+        aria-label={accessibleName}
+        bordered
         fullWidth={fullWidth}
         onClick={handleOpen}
         type="button"
       >
-        <span>{selectedOption?.value === 'all' ? label : selectedOption?.label}</span>
+        {prefix ? (
+          <DropdownButtonLabel>
+            <DropdownButtonPrefix>{prefix}</DropdownButtonPrefix>
+            <DropdownButtonValue>{buttonText}</DropdownButtonValue>
+          </DropdownButtonLabel>
+        ) : (
+          <DropdownButtonValue>{buttonText}</DropdownButtonValue>
+        )}
         <KeyboardArrowDownIcon fontSize="small" />
       </DropdownButton>
 
@@ -82,4 +101,10 @@ export function FilterDropdown({
       </Menu>
     </>
   );
+
+  if (!fullWidth) {
+    return control;
+  }
+
+  return <FilterFieldRoot fullWidth>{control}</FilterFieldRoot>;
 }

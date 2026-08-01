@@ -1,9 +1,10 @@
 import { useMutation } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/atoms';
+import { useToast } from '@/components/organisms/Toast/ToastContext';
 import {
   ProfileReviewSection,
   type ReviewField,
@@ -12,9 +13,11 @@ import { ResumeSummary } from '@/features/resume/components/ResumeSummary';
 import { ResumeUpload } from '@/features/resume/components/ResumeUpload';
 
 import { useResumeParser } from '@/features/resume/hooks/useResumeParser';
+import { useAppDispatch } from '@/hooks/redux';
 
 import { ROUTES } from '@/constants/routes';
 import { STORAGE_KEYS } from '@/constants/storage';
+import { setProfileComplete } from '@/features/auth/authSlice';
 import type { User } from '@/features/auth/types/auth.types';
 import { resumeService } from '@/features/resume/services/resume.service';
 import {
@@ -26,6 +29,10 @@ import {
   resumePrimaryActionSx,
 } from '@/features/resume/styles';
 import type { ResumeProfileFormValues } from '@/features/resume/types/resume.types';
+import {
+  mapFormValuesToProfileUpdate,
+  mapProfileToFormValues,
+} from '@/features/resume/utils/profileFormMapper';
 import {
   getProfileCompletion,
   getResumePresentation,
@@ -143,19 +150,23 @@ const SECTIONS: Array<{
 ];
 
 interface ProfilePageProps {
+  mode?: 'edit' | 'onboarding';
   onSave?: (values: ResumeProfileFormValues) => void | Promise<void>;
 }
 
 type Notice = { message: string; severity: 'error' | 'success' } | null;
 
-export function ProfilePage({ onSave }: ProfilePageProps) {
+export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
+  const dispatch = useAppDispatch();
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const userId = storage.get<User>(STORAGE_KEYS.USER)?.id ?? 'public';
   const [notice, setNotice] = useState<Notice>(null);
   const [hasParsedResume, setHasParsedResume] = useState(false);
   const [expandedSection, setExpandedSection] = useState('Personal Information');
   const [pendingProfile, setPendingProfile] = useState<ResumeProfileFormValues | null>(null);
   const [saveCompleted, setSaveCompleted] = useState(false);
+  const [isLoadingProfile, setIsLoadingProfile] = useState(mode === 'edit');
   const {
     formState: { errors },
     handleSubmit,
@@ -171,7 +182,8 @@ export function ProfilePage({ onSave }: ProfilePageProps) {
   const hasRequiredManualDetails = REQUIRED_PROFILE_FIELDS.every(
     (field) => values[field].trim().length > 0,
   );
-  const canSubmit = hasParsedResume || hasRequiredManualDetails;
+  const canSubmit =
+    mode === 'edit' ? hasRequiredManualDetails : hasParsedResume || hasRequiredManualDetails;
   const parser = useResumeParser((profile) => {
     reset(profile);
     setHasParsedResume(true);
@@ -182,27 +194,61 @@ export function ProfilePage({ onSave }: ProfilePageProps) {
   });
   const presentation = getResumePresentation(parser.metadata);
 
+  useEffect(() => {
+    if (mode !== 'edit') return;
+    let cancelled = false;
+
+    resumeService
+      .getMyProfile()
+      .then((profile) => {
+        if (cancelled || !profile) return;
+        reset(mapProfileToFormValues(profile));
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setNotice({
+          message: error instanceof Error ? error.message : 'Unable to load your profile.',
+          severity: 'error',
+        });
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingProfile(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [mode, reset]);
+
   const saveMutation = useMutation({
     mutationFn: async (profile: ResumeProfileFormValues) => {
       if (onSave) await onSave(profile);
+      if (mode === 'edit') {
+        const result = await resumeService.updateProfile(mapFormValuesToProfileUpdate(profile));
+        return { message: result.message };
+      }
       if (parser.resumeId) {
-        await resumeService.confirmProfile({ resumeId: parser.resumeId, userId });
-      } else if (!onSave) {
+        return resumeService.confirmProfile({ resumeId: parser.resumeId, userId });
+      }
+      if (!onSave) {
         throw new Error('Upload and parse a resume before saving your profile.');
       }
+      return { message: 'Profile created successfully' };
     },
-    mutationKey: ['resume', 'confirm-profile'],
+    mutationKey: ['resume', mode === 'edit' ? 'update-profile' : 'confirm-profile'],
     onError: (error) => {
-      setNotice({
+      showToast({
         message: error instanceof Error ? error.message : 'Unable to save your profile.',
         severity: 'error',
       });
     },
-    onSuccess: () => {
+    onSuccess: ({ message }) => {
       setPendingProfile(null);
+      showToast({ message, severity: 'success' });
+      if (mode === 'edit') return;
+      dispatch(setProfileComplete(true));
       setSaveCompleted(true);
-      setNotice({ message: 'Your profile has been saved successfully.', severity: 'success' });
-      window.setTimeout(() => void navigate(ROUTES.JOB_FEED), 800);
+      window.setTimeout(() => void navigate(ROUTES.JOB_FEED, { replace: true }), 800);
     },
   });
 
@@ -227,11 +273,14 @@ export function ProfilePage({ onSave }: ProfilePageProps) {
         <OnboardingPageHeader>
           <Box>
             <Typography component="h1" fontWeight={700} variant="h4">
-              Let&apos;s Build Your Professional Profile
+              {mode === 'edit'
+                ? 'Update Your Professional Profile'
+                : "Let's Build Your Professional Profile"}
             </Typography>
             <Typography color="text.secondary">
-              Upload your resume or enter your details manually. Review and complete your profile to
-              unlock personalized job matches and AI-powered career insights.
+              {mode === 'edit'
+                ? 'Review and update your details to keep your profile accurate and your job matches relevant.'
+                : 'Upload your resume or enter your details manually. Review and complete your profile to unlock personalized job matches and AI-powered career insights.'}
             </Typography>
           </Box>
           <Box>
@@ -311,14 +360,14 @@ export function ProfilePage({ onSave }: ProfilePageProps) {
           </Typography>
         </Box>
         <Button
-          disabled={saveCompleted || !canSubmit}
+          disabled={isLoadingProfile || (mode !== 'edit' && saveCompleted) || !canSubmit}
           form="profile-review-form"
           isLoading={saveMutation.isPending}
           size="medium"
           sx={resumePrimaryActionSx}
           type="submit"
         >
-          Save Profile &amp; Continue
+          {mode === 'edit' ? 'Save Changes' : 'Save Profile & Continue'}
         </Button>
       </ProfileStickyActions>
 
@@ -331,11 +380,14 @@ export function ProfilePage({ onSave }: ProfilePageProps) {
         open={Boolean(pendingProfile)}
         slotProps={{ paper: { sx: { borderRadius: borderRadius['2xl'], p: spacing[2] } } }}
       >
-        <DialogTitle id="confirm-profile-title">Confirm Profile Submission</DialogTitle>
+        <DialogTitle id="confirm-profile-title">
+          {mode === 'edit' ? 'Confirm Profile Changes' : 'Confirm Profile Submission'}
+        </DialogTitle>
         <DialogContent>
           <DialogContentText id="confirm-profile-description">
-            Please review your profile information before continuing. Once submitted, this
-            information will be used to complete your onboarding. You can edit it later if allowed.
+            {mode === 'edit'
+              ? 'Please review your updated details before saving these changes to your profile.'
+              : 'Please review your profile information before continuing. Once submitted, this information will be used to complete your onboarding. You can edit it later if allowed.'}
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ gap: spacing[2], p: spacing[3] }}>
@@ -356,7 +408,7 @@ export function ProfilePage({ onSave }: ProfilePageProps) {
             }}
             type="button"
           >
-            Save &amp; Continue
+            {mode === 'edit' ? 'Confirm & Save' : 'Save & Continue'}
           </Button>
         </DialogActions>
       </Dialog>

@@ -12,6 +12,7 @@ export const toSafeUser = (user: UserWithRole): SafeUser => ({
   bio: user.bio,
   status: user.status,
   isEmailVerified: user.isEmailVerified,
+  isProfileCreated: user.isProfileCreated,
   role: user.role.name,
   createdAt: user.createdAt,
 });
@@ -34,6 +35,7 @@ export interface SafeUserResponseDto {
   bio: string | null;
   status: string;
   isEmailVerified: boolean;
+  isProfileCreated: boolean;
   role: string;
   createdAt: string;
 }
@@ -48,6 +50,7 @@ export const toSafeUserResponse = (user: SafeUser): SafeUserResponseDto => ({
   bio: user.bio,
   status: user.status,
   isEmailVerified: user.isEmailVerified,
+  isProfileCreated: user.isProfileCreated,
   role: user.role,
   createdAt: user.createdAt.toISOString(),
 });

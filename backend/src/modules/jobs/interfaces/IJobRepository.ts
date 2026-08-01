@@ -1,17 +1,17 @@
-import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
+import { NormalizedJob } from '@/modules/jobs/models/NormalizedJob.js';
 import {
   JobSearchFilters,
   PaginationOptions,
   PaginatedResult,
-} from "@/modules/jobs/types/job.types.js";
+} from '@/modules/jobs/types/job.types.js';
+import type { JobPersistenceBatchResult } from '@/modules/jobs/types/job-persistence.types.js';
 
 export interface IJobRepository {
-  upsertMany(jobs: NormalizedJob[]): Promise<{ count: number }>;
+  upsertMany(jobs: NormalizedJob[]): Promise<JobPersistenceBatchResult>;
   findById(id: string): Promise<NormalizedJob | null>;
   search(
     filters: JobSearchFilters,
-    pagination: PaginationOptions
+    pagination: PaginationOptions,
   ): Promise<PaginatedResult<NormalizedJob>>;
   deleteExpiredBefore(timestamp: string): Promise<{ count: number }>;
 }
-

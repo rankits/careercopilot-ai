@@ -28,7 +28,7 @@ router.use('/jobs', jobListingRoutes); // Public job discovery
 router.use('/jobs-ingestion', jobsRoutes); // Administrative ingestion endpoints
 router.use('/applications', applicationRoutes);
 router.use('/interviews', interviewsRoutes);
-router.use('/recommendations', recommendationsRoutes);
+router.use('/job-recommendations', recommendationsRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/career', careerRoutes);
 

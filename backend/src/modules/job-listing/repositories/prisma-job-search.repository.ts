@@ -8,6 +8,32 @@ import {
   JobDetailDto,
 } from '@/modules/job-listing/types/job-listing.types.js';
 
+type JobWithCompany = Prisma.JobGetPayload<{ include: { company: true } }>;
+
+const toJobListDto = (job: JobWithCompany): JobListDto => ({
+  id: job.id,
+  title: job.title,
+  company: {
+    slug: job.company.slug,
+    name: job.company.name,
+    logoUrl: job.company.logoUrl,
+    verified: job.company.verified,
+  },
+  location: {
+    formatted: 'Unknown',
+    remoteType: job.remoteType,
+  },
+  employmentType: job.employmentType,
+  salary: {
+    minimum: job.salaryMin ? Number(job.salaryMin) : null,
+    maximum: job.salaryMax ? Number(job.salaryMax) : null,
+    currency: job.currency,
+  },
+  skills: (job.skills as string[]) || [],
+  publishedAt: job.postedAt ? job.postedAt.toISOString() : null,
+  expiresAt: null,
+});
+
 export class PrismaJobSearchRepository implements IJobSearchRepository {
   async search(options: JobSearchOptions): Promise<PaginatedJobResult<JobListDto>> {
     const { filters, pagination, sortBy } = options;
@@ -59,32 +85,8 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
 
     const totalPages = Math.ceil(totalItems / limit);
 
-    const items: JobListDto[] = jobs.map((job) => ({
-      id: job.id,
-      title: job.title,
-      company: {
-        slug: job.company.slug,
-        name: job.company.name,
-        logoUrl: job.company.logoUrl,
-        verified: job.company.verified,
-      },
-      location: {
-        formatted: 'Unknown',
-        remoteType: job.remoteType,
-      },
-      employmentType: job.employmentType,
-      salary: {
-        minimum: job.salaryMin ? Number(job.salaryMin) : null,
-        maximum: job.salaryMax ? Number(job.salaryMax) : null,
-        currency: job.currency,
-      },
-      skills: (job.skills as string[]) || [],
-      publishedAt: job.postedAt ? job.postedAt.toISOString() : null,
-      expiresAt: null,
-    }));
-
     return {
-      items,
+      items: jobs.map(toJobListDto),
       pagination: {
         page,
         limit,
@@ -105,27 +107,7 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
     if (!job) return null;
 
     return {
-      id: job.id,
-      title: job.title,
-      company: {
-        slug: job.company.slug,
-        name: job.company.name,
-        logoUrl: job.company.logoUrl,
-        verified: job.company.verified,
-      },
-      location: {
-        formatted: 'Unknown',
-        remoteType: job.remoteType,
-      },
-      employmentType: job.employmentType,
-      salary: {
-        minimum: job.salaryMin ? Number(job.salaryMin) : null,
-        maximum: job.salaryMax ? Number(job.salaryMax) : null,
-        currency: job.currency,
-      },
-      skills: (job.skills as string[]) || [],
-      publishedAt: job.postedAt ? job.postedAt.toISOString() : null,
-      expiresAt: null,
+      ...toJobListDto(job),
       descriptionHtml: job.descriptionHtml,
       descriptionText: job.descriptionText,
       benefits: (job.benefits as string[]) || [],
@@ -133,5 +115,21 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
       companyIndustry: job.company.industry,
       companySize: job.company.size,
     };
+  }
+
+  async findByIds(ids: readonly string[]): Promise<JobListDto[]> {
+    if (ids.length === 0) return [];
+    const uniqueIds = [...new Set(ids.filter((id) => id.trim()))];
+    if (uniqueIds.length === 0) return [];
+
+    const jobs = await prisma.job.findMany({
+      where: {
+        id: { in: uniqueIds },
+        status: 'ACTIVE',
+      },
+      include: { company: true },
+    });
+    const byId = new Map(jobs.map((job) => [job.id, toJobListDto(job)]));
+    return ids.map((id) => byId.get(id)).filter((job): job is JobListDto => job !== undefined);
   }
 }

@@ -9,12 +9,12 @@ import type {
   UserListItem,
   UserProfile,
 } from '@/modules/user/types/user.types.js';
+import type { UserProfileService } from '@/modules/user/contracts/user-profile.service.js';
 
 /**
- * Cross-module lookup: other modules (resume, applications, ...) that need
- * a user's profile should import this directly rather than reaching into
- * `userRepository`, so the "external-facing shape" mapping stays in one
- * place.
+ * User-owned implementation of the cross-module profile contract.
+ * Consumers resolve USER_PROFILE_SERVICE from the central service registry
+ * at execution time rather than importing this function or the repository.
  */
 export const getUserProfile = async (userId: number): Promise<UserProfile | null> => {
   const user = await userRepository.findById(userId);

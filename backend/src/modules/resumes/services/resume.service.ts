@@ -1,14 +1,20 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
 import { ResumeStorageDriver } from '@prisma/client';
+import { authRepository } from '@/modules/auth/repositories/auth.repository.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import {
   allowedResumeExtensions,
   allowedResumeMimeTypes,
 } from '@/modules/resumes/config/resume.config.js';
+import type { CandidateProfile } from '@prisma/client';
 import { resumeRepository } from '@/modules/resumes/repositories/resume.repository.js';
 import { createResumeStorage } from '@/modules/resumes/storage/resume-storage.factory.js';
-import { ParsedResumeData } from '@/modules/resumes/types/resume.types.js';
+import {
+  CandidateProfileResponse,
+  ParsedResumeData,
+  UpdateCandidateProfileInput,
+} from '@/modules/resumes/types/resume.types.js';
 import { resumeProcessingService } from '@/modules/resumes/services/resume-processing.service.js';
 import { resumeParsingOrchestrator } from '@/modules/resumes/services/resume-parsing.orchestrator.js';
 import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
@@ -37,6 +43,27 @@ const toParsedResumeData = (value: unknown): ParsedResumeData => {
       : [],
   };
 };
+
+const toCandidateProfileResponse = (profile: CandidateProfile): CandidateProfileResponse => ({
+  userId: profile.userId,
+  personalDetails: isRecord(profile.personalDetails) ? profile.personalDetails : {},
+  experience: Array.isArray(profile.experience)
+    ? (profile.experience as Array<Record<string, unknown>>)
+    : [],
+  education: Array.isArray(profile.education)
+    ? (profile.education as Array<Record<string, unknown>>)
+    : [],
+  skills: Array.isArray(profile.skills)
+    ? profile.skills.filter((skill): skill is string => typeof skill === 'string')
+    : [],
+  certifications: Array.isArray(profile.certifications)
+    ? (profile.certifications as Array<Record<string, unknown>>)
+    : [],
+  sourceResumeId: profile.sourceResumeId,
+  confirmedAt: profile.confirmedAt,
+  createdAt: profile.createdAt,
+  updatedAt: profile.updatedAt,
+});
 
 export const resumeService = {
   async uploadResume(input: { file?: Express.Multer.File; userId?: string }) {
@@ -237,16 +264,48 @@ export const resumeService = {
     };
   },
 
+  async getCandidateProfile(userId: string) {
+    const profile = await resumeRepository.findCandidateProfileByUserId(userId);
+    if (!profile) {
+      throw new AppError('Candidate profile not found', 404);
+    }
+
+    return {
+      ...toCandidateProfileResponse(profile),
+      isComplete: Boolean(profile.confirmedAt),
+    };
+  },
+
+  async updateCandidateProfile(
+    userId: string,
+    input: UpdateCandidateProfileInput,
+  ): Promise<CandidateProfileResponse> {
+    const existing = await resumeRepository.findCandidateProfileByUserId(userId);
+    if (!existing) {
+      throw new AppError(
+        'Candidate profile not found. Upload and confirm a resume to create one first.',
+        404,
+      );
+    }
+
+    const updated = await resumeRepository.updateCandidateProfile(userId, input);
+    return toCandidateProfileResponse(updated);
+  },
+
   async confirmProfile(input: { userId: string; resumeId: string }) {
     const extraction = await resumeRepository.findLatestExtraction(input.resumeId);
     if (!extraction) {
       throw new AppError('Resume parsed data is not available yet', 404);
     }
 
-    return resumeRepository.upsertCandidateProfile({
+    const profile = await resumeRepository.upsertCandidateProfile({
       userId: input.userId,
       sourceResumeId: input.resumeId,
       ...toParsedResumeData(extraction.extractedData),
     });
+
+    await authRepository.markProfileCreated(input.userId);
+
+    return profile;
   },
 };

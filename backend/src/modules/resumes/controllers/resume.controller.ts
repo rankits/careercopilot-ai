@@ -2,7 +2,13 @@ import { NextFunction, Request, Response } from 'express';
 import multer from 'multer';
 import { resumeConfig } from '@/modules/resumes/config/resume.config.js';
 import { resumeService } from '@/modules/resumes/services/resume.service.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
 import { successResponse } from '@/shared/utils/response.js';
+
+const requirePrincipalId = (req: Request): string => {
+  if (!req.user) throw new AppError('Authentication required', 401);
+  return req.user.principalId;
+};
 
 export const resumeUploadMiddleware = multer({
   storage: multer.memoryStorage(),
@@ -82,13 +88,52 @@ export const reparseResumeController = async (req: Request, res: Response, next:
   }
 };
 
+export const getCandidateProfileController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const profile = await resumeService.getCandidateProfile(String(req.params.userId));
+    return res.status(200).json(successResponse('Candidate profile retrieved', profile));
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const confirmProfileController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const profile = await resumeService.confirmProfile({
+    await resumeService.confirmProfile({
       userId: String(req.params.userId),
       resumeId: req.body.resumeId,
     });
-    return res.status(200).json(successResponse('Candidate profile confirmed', profile));
+    return res.status(200).json(successResponse('Profile created successfully'));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const getMyCandidateProfileController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const profile = await resumeService.getCandidateProfile(requirePrincipalId(req));
+    return res.status(200).json(successResponse('Candidate profile retrieved', profile));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const updateMyCandidateProfileController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const profile = await resumeService.updateCandidateProfile(requirePrincipalId(req), req.body);
+    return res.status(200).json(successResponse('Candidate profile updated', profile));
   } catch (error) {
     return next(error);
   }
