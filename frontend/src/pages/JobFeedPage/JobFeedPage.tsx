@@ -4,21 +4,33 @@ import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
-import { FilterDropdown, JobCard, JobFilterBar, VirtualizedJobList } from '@/components/molecules';
+import {
+  FilterDropdown,
+  JobCard,
+  JobFeedLoadingState,
+  JobFeedStatus,
+  JobFilterBar,
+  VirtualizedJobList,
+} from '@/components/molecules';
 
 import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
-import { applicationsService } from '@/features/applications/services/applications.service';
 import { useJobFeed } from '@/features/jobs/hooks/useJobFeed';
 import {
   type JobFeedWorkMode,
   useJobFeedSearchParams,
 } from '@/features/jobs/hooks/useJobFeedSearchParams';
-import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
 import { useDebouncedValue } from '@/hooks/useDebouncedValue';
 
-import { jobFilters, salaryBandToApiRange, salaryOptions, sortOptions } from '@/constants/pages/jobFeed';
+import {
+  jobFilters,
+  salaryBandToApiRange,
+  salaryOptions,
+  sortOptions,
+} from '@/constants/pages/jobFeed';
 import { jobDetailPath } from '@/constants/routes';
-import { Box, Chip, CircularProgress, Typography } from '@/lib/material';
+import { applicationsService } from '@/features/applications/services/applications.service';
+import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
+import { Box, Chip, Typography } from '@/lib/material';
 
 import { jobFeedPageSx } from './styles';
 
@@ -65,9 +77,7 @@ export function JobFeedPage() {
 
   const savedIdSet = useMemo(() => {
     const ids = new Set(
-      (savedQuery.data ?? [])
-        .map((app) => app.jobId)
-        .filter((id): id is string => Boolean(id)),
+      (savedQuery.data ?? []).map((app) => app.jobId).filter((id): id is string => Boolean(id)),
     );
     for (const [jobId, isSaved] of Object.entries(optimisticSaved)) {
       if (isSaved) ids.add(jobId);
@@ -84,10 +94,10 @@ export function JobFeedPage() {
   const totalItems = data?.pagination.totalItems ?? 0;
   const hasActiveFilters = Boolean(
     state.query ||
-      state.workMode !== 'all' ||
-      state.minSalary !== undefined ||
-      state.maxSalary !== undefined ||
-      state.sortBy !== 'newest',
+    state.workMode !== 'all' ||
+    state.minSalary !== undefined ||
+    state.maxSalary !== undefined ||
+    state.sortBy !== 'newest',
   );
 
   const activeFilterChips = useMemo(() => {
@@ -116,8 +126,7 @@ export function JobFeedPage() {
       chips.push({
         key: 'salary',
         label: labelFor(salaryOptions, salaryValue),
-        onDelete: () =>
-          patch({ minSalary: undefined, maxSalary: undefined }, { resetPage: true }),
+        onDelete: () => patch({ minSalary: undefined, maxSalary: undefined }, { resetPage: true }),
       });
     }
     if (state.sortBy !== 'newest') {
@@ -170,10 +179,7 @@ export function JobFeedPage() {
           label="Salary"
           onChange={(value) => {
             const range = salaryBandToApiRange(value);
-            patch(
-              { minSalary: range.minSalary, maxSalary: range.maxSalary },
-              { resetPage: true },
-            );
+            patch({ minSalary: range.minSalary, maxSalary: range.maxSalary }, { resetPage: true });
           }}
           options={salaryOptions}
           value={salaryValue}
@@ -225,25 +231,15 @@ export function JobFeedPage() {
       ) : null}
 
       <Box sx={jobFeedPageSx.list}>
-        {isPending ? (
-          <Box
-            aria-busy="true"
-            aria-live="polite"
-            sx={{ display: 'grid', placeItems: 'center', py: 8 }}
-          >
-            <CircularProgress aria-label="Loading jobs" />
-          </Box>
-        ) : null}
+        {isPending ? <JobFeedLoadingState /> : null}
 
         {isError ? (
-          <Box role="alert" sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 6 }}>
-            <Typography>
-              {error instanceof Error ? error.message : 'Unable to load jobs right now.'}
-            </Typography>
-            <Button disabled={isFetching} onClick={() => void refetch()} size="small">
-              Retry
-            </Button>
-          </Box>
+          <JobFeedStatus
+            message={error instanceof Error ? error.message : 'Unable to load jobs right now.'}
+            onRetry={isFetching ? undefined : () => void refetch()}
+            title="Unable to load jobs"
+            tone="error"
+          />
         ) : null}
 
         {!isPending && !isError ? (
@@ -253,31 +249,31 @@ export function JobFeedPage() {
                 ariaLabel="Job feed results"
                 getKey={(job) => job.id ?? `${job.company}-${job.title}`}
                 items={data?.cards ?? []}
-              renderItem={(job) => (
-                <JobCard
-                  job={job}
-                  isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                  onApply={(selected) => {
-                    openExternalApply(selected.applyUrl);
-                  }}
-                  onOpen={(selected) => {
-                    if (!selected.id) return;
-                    void navigate(jobDetailPath(selected.id), {
-                      state: { fromFeed: `${location.pathname}${location.search}` },
-                    });
-                  }}
-                  onSave={(selected) => {
-                    if (!selected.id) return;
-                    const jobId = selected.id;
-                    const wasSaved = savedIdSet.has(jobId);
-                    setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
-                    void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
-                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
-                    });
-                  }}
-                />
-              )}
-            />
+                renderItem={(job) => (
+                  <JobCard
+                    job={job}
+                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                    onApply={(selected) => {
+                      openExternalApply(selected.applyUrl);
+                    }}
+                    onOpen={(selected) => {
+                      if (!selected.id) return;
+                      void navigate(jobDetailPath(selected.id), {
+                        state: { fromFeed: `${location.pathname}${location.search}` },
+                      });
+                    }}
+                    onSave={(selected) => {
+                      if (!selected.id) return;
+                      const jobId = selected.id;
+                      const wasSaved = savedIdSet.has(jobId);
+                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
+                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
+                      });
+                    }}
+                  />
+                )}
+              />
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 2 }}>
                 <Button
                   disabled={!data?.pagination.hasPreviousPage || isFetching}
@@ -301,9 +297,14 @@ export function JobFeedPage() {
               </Box>
             </>
           ) : (
-            <Typography role="status" sx={{ py: 6 }}>
-              {emptyMessage}
-            </Typography>
+            <JobFeedStatus
+              message={
+                hasActiveFilters
+                  ? 'Try adjusting your filters or clearing them to see more openings.'
+                  : 'Check back later for new openings.'
+              }
+              title={emptyMessage}
+            />
           )
         ) : null}
       </Box>

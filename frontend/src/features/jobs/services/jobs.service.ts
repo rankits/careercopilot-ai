@@ -43,27 +43,76 @@ export type JobsRequestOptions = {
   signal?: AbortSignal;
 };
 
+const isCanceledError = (error: unknown): boolean => {
+  if (!axios.isAxiosError(error)) return false;
+  return (
+    error.code === 'ERR_CANCELED' ||
+    error.name === 'CanceledError' ||
+    error.name === 'AbortError' ||
+    axios.isCancel(error)
+  );
+};
+
+export const normalizeJobsError = (error: unknown): Error => {
+  if (isCanceledError(error)) {
+    return error instanceof Error ? error : new Error('Request canceled');
+  }
+
+  if (axios.isAxiosError(error)) {
+    if (error.response?.status === 404) {
+      const payload: unknown = error.response.data;
+      const message =
+        isRecord(payload) && typeof payload.message === 'string'
+          ? payload.message
+          : 'Job not found';
+      return new JobNotFoundError(message);
+    }
+    if (error.response?.status === 401) {
+      return new Error('Your session has expired. Please sign in again.');
+    }
+    if (error.code === 'ECONNABORTED') {
+      return new Error('The request timed out. Please check your connection and try again.');
+    }
+    if (!error.response) {
+      return new Error('Unable to reach the jobs service. Check your connection and try again.');
+    }
+    const payload: unknown = error.response.data;
+    if (isRecord(payload) && typeof payload.message === 'string') {
+      return new Error(payload.message);
+    }
+    if (error.response.status >= 500) {
+      return new Error('The jobs service is temporarily unavailable. Please try again.');
+    }
+  }
+
+  return error instanceof Error ? error : new Error('Unable to load jobs.');
+};
+
 export const jobsService = {
   async listJobs(
     params: ListJobsParams = {},
     options: JobsRequestOptions = {},
   ): Promise<JobListResult> {
-    const response = await httpClient.get('/jobs', {
-      signal: options.signal,
-      params: {
-        page: params.page ?? 1,
-        limit: params.limit ?? 20,
-        sortBy: params.sortBy ?? 'newest',
-        ...(params.query ? { query: params.query } : {}),
-        ...(params.location ? { location: params.location } : {}),
-        ...(params.remoteTypes ? { remoteTypes: params.remoteTypes } : {}),
-        ...(params.employmentTypes ? { employmentTypes: params.employmentTypes } : {}),
-        ...(params.skills ? { skills: params.skills } : {}),
-        ...(params.minSalary !== undefined ? { minSalary: params.minSalary } : {}),
-        ...(params.maxSalary !== undefined ? { maxSalary: params.maxSalary } : {}),
-      },
-    });
-    return unwrapListPayload(response);
+    try {
+      const response = await httpClient.get('/jobs', {
+        signal: options.signal,
+        params: {
+          page: params.page ?? 1,
+          limit: params.limit ?? 20,
+          sortBy: params.sortBy ?? 'newest',
+          ...(params.query ? { query: params.query } : {}),
+          ...(params.location ? { location: params.location } : {}),
+          ...(params.remoteTypes ? { remoteTypes: params.remoteTypes } : {}),
+          ...(params.employmentTypes ? { employmentTypes: params.employmentTypes } : {}),
+          ...(params.skills ? { skills: params.skills } : {}),
+          ...(params.minSalary !== undefined ? { minSalary: params.minSalary } : {}),
+          ...(params.maxSalary !== undefined ? { maxSalary: params.maxSalary } : {}),
+        },
+      });
+      return unwrapListPayload(response);
+    } catch (error) {
+      throw normalizeJobsError(error);
+    }
   },
 
   async getJob(jobId: string, options: JobsRequestOptions = {}): Promise<JobDetailDto> {
@@ -74,10 +123,7 @@ export const jobsService = {
       }
       return response.data.data as JobDetailDto;
     } catch (error) {
-      if (axios.isAxiosError(error) && error.response?.status === 404) {
-        throw new JobNotFoundError();
-      }
-      throw error;
+      throw normalizeJobsError(error);
     }
   },
 };

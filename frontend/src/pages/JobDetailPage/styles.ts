@@ -54,4 +54,22 @@ export const jobDetailPageSx = {
     '& p': { marginBottom: spacing[2] },
     '& ul': { paddingLeft: spacing[4] },
   } satisfies SxProps<Theme>,
+  panel: {
+    background: colorTokens.backgroundCard,
+    border: `0.0625rem solid ${colorTokens.borderDefault}`,
+    borderRadius: borderRadius.xl,
+    display: 'grid',
+    gap: spacing[2],
+    padding: spacing[4],
+  } satisfies SxProps<Theme>,
+  sectionTitle: {
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+    margin: 0,
+  } satisfies SxProps<Theme>,
+  listItem: {
+    fontSize: fontSize.sm,
+    lineHeight: 1.6,
+    margin: 0,
+  } satisfies SxProps<Theme>,
 };
