@@ -9,6 +9,7 @@ import { prisma } from '@/shared/config/db.conf.js';
 import type { IJobSearchRepository } from '@/modules/job-listing/contracts/IJobSearchRepository.js';
 import type { JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
 import { DEFAULT_RECOMMENDATION_WEIGHTS } from '@/modules/recommendations/constants/recommendation.constants.js';
+import { RETRIEVAL_EXCLUSION_FEEDBACK_ACTIONS } from '@/modules/recommendations/constants/recommendation-feedback.constants.js';
 import type {
   JobRecommendationRepository,
   RecommendationFeedbackRepository,
@@ -106,6 +107,33 @@ const placeholderJob = (jobId: string): JobListDto => ({
   applyUrl: null,
 });
 
+const eligibleRecommendationWhere = (userId: string) => ({
+  userId,
+  job: {
+    status: 'ACTIVE' as const,
+    embeddings: {
+      some: {},
+    },
+  },
+});
+
+const filterRowsWithEligibleJobs = async (
+  tx: Tx,
+  rows: Array<JobRecommendation & { scoreComponents: RecommendationScoreComponent[] }>,
+): Promise<Array<JobRecommendation & { scoreComponents: RecommendationScoreComponent[] }>> => {
+  if (rows.length === 0) return rows;
+  const jobIds = [...new Set(rows.map((row) => row.jobId))];
+  const eligible = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+    SELECT j."id"
+    FROM "jobs" j
+    INNER JOIN "job_embeddings" je ON je."job_id" = j."id" AND je."job_version" = j."version"
+    WHERE j."id" IN (${Prisma.join(jobIds)})
+      AND j."status" = 'ACTIVE'::"JobStatus"
+  `);
+  const eligibleIds = new Set(eligible.map((row) => row.id));
+  return rows.filter((row) => eligibleIds.has(row.jobId));
+};
+
 const createRunRepository = (tx: Tx): RecommendationRunRepository => ({
   async create(input) {
     const run = await tx.recommendationRun.create({
@@ -195,19 +223,26 @@ const createRecommendationRepository = (
   const hydrate = async (
     rows: Array<JobRecommendation & { scoreComponents: RecommendationScoreComponent[] }>,
   ): Promise<JobRecommendationRecord[]> => {
-    const jobDtos = await jobs.findByIds(rows.map((row) => row.jobId));
+    const eligibleRows = await filterRowsWithEligibleJobs(tx, rows);
+    const jobDtos = await jobs.findByIds(eligibleRows.map((row) => row.jobId));
     const byId = new Map(jobDtos.map((job) => [job.id, job]));
-    return rows.map((row) => ({
-      id: row.id,
-      runId: row.runId,
-      userId: row.userId,
-      rank: row.rank,
-      createdAt: row.createdAt,
-      job: byId.get(row.jobId) ?? placeholderJob(row.jobId),
-      category: row.category,
-      matchType: row.matchType,
-      scoreResult: toScoreResult(row),
-    }));
+    return eligibleRows
+      .map((row) => {
+        const job = byId.get(row.jobId);
+        if (!job) return null;
+        return {
+          id: row.id,
+          runId: row.runId,
+          userId: row.userId,
+          rank: row.rank,
+          createdAt: row.createdAt,
+          job,
+          category: row.category,
+          matchType: row.matchType,
+          scoreResult: toScoreResult(row),
+        };
+      })
+      .filter((record): record is JobRecommendationRecord => record !== null);
   };
 
   return {
@@ -307,7 +342,7 @@ const createRecommendationRepository = (
     },
 
     async listByUser(userId, pagination) {
-      const where = { userId };
+      const where = eligibleRecommendationWhere(userId);
       const [total, rows] = await Promise.all([
         tx.jobRecommendation.count({ where }),
         tx.jobRecommendation.findMany({
@@ -393,6 +428,17 @@ const createFeedbackRepository = (tx: Tx): RecommendationFeedbackRepository => (
       orderBy: { createdAt: 'desc' },
     });
     return rows.map(toFeedbackRecord);
+  },
+
+  async listExcludedJobIds(userId) {
+    const rows = await tx.recommendationFeedback.findMany({
+      where: {
+        userId,
+        action: { in: [...RETRIEVAL_EXCLUSION_FEEDBACK_ACTIONS] },
+      },
+      select: { jobId: true },
+    });
+    return [...new Set(rows.map((row) => row.jobId))];
   },
 });
 
