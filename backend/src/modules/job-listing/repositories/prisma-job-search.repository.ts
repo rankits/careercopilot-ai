@@ -7,10 +7,19 @@ import {
   JobListDto,
   JobDetailDto,
 } from '@/modules/job-listing/types/job-listing.types.js';
+import { pickPrimaryApplyUrl } from '@/modules/job-listing/utils/safe-apply-url.js';
 
-type JobWithCompany = Prisma.JobGetPayload<{ include: { company: true } }>;
+const jobListInclude = {
+  company: true,
+  sources: {
+    orderBy: { priority: 'desc' as const },
+    select: { applyUrl: true },
+  },
+};
 
-const toJobListDto = (job: JobWithCompany): JobListDto => ({
+type JobWithCompanyAndSources = Prisma.JobGetPayload<{ include: typeof jobListInclude }>;
+
+export const toJobListDto = (job: JobWithCompanyAndSources): JobListDto => ({
   id: job.id,
   title: job.title,
   company: {
@@ -32,6 +41,7 @@ const toJobListDto = (job: JobWithCompany): JobListDto => ({
   skills: (job.skills as string[]) || [],
   publishedAt: job.postedAt ? job.postedAt.toISOString() : null,
   expiresAt: null,
+  applyUrl: pickPrimaryApplyUrl(job.sources),
 });
 
 export class PrismaJobSearchRepository implements IJobSearchRepository {
@@ -79,7 +89,7 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
         orderBy,
         skip,
         take: limit,
-        include: { company: true },
+        include: jobListInclude,
       }),
     ]);
 
@@ -99,9 +109,10 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
   }
 
   async findById(id: string): Promise<JobDetailDto | null> {
-    const job = await prisma.job.findUnique({
-      where: { id },
-      include: { company: true },
+    // Public detail is ACTIVE-only; inactive/expired/removed jobs must not leak.
+    const job = await prisma.job.findFirst({
+      where: { id, status: 'ACTIVE' },
+      include: jobListInclude,
     });
 
     if (!job) return null;
@@ -127,7 +138,7 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
         id: { in: uniqueIds },
         status: 'ACTIVE',
       },
-      include: { company: true },
+      include: jobListInclude,
     });
     const byId = new Map(jobs.map((job) => [job.id, toJobListDto(job)]));
     return ids.map((id) => byId.get(id)).filter((job): job is JobListDto => job !== undefined);
