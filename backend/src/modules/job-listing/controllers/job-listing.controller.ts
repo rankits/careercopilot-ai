@@ -33,7 +33,6 @@ export const searchJobsController = async (req: Request, res: Response, next: Ne
         : undefined,
       minSalary: query.minSalary ? Number(query.minSalary) : undefined,
       maxSalary: query.maxSalary ? Number(query.maxSalary) : undefined,
-      currency: query.currency,
     };
 
     const pagination: JobSearchPagination = {

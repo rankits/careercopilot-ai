@@ -7,7 +7,6 @@ export interface JobSearchFilters {
   skills?: string[];
   minSalary?: number;
   maxSalary?: number;
-  currency?: string;
   postedWithinDays?: number;
 }
 
@@ -16,7 +15,7 @@ export interface JobSearchPagination {
   limit: number;
 }
 
-export type JobSortBy = 'relevance' | 'newest' | 'salaryHighToLow' | 'salaryLowToHigh';
+export type JobSortBy = 'newest' | 'salaryHighToLow' | 'salaryLowToHigh';
 
 export interface JobSearchOptions {
   filters: JobSearchFilters;
