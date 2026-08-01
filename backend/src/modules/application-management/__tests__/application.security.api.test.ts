@@ -24,13 +24,45 @@ describe('JOB-QA-002 application IDOR / authz regression', () => {
     ['PATCH', `${API}/${APP_ID}`],
     ['DELETE', `${API}/${APP_ID}`],
     ['POST', `${API}/${APP_ID}/archive`],
+    ['POST', `${API}/saved-jobs`],
+    ['DELETE', `${API}/saved-jobs/${APP_ID}`],
   ] as const)('%s %s returns 401 without auth (x-user-id ignored)', async (method, path) => {
     const req = request(app)[method.toLowerCase() as 'get' | 'patch' | 'delete' | 'post'](path).set(
       'x-user-id',
       'spoofed-user',
     );
-    const res = method === 'PATCH' ? await req.send({ jobTitle: 'X' }) : await req;
+    const res =
+      method === 'PATCH'
+        ? await req.send({ jobTitle: 'X' })
+        : method === 'POST' && path.endsWith('/saved-jobs')
+          ? await req.send({ jobId: APP_ID })
+          : await req;
     expect(res.status).toBe(401);
+  });
+
+  it('savePlatformJob uses caller principal and is idempotent', async () => {
+    const user = await seedVerifiedUser({ email: 'saver@example.com' });
+    const token = accessTokenForUser(user);
+    const jobId = '00000000-0000-4000-8000-000000000055';
+
+    const spy = vi.spyOn(applicationService, 'savePlatformJob').mockResolvedValue({
+      created: false,
+      application: {
+        id: APP_ID,
+        userId: user.publicId,
+        jobId,
+        jobTitle: 'Engineer',
+        companyName: 'Acme',
+      } as never,
+    });
+
+    const res = await request(app)
+      .post(`${API}/saved-jobs`)
+      .set(authHeader(token))
+      .send({ jobId });
+
+    expect(res.status).toBe(200);
+    expect(spy).toHaveBeenCalledWith(user.publicId, jobId);
   });
 
   it('owner can read their application (happy path)', async () => {

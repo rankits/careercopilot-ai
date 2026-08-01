@@ -39,6 +39,43 @@ export const createApplicationController = async (
   }
 };
 
+export const savePlatformJobController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = requireUserPrincipalId(req);
+    const jobId = String(req.body?.jobId ?? '');
+    const { application, created } = await applicationService.savePlatformJob(userId, jobId);
+    return res
+      .status(created ? 201 : 200)
+      .json(
+        successResponse(
+          created ? 'Job saved successfully' : 'Job already saved',
+          application,
+        ),
+      );
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const unsavePlatformJobController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = requireUserPrincipalId(req);
+    const jobId = getParam(req.params.jobId, 'jobId');
+    await applicationService.unsavePlatformJob(userId, jobId);
+    return res.status(200).json(successResponse('Job unsaved successfully'));
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const getApplicationsController = async (
   req: Request,
   res: Response,
