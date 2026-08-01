@@ -1,0 +1,40 @@
+import type { JobListDto, JobListResult, ListJobsParams } from '@/features/jobs/types/job.types';
+import { httpClient } from '@/services/httpClient';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const unwrapListPayload = (response: unknown): JobListResult => {
+  if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
+    throw new Error('Unexpected jobs response shape');
+  }
+
+  const payload = response.data.data;
+  const items = Array.isArray(payload.items) ? (payload.items as JobListDto[]) : [];
+  const pagination = isRecord(payload.pagination)
+    ? (payload.pagination as JobListResult['pagination'])
+    : {
+        page: 1,
+        limit: items.length,
+        totalItems: items.length,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
+      };
+
+  return { items, pagination };
+};
+
+export const jobsService = {
+  async listJobs(params: ListJobsParams = {}): Promise<JobListResult> {
+    const response = await httpClient.get('/jobs', {
+      params: {
+        page: params.page ?? 1,
+        limit: params.limit ?? 50,
+        sortBy: params.sortBy ?? 'newest',
+        ...(params.query ? { query: params.query } : {}),
+      },
+    });
+    return unwrapListPayload(response);
+  },
+};
