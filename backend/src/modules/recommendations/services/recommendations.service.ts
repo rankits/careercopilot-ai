@@ -17,6 +17,7 @@ import type {
   BuildRecommendationContextInput,
   JobRecommendationRecord,
   RecommendationPage,
+  RecommendationReadinessStatus,
   RetrievalBackend,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import type {
@@ -176,6 +177,39 @@ export class RecommendationsService {
       );
     }
     return record;
+  }
+
+  async getReadinessStatus(userId: string): Promise<RecommendationReadinessStatus> {
+    const dependencies = this.requireOrchestration();
+    const blockers: string[] = [];
+    let canGenerateFromProfile = false;
+
+    try {
+      await dependencies.sourceAuthorization.authorizeForSource(userId, { sourceType: 'PROFILE' });
+      canGenerateFromProfile = true;
+    } catch (error) {
+      if (error instanceof RecommendationError) {
+        if (error.statusCode === 422) {
+          blockers.push('PROFILE_INCOMPLETE');
+        } else if (error.statusCode === 404) {
+          blockers.push('PROFILE_NOT_FOUND');
+        } else {
+          blockers.push('PROFILE_UNAVAILABLE');
+        }
+      } else {
+        blockers.push('PROFILE_UNAVAILABLE');
+      }
+    }
+
+    return {
+      ready: canGenerateFromProfile,
+      canGenerateFromProfile,
+      blockers,
+      retrieval: {
+        backend: DEFAULT_RETRIEVAL_BACKEND,
+        configured: true,
+      },
+    };
   }
 
   private requireOrchestration(): RecommendationOrchestrationDependencies {

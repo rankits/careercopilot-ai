@@ -190,3 +190,14 @@ export interface RecommendationPage {
   limit: number;
   total: number;
 }
+
+/** Foundation response for readiness/status API (JR-ARCH-001). */
+export interface RecommendationReadinessStatus {
+  ready: boolean;
+  canGenerateFromProfile: boolean;
+  blockers: string[];
+  retrieval: {
+    backend: RetrievalBackend;
+    configured: boolean;
+  };
+}
