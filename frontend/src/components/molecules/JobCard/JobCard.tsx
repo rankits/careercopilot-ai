@@ -1,3 +1,5 @@
+import { useState } from 'react';
+
 import { Button } from '@/components/atoms/Button';
 
 import {
@@ -34,6 +36,8 @@ export interface JobCardData {
   experience: string;
   experienceBand: string;
   logo: string;
+  /** Optional company logo image; falls back to `logo` initial. */
+  logoUrl?: string;
   location: string;
   /** Real recommendation score only — omit while mock/unwired. */
   match?: number;
@@ -57,6 +61,8 @@ export interface JobCardProps {
 export function JobCard({ job, onApply, onOpen, onSave }: JobCardProps) {
   const showMatch = typeof job.match === 'number';
   const showActions = Boolean(onApply || onSave);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const showLogoImage = Boolean(job.logoUrl) && !logoFailed;
 
   return (
     <JobCardRoot
@@ -76,7 +82,18 @@ export function JobCard({ job, onApply, onOpen, onSave }: JobCardProps) {
       sx={onOpen ? { cursor: 'pointer' } : undefined}
     >
       <Accent tone={job.accent} />
-      <CompanyLogo>{job.logo}</CompanyLogo>
+      <CompanyLogo aria-label={`${job.company} logo`}>
+        {showLogoImage ? (
+          <img
+            alt=""
+            loading="lazy"
+            onError={() => setLogoFailed(true)}
+            src={job.logoUrl}
+          />
+        ) : (
+          job.logo || '?'
+        )}
+      </CompanyLogo>
 
       <JobDetails>
         {job.isRecommended ? (
@@ -111,11 +128,13 @@ export function JobCard({ job, onApply, onOpen, onSave }: JobCardProps) {
           </span>
         </JobMeta>
 
-        <SkillList>
-          {job.skills.map((skill) => (
-            <SkillPill key={skill}>{skill}</SkillPill>
-          ))}
-        </SkillList>
+        {job.skills.length > 0 ? (
+          <SkillList>
+            {job.skills.map((skill) => (
+              <SkillPill key={skill}>{skill}</SkillPill>
+            ))}
+          </SkillList>
+        ) : null}
       </JobDetails>
 
       {showMatch || showActions ? (

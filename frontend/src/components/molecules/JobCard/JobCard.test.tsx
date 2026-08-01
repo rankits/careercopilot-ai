@@ -46,4 +46,22 @@ describe('JobCard', () => {
     expect(screen.getByRole('button', { name: /apply now/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save frontend engineer/i })).toBeInTheDocument();
   });
+
+  it('shows logo placeholder and hides empty skills', () => {
+    render(
+      <JobCard
+        job={{
+          ...baseJob,
+          logo: 'A',
+          logoUrl: undefined,
+          salary: 'Not disclosed',
+          skills: [],
+        }}
+      />,
+    );
+
+    expect(screen.getByLabelText(/acme logo/i)).toHaveTextContent('A');
+    expect(screen.queryByText('React')).not.toBeInTheDocument();
+    expect(screen.getByText(/not disclosed/i)).toBeInTheDocument();
+  });
 });

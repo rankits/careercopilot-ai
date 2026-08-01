@@ -9,7 +9,7 @@ const companyInitial = (name: string): string => {
 
 const formatSalary = (salary: JobListDto['salary']): string => {
   const { minimum, maximum, currency } = salary;
-  if (minimum == null && maximum == null) return 'Salary not listed';
+  if (minimum == null && maximum == null) return 'Not disclosed';
   const code = currency?.toUpperCase() ?? '';
   const unit = code === 'INR' ? 'LPA' : code;
   if (minimum != null && maximum != null) {
@@ -41,8 +41,11 @@ const remoteTag = (remoteType: string | null): string[] => {
 };
 
 const employmentLabel = (employmentType: string | null, remoteType: string | null): string => {
-  if (remoteType?.toLowerCase().includes('remote')) return 'Remote';
-  if (remoteType?.toLowerCase().includes('hybrid')) return 'Hybrid';
+  const remote = remoteType?.toLowerCase() ?? '';
+  if (remote.includes('remote')) return 'Remote';
+  if (remote.includes('hybrid')) return 'Hybrid';
+  if (remote.includes('onsite') || remote.includes('on-site')) return 'On-site';
+  if (remote) return 'Work mode unknown';
   if (!employmentType) return 'Full-time';
   return employmentType
     .toLowerCase()
@@ -66,11 +69,12 @@ export function mapJobListDtoToCard(job: JobListDto, index = 0): JobCardData {
     experience: 'Experience not listed',
     experienceBand: 'all',
     logo: companyInitial(job.company.name || '?'),
+    logoUrl: job.company.logoUrl ?? undefined,
     location: job.location.formatted || 'Location not listed',
     postedAt: formatPostedAt(job.publishedAt),
     salary: formatSalary(job.salary),
     salaryBand: 'all',
-    skills: job.skills?.length ? job.skills.slice(0, 6) : ['Skills not listed'],
+    skills: job.skills?.length ? job.skills.slice(0, 6) : [],
     tags,
     title: job.title,
     type,
