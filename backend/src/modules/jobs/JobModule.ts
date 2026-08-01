@@ -11,6 +11,7 @@ import { RemoteOkJobProvider } from '@/modules/jobs/providers/remoteok/provider.
 import { LeverJobProvider } from '@/modules/jobs/providers/lever/provider.js';
 import { AshbyJobProvider } from '@/modules/jobs/providers/ashby/provider.js';
 import { RecruiteeJobProvider } from '@/modules/jobs/providers/recruitee/provider.js';
+import { PersonioJobProvider } from '@/modules/jobs/providers/personio/provider.js';
 import { JobsService } from '@/modules/jobs/services/jobs.service.js';
 import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
@@ -97,7 +98,13 @@ const recruiteeProvider = new RecruiteeJobProvider({
 });
 
 jobProviderRegistry.register(ashbyProvider);
+const personioProvider = new PersonioJobProvider({
+  accounts: [{ account: 'acme', companyName: 'Personio Sample' }],
+  tier: ProviderTier.PUBLIC,
+});
+
 jobProviderRegistry.register(recruiteeProvider);
+jobProviderRegistry.register(personioProvider);
 
 jobsLogger.info(
   {
