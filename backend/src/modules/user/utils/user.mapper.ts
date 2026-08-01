@@ -6,7 +6,7 @@ import type {
 } from '@/modules/user/types/user.types.js';
 
 export const toUserProfile = (user: UserWithRole): UserProfile => ({
-  id: user.publicId,
+  id: user.id,
   email: user.email,
   firstName: user.firstName,
   lastName: user.lastName,
@@ -21,7 +21,7 @@ export const toUserProfile = (user: UserWithRole): UserProfile => ({
 });
 
 export const toUserListItem = (user: UserWithRole): UserListItem => ({
-  id: user.publicId,
+  id: user.id,
   email: user.email,
   firstName: user.firstName,
   lastName: user.lastName,
@@ -32,7 +32,7 @@ export const toUserListItem = (user: UserWithRole): UserListItem => ({
 });
 
 export interface UserProfileResponseDto {
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;
@@ -47,7 +47,7 @@ export interface UserProfileResponseDto {
 }
 
 export interface UserListItemResponseDto {
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;

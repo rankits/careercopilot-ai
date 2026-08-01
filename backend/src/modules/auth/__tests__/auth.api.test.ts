@@ -590,7 +590,7 @@ describe('GET /auth/me', () => {
         expect(res.status).toBe(200);
         expect(res.body.data.email).toBe(user.email);
         expect(res.body.data.firstName).toBe('Meredith');
-        expect(res.body.data.id).toBe(user.publicId);
+        expect(res.body.data.id).toBe(user.id);
       });
     });
   });

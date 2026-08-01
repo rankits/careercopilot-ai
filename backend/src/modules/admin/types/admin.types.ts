@@ -11,9 +11,9 @@ export interface AuthTokens {
   accessTokenExpiresInSeconds: number;
 }
 
-/** External-facing shape - `id` is always the `publicId`, never the internal db id. */
+/** External-facing shape - `id` is the internal numeric db id for consistency with other responses. */
 export interface SafeAdmin {
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;
@@ -30,10 +30,8 @@ export interface AdminSession {
 
 /** What `admin-token.service.ts` needs to mint an access token and create a session row. */
 export interface AdminTokenContext {
-  /** Internal PK - used only for the AdminSession FK, never exposed externally. */
+  /** Internal PK - used only for the AdminSession FK and JWT `sub` claim. */
   id: number;
-  /** Public id - becomes the JWT `sub` claim. */
-  publicId: string;
   email: string;
   role: string;
   tokenVersion: number;
