@@ -1,5 +1,6 @@
 import { NextFunction, Request, Response } from 'express';
 import { jobListingService } from '@/modules/job-listing/index.js';
+import { recordJobListingRequest } from '@/modules/job-listing/observability/job-listing.metrics.js';
 import { successResponse } from '@/shared/utils/response.js';
 import {
   JobSearchOptions,
@@ -8,11 +9,28 @@ import {
   JobSortBy,
 } from '@/modules/job-listing/types/job-listing.types.js';
 
+const hasActiveFilters = (filters: JobSearchFilters, sortBy: JobSortBy): boolean =>
+  Boolean(
+    filters.query ||
+      filters.companySlug ||
+      filters.location ||
+      filters.remoteTypes?.length ||
+      filters.employmentTypes?.length ||
+      filters.skills?.length ||
+      filters.minSalary !== undefined ||
+      filters.maxSalary !== undefined ||
+      (sortBy && sortBy !== 'newest'),
+  );
+
 export const searchJobsController = async (req: Request, res: Response, next: NextFunction) => {
+  const started = performance.now();
+  let filters: JobSearchFilters = {};
+  let sortBy: JobSortBy = 'newest';
+
   try {
     const query = req.query as any;
 
-    const filters: JobSearchFilters = {
+    filters = {
       query: query.query,
       companySlug: query.companySlug,
       location: query.location,
@@ -40,7 +58,7 @@ export const searchJobsController = async (req: Request, res: Response, next: Ne
       limit: query.limit ? Number(query.limit) : 20,
     };
 
-    const sortBy: JobSortBy = query.sortBy || 'newest';
+    sortBy = query.sortBy || 'newest';
 
     const options: JobSearchOptions = {
       filters,
@@ -49,6 +67,16 @@ export const searchJobsController = async (req: Request, res: Response, next: Ne
     };
 
     const result = await jobListingService.searchJobs(options);
+    const resultCount = result.pagination.totalItems;
+    const empty = resultCount === 0;
+
+    recordJobListingRequest({
+      outcome: empty ? 'empty' : 'success',
+      statusCode: 200,
+      durationMs: performance.now() - started,
+      hasFilters: hasActiveFilters(filters, sortBy),
+      resultCount,
+    });
 
     return res.status(200).json(
       successResponse('Jobs retrieved successfully', {
@@ -58,6 +86,12 @@ export const searchJobsController = async (req: Request, res: Response, next: Ne
       }),
     );
   } catch (error) {
+    recordJobListingRequest({
+      outcome: 'error',
+      statusCode: 500,
+      durationMs: performance.now() - started,
+      hasFilters: hasActiveFilters(filters, sortBy),
+    });
     next(error);
   }
 };
