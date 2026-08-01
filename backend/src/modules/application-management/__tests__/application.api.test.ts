@@ -48,7 +48,7 @@ describe('GET /applications authz', () => {
 
       expect(res.status).toBe(200);
       expect(spy).toHaveBeenCalledTimes(1);
-      expect(spy.mock.calls[0][0]).toMatchObject({ userId: user.publicId });
+      expect(spy.mock.calls[0][0]).toMatchObject({ userId: String(user.id) });
       expect(spy.mock.calls[0][0].userId).not.toBe('other-user');
     });
   });
@@ -71,7 +71,7 @@ describe('GET /applications/:id ownership', () => {
 
       expect(res.status).toBe(404);
       expect(applicationService.getApplicationById).toHaveBeenCalledWith(
-        user.publicId,
+        String(user.id),
         '00000000-0000-4000-8000-000000000099',
       );
     });
@@ -102,7 +102,7 @@ describe('POST /applications authn', () => {
 
       const spy = vi.spyOn(applicationService, 'createApplication').mockResolvedValue({
         id: 'app-1',
-        userId: user.publicId,
+        userId: String(user.id),
         jobTitle: 'Engineer',
         companyName: 'Acme',
       } as never);
@@ -120,7 +120,7 @@ describe('POST /applications authn', () => {
 
       expect(res.status).toBe(201);
       expect(spy).toHaveBeenCalledWith(
-        user.publicId,
+        String(user.id),
         expect.objectContaining({
           sourceType: 'MANUAL',
           jobTitle: 'Engineer',
