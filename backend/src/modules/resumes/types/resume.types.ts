@@ -196,3 +196,24 @@ export interface OnboardingProfilePayload extends ParsedResumeData {
   userId: string;
   sourceResumeId?: string;
 }
+
+export interface UpdateCandidateProfileInput {
+  personalDetails?: Record<string, unknown>;
+  experience?: Array<Record<string, unknown>>;
+  education?: Array<Record<string, unknown>>;
+  skills?: string[];
+  certifications?: Array<Record<string, unknown>>;
+}
+
+export interface CandidateProfileResponse {
+  userId: string;
+  personalDetails: Record<string, unknown>;
+  experience: Array<Record<string, unknown>>;
+  education: Array<Record<string, unknown>>;
+  skills: string[];
+  certifications: Array<Record<string, unknown>>;
+  sourceResumeId: string | null;
+  confirmedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
