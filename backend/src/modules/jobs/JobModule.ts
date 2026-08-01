@@ -9,6 +9,7 @@ import { HimalayasJobProvider } from '@/modules/jobs/providers/himalayas/provide
 import { RemoteJobsOrgProvider } from '@/modules/jobs/providers/remotejobs-org/provider.js';
 import { RemoteOkJobProvider } from '@/modules/jobs/providers/remoteok/provider.js';
 import { LeverJobProvider } from '@/modules/jobs/providers/lever/provider.js';
+import { AshbyJobProvider } from '@/modules/jobs/providers/ashby/provider.js';
 import { JobsService } from '@/modules/jobs/services/jobs.service.js';
 import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
@@ -78,7 +79,18 @@ jobProviderRegistry.register(jobicyProvider);
 jobProviderRegistry.register(himalayasProvider);
 jobProviderRegistry.register(remoteJobsOrgProvider);
 jobProviderRegistry.register(remoteOkProvider);
+const ashbyProvider = new AshbyJobProvider({
+  boards: [
+    { boardName: 'notion', companyName: 'Notion' },
+    { boardName: 'openai', companyName: 'OpenAI' },
+    { boardName: 'ramp', companyName: 'Ramp' },
+    { boardName: 'linear', companyName: 'Linear' },
+  ],
+  tier: ProviderTier.PUBLIC,
+});
+
 jobProviderRegistry.register(leverProvider);
+jobProviderRegistry.register(ashbyProvider);
 
 jobsLogger.info(
   {
