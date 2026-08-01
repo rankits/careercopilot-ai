@@ -42,4 +42,10 @@ export interface ListJobsParams {
   limit?: number;
   sortBy?: 'newest' | 'salaryHighToLow' | 'salaryLowToHigh';
   query?: string;
+  location?: string;
+  remoteTypes?: string | string[];
+  employmentTypes?: string | string[];
+  skills?: string | string[];
+  minSalary?: number;
+  maxSalary?: number;
 }

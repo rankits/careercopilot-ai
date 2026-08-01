@@ -30,9 +30,15 @@ export const jobsService = {
     const response = await httpClient.get('/jobs', {
       params: {
         page: params.page ?? 1,
-        limit: params.limit ?? 50,
+        limit: params.limit ?? 20,
         sortBy: params.sortBy ?? 'newest',
         ...(params.query ? { query: params.query } : {}),
+        ...(params.location ? { location: params.location } : {}),
+        ...(params.remoteTypes ? { remoteTypes: params.remoteTypes } : {}),
+        ...(params.employmentTypes ? { employmentTypes: params.employmentTypes } : {}),
+        ...(params.skills ? { skills: params.skills } : {}),
+        ...(params.minSalary !== undefined ? { minSalary: params.minSalary } : {}),
+        ...(params.maxSalary !== undefined ? { maxSalary: params.maxSalary } : {}),
       },
     });
     return unwrapListPayload(response);

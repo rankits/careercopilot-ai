@@ -10,14 +10,15 @@ const companyInitial = (name: string): string => {
 const formatSalary = (salary: JobListDto['salary']): string => {
   const { minimum, maximum, currency } = salary;
   if (minimum == null && maximum == null) return 'Salary not listed';
-  const unit = currency?.toUpperCase() === 'INR' ? 'LPA' : (currency ?? '');
+  const code = currency?.toUpperCase() ?? '';
+  const unit = code === 'INR' ? 'LPA' : code;
   if (minimum != null && maximum != null) {
     return unit
       ? `${unit} ${minimum.toLocaleString()} - ${maximum.toLocaleString()}`
       : `${minimum.toLocaleString()} - ${maximum.toLocaleString()}`;
   }
-  const value = minimum ?? maximum;
-  return unit ? `${unit} ${value!.toLocaleString()}` : value!.toLocaleString();
+  const value = (minimum ?? maximum) as number;
+  return unit ? `${unit} ${value.toLocaleString()}` : value.toLocaleString();
 };
 
 const formatPostedAt = (publishedAt: string | null): string => {
@@ -35,6 +36,7 @@ const remoteTag = (remoteType: string | null): string[] => {
   const normalized = remoteType.toLowerCase().replace(/_/g, '-');
   if (normalized.includes('remote')) return ['remote'];
   if (normalized.includes('hybrid')) return ['hybrid'];
+  if (normalized.includes('onsite') || normalized.includes('on-site')) return ['onsite'];
   return [normalized];
 };
 
@@ -50,7 +52,7 @@ const employmentLabel = (employmentType: string | null, remoteType: string | nul
 };
 
 /** Maps API JobListDto → JobCard view model. Match/recommendation fields intentionally omitted. */
-export function mapJobToCard(job: JobListDto, index = 0): JobCardData {
+export function mapJobListDtoToCard(job: JobListDto, index = 0): JobCardData {
   const type = employmentLabel(job.employmentType, job.location.remoteType);
   const tags = [
     ...remoteTag(job.location.remoteType),
@@ -60,10 +62,10 @@ export function mapJobToCard(job: JobListDto, index = 0): JobCardData {
   return {
     id: job.id,
     accent: index % 2 === 0 ? 'primary' : 'danger',
-    company: job.company.name,
+    company: job.company.name || 'Company not listed',
     experience: 'Experience not listed',
     experienceBand: 'all',
-    logo: companyInitial(job.company.name),
+    logo: companyInitial(job.company.name || '?'),
     location: job.location.formatted || 'Location not listed',
     postedAt: formatPostedAt(job.publishedAt),
     salary: formatSalary(job.salary),
@@ -74,3 +76,6 @@ export function mapJobToCard(job: JobListDto, index = 0): JobCardData {
     type,
   };
 }
+
+/** @deprecated Prefer mapJobListDtoToCard */
+export const mapJobToCard = mapJobListDtoToCard;
