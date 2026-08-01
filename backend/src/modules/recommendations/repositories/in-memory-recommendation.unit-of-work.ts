@@ -104,7 +104,9 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
     ): Promise<JobRecommendationRecord[]> => {
       this.requireRun(userId, runId);
       const ranked = [...recommendations].sort(
-        (left, right) => right.scoreResult.overallScore - left.scoreResult.overallScore,
+        (left, right) =>
+          right.scoreResult.overallScore - left.scoreResult.overallScore ||
+          left.job.id.localeCompare(right.job.id),
       );
       const created = ranked.map((item, index): JobRecommendationRecord => {
         const record: JobRecommendationRecord = {
@@ -147,7 +149,12 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
     ): Promise<RecommendationPage> => {
       const items = [...this.recommendations.values()]
         .filter((item) => item.userId === userId)
-        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
+        .sort(
+          (left, right) =>
+            right.createdAt.getTime() - left.createdAt.getTime() ||
+            left.rank - right.rank ||
+            left.id.localeCompare(right.id),
+        );
       return paginate(items, pagination);
     },
 

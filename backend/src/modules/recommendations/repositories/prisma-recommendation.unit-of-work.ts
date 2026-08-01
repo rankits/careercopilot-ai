@@ -222,7 +222,9 @@ const createRecommendationRepository = (
       }
 
       const ranked = [...recommendations].sort(
-        (left, right) => right.scoreResult.overallScore - left.scoreResult.overallScore,
+        (left, right) =>
+          right.scoreResult.overallScore - left.scoreResult.overallScore ||
+          left.job.id.localeCompare(right.job.id),
       );
 
       const created: Array<
@@ -311,7 +313,7 @@ const createRecommendationRepository = (
         tx.jobRecommendation.findMany({
           where,
           include: { scoreComponents: true },
-          orderBy: { createdAt: 'desc' },
+          orderBy: [{ createdAt: 'desc' }, { rank: 'asc' }, { id: 'asc' }],
           skip: (pagination.page - 1) * pagination.limit,
           take: pagination.limit,
         }),
