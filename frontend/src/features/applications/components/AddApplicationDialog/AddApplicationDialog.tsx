@@ -1,3 +1,4 @@
+import { useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -10,15 +11,18 @@ import { useCreateApplication } from '@/features/applications/hooks/useCreateApp
 
 import type { defaultAddApplicationForm } from '@/constants/pages/addApplication';
 import {
-  addApplicationEntryModes,
   addApplicationPriorityOptions,
   addApplicationStatusOptions,
   createDefaultAddApplicationForm,
   getTodayDateInputValue,
   jobFeedPickerFilters,
   jobFeedPickerJobs,
+  MAX_APPLICATION_NOTE_LENGTH,
+  visibleAddApplicationEntryModes,
   type AddApplicationEntryMode,
 } from '@/constants/pages/addApplication';
+import { applicationQueryKeys } from '@/features/applications/queryKeys';
+import { applicationsService } from '@/features/applications/services/applications.service';
 import type { ApplicationPriority } from '@/features/applications/types/application.view.types';
 import type {
   AddApplicationFormErrors,
@@ -243,6 +247,24 @@ function TrackingPreferencesSection({
             value={form.interest}
           />
         </InterestField>
+      </FieldGroup>
+
+      <FieldGroup>
+        <FieldLabel htmlFor="add-application-notes">Notes</FieldLabel>
+        <FieldHint>Optional — capture context, next steps, or recruiter details.</FieldHint>
+        <Input
+          errorMessage={fieldError('notes')}
+          fullWidth
+          id="add-application-notes"
+          inputProps={{ maxLength: MAX_APPLICATION_NOTE_LENGTH }}
+          multiline
+          onBlur={() => onFieldBlur('notes')}
+          onChange={(event) => onChange('notes', event.target.value)}
+          placeholder="Add any notes about this application..."
+          rows={3}
+          size="small"
+          value={form.notes}
+        />
       </FieldGroup>
     </DialogSection>
   );
@@ -504,6 +526,7 @@ function JobFeedPicker({
 
 export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProps) {
   const { showToast } = useToast();
+  const queryClient = useQueryClient();
   const createApplication = useCreateApplication();
   const [entryMode, setEntryMode] = useState<AddApplicationEntryMode>('manual');
   const [form, setForm] = useState(createDefaultAddApplicationForm);
@@ -603,7 +626,13 @@ export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProp
         payload.appliedAt = form.appliedDate.trim();
       }
 
-      await createApplication.mutateAsync(payload);
+      const created = await createApplication.mutateAsync(payload);
+      const noteContent = form.notes.trim();
+
+      if (noteContent) {
+        await applicationsService.addNote(created.id, { content: noteContent });
+        await queryClient.invalidateQueries({ queryKey: applicationQueryKeys.all });
+      }
 
       showToast({ message: 'Application added successfully', severity: 'success' });
       handleClose();
@@ -651,8 +680,12 @@ export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProp
           icon={<LightbulbOutlinedIcon fontSize="small" />}
           title="How would you like to add it?"
         >
-          <EntryModeTabs aria-label="Add application entry mode" role="tablist">
-            {addApplicationEntryModes.map((mode) => {
+          <EntryModeTabs
+            aria-label="Add application entry mode"
+            columns={visibleAddApplicationEntryModes.length}
+            role="tablist"
+          >
+            {visibleAddApplicationEntryModes.map((mode) => {
               const Icon = entryModeIcons[mode.icon];
 
               return (

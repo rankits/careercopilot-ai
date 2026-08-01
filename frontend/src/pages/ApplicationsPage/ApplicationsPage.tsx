@@ -344,8 +344,12 @@ export function ApplicationsPage() {
             className="applications-search-field"
             fullWidth
             onChange={(event) => {
-              setSearchQuery(event.target.value);
-              setCurrentPage(1);
+              const nextQuery = event.target.value;
+              setSearchQuery(nextQuery);
+
+              if (nextQuery.trim() !== searchQuery.trim()) {
+                setCurrentPage(1);
+              }
             }}
             placeholder="Search by company or job title"
             size="small"
@@ -547,6 +551,7 @@ export function ApplicationsPage() {
         confirmLabel="Delete"
         confirmVariant="danger"
         description={`This will permanently delete "${selectedRecord?.title}" at ${selectedRecord?.company} along with its notes, tasks, and history.`}
+        intent="delete"
         isPending={deleteApplication.isPending}
         onClose={() => setDeleteConfirmOpen(false)}
         onConfirm={() => void handleDeleteConfirm()}
@@ -558,9 +563,10 @@ export function ApplicationsPage() {
         confirmLabel={archiveAction === 'archive' ? 'Archive' : 'Restore'}
         description={
           archiveAction === 'archive'
-            ? `"${selectedRecord?.title}" will be moved to your archived applications. You can restore it later.`
-            : `"${selectedRecord?.title}" will return to your active applications list.`
+            ? `"${selectedRecord?.title}" at ${selectedRecord?.company} will be moved to your archived applications. You can restore it later.`
+            : `"${selectedRecord?.title}" at ${selectedRecord?.company} will return to your active applications list.`
         }
+        intent={archiveAction === 'archive' ? 'archive' : 'restore'}
         isPending={archiveApplication.isPending}
         onClose={() => setArchiveConfirmOpen(false)}
         onConfirm={() => void handleArchiveConfirm()}

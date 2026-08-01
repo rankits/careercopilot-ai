@@ -9,7 +9,12 @@ export const DetailApplicationDialog = styled(ApplicationDialog)({
   '& .MuiDialog-paper': {
     display: 'flex',
     flexDirection: 'column',
+    maxHeight: 'calc(100vh - 2rem)',
     overflow: 'hidden',
+
+    [mobileBreakpoint]: {
+      maxHeight: 'calc(100vh - 1.5rem)',
+    },
   },
 });
 
@@ -32,10 +37,12 @@ export const DetailTabPanel = styled(Box)({
   display: 'grid',
   flex: '1 1 auto',
   gap: spacing[4],
-  maxHeight: '28rem',
-  minHeight: '28rem',
+  minHeight: 0,
   overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  paddingBottom: spacing[2],
   paddingRight: spacing[1],
+  scrollbarGutter: 'stable',
 
   '&::-webkit-scrollbar': {
     width: '0.375rem',
@@ -49,11 +56,6 @@ export const DetailTabPanel = styled(Box)({
   '&::-webkit-scrollbar-track': {
     background: palette.gray100,
     borderRadius: borderRadius.full,
-  },
-
-  [mobileBreakpoint]: {
-    maxHeight: '22rem',
-    minHeight: '22rem',
   },
 });
 
@@ -256,6 +258,7 @@ export const RecordActionButton = styled(IconButton)({
 export const HistoryTimeline = styled(Box)({
   display: 'grid',
   gap: spacing[4],
+  paddingTop: spacing[1],
 });
 
 export const HistoryItem = styled(Box)({

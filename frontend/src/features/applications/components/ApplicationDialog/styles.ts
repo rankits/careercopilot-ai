@@ -210,15 +210,17 @@ export const SectionContent = styled(Box)({
   gap: spacing[4],
 });
 
-export const EntryModeTabs = styled('div')({
+export const EntryModeTabs = styled('div', {
+  shouldForwardProp: (prop) => prop !== 'columns',
+})<{ columns?: number }>(({ columns = 2 }) => ({
   display: 'grid',
   gap: spacing[3],
-  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+  gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
 
   [mobileBreakpoint]: {
     gridTemplateColumns: '1fr',
   },
-});
+}));
 
 export const EntryModeTab = styled('button', {
   shouldForwardProp: (prop) => prop !== 'active',

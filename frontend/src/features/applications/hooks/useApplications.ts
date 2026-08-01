@@ -39,7 +39,8 @@ function sortRecords(records: ApplicationRecord[], sortBy: string): ApplicationR
 }
 
 export function useApplications(filters: ApplicationListFilters) {
-  const debouncedSearch = useDebouncedValue(filters.searchQuery.trim(), 300);
+  const normalizedSearch = filters.searchQuery.trim();
+  const debouncedSearch = useDebouncedValue(normalizedSearch, 300);
   const listParams = buildApplicationListParams(filters, {
     limit: Number(filters.pageSize),
     page: filters.currentPage,
@@ -47,13 +48,17 @@ export function useApplications(filters: ApplicationListFilters) {
   });
 
   const queryParams = {
-    ...filters,
+    activeTab: filters.activeTab,
+    archiveFilter: filters.archiveFilter,
     archived: listParams.archived,
+    currentPage: filters.currentPage,
     limit: listParams.limit,
     page: listParams.page,
-    search: debouncedSearch,
-    sortBy: listParams.sortBy,
+    pageSize: filters.pageSize,
+    search: debouncedSearch || undefined,
+    sortBy: filters.sortBy,
     status: listParams.status,
+    statusFilter: filters.statusFilter,
   };
 
   return useQuery({
