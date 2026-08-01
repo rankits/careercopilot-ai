@@ -18,7 +18,6 @@ const job = (overrides: Partial<JobListDto> = {}): JobListDto => ({
   salary: overrides.salary ?? { minimum: 90000, maximum: 120000, currency: 'EUR' },
   skills: overrides.skills ?? ['TypeScript'],
   publishedAt: null,
-  expiresAt: null,
 });
 
 const context = (overrides: Partial<RecommendationContext> = {}): RecommendationContext => ({

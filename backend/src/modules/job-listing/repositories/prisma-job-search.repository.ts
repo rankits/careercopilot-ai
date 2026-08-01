@@ -42,7 +42,6 @@ export const toJobListDto = (job: JobWithCompanyAndSources): JobListDto => ({
   },
   skills: (job.skills as string[]) || [],
   publishedAt: job.postedAt ? job.postedAt.toISOString() : null,
-  expiresAt: null,
   applyUrl: pickPrimaryApplyUrl(job.sources),
 });
 

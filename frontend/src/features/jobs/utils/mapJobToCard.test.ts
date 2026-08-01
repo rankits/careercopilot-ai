@@ -13,7 +13,6 @@ describe('mapJobListDtoToCard', () => {
       salary: { minimum: 100000, maximum: 140000, currency: 'USD' },
       skills: ['Go', 'Postgres'],
       publishedAt: new Date().toISOString(),
-      expiresAt: null,
       applyUrl: 'https://acme.test/jobs/1',
     });
 
