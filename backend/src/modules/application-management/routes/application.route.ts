@@ -1,6 +1,9 @@
 import express from 'express';
 import { z } from 'zod';
+import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
+import { requirePermission } from '@/shared/middlewares/rbac.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
+import { APPLICATIONS_PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
 import {
   createApplicationController,
   getApplicationsController,
@@ -27,29 +30,37 @@ import {
 
 const router = express.Router();
 
+router.use(authMiddleware);
+
 // Application Root CRUD & Listing
 router.post(
   '/',
+  requirePermission(APPLICATIONS_PERMISSIONS.CREATE_OWN),
   validateResource(
     z.object({
       body: CreateApplicationSchema,
-    })
+    }),
   ),
-  createApplicationController
+  createApplicationController,
 );
 
-router.get('/', getApplicationsController);
+router.get('/', requirePermission(APPLICATIONS_PERMISSIONS.READ_OWN), getApplicationsController);
 
-router.get('/:id', getApplicationByIdController);
+router.get(
+  '/:id',
+  requirePermission(APPLICATIONS_PERMISSIONS.READ_OWN),
+  getApplicationByIdController,
+);
 
 router.patch(
   '/:id',
+  requirePermission(APPLICATIONS_PERMISSIONS.UPDATE_OWN),
   validateResource(
     z.object({
       body: UpdateApplicationSchema,
-    })
+    }),
   ),
-  updateApplicationController
+  updateApplicationController,
 );
 
 router.delete('/:id', deleteApplicationController);
@@ -60,9 +71,9 @@ router.post(
   validateResource(
     z.object({
       body: StatusTransitionSchema,
-    })
+    }),
   ),
-  transitionStatusController
+  transitionStatusController,
 );
 
 router.post('/:id/archive', archiveApplicationController);
@@ -74,9 +85,9 @@ router.post(
   validateResource(
     z.object({
       body: CreateNoteSchema,
-    })
+    }),
   ),
-  addNoteController
+  addNoteController,
 );
 router.delete('/:id/notes/:noteId', deleteNoteController);
 
@@ -86,9 +97,9 @@ router.post(
   validateResource(
     z.object({
       body: CreateTaskSchema,
-    })
+    }),
   ),
-  addTaskController
+  addTaskController,
 );
 
 router.patch(
@@ -96,9 +107,9 @@ router.patch(
   validateResource(
     z.object({
       body: UpdateTaskSchema,
-    })
+    }),
   ),
-  updateTaskController
+  updateTaskController,
 );
 
 router.delete('/:id/tasks/:taskId', deleteTaskController);

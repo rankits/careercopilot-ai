@@ -3,6 +3,10 @@ import { AppError } from '@/shared/utils/errors/AppError.js';
 import { successResponse } from '@/shared/utils/response.js';
 import { ApplicationManagementService } from '@/modules/application-management/services/application.service.js';
 import { PrismaApplicationRepository } from '@/modules/application-management/repositories/prisma-application.repository.js';
+import {
+  CreateApplicationSchema,
+  UpdateApplicationSchema,
+} from '@/modules/application-management/validations/application.validation.js';
 import { ApplicationStatus, ApplicationPriority } from '@prisma/client';
 import { ApplicationSortBy } from '@/modules/application-management/types/application.types.js';
 
@@ -11,7 +15,8 @@ export const applicationService = new ApplicationManagementService(repository);
 
 function getUserId(req: Request): string {
   const userId =
-    (req as any).user?.id ||
+    req.user?.principalId ||
+    (req as { user?: { id?: string } }).user?.id ||
     req.header('x-user-id') ||
     (typeof req.body?.userId === 'string' ? req.body.userId : undefined) ||
     (typeof req.query?.userId === 'string' ? req.query.userId : undefined);
@@ -28,17 +33,26 @@ function getParam(param: string | string[] | undefined, name: string): string {
   throw new AppError(`Missing required parameter: ${name}`, 400, 'BAD_REQUEST');
 }
 
-export const createApplicationController = async (req: Request, res: Response, next: NextFunction) => {
+export const createApplicationController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const userId = getUserId(req);
-    const application = await applicationService.createApplication(userId, req.body);
+    const input = CreateApplicationSchema.parse(req.body);
+    const application = await applicationService.createApplication(userId, input);
     return res.status(201).json(successResponse('Application created successfully', application));
   } catch (error) {
     return next(error);
   }
 };
 
-export const getApplicationsController = async (req: Request, res: Response, next: NextFunction) => {
+export const getApplicationsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const userId = getUserId(req);
     const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
@@ -73,7 +87,11 @@ export const getApplicationsController = async (req: Request, res: Response, nex
   }
 };
 
-export const getApplicationByIdController = async (req: Request, res: Response, next: NextFunction) => {
+export const getApplicationByIdController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const userId = getUserId(req);
     const id = getParam(req.params.id, 'id');
@@ -84,29 +102,44 @@ export const getApplicationByIdController = async (req: Request, res: Response, 
   }
 };
 
-export const updateApplicationController = async (req: Request, res: Response, next: NextFunction) => {
+export const updateApplicationController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const userId = getUserId(req);
     const id = getParam(req.params.id, 'id');
-    const application = await applicationService.updateApplication(userId, id, req.body);
+    const input = UpdateApplicationSchema.parse(req.body);
+    const application = await applicationService.updateApplication(userId, id, input);
     return res.status(200).json(successResponse('Application updated successfully', application));
   } catch (error) {
     return next(error);
   }
 };
 
-export const transitionStatusController = async (req: Request, res: Response, next: NextFunction) => {
+export const transitionStatusController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const userId = getUserId(req);
     const id = getParam(req.params.id, 'id');
     const application = await applicationService.transitionStatus(userId, id, req.body);
-    return res.status(200).json(successResponse('Application status transitioned successfully', application));
+    return res
+      .status(200)
+      .json(successResponse('Application status transitioned successfully', application));
   } catch (error) {
     return next(error);
   }
 };
 
-export const archiveApplicationController = async (req: Request, res: Response, next: NextFunction) => {
+export const archiveApplicationController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const userId = getUserId(req);
     const id = getParam(req.params.id, 'id');
@@ -117,18 +150,28 @@ export const archiveApplicationController = async (req: Request, res: Response, 
   }
 };
 
-export const unarchiveApplicationController = async (req: Request, res: Response, next: NextFunction) => {
+export const unarchiveApplicationController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const userId = getUserId(req);
     const id = getParam(req.params.id, 'id');
     const application = await applicationService.unarchiveApplication(userId, id);
-    return res.status(200).json(successResponse('Application unarchived successfully', application));
+    return res
+      .status(200)
+      .json(successResponse('Application unarchived successfully', application));
   } catch (error) {
     return next(error);
   }
 };
 
-export const deleteApplicationController = async (req: Request, res: Response, next: NextFunction) => {
+export const deleteApplicationController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
   try {
     const userId = getUserId(req);
     const id = getParam(req.params.id, 'id');
