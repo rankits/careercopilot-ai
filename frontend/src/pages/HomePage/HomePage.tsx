@@ -6,6 +6,7 @@ import { DashboardMetricCard, ResumeScoreCard } from '@/components/molecules';
 import { dashboardMetrics } from '@/constants/pages/dashboard';
 import { ROUTES } from '@/constants/routes';
 
+import { useRecommendationReadiness } from '@/features/recommendations/hooks/useRecommendations';
 import {
   DashboardMetricsGrid,
   DashboardPanel,
@@ -18,10 +19,17 @@ import {
 
 export function HomePage() {
   const navigate = useNavigate();
+  const readiness = useRecommendationReadiness();
 
   const openForYou = () => {
     void navigate(ROUTES.FOR_YOU);
   };
+
+  const readinessHint = readiness.data?.canGenerateFromProfile
+    ? 'Your profile is ready — generate matches on For You.'
+    : readiness.data?.blockers.includes('PROFILE_INCOMPLETE')
+      ? 'Complete your profile to unlock personalized recommendations.'
+      : 'Open For You to check recommendation readiness from the backend.';
 
   return (
     <DashboardRoot aria-label="Dashboard page">
@@ -38,10 +46,7 @@ export function HomePage() {
       <DashboardPanel>
         <DashboardTitle>Recommended Jobs</DashboardTitle>
         <RecommendationsEmptyState>
-          <RecommendationsEmptyText>
-            Personalized matches are generated on the For You page from your profile — not shown
-            here with sample data.
-          </RecommendationsEmptyText>
+          <RecommendationsEmptyText>{readinessHint}</RecommendationsEmptyText>
           <Button onClick={openForYou} variant="contained">
             Go to For You
           </Button>
