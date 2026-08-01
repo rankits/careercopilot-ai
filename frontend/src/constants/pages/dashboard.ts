@@ -1,11 +1,7 @@
-import type { JobCardData } from '@/components/molecules';
-
-import { jobs } from '@/constants/pages/jobFeed';
 import {
   AccessTimeOutlinedIcon,
   BusinessCenterOutlinedIcon,
   CheckCircleOutlineIcon,
-  InsightsOutlinedIcon,
 } from '@/lib/material';
 
 export const dashboardMetrics = [
@@ -27,16 +23,7 @@ export const dashboardMetrics = [
     label: 'Offers',
     value: '2',
   },
-  {
-    helper: 'up 8% this week',
-    icon: InsightsOutlinedIcon,
-    label: 'Avg. Match Score',
-    value: '91%',
-  },
 ] as const;
-
-export const bestJobMatch = jobs[0] as JobCardData;
-export const recommendedJobs = jobs.slice(1, 5);
 
 export const dashboardFilterOptions = {
   experience: [
