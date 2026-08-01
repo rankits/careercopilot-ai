@@ -196,8 +196,11 @@ export interface RecommendationReadinessStatus {
   ready: boolean;
   canGenerateFromProfile: boolean;
   blockers: string[];
+  stale?: boolean;
+  lastGeneratedAt?: string | null;
   retrieval: {
     backend: RetrievalBackend;
     configured: boolean;
+    embeddingCoverageRatio?: number;
   };
 }

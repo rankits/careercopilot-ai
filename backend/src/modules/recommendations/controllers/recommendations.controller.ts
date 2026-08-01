@@ -28,6 +28,12 @@ const requireUserPrincipalId = (req: Request): string => {
   return String(req.user.principalId);
 };
 
+export const getRecommendationReadinessController = (service: RecommendationsService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const status = await service.getReadinessStatus(requireUserPrincipalId(req));
+    return res.status(200).json(successResponse('Recommendation readiness retrieved', status));
+  });
+
 export const createRecommendationsController = (service: RecommendationsService) =>
   catchAsync(async (req: Request, res: Response) => {
     const input = createRecommendationSchema.shape.body.parse(req.body);

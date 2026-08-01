@@ -85,6 +85,12 @@ export const listRecommendationsSchema = z.object({
   params: emptyParams,
 });
 
+export const recommendationReadinessSchema = z.object({
+  body: z.object({}).optional(),
+  query: emptyQuery,
+  params: emptyParams,
+});
+
 export const recommendationIdParamsSchema = z.object({
   body: z.object({}).optional(),
   query: emptyQuery,

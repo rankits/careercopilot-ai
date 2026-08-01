@@ -7,6 +7,7 @@ import {
   createRecommendationsFromTextController,
   createSimilarJobsController,
   getRecommendationController,
+  getRecommendationReadinessController,
   listRecommendationsController,
   upsertRecommendationFeedbackController,
 } from '@/modules/recommendations/controllers/recommendations.controller.js';
@@ -16,6 +17,7 @@ import {
   listRecommendationsSchema,
   recommendationFeedbackSchema,
   recommendationIdParamsSchema,
+  recommendationReadinessSchema,
   similarJobParamsSchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
@@ -49,6 +51,15 @@ export const createRecommendationsRouter = (
     recommendationRateLimiter,
     validateResource(createRecommendationFromTextSchema),
     createRecommendationsFromTextController(service),
+  );
+
+  router.get(
+    '/status',
+    authMiddleware,
+    requirePrincipalType('USER'),
+    requirePermission(RECOMMENDATIONS_PERMISSIONS.READ_OWN),
+    validateResource(recommendationReadinessSchema),
+    getRecommendationReadinessController(service),
   );
 
   router.get(

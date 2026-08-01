@@ -12,6 +12,13 @@ import type { RecommendationContextService } from '@/modules/recommendations/ser
 import type { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 import type { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
 import type { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
+import {
+  countEmbeddingCoverage,
+  findLatestRecommendationGeneratedAt,
+  isRecommendationSetStale,
+} from '@/modules/recommendations/services/recommendation-readiness.helpers.js';
+import { recordRecommendationGenerate } from '@/modules/recommendations/observability/recommendation.metrics.js';
+import { withRecommendationTimeout } from '@/modules/recommendations/utils/recommendation-timeout.js';
 import { applyRecommendationFilters } from '@/modules/recommendations/utils/apply-recommendation-filters.js';
 import type {
   BuildRecommendationContextInput,
@@ -32,6 +39,7 @@ export interface RecommendationOrchestrationDependencies {
   scoringService: RecommendationScoringService;
   unitOfWork: RecommendationUnitOfWork;
   sourceAuthorization: RecommendationSourceAuthorizationService;
+  profileUpdatedAfter?: (userId: string, timestamp: Date) => Promise<boolean>;
 }
 
 export class RecommendationsService {
@@ -97,6 +105,7 @@ export class RecommendationsService {
       excludeJobIds?: string[];
     },
   ): Promise<JobRecommendationRecord[]> {
+    const startedAt = Date.now();
     const dependencies = this.requireOrchestration();
     const run = await dependencies.unitOfWork.execute(({ runs }) =>
       runs.create({
@@ -107,55 +116,85 @@ export class RecommendationsService {
     );
 
     try {
-      const built = await dependencies.contextService.build(input);
-      const context = applyRecommendationFilters(built, options.filters);
+      return await withRecommendationTimeout(async () => {
+        const built = await dependencies.contextService.build(input);
+        const context = applyRecommendationFilters(built, options.filters);
+        await dependencies.unitOfWork.execute(({ runs }) =>
+          runs.updateStatus(input.userId, run.id, 'RETRIEVING'),
+        );
+        const excludedJobIds = await dependencies.unitOfWork.execute(({ feedback }) =>
+          feedback.listExcludedJobIds(input.userId),
+        );
+        const excludeJobIds = [...new Set([...(options.excludeJobIds ?? []), ...excludedJobIds])];
+        const candidates = await dependencies.retrievalService.retrieve({
+          context,
+          backend: options.backend,
+          limit: options.limit,
+          excludeJobIds: excludeJobIds.length > 0 ? excludeJobIds : undefined,
+        });
+        await dependencies.unitOfWork.execute(async ({ runs }) => {
+          await runs.updateCandidateCount(input.userId, run.id, candidates.length);
+          await runs.updateStatus(input.userId, run.id, 'SCORING');
+        });
+        const scored = await dependencies.scoringService.score(context, candidates);
+        const eligible =
+          options.filters?.includeStretchOpportunities === false
+            ? scored.filter(
+                (item) => item.category === 'BEST_MATCH' || item.category === 'GOOD_MATCH',
+              )
+            : scored;
+        if (eligible.length === 0) {
+          throw new RecommendationError(
+            'No eligible jobs were found for this recommendation context',
+            404,
+            RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
+          );
+        }
+        const records = await dependencies.unitOfWork.execute(async ({ recommendations, runs }) => {
+          const created = await recommendations.createMany(input.userId, run.id, eligible);
+          await runs.markCompleted(input.userId, run.id);
+          return created;
+        });
+        recordRecommendationGenerate(this.logger, {
+          userId: input.userId,
+          runId: run.id,
+          candidateCount: eligible.length,
+          durationMs: Date.now() - startedAt,
+          success: true,
+          empty: false,
+        });
+        this.logger.info(
+          { userId: input.userId, runId: run.id, candidateCount: eligible.length },
+          'Recommendation generation completed',
+        );
+        return records;
+      });
+    } catch (error) {
+      const failureCode =
+        error instanceof RecommendationError
+          ? error.code
+          : error instanceof Error && error.message === 'RECOMMENDATION_GENERATION_TIMEOUT'
+            ? 'RECOMMENDATION_GENERATION_TIMEOUT'
+            : RECOMMENDATION_ERROR_CODES.GENERATION_FAILED;
       await dependencies.unitOfWork.execute(({ runs }) =>
-        runs.updateStatus(input.userId, run.id, 'RETRIEVING'),
+        runs.markFailed(input.userId, run.id, failureCode),
       );
-      const excludedJobIds = await dependencies.unitOfWork.execute(({ feedback }) =>
-        feedback.listExcludedJobIds(input.userId),
-      );
-      const excludeJobIds = [
-        ...new Set([...(options.excludeJobIds ?? []), ...excludedJobIds]),
-      ];
-      const candidates = await dependencies.retrievalService.retrieve({
-        context,
-        backend: options.backend,
-        limit: options.limit,
-        excludeJobIds: excludeJobIds.length > 0 ? excludeJobIds : undefined,
+      recordRecommendationGenerate(this.logger, {
+        userId: input.userId,
+        runId: run.id,
+        candidateCount: 0,
+        durationMs: Date.now() - startedAt,
+        success: false,
+        failureCode,
+        empty: failureCode === RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
       });
-      await dependencies.unitOfWork.execute(async ({ runs }) => {
-        await runs.updateCandidateCount(input.userId, run.id, candidates.length);
-        await runs.updateStatus(input.userId, run.id, 'SCORING');
-      });
-      const scored = await dependencies.scoringService.score(context, candidates);
-      const eligible =
-        options.filters?.includeStretchOpportunities === false
-          ? scored.filter(
-              (item) => item.category === 'BEST_MATCH' || item.category === 'GOOD_MATCH',
-            )
-          : scored;
-      if (eligible.length === 0) {
+      if (error instanceof Error && error.message === 'RECOMMENDATION_GENERATION_TIMEOUT') {
         throw new RecommendationError(
-          'No eligible jobs were found for this recommendation context',
-          404,
-          RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
+          'Recommendation generation timed out',
+          504,
+          RECOMMENDATION_ERROR_CODES.GENERATION_FAILED,
         );
       }
-      const records = await dependencies.unitOfWork.execute(async ({ recommendations, runs }) => {
-        const created = await recommendations.createMany(input.userId, run.id, eligible);
-        await runs.markCompleted(input.userId, run.id);
-        return created;
-      });
-      this.logger.info(
-        { userId: input.userId, runId: run.id, candidateCount: eligible.length },
-        'Recommendation generation completed',
-      );
-      return records;
-    } catch (error) {
-      await dependencies.unitOfWork.execute(({ runs }) =>
-        runs.markFailed(input.userId, run.id, RECOMMENDATION_ERROR_CODES.GENERATION_FAILED),
-      );
       throw error;
     }
   }
@@ -207,13 +246,39 @@ export class RecommendationsService {
       }
     }
 
+    let coverage = { activeJobs: 0, embeddedJobs: 0, coverageRatio: 1 };
+    try {
+      coverage = await countEmbeddingCoverage();
+    } catch {
+      coverage = { activeJobs: 0, embeddedJobs: 0, coverageRatio: 1 };
+    }
+    const lastGeneratedAt = await findLatestRecommendationGeneratedAt(dependencies.unitOfWork, userId);
+    const stale = await isRecommendationSetStale(
+      {
+        unitOfWork: dependencies.unitOfWork,
+        jobEmbeddings: { searchNearest: async () => [] } as never,
+        profileUpdatedAfter: dependencies.profileUpdatedAfter,
+      },
+      userId,
+      lastGeneratedAt,
+    );
+    if (stale) {
+      blockers.push('RECOMMENDATIONS_STALE');
+    }
+    if (coverage.coverageRatio < 0.25 && coverage.activeJobs > 0) {
+      blockers.push('EMBEDDING_COVERAGE_LOW');
+    }
+
     return {
-      ready: canGenerateFromProfile,
+      ready: canGenerateFromProfile && blockers.every((b) => b === 'RECOMMENDATIONS_STALE'),
       canGenerateFromProfile,
       blockers,
+      stale,
+      lastGeneratedAt: lastGeneratedAt?.toISOString() ?? null,
       retrieval: {
         backend: DEFAULT_RETRIEVAL_BACKEND,
         configured: true,
+        embeddingCoverageRatio: coverage.coverageRatio,
       },
     };
   }
