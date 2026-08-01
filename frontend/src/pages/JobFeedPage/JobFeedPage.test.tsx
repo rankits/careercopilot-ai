@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -121,5 +121,25 @@ describe('JobFeedPage', () => {
         sortBy: 'salaryHighToLow',
       }),
     );
+  });
+
+  it('shows active filter chips and clears all filters', async () => {
+    const user = userEvent.setup();
+    renderPage('/jobs-feed?workMode=remote&query=react&sortBy=salaryHighToLow');
+    await screen.findByText(/microsoft/i);
+
+    const chips = screen.getByLabelText(/active filters/i);
+    expect(within(chips).getByText(/search: react/i)).toBeInTheDocument();
+    expect(within(chips).getByText(/^remote$/i)).toBeInTheDocument();
+    expect(within(chips).getByText(/salary: high to low/i)).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /clear all/i }));
+
+    await waitFor(() => {
+      expect(listJobsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ page: 1, sortBy: 'newest' }),
+      );
+    });
+    expect(screen.queryByLabelText(/active filters/i)).not.toBeInTheDocument();
   });
 });

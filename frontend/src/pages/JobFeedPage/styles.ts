@@ -2,6 +2,12 @@ import type { SxProps, Theme } from '@/lib/material';
 import { borderRadius, colorTokens, fontSize, fontWeight, jobFeedTokens, spacing } from '@/tokens';
 
 export const jobFeedPageSx = {
+  activeChips: {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[1],
+  },
   header: {
     display: 'grid',
     gap: spacing[1],

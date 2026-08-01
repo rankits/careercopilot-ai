@@ -13,7 +13,7 @@ import {
 
 import { jobFilters, salaryBandToApiRange, salaryOptions, sortOptions } from '@/constants/pages/jobFeed';
 import { jobDetailPath } from '@/constants/routes';
-import { Box, CircularProgress, Typography } from '@/lib/material';
+import { Box, Chip, CircularProgress, Typography } from '@/lib/material';
 
 import { jobFeedPageSx } from './styles';
 
@@ -22,6 +22,10 @@ function salaryStateFromUrl(min?: number, max?: number): string {
   if (min === 50_000 && max === 100_000) return '50-100k';
   if (min === 100_000 && max === undefined) return '100k-plus';
   return 'all';
+}
+
+function labelFor(options: { label: string; value: string }[], value: string): string {
+  return options.find((option) => option.value === value)?.label ?? value;
 }
 
 export function JobFeedPage() {
@@ -45,6 +49,46 @@ export function JobFeedPage() {
       state.maxSalary !== undefined ||
       state.sortBy !== 'newest',
   );
+
+  const activeFilterChips = useMemo(() => {
+    const chips: { key: string; label: string; onDelete: () => void }[] = [];
+    if (state.query) {
+      chips.push({
+        key: 'query',
+        label: `Search: ${state.query}`,
+        onDelete: () => {
+          setSearchDraft('');
+          patch({ query: '' }, { resetPage: true });
+        },
+      });
+    }
+    if (state.workMode !== 'all') {
+      chips.push({
+        key: 'workMode',
+        label: labelFor(
+          jobFilters.map((f) => ({ label: f.label, value: f.id })),
+          state.workMode,
+        ),
+        onDelete: () => patch({ workMode: 'all' }, { resetPage: true }),
+      });
+    }
+    if (salaryValue !== 'all') {
+      chips.push({
+        key: 'salary',
+        label: labelFor(salaryOptions, salaryValue),
+        onDelete: () =>
+          patch({ minSalary: undefined, maxSalary: undefined }, { resetPage: true }),
+      });
+    }
+    if (state.sortBy !== 'newest') {
+      chips.push({
+        key: 'sortBy',
+        label: labelFor(sortOptions, state.sortBy),
+        onDelete: () => patch({ sortBy: 'newest' }, { resetPage: true }),
+      });
+    }
+    return chips;
+  }, [patch, salaryValue, state.query, state.sortBy, state.workMode]);
 
   const emptyMessage = useMemo(() => {
     if (hasActiveFilters) return 'No jobs match your filters.';
@@ -105,11 +149,32 @@ export function JobFeedPage() {
           value={state.sortBy}
         />
         {hasActiveFilters ? (
-          <Button onClick={clearAll} size="small" variant="outline">
+          <Button
+            onClick={() => {
+              setSearchDraft('');
+              clearAll();
+            }}
+            size="small"
+            variant="outline"
+          >
             Clear all
           </Button>
         ) : null}
       </Box>
+
+      {activeFilterChips.length > 0 ? (
+        <Box aria-label="Active filters" sx={jobFeedPageSx.activeChips}>
+          {activeFilterChips.map((chip) => (
+            <Chip
+              key={chip.key}
+              label={chip.label}
+              onDelete={chip.onDelete}
+              size="small"
+              variant="outlined"
+            />
+          ))}
+        </Box>
+      ) : null}
 
       {!isPending && !isError ? (
         <Typography aria-live="polite" sx={{ px: 0.5 }}>
