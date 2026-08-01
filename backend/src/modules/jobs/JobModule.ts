@@ -8,6 +8,7 @@ import { JobicyJobProvider } from '@/modules/jobs/providers/jobicy/provider.js';
 import { HimalayasJobProvider } from '@/modules/jobs/providers/himalayas/provider.js';
 import { RemoteJobsOrgProvider } from '@/modules/jobs/providers/remotejobs-org/provider.js';
 import { RemoteOkJobProvider } from '@/modules/jobs/providers/remoteok/provider.js';
+import { LeverJobProvider } from '@/modules/jobs/providers/lever/provider.js';
 import { JobsService } from '@/modules/jobs/services/jobs.service.js';
 import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
@@ -61,6 +62,14 @@ const remoteJobsOrgProvider = new RemoteJobsOrgProvider({
   tier: ProviderTier.PUBLIC,
 });
 const remoteOkProvider = new RemoteOkJobProvider({ tier: ProviderTier.PUBLIC });
+const leverProvider = new LeverJobProvider({
+  sites: [
+    { site: 'leverdemo', companyName: 'Lever Demo' },
+    { site: 'spotify', companyName: 'Spotify' },
+    { site: 'palantir', companyName: 'Palantir' },
+  ],
+  tier: ProviderTier.PUBLIC,
+});
 
 jobProviderRegistry.register(defaultGreenhouseProvider);
 jobProviderRegistry.register(defaultPublicFeedProvider);
@@ -69,6 +78,7 @@ jobProviderRegistry.register(jobicyProvider);
 jobProviderRegistry.register(himalayasProvider);
 jobProviderRegistry.register(remoteJobsOrgProvider);
 jobProviderRegistry.register(remoteOkProvider);
+jobProviderRegistry.register(leverProvider);
 
 jobsLogger.info(
   {
