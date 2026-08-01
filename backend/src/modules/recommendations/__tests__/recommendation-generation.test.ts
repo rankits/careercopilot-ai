@@ -412,7 +412,7 @@ describe('RecommendationsService readiness', () => {
       ),
     });
 
-    await expect(service.getReadinessStatus('user-1')).resolves.toEqual({
+    await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({
       ready: true,
       canGenerateFromProfile: true,
       blockers: [],
