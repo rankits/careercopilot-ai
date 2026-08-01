@@ -10,6 +10,7 @@ import {
   type JobFeedWorkMode,
   useJobFeedSearchParams,
 } from '@/features/jobs/hooks/useJobFeedSearchParams';
+import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
 
 import { jobFilters, salaryBandToApiRange, salaryOptions, sortOptions } from '@/constants/pages/jobFeed';
 import { jobDetailPath } from '@/constants/routes';
@@ -215,6 +216,9 @@ export function JobFeedPage() {
               renderItem={(job) => (
                 <JobCard
                   job={job}
+                  onApply={(selected) => {
+                    openExternalApply(selected.applyUrl);
+                  }}
                   onOpen={(selected) => {
                     if (!selected.id) return;
                     void navigate(jobDetailPath(selected.id), {

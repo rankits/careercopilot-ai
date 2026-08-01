@@ -21,6 +21,7 @@ describe('mapJobListDtoToCard', () => {
     expect(card.company).toBe('Acme');
     expect(card.logo).toBe('A');
     expect(card.logoUrl).toBeUndefined();
+    expect(card.applyUrl).toBe('https://acme.test/jobs/1');
     expect(card.tags).toContain('remote');
     expect(card.match).toBeUndefined();
     expect(card.isRecommended).toBeUndefined();
@@ -44,6 +45,7 @@ describe('mapJobListDtoToCard', () => {
     expect(card.location).toBe('Location not listed');
     expect(card.salary).toBe('Not disclosed');
     expect(card.skills).toEqual([]);
+    expect(card.applyUrl).toBeNull();
     expect(card.type).toBe('Work mode unknown');
   });
 });

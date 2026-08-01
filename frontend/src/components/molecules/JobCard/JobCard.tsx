@@ -32,6 +32,8 @@ import {
 export interface JobCardData {
   id?: string;
   accent: 'primary' | 'danger';
+  /** Validated http(s) apply URL when available. */
+  applyUrl?: string | null;
   company: string;
   experience: string;
   experienceBand: string;
@@ -61,6 +63,7 @@ export interface JobCardProps {
 export function JobCard({ job, onApply, onOpen, onSave }: JobCardProps) {
   const showMatch = typeof job.match === 'number';
   const showActions = Boolean(onApply || onSave);
+  const canApply = Boolean(job.applyUrl);
   const [logoFailed, setLogoFailed] = useState(false);
   const showLogoImage = Boolean(job.logoUrl) && !logoFailed;
 
@@ -146,12 +149,27 @@ export function JobCard({ job, onApply, onOpen, onSave }: JobCardProps) {
             </MatchPill>
           ) : null}
           {onSave ? (
-            <SaveButton aria-label={`Save ${job.title}`} onClick={() => onSave(job)}>
+            <SaveButton
+              aria-label={`Save ${job.title}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSave(job);
+              }}
+            >
               <BookmarkBorderOutlinedIcon fontSize="small" />
             </SaveButton>
           ) : null}
           {onApply ? (
-            <Button onClick={() => onApply(job)} size="small" variant="outline">
+            <Button
+              disabled={!canApply}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (!canApply) return;
+                onApply(job);
+              }}
+              size="small"
+              variant="outline"
+            >
               Apply Now
             </Button>
           ) : null}

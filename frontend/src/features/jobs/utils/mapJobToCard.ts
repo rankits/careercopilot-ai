@@ -1,6 +1,7 @@
 import type { JobCardData } from '@/components/molecules';
 
 import type { JobListDto } from '@/features/jobs/types/job.types';
+import { toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
 
 const companyInitial = (name: string): string => {
   const trimmed = name.trim();
@@ -65,6 +66,7 @@ export function mapJobListDtoToCard(job: JobListDto, index = 0): JobCardData {
   return {
     id: job.id,
     accent: index % 2 === 0 ? 'primary' : 'danger',
+    applyUrl: toSafeApplyUrl(job.applyUrl),
     company: job.company.name || 'Company not listed',
     experience: 'Experience not listed',
     experienceBand: 'all',
