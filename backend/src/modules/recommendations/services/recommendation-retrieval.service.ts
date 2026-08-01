@@ -32,6 +32,9 @@ export class RecommendationRetrievalService {
         RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
       );
     }
-    return result.jobs.map((job) => ({ job }));
+    return result.jobs.map((job) => ({
+      job,
+      retrievalScore: result.retrievalScores?.[job.id],
+    }));
   }
 }
