@@ -4,10 +4,8 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
-import {
-  hasRecommendationSignal,
-  toCandidateProfileSourcePayload,
-} from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
+import { hasRecommendationSignal } from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
+import { buildProfilePrimaryRecommendationPayload } from '@/modules/recommendations/utils/candidate-recommendation-document.js';
 import type { BuildRecommendationContextInput } from '@/modules/recommendations/types/recommendations.types.js';
 import type {
   CreateRecommendationFromTextInput,
@@ -61,7 +59,10 @@ export class RecommendationSourceAuthorizationService {
             RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
           );
         }
-        const payload = toCandidateProfileSourcePayload(profile);
+        const resumeFallback =
+          profile.sourceResumeId &&
+          (await this.profiles.findOwnedResumeProfileSource(userId, profile.sourceResumeId));
+        const payload = buildProfilePrimaryRecommendationPayload(profile, resumeFallback);
         if (!hasRecommendationSignal(payload)) {
           throw new RecommendationError(
             'Candidate profile does not contain titles, skills, or summary text for recommendations',
@@ -91,7 +92,7 @@ export class RecommendationSourceAuthorizationService {
             RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
           );
         }
-        const payload = toCandidateProfileSourcePayload(parsed);
+        const payload = buildProfilePrimaryRecommendationPayload(parsed, null);
         if (!hasRecommendationSignal(payload)) {
           throw new RecommendationError(
             'Resume parse data does not contain titles, skills, or summary text for recommendations',

@@ -76,6 +76,7 @@ export interface CandidateProfileSourceInput {
   totalExperienceYears?: unknown;
   professionalProfile?: unknown;
   professionalLabels?: unknown;
+  sourceResumeId?: string | null;
 }
 
 /**

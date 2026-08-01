@@ -50,6 +50,7 @@ export const createResumeRecommendationSourceLoader = (
       education: profile.education,
       skills: profile.skills,
       certifications: profile.certifications,
+      sourceResumeId: profile.sourceResumeId,
     };
   },
 
