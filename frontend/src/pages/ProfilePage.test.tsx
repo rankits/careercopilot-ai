@@ -9,6 +9,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
 import { authReducer } from '@/features/auth/authSlice';
+import type { AuthState } from '@/features/auth/types/auth.types';
 import type {
   ResumeParseCallbacks,
   ResumeProfileFormValues,
@@ -49,11 +50,32 @@ function LocationDisplay() {
   return <span data-testid="location">{useLocation().pathname}</span>;
 }
 
-function renderPage(onSave = vi.fn(), mode?: 'edit' | 'onboarding') {
+const AUTHENTICATED_STATE: AuthState = {
+  accessToken: 'token',
+  error: null,
+  isAuthenticated: true,
+  isLoading: false,
+  isProfileComplete: false,
+  isSessionResolved: true,
+  user: {
+    email: 'ada@example.com',
+    id: 'user-1',
+    role: 'USER',
+  },
+};
+
+function renderPage(
+  onSave = vi.fn(),
+  mode?: 'edit' | 'onboarding',
+  authState: AuthState = AUTHENTICATED_STATE,
+) {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
-  const store = configureStore({ reducer: { auth: authReducer } });
+  const store = configureStore({
+    preloadedState: { auth: authState },
+    reducer: { auth: authReducer },
+  });
   render(
     <QueryClientProvider client={queryClient}>
       <Provider store={store}>
@@ -194,7 +216,7 @@ describe('ProfilePage resume parsing', () => {
     await waitFor(() =>
       expect(confirmProfileMock).toHaveBeenCalledWith({
         resumeId: 'resume-1',
-        userId: 'public',
+        userId: 'user-1',
       }),
     );
     expect(onSave).toHaveBeenCalled();
@@ -203,6 +225,32 @@ describe('ProfilePage resume parsing', () => {
       timeout: 5000,
     });
     expect(store.getState().auth.isProfileComplete).toBe(true);
+  }, 30_000);
+
+  it('refuses to confirm a profile when no user is signed in', async () => {
+    const user = setupUser();
+    parseMock.mockImplementationOnce((_file: File, callbacks: ResumeParseCallbacks) => {
+      callbacks.onUploaded?.('resume-1');
+      return Promise.resolve(parsed);
+    });
+    renderPage(vi.fn(), 'onboarding', {
+      ...AUTHENTICATED_STATE,
+      isAuthenticated: false,
+      user: null,
+    });
+
+    await uploadResume(user);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled(),
+    );
+    await dismissOpenAlerts(user);
+    await user.click(screen.getByRole('button', { name: /save profile/i }));
+    await user.click(screen.getByRole('button', { name: /save & continue/i }));
+
+    expect(
+      await screen.findByText(/you must be signed in to confirm your profile/i),
+    ).toBeInTheDocument();
+    expect(confirmProfileMock).not.toHaveBeenCalled();
   }, 30_000);
 
   it('cancels profile confirmation without submitting', async () => {

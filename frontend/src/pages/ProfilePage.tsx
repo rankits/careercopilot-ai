@@ -13,12 +13,10 @@ import { ResumeSummary } from '@/features/resume/components/ResumeSummary';
 import { ResumeUpload } from '@/features/resume/components/ResumeUpload';
 
 import { useResumeParser } from '@/features/resume/hooks/useResumeParser';
-import { useAppDispatch } from '@/hooks/redux';
+import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 
 import { ROUTES } from '@/constants/routes';
-import { STORAGE_KEYS } from '@/constants/storage';
 import { setProfileComplete } from '@/features/auth/authSlice';
-import type { User } from '@/features/auth/types/auth.types';
 import { resumeService } from '@/features/resume/services/resume.service';
 import {
   OnboardingPage,
@@ -58,7 +56,6 @@ import {
   WorkspacePremiumOutlinedIcon,
 } from '@/lib/material';
 import { borderRadius, spacing } from '@/tokens';
-import { storage } from '@/utils/storage';
 
 const DEFAULT_VALUES: ResumeProfileFormValues = {
   certifications: '',
@@ -160,7 +157,7 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const userId = storage.get<User>(STORAGE_KEYS.USER)?.id ?? 'public';
+  const currentUser = useAppSelector((state) => state.auth.user);
   const [notice, setNotice] = useState<Notice>(null);
   const [hasParsedResume, setHasParsedResume] = useState(false);
   const [expandedSection, setExpandedSection] = useState('Personal Information');
@@ -228,7 +225,10 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
         return { message: result.message };
       }
       if (parser.resumeId) {
-        return resumeService.confirmProfile({ resumeId: parser.resumeId, userId });
+        if (!currentUser) {
+          throw new Error('You must be signed in to confirm your profile.');
+        }
+        return resumeService.confirmProfile({ resumeId: parser.resumeId, userId: currentUser.id });
       }
       if (!onSave) {
         throw new Error('Upload and parse a resume before saving your profile.');
