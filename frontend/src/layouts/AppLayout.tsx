@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Outlet, useLocation } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import type { SidebarVariant } from '@/components/organisms/Sidebar/interfaces';
 
@@ -13,6 +13,7 @@ import { useMediaQuery } from '@/lib/material';
 export function AppLayout() {
   const isMobile = useMediaQuery('(max-width: 760px)');
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const [sidebarVariant, setSidebarVariant] = useState<SidebarVariant>('open');
   const activeItemId =
     pathname === ROUTES.JOB_FEED
@@ -40,6 +41,7 @@ export function AppLayout() {
               void logout();
             }
           }}
+          onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
           userAvatarUrl={user?.profileImage ?? undefined}
           userName={userName}
           userRoleLabel={userRoleLabel}

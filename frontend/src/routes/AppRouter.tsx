@@ -35,6 +35,7 @@ export function AppRouter() {
           <Route path={ROUTES.DASHBOARD} element={<HomePage />} />
           <Route path={ROUTES.JOB_FEED} element={<JobFeedPage />} />
           <Route path={ROUTES.APPLICATIONS} element={<ApplicationsPage />} />
+          <Route path={ROUTES.PROFILE_EDIT} element={<ProfilePage mode="edit" />} />
         </Route>
       </Route>
 

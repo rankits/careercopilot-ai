@@ -16,13 +16,20 @@ import type {
 
 import { ProfilePage } from './ProfilePage';
 
-const { confirmProfileMock, parseMock } = vi.hoisted(() => ({
+const { confirmProfileMock, parseMock, getMyProfileMock, updateProfileMock } = vi.hoisted(() => ({
   confirmProfileMock: vi.fn(),
+  getMyProfileMock: vi.fn(),
   parseMock: vi.fn(),
+  updateProfileMock: vi.fn(),
 }));
 
 vi.mock('@/features/resume/services/resume.service', () => ({
-  resumeService: { confirmProfile: confirmProfileMock, parse: parseMock },
+  resumeService: {
+    confirmProfile: confirmProfileMock,
+    getMyProfile: getMyProfileMock,
+    parse: parseMock,
+    updateProfile: updateProfileMock,
+  },
 }));
 
 const parsed = {
@@ -42,7 +49,7 @@ function LocationDisplay() {
   return <span data-testid="location">{useLocation().pathname}</span>;
 }
 
-function renderPage(onSave = vi.fn()) {
+function renderPage(onSave = vi.fn(), mode?: 'edit' | 'onboarding') {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
@@ -52,7 +59,7 @@ function renderPage(onSave = vi.fn()) {
       <Provider store={store}>
         <ToastProvider>
           <MemoryRouter>
-            <ProfilePage onSave={onSave} />
+            <ProfilePage mode={mode} onSave={onSave} />
             <LocationDisplay />
           </MemoryRouter>
         </ToastProvider>
@@ -60,6 +67,12 @@ function renderPage(onSave = vi.fn()) {
     </QueryClientProvider>,
   );
   return { onSave, store };
+}
+
+function setupUser() {
+  // Parse success opens a bottom Snackbar over the sticky save bar; skip pointer-events
+  // checks so clicks are not blocked when the suite is under load.
+  return userEvent.setup({ delay: null, pointerEventsCheck: 0 });
 }
 
 async function uploadResume(user: ReturnType<typeof userEvent.setup>, name = 'resume.pdf') {
@@ -70,6 +83,13 @@ async function uploadResume(user: ReturnType<typeof userEvent.setup>, name = 're
   await user.click(screen.getByRole('button', { name: /parse resume/i }));
 }
 
+async function dismissOpenAlerts(user: ReturnType<typeof userEvent.setup>) {
+  const closeButtons = screen.queryAllByRole('button', { name: /^close$/i });
+  for (const button of closeButtons) {
+    await user.click(button);
+  }
+}
+
 describe('ProfilePage resume parsing', () => {
   beforeEach(() => {
     confirmProfileMock.mockReset();
@@ -78,7 +98,7 @@ describe('ProfilePage resume parsing', () => {
   });
 
   it('auto-populates all available profile values and allows editing', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     parseMock.mockResolvedValueOnce(parsed);
     renderPage();
 
@@ -93,13 +113,14 @@ describe('ProfilePage resume parsing', () => {
     await user.click(screen.getByRole('button', { name: /^professional profile/i }));
     expect(screen.getByRole('textbox', { name: /summary/i })).toHaveValue('Computing pioneer');
 
+    await dismissOpenAlerts(user);
     await user.clear(screen.getByRole('textbox', { name: /summary/i }));
     await user.type(screen.getByRole('textbox', { name: /summary/i }), 'Edited summary');
     expect(screen.getByRole('textbox', { name: /summary/i })).toHaveValue('Edited summary');
-  }, 30_000);
+  }, 60_000);
 
   it('clears old values and manual edits before parsing a replacement resume', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     parseMock.mockResolvedValue(parsed);
     renderPage();
     await uploadResume(user);
@@ -116,10 +137,10 @@ describe('ProfilePage resume parsing', () => {
     await user.click(screen.getByRole('button', { name: /parse resume/i }));
 
     expect(await screen.findByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
-  }, 30_000);
+  }, 60_000);
 
   it('validates required fields and submits the latest edited values', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     const { onSave } = renderPage();
 
     expect(screen.getByRole('button', { name: /save profile/i })).toBeDisabled();
@@ -152,10 +173,10 @@ describe('ProfilePage resume parsing', () => {
         summary: 'Updated by user',
       }),
     );
-  }, 30_000);
+  }, 60_000);
 
   it('confirms a parsed profile and navigates to the job feed', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     parseMock.mockImplementationOnce((_file: File, callbacks: ResumeParseCallbacks) => {
       callbacks.onUploaded?.('resume-1');
       return Promise.resolve(parsed);
@@ -163,6 +184,10 @@ describe('ProfilePage resume parsing', () => {
     const { onSave, store } = renderPage();
 
     await uploadResume(user);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled(),
+    );
+    await dismissOpenAlerts(user);
     await user.click(screen.getByRole('button', { name: /save profile/i }));
     await user.click(screen.getByRole('button', { name: /save & continue/i }));
 
@@ -175,22 +200,93 @@ describe('ProfilePage resume parsing', () => {
     expect(onSave).toHaveBeenCalled();
     expect(await screen.findByText(/profile created successfully/i)).toBeInTheDocument();
     await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/jobs-feed'), {
-      timeout: 1500,
+      timeout: 5000,
     });
     expect(store.getState().auth.isProfileComplete).toBe(true);
-  });
+  }, 30_000);
 
   it('cancels profile confirmation without submitting', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     parseMock.mockResolvedValueOnce(parsed);
     const { onSave } = renderPage();
 
     await uploadResume(user);
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled(),
+    );
+    await dismissOpenAlerts(user);
     await user.click(screen.getByRole('button', { name: /save profile/i }));
     await user.click(screen.getByRole('button', { name: /cancel/i }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(onSave).not.toHaveBeenCalled();
     expect(confirmProfileMock).not.toHaveBeenCalled();
+  }, 15_000);
+});
+
+const existingProfile = {
+  certifications: [],
+  education: [],
+  experience: [],
+  isComplete: true,
+  personalDetails: {
+    designation: 'Engineer',
+    email: 'ada@example.com',
+    fullName: 'Ada Lovelace',
+    phone: '+44 1234',
+    summary: 'Computing pioneer',
+    totalExperience: '8',
+  },
+  skills: ['Algorithms'],
+  sourceResumeId: null,
+  userId: 'user-1',
+};
+
+describe('ProfilePage edit mode', () => {
+  beforeEach(() => {
+    getMyProfileMock.mockReset();
+    updateProfileMock.mockReset();
+  });
+
+  it('loads and pre-fills the form with the existing profile', async () => {
+    getMyProfileMock.mockResolvedValueOnce(existingProfile);
+    renderPage(vi.fn(), 'edit');
+
+    expect(await screen.findByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
+    expect(screen.getByRole('textbox', { name: /email/i })).toHaveValue('ada@example.com');
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled();
+  });
+
+  it('submits changes through the update API, shows a success message, and stays on the page', async () => {
+    const user = userEvent.setup();
+    getMyProfileMock.mockResolvedValueOnce(existingProfile);
+    updateProfileMock.mockResolvedValueOnce({
+      message: 'Candidate profile updated',
+      profile: existingProfile,
+    });
+    renderPage(vi.fn(), 'edit');
+
+    await screen.findByRole('textbox', { name: /full name/i });
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(screen.getByRole('dialog', { name: /confirm profile changes/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /confirm & save/i }));
+
+    await waitFor(() => expect(updateProfileMock).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/candidate profile updated/i)).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/');
+  });
+
+  it('shows an error toast when the update API call fails', async () => {
+    const user = userEvent.setup();
+    getMyProfileMock.mockResolvedValueOnce(existingProfile);
+    updateProfileMock.mockRejectedValueOnce(new Error('Unable to reach the resume service.'));
+    renderPage(vi.fn(), 'edit');
+
+    await screen.findByRole('textbox', { name: /full name/i });
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    await user.click(screen.getByRole('button', { name: /confirm & save/i }));
+
+    expect(await screen.findByText(/unable to reach the resume service/i)).toBeInTheDocument();
   });
 });

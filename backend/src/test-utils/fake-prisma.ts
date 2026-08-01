@@ -490,6 +490,21 @@ export class FakeDb {
           const found = db.candidateProfiles.find((profile) => profile.userId === where.userId);
           return found ? { ...found } : null;
         },
+        update: async ({
+          where,
+          data,
+        }: {
+          where: { userId: string };
+          data: Partial<FakeCandidateProfile>;
+        }) => {
+          const index = db.candidateProfiles.findIndex((p) => p.userId === where.userId);
+          if (index === -1) throw new Error(`FakeDb: candidateProfile ${where.userId} not found`);
+          db.candidateProfiles[index] = applyIncrements(
+            db.candidateProfiles[index] as unknown as Record<string, unknown>,
+            data as Record<string, unknown>,
+          ) as unknown as FakeCandidateProfile;
+          return { ...db.candidateProfiles[index] };
+        },
       },
 
       userSession: {
@@ -785,6 +800,44 @@ export class FakeDb {
           db.auditLogs.push(record);
           return { ...record };
         },
+      },
+
+      // Minimal recommendation surfaces so list/detail smoke tests can hit the
+      // Prisma UoW against FakeDb without a live Postgres. Writes for generate
+      // are not fully modeled here.
+      recommendationRun: {
+        findFirst: async () => null,
+        create: async () => {
+          throw new Error('FakeDb: recommendationRun.create is not implemented');
+        },
+        updateMany: async () => ({ count: 0 }),
+      },
+      jobRecommendation: {
+        findFirst: async () => null,
+        findMany: async () => [],
+        count: async () => 0,
+        create: async () => {
+          throw new Error('FakeDb: jobRecommendation.create is not implemented');
+        },
+      },
+      recommendationFeedback: {
+        findFirst: async () => null,
+        findMany: async () => [],
+        upsert: async () => {
+          throw new Error('FakeDb: recommendationFeedback.upsert is not implemented');
+        },
+      },
+      job: {
+        findMany: async () => [],
+        findUnique: async () => null,
+      },
+
+      $transaction: async (arg: unknown) => {
+        const client = db.toPrismaClient();
+        if (typeof arg === 'function') {
+          return (arg as (tx: typeof client) => Promise<unknown>)(client);
+        }
+        throw new Error('FakeDb: only interactive $transaction callbacks are supported');
       },
 
       $queryRaw: async () => [{ '?column?': 1 }],

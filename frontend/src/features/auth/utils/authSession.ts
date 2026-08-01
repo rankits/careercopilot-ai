@@ -8,6 +8,10 @@ export function getAccessToken(): string | null {
   return storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN);
 }
 
+export function setAccessToken(accessToken: string): void {
+  storage.set(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+}
+
 export function getStoredUser(): User | null {
   return storage.get<User>(STORAGE_KEYS.USER);
 }
