@@ -3,10 +3,24 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { formatRecommendationScorePercent } from '@/features/jobs/utils/formatRecommendationScore';
 import { mapJobListDtoToCard } from '@/features/jobs/utils/mapJobToCard';
 import { recommendationsService } from '@/features/recommendations/services/recommendations.service';
-import type { ListRecommendationsParams } from '@/features/recommendations/types/recommendation.types';
+import type {
+  ListRecommendationsParams,
+  RecommendationFeedbackAction,
+} from '@/features/recommendations/types/recommendation.types';
+import { formatRecommendationCardSubtitle } from '@/features/recommendations/utils/formatRecommendationMatchLabel';
 
 export const recommendationsQueryKey = (params: ListRecommendationsParams) =>
   ['recommendations', 'list', params] as const;
+
+export const recommendationsReadinessQueryKey = ['recommendations', 'readiness'] as const;
+
+export function useRecommendationReadiness() {
+  return useQuery({
+    queryKey: recommendationsReadinessQueryKey,
+    queryFn: ({ signal }) => recommendationsService.getReadiness({ signal }),
+    staleTime: 30_000,
+  });
+}
 
 export function useRecommendations(params: ListRecommendationsParams = {}) {
   return useQuery({
@@ -24,7 +38,9 @@ export function useRecommendations(params: ListRecommendationsParams = {}) {
           const match = formatRecommendationScorePercent(rec.scoreResult?.overallScore);
           return {
             ...card,
+            recommendationId: rec.id,
             match: match ?? undefined,
+            matchSubtitle: formatRecommendationCardSubtitle(rec.category, rec.matchType),
             isRecommended: true,
           };
         }),
@@ -37,6 +53,22 @@ export function useGenerateRecommendations() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => recommendationsService.generateFromProfile(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    },
+  });
+}
+
+export function useRecommendationFeedback() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      recommendationId,
+      action,
+    }: {
+      recommendationId: string;
+      action: RecommendationFeedbackAction;
+    }) => recommendationsService.submitFeedback(recommendationId, action),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['recommendations', 'list'] });
     },

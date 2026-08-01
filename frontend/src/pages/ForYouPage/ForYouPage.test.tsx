@@ -10,18 +10,39 @@ import { authReducer } from '@/features/auth/authSlice';
 
 import { ForYouPage } from './ForYouPage';
 
-const { listMock, generateMock, listSavedMock } = vi.hoisted(() => ({
+const { listMock, generateMock, listSavedMock, readinessMock, feedbackMock } = vi.hoisted(() => ({
   listMock: vi.fn(),
   generateMock: vi.fn(),
   listSavedMock: vi.fn(),
+  readinessMock: vi.fn(),
+  feedbackMock: vi.fn(),
 }));
 
 vi.mock('@/features/recommendations/services/recommendations.service', () => ({
   recommendationsService: {
     list: listMock,
     generateFromProfile: generateMock,
+    getReadiness: readinessMock,
+    submitFeedback: feedbackMock,
   },
 }));
+
+vi.mock('@/features/recommendations/hooks/useRecommendations', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('@/features/recommendations/hooks/useRecommendations')>();
+  return {
+    ...actual,
+    useRecommendationReadiness: () => ({
+      data: {
+        canGenerateFromProfile: true,
+        blockers: [],
+        stale: false,
+        ready: true,
+        retrieval: { configured: true, backend: 'PGVECTOR' },
+      },
+      isError: false,
+    }),
+  };
+});
 
 vi.mock('@/features/applications/services/applications.service', () => ({
   applicationsService: {

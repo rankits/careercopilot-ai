@@ -1,7 +1,9 @@
 import type {
   ListRecommendationsParams,
   RecommendationDto,
+  RecommendationFeedbackAction,
   RecommendationListResult,
+  RecommendationReadinessStatus,
 } from '@/features/recommendations/types/recommendation.types';
 import { httpClient } from '@/services/httpClient';
 
@@ -22,6 +24,13 @@ const unwrapList = (response: unknown): RecommendationListResult => {
   };
 };
 
+const unwrapReadiness = (response: unknown): RecommendationReadinessStatus => {
+  if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
+    throw new Error('Unexpected recommendation readiness response shape');
+  }
+  return response.data.data as RecommendationReadinessStatus;
+};
+
 export const recommendationsService = {
   async list(
     params: ListRecommendationsParams = {},
@@ -37,13 +46,33 @@ export const recommendationsService = {
     return unwrapList(response);
   },
 
-  async generateFromProfile(): Promise<RecommendationDto[]> {
-    const response = await httpClient.post('/job-recommendations', {
-      sourceType: 'PROFILE',
+  async getReadiness(options: { signal?: AbortSignal } = {}): Promise<RecommendationReadinessStatus> {
+    const response = await httpClient.get('/job-recommendations/status', {
+      signal: options.signal,
     });
+    return unwrapReadiness(response);
+  },
+
+  async generateFromProfile(options: { signal?: AbortSignal } = {}): Promise<RecommendationDto[]> {
+    const response = await httpClient.post(
+      '/job-recommendations',
+      { sourceType: 'PROFILE' },
+      { signal: options.signal, timeout: 60_000 },
+    );
     if (!isRecord(response) || !isRecord(response.data) || !Array.isArray(response.data.data)) {
       throw new Error('Unexpected generate-recommendations response shape');
     }
     return response.data.data as RecommendationDto[];
+  },
+
+  async submitFeedback(
+    recommendationId: string,
+    action: RecommendationFeedbackAction,
+    note?: string,
+  ): Promise<void> {
+    await httpClient.post(`/job-recommendations/${recommendationId}/feedback`, {
+      action,
+      ...(note ? { note } : {}),
+    });
   },
 };

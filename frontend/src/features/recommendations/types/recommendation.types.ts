@@ -27,7 +27,30 @@ export interface RecommendationListResult {
   total: number;
 }
 
+export interface RecommendationReadinessStatus {
+  ready: boolean;
+  canGenerateFromProfile: boolean;
+  blockers: string[];
+  stale?: boolean;
+  lastGeneratedAt?: string | null;
+  retrieval: {
+    backend: string;
+    configured: boolean;
+    embeddingCoverageRatio?: number;
+  };
+}
+
 export interface ListRecommendationsParams {
   page?: number;
   limit?: number;
 }
+
+export type RecommendationFeedbackAction =
+  | 'DISMISSED'
+  | 'NOT_RELEVANT'
+  | 'SAVED'
+  | 'APPLIED'
+  | 'VIEWED'
+  | 'OPENED'
+  | 'MORE_LIKE_THIS'
+  | 'LESS_LIKE_THIS';

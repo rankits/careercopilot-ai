@@ -8,6 +8,8 @@ import { JobCard, VirtualizedJobList } from '@/components/molecules';
 import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
 import {
   useGenerateRecommendations,
+  useRecommendationFeedback,
+  useRecommendationReadiness,
   useRecommendations,
 } from '@/features/recommendations/hooks/useRecommendations';
 import { useAppSelector } from '@/hooks/redux';
@@ -15,7 +17,7 @@ import { useAppSelector } from '@/hooks/redux';
 import { jobDetailPath, ROUTES } from '@/constants/routes';
 import { applicationsService } from '@/features/applications/services/applications.service';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
-import { Box, CircularProgress, Typography } from '@/lib/material';
+import { Alert, Box, CircularProgress, Typography } from '@/lib/material';
 
 export function ForYouPage() {
   const navigate = useNavigate();
@@ -23,12 +25,15 @@ export function ForYouPage() {
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
   const [page, setPage] = useState(1);
   const [generatedOnce, setGeneratedOnce] = useState(false);
+  const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
 
+  const readiness = useRecommendationReadiness();
   const { data, isPending, isError, error, refetch, isFetching } = useRecommendations({
     page,
     limit: 20,
   });
   const generate = useGenerateRecommendations();
+  const feedback = useRecommendationFeedback();
   const { saveJob, unsaveJob } = useSaveJob();
   const savedQuery = useQuery({
     queryKey: savedJobsQueryKey,
@@ -47,13 +52,36 @@ export function ForYouPage() {
     return ids;
   }, [optimisticSaved, savedQuery.data]);
 
-  const isEmpty = !isPending && !isError && (data?.items.length ?? 0) === 0;
+  const visibleCards = (data?.cards ?? []).filter(
+    (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
+  );
+
+  const profileBlocker = readiness.data?.blockers.includes('PROFILE_INCOMPLETE')
+    ? 'PROFILE_INCOMPLETE'
+    : readiness.data?.blockers.includes('PROFILE_NOT_FOUND')
+      ? 'PROFILE_NOT_FOUND'
+      : null;
+  const showProfileIncomplete = profileBlocker === 'PROFILE_INCOMPLETE' || !isProfileComplete;
+  const showProfileMissing = profileBlocker === 'PROFILE_NOT_FOUND';
+
+  const isEmpty = !isPending && !isError && visibleCards.length === 0;
+  const isStale = Boolean(readiness.data?.stale);
+  const isEmbeddingPending = readiness.data?.blockers.includes('EMBEDDING_COVERAGE_LOW');
+  const canGenerate = readiness.data?.canGenerateFromProfile ?? isProfileComplete;
+
   const generateError =
     generate.error instanceof Error
       ? generate.error.message
       : generate.isError
         ? 'Unable to generate recommendations.'
         : null;
+
+  const submitFeedback = (recommendationId: string, action: 'DISMISSED' | 'NOT_RELEVANT') => {
+    setDismissedIds((prev) => ({ ...prev, [recommendationId]: true }));
+    void feedback
+      .mutateAsync({ recommendationId, action })
+      .catch(() => setDismissedIds((prev) => ({ ...prev, [recommendationId]: false })));
+  };
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3, py: 2 }}>
@@ -66,6 +94,24 @@ export function ForYouPage() {
           starts a new run.
         </Typography>
       </Box>
+
+      {readiness.isError ? (
+        <Alert role="alert" severity="warning">
+          Could not load recommendation readiness. You can still browse saved recommendations below.
+        </Alert>
+      ) : null}
+
+      {isStale ? (
+        <Alert role="status" severity="info">
+          Your profile changed since these matches were generated. Refresh to update recommendations.
+        </Alert>
+      ) : null}
+
+      {isEmbeddingPending ? (
+        <Alert role="status" severity="warning">
+          Job embedding index is still warming up. Results may be limited until indexing completes.
+        </Alert>
+      ) : null}
 
       {isPending ? (
         <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
@@ -84,7 +130,7 @@ export function ForYouPage() {
         </Box>
       ) : null}
 
-      {isEmpty && !isProfileComplete ? (
+      {isEmpty && showProfileIncomplete ? (
         <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
           <Typography role="status">
             Complete your profile so we can score jobs against your skills and experience.
@@ -95,7 +141,18 @@ export function ForYouPage() {
         </Box>
       ) : null}
 
-      {isEmpty && isProfileComplete ? (
+      {isEmpty && showProfileMissing ? (
+        <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
+          <Typography role="status">
+            We could not find a candidate profile for your account. Complete onboarding to continue.
+          </Typography>
+          <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
+            Set up profile
+          </Button>
+        </Box>
+      ) : null}
+
+      {isEmpty && canGenerate && !showProfileIncomplete && !showProfileMissing ? (
         <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
           <Typography role="status">
             {generatedOnce
@@ -124,7 +181,7 @@ export function ForYouPage() {
         </Box>
       ) : null}
 
-      {!isPending && !isError && (data?.cards.length ?? 0) > 0 ? (
+      {!isPending && !isError && visibleCards.length > 0 ? (
         <>
           <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
             <Typography sx={{ color: 'text.secondary' }}>
@@ -150,8 +207,8 @@ export function ForYouPage() {
           ) : null}
           <VirtualizedJobList
             ariaLabel="For you recommendations"
-            getKey={(job) => job.id ?? `${job.company}-${job.title}`}
-            items={data?.cards ?? []}
+            getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
+            items={visibleCards}
             renderItem={(job) => (
               <JobCard
                 job={job}
@@ -159,6 +216,16 @@ export function ForYouPage() {
                 onApply={(selected) => {
                   openExternalApply(selected.applyUrl);
                 }}
+                onDismiss={
+                  job.recommendationId
+                    ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
+                    : undefined
+                }
+                onNotRelevant={
+                  job.recommendationId
+                    ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
+                    : undefined
+                }
                 onOpen={(selected) => {
                   if (!selected.id) return;
                   void navigate(jobDetailPath(selected.id), {
