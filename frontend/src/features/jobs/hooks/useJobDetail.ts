@@ -7,7 +7,7 @@ export const jobDetailQueryKey = (jobId: string) => ['jobs', 'detail', jobId] as
 export function useJobDetail(jobId: string | undefined) {
   return useQuery({
     queryKey: jobDetailQueryKey(jobId ?? ''),
-    queryFn: () => jobsService.getJob(jobId as string),
+    queryFn: ({ signal }) => jobsService.getJob(jobId as string, { signal }),
     enabled: Boolean(jobId),
     retry: (failureCount, error) => {
       if (error instanceof JobNotFoundError) return false;

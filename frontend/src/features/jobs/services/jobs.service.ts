@@ -39,9 +39,17 @@ export class JobNotFoundError extends Error {
   }
 }
 
+export type JobsRequestOptions = {
+  signal?: AbortSignal;
+};
+
 export const jobsService = {
-  async listJobs(params: ListJobsParams = {}): Promise<JobListResult> {
+  async listJobs(
+    params: ListJobsParams = {},
+    options: JobsRequestOptions = {},
+  ): Promise<JobListResult> {
     const response = await httpClient.get('/jobs', {
+      signal: options.signal,
       params: {
         page: params.page ?? 1,
         limit: params.limit ?? 20,
@@ -58,9 +66,9 @@ export const jobsService = {
     return unwrapListPayload(response);
   },
 
-  async getJob(jobId: string): Promise<JobDetailDto> {
+  async getJob(jobId: string, options: JobsRequestOptions = {}): Promise<JobDetailDto> {
     try {
-      const response = await httpClient.get(`/jobs/${jobId}`);
+      const response = await httpClient.get(`/jobs/${jobId}`, { signal: options.signal });
       if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
         throw new Error('Unexpected job detail response shape');
       }

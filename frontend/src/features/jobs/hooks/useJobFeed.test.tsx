@@ -55,7 +55,10 @@ describe('useJobFeed', () => {
     const { result } = renderHook(() => useJobFeed({ page: 1, sortBy: 'newest' }), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
-    expect(listJobsMock).toHaveBeenCalledWith({ page: 1, sortBy: 'newest' });
+    expect(listJobsMock).toHaveBeenCalledWith(
+      { page: 1, sortBy: 'newest' },
+      expect.objectContaining({ signal: expect.any(AbortSignal) }),
+    );
     expect(result.current.data?.cards[0]).toMatchObject({
       id: 'job-1',
       title: 'Frontend Engineer',
