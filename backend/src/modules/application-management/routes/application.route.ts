@@ -60,7 +60,7 @@ router.get(
   getApplicationsController,
 );
 
-// Idempotent platform-job bookmarks (JOB-BE-004) — before /:id
+// Idempotent platform-job bookmarks (JOB-BE-004) � before /:id
 router.post(
   '/saved-jobs',
   ...requireUser,
