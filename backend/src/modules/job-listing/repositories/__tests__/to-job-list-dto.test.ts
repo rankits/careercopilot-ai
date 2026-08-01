@@ -61,4 +61,16 @@ describe('toJobListDto applyUrl', () => {
       toJobListDto({ ...baseJob, sources: [{ applyUrl: 'javascript:x' }] }).applyUrl,
     ).toBeNull();
   });
+
+  it('formats location from provider metadata instead of Unknown', () => {
+    const dto = toJobListDto({
+      ...baseJob,
+      remoteType: 'ONSITE',
+      providerMetadata: { locationRaw: 'Austin, TX' },
+      sources: [],
+    });
+    expect(dto.location.formatted).toBe('Austin, TX');
+    expect(dto.location.formatted).not.toBe('Unknown');
+  });
 });
+

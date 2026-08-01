@@ -7,6 +7,8 @@ import {
   JobListDto,
   JobDetailDto,
 } from '@/modules/job-listing/types/job-listing.types.js';
+import { buildJobSearchWhere } from '@/modules/job-listing/utils/build-job-search-where.js';
+import { formatJobLocation } from '@/modules/job-listing/utils/format-job-location.js';
 import { pickPrimaryApplyUrl } from '@/modules/job-listing/utils/safe-apply-url.js';
 
 const jobListInclude = {
@@ -29,7 +31,7 @@ export const toJobListDto = (job: JobWithCompanyAndSources): JobListDto => ({
     verified: job.company.verified,
   },
   location: {
-    formatted: 'Unknown',
+    formatted: formatJobLocation(job.remoteType, job.providerMetadata),
     remoteType: job.remoteType,
   },
   employmentType: job.employmentType,
@@ -51,35 +53,16 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
     const limit = Math.max(1, Math.min(100, pagination.limit));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.JobWhereInput = {
-      status: 'ACTIVE',
-      ...(filters.query && {
-        OR: [
-          { title: { contains: filters.query, mode: 'insensitive' } },
-          { descriptionText: { contains: filters.query, mode: 'insensitive' } },
-          { company: { name: { contains: filters.query, mode: 'insensitive' } } },
-        ],
-      }),
-      ...(filters.companySlug && { companySlug: filters.companySlug }),
-      ...(filters.remoteTypes?.length && {
-        remoteType: { in: filters.remoteTypes },
-      }),
-      ...(filters.employmentTypes?.length && {
-        employmentType: { in: filters.employmentTypes },
-      }),
-      ...(filters.minSalary !== undefined && {
-        salaryMax: { gte: filters.minSalary },
-      }),
-      ...(filters.maxSalary !== undefined && {
-        salaryMin: { lte: filters.maxSalary },
-      }),
-    };
+    const where = buildJobSearchWhere(filters);
 
     let orderBy: Prisma.JobOrderByWithRelationInput = { createdAt: 'desc' };
     if (sortBy === 'salaryHighToLow') {
       orderBy = { salaryMax: 'desc' };
     } else if (sortBy === 'salaryLowToHigh') {
       orderBy = { salaryMin: 'asc' };
+    } else {
+      // newest (default) — relevance removed in JOB-API-002
+      orderBy = { createdAt: 'desc' };
     }
 
     const [totalItems, jobs] = await Promise.all([
