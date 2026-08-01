@@ -19,6 +19,7 @@ import {
   similarJobParamsSchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
+import { recommendationRateLimiter } from '@/shared/middlewares/rateLimiter.js';
 import { requirePermission, requirePrincipalType } from '@/shared/middlewares/rbac.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
 import { RECOMMENDATIONS_PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
@@ -35,6 +36,7 @@ export const createRecommendationsRouter = (
     authMiddleware,
     requirePrincipalType('USER'),
     requirePermission(RECOMMENDATIONS_PERMISSIONS.CREATE_OWN),
+    recommendationRateLimiter,
     validateResource(createRecommendationSchema),
     createRecommendationsController(service),
   );
@@ -44,6 +46,7 @@ export const createRecommendationsRouter = (
     authMiddleware,
     requirePrincipalType('USER'),
     requirePermission(RECOMMENDATIONS_PERMISSIONS.CREATE_OWN),
+    recommendationRateLimiter,
     validateResource(createRecommendationFromTextSchema),
     createRecommendationsFromTextController(service),
   );
