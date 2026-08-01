@@ -29,7 +29,6 @@ const jobDetail = (id: string): JobDetailDto => ({
   salary: { minimum: 130000, maximum: 160000, currency: 'USD' },
   skills: ['TypeScript', 'PostgreSQL'],
   publishedAt: null,
-  expiresAt: null,
   descriptionHtml: '<p>Build APIs</p>',
   descriptionText: 'Build APIs with TypeScript',
   benefits: [],
@@ -52,7 +51,6 @@ const jobList = (id: string, overrides: Partial<JobListDto> = {}): JobListDto =>
   salary: overrides.salary ?? { minimum: 130000, maximum: 160000, currency: 'USD' },
   skills: overrides.skills ?? ['TypeScript', 'PostgreSQL'],
   publishedAt: null,
-  expiresAt: null,
 });
 
 const baseContext = (): RecommendationContext => ({

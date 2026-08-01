@@ -60,7 +60,6 @@ export interface JobListDto {
   };
   skills: string[];
   publishedAt: string | null;
-  expiresAt: string | null;
   /** Primary JobSource apply URL (priority desc); http(s) only, else null. */
   applyUrl: string | null;
 }

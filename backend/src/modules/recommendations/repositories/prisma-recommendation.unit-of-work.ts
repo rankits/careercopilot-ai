@@ -103,7 +103,6 @@ const placeholderJob = (jobId: string): JobListDto => ({
   salary: { minimum: null, maximum: null, currency: null },
   skills: [],
   publishedAt: null,
-  expiresAt: null,
 });
 
 const createRunRepository = (tx: Tx): RecommendationRunRepository => ({

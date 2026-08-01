@@ -19,7 +19,6 @@ export interface JobListDto {
   };
   skills: string[];
   publishedAt: string | null;
-  expiresAt: string | null;
   applyUrl: string | null;
 }
 

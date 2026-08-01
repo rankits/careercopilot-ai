@@ -41,7 +41,6 @@ const apiJobs = {
       salary: { minimum: 18, maximum: 28, currency: 'INR' },
       skills: ['React', 'TypeScript'],
       publishedAt: '2026-07-30T00:00:00.000Z',
-      expiresAt: null,
       applyUrl: 'https://careers.microsoft.com/1',
     },
     {
@@ -53,7 +52,6 @@ const apiJobs = {
       salary: { minimum: 20, maximum: 30, currency: 'INR' },
       skills: ['React'],
       publishedAt: '2026-07-29T00:00:00.000Z',
-      expiresAt: null,
       applyUrl: null,
     },
   ],
