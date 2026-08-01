@@ -1,26 +1,32 @@
 import { Button } from '@/components/atoms/Button';
 
-import { CloseIcon } from '@/lib/material';
+import {
+  ArchiveOutlinedIcon,
+  CloseIcon,
+  DeleteOutlineIcon,
+  UnarchiveOutlinedIcon,
+} from '@/lib/material';
 
 import {
-  ApplicationDialog,
+  ConfirmApplicationDialog,
+  ConfirmBody,
+  ConfirmFooter,
+  ConfirmHeader,
+  ConfirmHeaderAccent,
+  ConfirmHeaderMain,
+  ConfirmIcon,
+  ConfirmMessage,
+  ConfirmTitle,
   CloseButton,
-  DialogBody,
-  DialogFooter,
-  DialogFooterActions,
-  DialogHeader,
-  DialogHeaderAccent,
-  DialogHeaderContent,
-  DialogSubtitle,
-  DialogTitleGroup,
-  DialogTitleText,
-} from '../ApplicationDialog/styles';
+  type ConfirmDialogIntent,
+} from './styles';
 
 export interface ConfirmDialogProps {
   cancelLabel?: string;
   confirmLabel?: string;
   confirmVariant?: 'danger' | 'primary';
   description: string;
+  intent?: ConfirmDialogIntent;
   isPending?: boolean;
   onClose: () => void;
   onConfirm: () => void;
@@ -28,55 +34,64 @@ export interface ConfirmDialogProps {
   title: string;
 }
 
+const intentIcons = {
+  archive: ArchiveOutlinedIcon,
+  delete: DeleteOutlineIcon,
+  restore: UnarchiveOutlinedIcon,
+} as const;
+
 export function ConfirmDialog({
   cancelLabel = 'Cancel',
   confirmLabel = 'Confirm',
   confirmVariant = 'primary',
   description,
+  intent = 'archive',
   isPending = false,
   onClose,
   onConfirm,
   open,
   title,
 }: ConfirmDialogProps) {
+  const Icon = intentIcons[intent];
+
   return (
-    <ApplicationDialog
+    <ConfirmApplicationDialog
       aria-labelledby="confirm-dialog-title"
       fullWidth
       maxWidth={false}
       onClose={onClose}
       open={open}
     >
-      <DialogHeaderAccent />
+      <ConfirmHeaderAccent intent={intent} />
 
-      <DialogHeader>
-        <DialogHeaderContent>
-          <DialogTitleGroup>
-            <DialogTitleText id="confirm-dialog-title">{title}</DialogTitleText>
-            <DialogSubtitle>{description}</DialogSubtitle>
-          </DialogTitleGroup>
-        </DialogHeaderContent>
+      <ConfirmHeader>
+        <ConfirmHeaderMain>
+          <ConfirmIcon intent={intent}>
+            <Icon fontSize="inherit" />
+          </ConfirmIcon>
+          <ConfirmTitle id="confirm-dialog-title">{title}</ConfirmTitle>
+        </ConfirmHeaderMain>
         <CloseButton aria-label="Close confirmation dialog" onClick={onClose}>
           <CloseIcon fontSize="small" />
         </CloseButton>
-      </DialogHeader>
+      </ConfirmHeader>
 
-      <DialogBody />
+      <ConfirmBody>
+        <ConfirmMessage>{description}</ConfirmMessage>
+      </ConfirmBody>
 
-      <DialogFooter>
-        <DialogFooterActions>
-          <Button disabled={isPending} onClick={onClose} variant="outline">
-            {cancelLabel}
-          </Button>
-          <Button
-            disabled={isPending}
-            onClick={() => void onConfirm()}
-            tone={confirmVariant === 'danger' ? 'danger' : 'primary'}
-          >
-            {isPending ? 'Working...' : confirmLabel}
-          </Button>
-        </DialogFooterActions>
-      </DialogFooter>
-    </ApplicationDialog>
+      <ConfirmFooter>
+        <Button disabled={isPending} onClick={onClose} variant="outline">
+          {cancelLabel}
+        </Button>
+        <Button
+          disabled={isPending}
+          onClick={() => void onConfirm()}
+          tone={confirmVariant === 'danger' ? 'danger' : 'primary'}
+        >
+          {isPending ? 'Working...' : confirmLabel}
+        </Button>
+      </ConfirmFooter>
+    </ConfirmApplicationDialog>
   );
 }

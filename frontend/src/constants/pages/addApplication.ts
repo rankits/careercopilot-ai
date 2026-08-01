@@ -37,6 +37,13 @@ export const addApplicationEntryModes = [
   },
 ] as const;
 
+/** Entry modes shown in the add-application dialog (external URL hidden for now). */
+export const visibleAddApplicationEntryModes = addApplicationEntryModes.filter(
+  (mode) => mode.id !== 'external-url',
+);
+
+export const MAX_APPLICATION_NOTE_LENGTH = 10_000;
+
 const addApplicationStatusValues = new Set([
   'saved',
   'preparing',
@@ -117,6 +124,7 @@ export function createDefaultAddApplicationForm() {
     jobTitle: '',
     jobUrl: '',
     location: '',
+    notes: '',
     priority: 'medium' as ApplicationPriority,
     salaryMax: '',
     salaryMin: '',

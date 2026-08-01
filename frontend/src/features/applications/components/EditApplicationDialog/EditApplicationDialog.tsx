@@ -6,13 +6,18 @@ import { Input } from '@/components/atoms/Input';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { useApplicationDetail } from '@/features/applications/hooks/useApplicationDetail';
-import { useUpdateApplication } from '@/features/applications/hooks/useApplicationMutations';
+import {
+  useAddApplicationNote,
+  useUpdateApplication,
+} from '@/features/applications/hooks/useApplicationMutations';
 
 import {
   addApplicationPriorityOptions,
   getTodayDateInputValue,
+  MAX_APPLICATION_NOTE_LENGTH,
 } from '@/constants/pages/addApplication';
 import type { ApplicationPriority } from '@/features/applications/types/application.view.types';
+import { validateApplicationNoteContent } from '@/features/applications/utils/addApplicationValidation';
 import {
   mapApiPriorityToUi,
   mapUiPriorityToApi,
@@ -79,6 +84,7 @@ export function EditApplicationDialog({
   const { showToast } = useToast();
   const { data, isError, isLoading } = useApplicationDetail(open ? applicationId : null);
   const updateApplication = useUpdateApplication(applicationId ?? '');
+  const addNote = useAddApplicationNote(applicationId ?? '');
 
   const [jobTitle, setJobTitle] = useState('');
   const [companyName, setCompanyName] = useState('');
@@ -89,8 +95,11 @@ export function EditApplicationDialog({
   const [salaryMin, setSalaryMin] = useState('');
   const [salaryMax, setSalaryMax] = useState('');
   const [currency, setCurrency] = useState('USD');
+  const [notes, setNotes] = useState('');
   const [errors, setErrors] = useState<EditApplicationFormErrors>({});
+  const [noteError, setNoteError] = useState<string | undefined>();
   const [touched, setTouched] = useState<Partial<Record<EditApplicationFormField, boolean>>>({});
+  const [notesTouched, setNotesTouched] = useState(false);
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
   const getFormState = (): EditApplicationFormState => ({
@@ -115,7 +124,9 @@ export function EditApplicationDialog({
 
   const clearValidationState = () => {
     setErrors({});
+    setNoteError(undefined);
     setTouched({});
+    setNotesTouched(false);
     setSubmitAttempted(false);
   };
 
@@ -174,6 +185,7 @@ export function EditApplicationDialog({
     setSalaryMin(data.salaryMin ?? '');
     setSalaryMax(data.salaryMax ?? '');
     setCurrency(data.salaryCurrency ?? 'USD');
+    setNotes('');
     clearValidationState();
   }, [data, open]);
 
@@ -188,15 +200,17 @@ export function EditApplicationDialog({
     }
 
     const validation = runValidation();
+    const nextNoteError = validateApplicationNoteContent(notes);
 
     flushSync(() => {
       setSubmitAttempted(true);
       setErrors(validation.errors);
+      setNoteError(nextNoteError);
     });
 
-    if (!validation.isValid) {
+    if (!validation.isValid || nextNoteError) {
       showToast({
-        message: validation.firstError ?? 'Please fix the highlighted fields.',
+        message: validation.firstError ?? nextNoteError ?? 'Please fix the highlighted fields.',
         severity: 'error',
       });
       return;
@@ -215,6 +229,12 @@ export function EditApplicationDialog({
         salaryMin: salaryMin.trim() ? Number(salaryMin) : null,
         salaryPeriod: salaryMin.trim() || salaryMax.trim() ? 'YEAR' : null,
       });
+
+      const noteContent = notes.trim();
+
+      if (noteContent) {
+        await addNote.mutateAsync({ content: noteContent });
+      }
 
       showToast({ message: 'Application updated successfully', severity: 'success' });
       handleClose();
@@ -389,6 +409,48 @@ export function EditApplicationDialog({
                 </FieldGroup>
               </SectionContent>
             </SectionCard>
+
+            <SectionCard>
+              <SectionHeader>
+                <SectionHeaderText>
+                  <SectionTitle>Notes</SectionTitle>
+                  <SectionDescription>
+                    {data.notes.length > 0
+                      ? `${data.notes.length} saved note${data.notes.length === 1 ? '' : 's'}. Add another below.`
+                      : 'Optional — add context about this application when saving.'}
+                  </SectionDescription>
+                </SectionHeaderText>
+              </SectionHeader>
+              <SectionContent>
+                <FieldGroup>
+                  <FieldLabel htmlFor="edit-application-note">Add a note</FieldLabel>
+                  <FieldHint>Optional — saved when you update this application.</FieldHint>
+                  <Input
+                    errorMessage={submitAttempted || notesTouched ? noteError : undefined}
+                    fullWidth
+                    id="edit-application-note"
+                    inputProps={{ maxLength: MAX_APPLICATION_NOTE_LENGTH }}
+                    multiline
+                    onBlur={() => {
+                      setNotesTouched(true);
+                      setNoteError(validateApplicationNoteContent(notes));
+                    }}
+                    onChange={(event) => {
+                      const value = event.target.value;
+                      setNotes(value);
+
+                      if (submitAttempted || notesTouched) {
+                        setNoteError(validateApplicationNoteContent(value));
+                      }
+                    }}
+                    placeholder="Capture interview feedback, recruiter updates, or next steps..."
+                    rows={3}
+                    size="small"
+                    value={notes}
+                  />
+                </FieldGroup>
+              </SectionContent>
+            </SectionCard>
           </>
         )}
       </DialogBody>
@@ -399,10 +461,10 @@ export function EditApplicationDialog({
             Cancel
           </Button>
           <Button
-            disabled={updateApplication.isPending || isLoading || isError}
+            disabled={updateApplication.isPending || addNote.isPending || isLoading || isError}
             onClick={() => void handleSubmit()}
           >
-            {updateApplication.isPending ? 'Saving...' : 'Save changes'}
+            {updateApplication.isPending || addNote.isPending ? 'Saving...' : 'Save changes'}
           </Button>
         </DialogFooterActions>
       </DialogFooter>

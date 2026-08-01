@@ -2,7 +2,10 @@ import type {
   AddApplicationEntryMode,
   defaultAddApplicationForm,
 } from '@/constants/pages/addApplication';
-import { getTodayDateInputValue } from '@/constants/pages/addApplication';
+import {
+  getTodayDateInputValue,
+  MAX_APPLICATION_NOTE_LENGTH,
+} from '@/constants/pages/addApplication';
 
 type AddApplicationFormState = typeof defaultAddApplicationForm;
 
@@ -12,6 +15,7 @@ export type AddApplicationFormField =
   | 'jobTitle'
   | 'jobUrl'
   | 'location'
+  | 'notes'
   | 'salaryMax'
   | 'salaryMin'
   | 'selectedJobId';
@@ -115,6 +119,20 @@ function validateSalaryFields(
   return errors;
 }
 
+export function validateApplicationNoteContent(value: string): string | undefined {
+  const trimmed = value.trim();
+
+  if (!trimmed) {
+    return undefined;
+  }
+
+  if (trimmed.length > MAX_APPLICATION_NOTE_LENGTH) {
+    return `Notes must be ${MAX_APPLICATION_NOTE_LENGTH.toLocaleString()} characters or fewer.`;
+  }
+
+  return undefined;
+}
+
 export function validateAddApplicationForm(
   entryMode: AddApplicationEntryMode,
   form: AddApplicationFormState,
@@ -160,6 +178,11 @@ export function validateAddApplicationForm(
   const appliedDateError = validateAppliedDate(form.appliedDate);
   if (appliedDateError) {
     errors.appliedDate = appliedDateError;
+  }
+
+  const notesError = validateApplicationNoteContent(form.notes);
+  if (notesError) {
+    errors.notes = notesError;
   }
 
   const firstError = Object.values(errors).find(Boolean) ?? null;

@@ -7,13 +7,22 @@ import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
 import { AddApplicationDialog } from './AddApplicationDialog';
 
-const mutateAsyncMock = vi.fn();
+const { mutateAsyncMock, addNoteMock } = vi.hoisted(() => ({
+  addNoteMock: vi.fn(),
+  mutateAsyncMock: vi.fn(),
+}));
 
 vi.mock('@/features/applications/hooks/useCreateApplication', () => ({
   useCreateApplication: () => ({
     isPending: false,
     mutateAsync: mutateAsyncMock,
   }),
+}));
+
+vi.mock('@/features/applications/services/applications.service', () => ({
+  applicationsService: {
+    addNote: addNoteMock,
+  },
 }));
 
 function renderDialog(onClose = vi.fn()) {
@@ -36,7 +45,9 @@ function renderDialog(onClose = vi.fn()) {
 describe('AddApplicationDialog', () => {
   beforeEach(() => {
     mutateAsyncMock.mockReset();
+    addNoteMock.mockReset();
     mutateAsyncMock.mockResolvedValue({ id: 'app-1' });
+    addNoteMock.mockResolvedValue({ id: 'note-1' });
   });
 
   it('renders manual entry form by default', () => {
@@ -53,21 +64,9 @@ describe('AddApplicationDialog', () => {
     expect(screen.getByLabelText(/^job title/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^company name/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/^applied date/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^notes/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^add application$/i })).toBeInTheDocument();
-  });
-
-  it('switches to external url entry mode', async () => {
-    const user = userEvent.setup();
-
-    renderDialog();
-
-    await user.click(screen.getByRole('tab', { name: /external url/i }));
-
-    expect(screen.getByLabelText(/^job url/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /fetch job details/i })).toBeInTheDocument();
-    expect(
-      screen.getByText(/we'll use this url to prefill the job details when available/i),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /external url/i })).not.toBeInTheDocument();
   });
 
   it('switches to job feed picker mode', async () => {
@@ -135,6 +134,30 @@ describe('AddApplicationDialog', () => {
     });
 
     expect(onClose).toHaveBeenCalledTimes(1);
+  });
+
+  it('creates a note when notes are provided on submit', async () => {
+    const user = userEvent.setup();
+
+    renderDialog();
+
+    fireEvent.change(screen.getByLabelText(/^job title/i), {
+      target: { value: 'Senior Full Stack Engineer' },
+    });
+    fireEvent.change(screen.getByLabelText(/^company name/i), {
+      target: { value: 'Acme Corp' },
+    });
+    fireEvent.change(screen.getByLabelText(/^notes/i), {
+      target: { value: 'Recruiter reached out on LinkedIn.' },
+    });
+
+    await user.click(screen.getByRole('button', { name: /^add application$/i }));
+
+    await waitFor(() => {
+      expect(addNoteMock).toHaveBeenCalledWith('app-1', {
+        content: 'Recruiter reached out on LinkedIn.',
+      });
+    });
   });
 
   it('shows validation errors when submitting an empty manual form', async () => {
