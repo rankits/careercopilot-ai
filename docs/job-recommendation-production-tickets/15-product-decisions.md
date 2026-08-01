@@ -57,3 +57,11 @@ Persist exclusions via `RecommendationFeedback` (and application tracker for app
 **Implementation:** JR-DATA-001 (Wave 2); FE already uses PROFILE only on For You.
 
 ---
+
+## JR-PROD-005 — CAREER_GOAL / SAVED_SEARCH API surface
+
+**Decision:** Option A — Remove `CAREER_GOAL` and `SAVED_SEARCH` from public API request schema and Swagger until domain models exist. Keep enums in DB schema if needed; reject at API boundary with clear 400 (via Zod) rather than silent 501.
+
+**Implementation:** JR-API-001.
+
+---
