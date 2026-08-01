@@ -13,7 +13,14 @@ import { logger } from '@/shared/logger/logger.js';
 
 export const startJobEmbeddingWorker = async (): Promise<void> => {
   const provider = createEmbeddingProvider();
-  const indexer = new JobEmbeddingIndexerService(provider, new PrismaJobEmbeddingRepository());
+  const indexer = new JobEmbeddingIndexerService(
+    provider,
+    new PrismaJobEmbeddingRepository(),
+    undefined,
+    undefined,
+    undefined,
+    ({ jobId, eventId, outcome }) => logJobEmbeddingIndexOutcome(logger, { jobId, eventId, outcome }),
+  );
   await messageBus.subscribe(
     MessageQueues.JOB_EMBEDDING_REQUESTS,
     MessageExchanges.DOMAIN_EVENTS,
