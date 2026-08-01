@@ -1,32 +1,51 @@
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
+import { Input } from '@/components/atoms/Input';
 import { FilterDropdown, JobCard, JobFilterBar, VirtualizedJobList } from '@/components/molecules';
 
 import { useJobFeed } from '@/features/jobs/hooks/useJobFeed';
+import {
+  type JobFeedWorkMode,
+  useJobFeedSearchParams,
+} from '@/features/jobs/hooks/useJobFeedSearchParams';
 
-import { experienceOptions, jobFilters, salaryOptions } from '@/constants/pages/jobFeed';
+import { jobFilters, salaryBandToApiRange, salaryOptions, sortOptions } from '@/constants/pages/jobFeed';
 import { Box, CircularProgress, Typography } from '@/lib/material';
-import { filterJobs } from '@/utils/jobFeed';
 
 import { jobFeedPageSx } from './styles';
 
+function salaryStateFromUrl(min?: number, max?: number): string {
+  if (max === 50_000 && min === undefined) return 'under-50k';
+  if (min === 50_000 && max === 100_000) return '50-100k';
+  if (min === 100_000 && max === undefined) return '100k-plus';
+  return 'all';
+}
+
 export function JobFeedPage() {
-  const [type, setType] = useState('all');
-  const [salary, setSalary] = useState('all');
-  const [experience, setExperience] = useState('all');
+  const { state, listParams, patch, clearAll } = useJobFeedSearchParams();
+  const [searchDraft, setSearchDraft] = useState(state.query);
 
-  const { data, isPending, isError, error, refetch, isFetching } = useJobFeed({
-    page: 1,
-    limit: 50,
-    sortBy: 'newest',
-  });
+  const { data, isPending, isError, error, refetch, isFetching } = useJobFeed(listParams);
 
-  const filteredJobs = useMemo(
-    () => filterJobs(data?.cards ?? [], { experience, salary, type }),
-    [data?.cards, experience, salary, type],
+  const activeFilters = jobFilters.map((filter) => ({
+    ...filter,
+    active: filter.id === state.workMode,
+  }));
+  const salaryValue = salaryStateFromUrl(state.minSalary, state.maxSalary);
+  const totalItems = data?.pagination.totalItems ?? 0;
+  const hasActiveFilters = Boolean(
+    state.query ||
+      state.workMode !== 'all' ||
+      state.minSalary !== undefined ||
+      state.maxSalary !== undefined ||
+      state.sortBy !== 'newest',
   );
-  const activeFilters = jobFilters.map((filter) => ({ ...filter, active: filter.id === type }));
+
+  const emptyMessage = useMemo(() => {
+    if (hasActiveFilters) return 'No jobs match your filters.';
+    return 'No jobs are available yet.';
+  }, [hasActiveFilters]);
 
   return (
     <Box component="section" sx={jobFeedPageSx.root}>
@@ -40,24 +59,68 @@ export function JobFeedPage() {
       </Box>
 
       <Box sx={jobFeedPageSx.filters}>
-        <JobFilterBar filters={activeFilters} onFilterClick={(filter) => setType(filter.id)} />
+        <JobFilterBar
+          filters={activeFilters}
+          onFilterClick={(filter) =>
+            patch({ workMode: filter.id as JobFeedWorkMode }, { resetPage: true })
+          }
+        />
+        <Input
+          aria-label="Search jobs"
+          onChange={(event) => setSearchDraft(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              patch({ query: searchDraft.trim() }, { resetPage: true });
+            }
+          }}
+          placeholder="Search title, company..."
+          size="small"
+          value={searchDraft}
+        />
         <FilterDropdown
           label="Salary"
-          onChange={setSalary}
+          onChange={(value) => {
+            const range = salaryBandToApiRange(value);
+            patch(
+              { minSalary: range.minSalary, maxSalary: range.maxSalary },
+              { resetPage: true },
+            );
+          }}
           options={salaryOptions}
-          value={salary}
+          value={salaryValue}
         />
         <FilterDropdown
-          label="Experience"
-          onChange={setExperience}
-          options={experienceOptions}
-          value={experience}
+          label="Sort"
+          onChange={(value) =>
+            patch(
+              { sortBy: value as 'newest' | 'salaryHighToLow' | 'salaryLowToHigh' },
+              { resetPage: true },
+            )
+          }
+          options={sortOptions}
+          value={state.sortBy}
         />
+        {hasActiveFilters ? (
+          <Button onClick={clearAll} size="small" variant="outline">
+            Clear all
+          </Button>
+        ) : null}
       </Box>
+
+      {!isPending && !isError ? (
+        <Typography aria-live="polite" sx={{ px: 0.5 }}>
+          {totalItems} job{totalItems === 1 ? '' : 's'} found
+          {isFetching ? ' · Updating…' : ''}
+        </Typography>
+      ) : null}
 
       <Box sx={jobFeedPageSx.list}>
         {isPending ? (
-          <Box aria-busy="true" aria-live="polite" sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
+          <Box
+            aria-busy="true"
+            aria-live="polite"
+            sx={{ display: 'grid', placeItems: 'center', py: 8 }}
+          >
             <CircularProgress aria-label="Loading jobs" />
           </Box>
         ) : null}
@@ -74,15 +137,40 @@ export function JobFeedPage() {
         ) : null}
 
         {!isPending && !isError ? (
-          filteredJobs.length > 0 ? (
-            <VirtualizedJobList
-              ariaLabel="Job feed results"
-              getKey={(job) => job.id ?? `${job.company}-${job.title}`}
-              items={filteredJobs}
-              renderItem={(job) => <JobCard job={job} />}
-            />
+          (data?.cards.length ?? 0) > 0 ? (
+            <>
+              <VirtualizedJobList
+                ariaLabel="Job feed results"
+                getKey={(job) => job.id ?? `${job.company}-${job.title}`}
+                items={data?.cards ?? []}
+                renderItem={(job) => <JobCard job={job} />}
+              />
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 2 }}>
+                <Button
+                  disabled={!data?.pagination.hasPreviousPage || isFetching}
+                  onClick={() => patch({ page: state.page - 1 }, { resetPage: false })}
+                  size="small"
+                  variant="outline"
+                >
+                  Previous
+                </Button>
+                <Typography>
+                  Page {data?.pagination.page ?? state.page} of {data?.pagination.totalPages ?? 1}
+                </Typography>
+                <Button
+                  disabled={!data?.pagination.hasNextPage || isFetching}
+                  onClick={() => patch({ page: state.page + 1 }, { resetPage: false })}
+                  size="small"
+                  variant="outline"
+                >
+                  Next
+                </Button>
+              </Box>
+            </>
           ) : (
-            <Typography sx={{ py: 6 }}>No jobs match your filters.</Typography>
+            <Typography role="status" sx={{ py: 6 }}>
+              {emptyMessage}
+            </Typography>
           )
         ) : null}
       </Box>
