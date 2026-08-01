@@ -4,7 +4,7 @@ import { successResponse } from '@/shared/utils/response.js';
 import { ApplicationManagementService } from '@/modules/application-management/services/application.service.js';
 import { PrismaApplicationRepository } from '@/modules/application-management/repositories/prisma-application.repository.js';
 import { ApplicationStatus, ApplicationPriority } from '@prisma/client';
-import { ApplicationSortBy } from '@/modules/application-management/types/application.types.js';
+import { ListApplicationsQuerySchema } from '@/modules/application-management/validations/application.validation.js';
 
 const repository = new PrismaApplicationRepository();
 export const applicationService = new ApplicationManagementService(repository);
@@ -46,18 +46,14 @@ export const getApplicationsController = async (
 ) => {
   try {
     const userId = requireUserPrincipalId(req);
-    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
-    const limit = Math.max(1, Math.min(100, parseInt((req.query.limit as string) || '20', 10)));
-    const search = typeof req.query.search === 'string' ? req.query.search : undefined;
-    const archived = req.query.archived as 'true' | 'false' | 'all' | undefined;
-    const sortBy = (req.query.sortBy as ApplicationSortBy) || 'updatedAt:desc';
+    const query = ListApplicationsQuerySchema.parse(req.query);
 
     let statusFilter: ApplicationStatus | ApplicationStatus[] | undefined;
-    if (req.query.status) {
-      if (Array.isArray(req.query.status)) {
-        statusFilter = req.query.status as ApplicationStatus[];
-      } else if (typeof req.query.status === 'string') {
-        statusFilter = req.query.status.split(',') as ApplicationStatus[];
+    if (query.status) {
+      if (Array.isArray(query.status)) {
+        statusFilter = query.status as ApplicationStatus[];
+      } else {
+        statusFilter = query.status.split(',') as ApplicationStatus[];
       }
     }
 
@@ -65,11 +61,11 @@ export const getApplicationsController = async (
       userId,
       filters: {
         status: statusFilter,
-        archived,
-        search,
+        archived: query.archived,
+        search: query.search,
       },
-      pagination: { page, limit },
-      sortBy,
+      pagination: { page: query.page, limit: query.limit },
+      sortBy: query.sortBy,
     });
 
     return res.status(200).json(successResponse('Applications fetched successfully', result));

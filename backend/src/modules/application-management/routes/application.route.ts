@@ -26,6 +26,7 @@ import {
   CreateNoteSchema,
   CreateTaskSchema,
   UpdateTaskSchema,
+  ListApplicationsQuerySchema,
 } from '@/modules/application-management/validations/application.validation.js';
 
 const router = express.Router();
@@ -49,6 +50,7 @@ router.get(
   '/',
   ...requireUser,
   requirePermission(APPLICATIONS_PERMISSIONS.READ_OWN),
+  validateResource(z.object({ query: ListApplicationsQuerySchema })),
   getApplicationsController,
 );
 
