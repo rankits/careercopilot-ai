@@ -61,4 +61,13 @@ export const listUsers = async (query: ListUsersQuery): Promise<PaginatedResult<
   };
 };
 
+/** Cross-module adapter: registry contract uses string ids; User rows use numeric ids. */
+export const userProfileService: UserProfileService = {
+  getUserProfile: async (publicId: string) => {
+    const id = Number(publicId);
+    if (!Number.isInteger(id)) return null;
+    return getUserProfile(id);
+  },
+};
+
 export default { getUserProfile, getMyProfile, updateMyProfile, listUsers };

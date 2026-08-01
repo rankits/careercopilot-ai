@@ -24,7 +24,7 @@ const requireUserPrincipalId = (req: Request): string => {
   if (req.user.principalType !== 'USER') {
     throw new AppError('Job recommendations are available only to user accounts', 403);
   }
-  return req.user.principalId;
+  return String(req.user.principalId);
 };
 
 export const createRecommendationsController = (service: RecommendationsService) =>

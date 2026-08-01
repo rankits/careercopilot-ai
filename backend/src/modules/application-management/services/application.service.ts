@@ -35,10 +35,7 @@ import {
 export class ApplicationManagementService implements IApplicationManagementService {
   constructor(private readonly repository: IApplicationRepository) {}
 
-  async createApplication(
-    userId: string,
-    input: CreateApplicationSchemaInput,
-  ): Promise<ApplicationDto> {
+  async createApplication(userId: string, input: CreateApplicationInput): Promise<ApplicationDto> {
     if (input.sourceType === 'PLATFORM_JOB' || input.sourceType === 'PLATFORM_APPLY') {
       const existing = await this.repository.findByJobId(userId, input.jobId);
       if (existing) {
