@@ -98,6 +98,8 @@ const envSchema = z
     OTP_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(5),
     JOB_LISTING_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(1),
     JOB_LISTING_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(60),
+    RECOMMENDATION_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
+    RECOMMENDATION_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
 
     // Feature flags
     ENABLE_EMAIL_WORKER: booleanFromString(true),
