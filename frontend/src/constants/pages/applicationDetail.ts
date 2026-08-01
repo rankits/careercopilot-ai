@@ -3,6 +3,7 @@ import type {
   ApiNoteType,
   ApiTaskType,
 } from '@/features/applications/types/application.types';
+import { colorTokens } from '@/tokens';
 
 export const applicationDetailStatusOptions = [
   { label: 'Saved', value: 'SAVED' as ApiApplicationStatus },
@@ -29,44 +30,34 @@ export const applicationNoteTypeOptions = [
   { label: 'Rejection', value: 'REJECTION' as ApiNoteType },
 ];
 
+const noteColors = colorTokens.note;
+
 export const noteTypeDisplayConfig: Record<
   ApiNoteType,
   { accent: string; background: string; color: string; label: string }
 > = {
   GENERAL: {
-    accent: '#6366f1',
-    background: '#eef2ff',
-    color: '#4338ca',
+    ...noteColors.general,
     label: 'General',
   },
   INTERVIEW: {
-    accent: '#2563eb',
-    background: '#dbeafe',
-    color: '#1d4ed8',
+    ...noteColors.interview,
     label: 'Interview',
   },
   OFFER: {
-    accent: '#ca8a04',
-    background: '#fef9c3',
-    color: '#a16207',
+    ...noteColors.offer,
     label: 'Offer',
   },
   PREPARATION: {
-    accent: '#7c3aed',
-    background: '#ede9fe',
-    color: '#6d28d9',
+    ...noteColors.preparation,
     label: 'Preparation',
   },
   RECRUITER: {
-    accent: '#0891b2',
-    background: '#cffafe',
-    color: '#0e7490',
+    ...noteColors.recruiter,
     label: 'Recruiter',
   },
   REJECTION: {
-    accent: '#dc2626',
-    background: '#fee2e2',
-    color: '#b91c1c',
+    ...noteColors.rejection,
     label: 'Rejection',
   },
 };
