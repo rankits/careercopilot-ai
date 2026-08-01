@@ -47,6 +47,14 @@ describe('JobCard', () => {
     expect(screen.getByRole('button', { name: /save frontend engineer/i })).toBeInTheDocument();
   });
 
+  it('shows Unsave label when isSaved', () => {
+    render(<JobCard job={baseJob} isSaved onSave={vi.fn()} />);
+    expect(screen.getByRole('button', { name: /unsave frontend engineer/i })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    );
+  });
+
   it('shows logo placeholder and hides empty skills', () => {
     render(
       <JobCard

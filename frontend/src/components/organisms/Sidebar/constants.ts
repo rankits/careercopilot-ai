@@ -1,5 +1,6 @@
 import { ROUTES } from '@/constants/routes';
 import {
+  BookmarkBorderOutlinedIcon,
   BusinessCenterOutlinedIcon,
   HomeOutlinedIcon,
   SearchOutlinedIcon,
@@ -8,13 +9,10 @@ import {
 
 import type { SidebarNavItem } from './interfaces';
 
-/**
- * Default app nav. Saved Jobs is omitted until JOB-FE-005 / save API ships
- * (JOB-FE-007 — hide dead nav rather than an inert bookmark entry).
- */
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
   { href: ROUTES.DASHBOARD, icon: HomeOutlinedIcon, id: 'dashboard', label: 'Dashboard' },
   { href: ROUTES.JOB_FEED, icon: SearchOutlinedIcon, id: 'jobs-feed', label: 'Jobs Feed' },
+  { href: ROUTES.SAVED_JOBS, icon: BookmarkBorderOutlinedIcon, id: 'saved-jobs', label: 'Saved Jobs' },
   { icon: TuneOutlinedIcon, id: 'ai-match', label: 'AI Match' },
   { icon: BusinessCenterOutlinedIcon, id: 'applications', label: 'Applications' },
 ];

@@ -1,3 +1,4 @@
+import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -5,6 +6,8 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 import { FilterDropdown, JobCard, JobFilterBar, VirtualizedJobList } from '@/components/molecules';
 
+import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
+import { applicationsService } from '@/features/applications/services/applications.service';
 import { useJobFeed } from '@/features/jobs/hooks/useJobFeed';
 import {
   type JobFeedWorkMode,
@@ -53,6 +56,25 @@ export function JobFeedPage() {
   }, [debouncedSearch, patch, searchDraft, state.query]);
 
   const { data, isPending, isError, error, refetch, isFetching } = useJobFeed(listParams);
+  const { saveJob, unsaveJob } = useSaveJob();
+  const savedQuery = useQuery({
+    queryKey: savedJobsQueryKey,
+    queryFn: () => applicationsService.listSavedJobs(),
+  });
+  const [optimisticSaved, setOptimisticSaved] = useState<Record<string, boolean>>({});
+
+  const savedIdSet = useMemo(() => {
+    const ids = new Set(
+      (savedQuery.data ?? [])
+        .map((app) => app.jobId)
+        .filter((id): id is string => Boolean(id)),
+    );
+    for (const [jobId, isSaved] of Object.entries(optimisticSaved)) {
+      if (isSaved) ids.add(jobId);
+      else ids.delete(jobId);
+    }
+    return ids;
+  }, [optimisticSaved, savedQuery.data]);
 
   const activeFilters = jobFilters.map((filter) => ({
     ...filter,
@@ -234,6 +256,7 @@ export function JobFeedPage() {
               renderItem={(job) => (
                 <JobCard
                   job={job}
+                  isSaved={Boolean(job.id && savedIdSet.has(job.id))}
                   onApply={(selected) => {
                     openExternalApply(selected.applyUrl);
                   }}
@@ -241,6 +264,15 @@ export function JobFeedPage() {
                     if (!selected.id) return;
                     void navigate(jobDetailPath(selected.id), {
                       state: { fromFeed: `${location.pathname}${location.search}` },
+                    });
+                  }}
+                  onSave={(selected) => {
+                    if (!selected.id) return;
+                    const jobId = selected.id;
+                    const wasSaved = savedIdSet.has(jobId);
+                    setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+                    void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
+                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
                     });
                   }}
                 />

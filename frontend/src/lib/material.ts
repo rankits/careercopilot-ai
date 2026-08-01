@@ -12,6 +12,7 @@ export { default as SchoolOutlinedIcon } from '@mui/icons-material/SchoolOutline
 export { default as WorkspacePremiumOutlinedIcon } from '@mui/icons-material/WorkspacePremiumOutlined';
 export { default as RefreshIcon } from '@mui/icons-material/Refresh';
 export { default as BookmarkBorderOutlinedIcon } from '@mui/icons-material/BookmarkBorderOutlined';
+export { default as BookmarkOutlinedIcon } from '@mui/icons-material/BookmarkOutlined';
 export { default as BusinessCenterOutlinedIcon } from '@mui/icons-material/BusinessCenterOutlined';
 export { default as CheckCircleIcon } from '@mui/icons-material/CheckCircle';
 export { default as ChevronLeftIcon } from '@mui/icons-material/ChevronLeft';
