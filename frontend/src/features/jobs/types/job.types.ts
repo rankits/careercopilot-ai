@@ -36,6 +36,15 @@ export interface JobListResult {
   pagination: JobListPagination;
 }
 
+export interface JobDetailDto extends JobListDto {
+  descriptionHtml: string;
+  descriptionText: string;
+  benefits: string[];
+  tags: string[];
+  companyIndustry: string | null;
+  companySize: string | null;
+}
+
 export interface ListJobsParams {
   page?: number;
   limit?: number;

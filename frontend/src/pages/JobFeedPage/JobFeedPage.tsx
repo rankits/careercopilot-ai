@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -11,6 +12,7 @@ import {
 } from '@/features/jobs/hooks/useJobFeedSearchParams';
 
 import { jobFilters, salaryBandToApiRange, salaryOptions, sortOptions } from '@/constants/pages/jobFeed';
+import { jobDetailPath } from '@/constants/routes';
 import { Box, CircularProgress, Typography } from '@/lib/material';
 
 import { jobFeedPageSx } from './styles';
@@ -23,6 +25,8 @@ function salaryStateFromUrl(min?: number, max?: number): string {
 }
 
 export function JobFeedPage() {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { state, listParams, patch, clearAll } = useJobFeedSearchParams();
   const [searchDraft, setSearchDraft] = useState(state.query);
 
@@ -143,8 +147,18 @@ export function JobFeedPage() {
                 ariaLabel="Job feed results"
                 getKey={(job) => job.id ?? `${job.company}-${job.title}`}
                 items={data?.cards ?? []}
-                renderItem={(job) => <JobCard job={job} />}
-              />
+              renderItem={(job) => (
+                <JobCard
+                  job={job}
+                  onOpen={(selected) => {
+                    if (!selected.id) return;
+                    void navigate(jobDetailPath(selected.id), {
+                      state: { fromFeed: `${location.pathname}${location.search}` },
+                    });
+                  }}
+                />
+              )}
+            />
               <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 2 }}>
                 <Button
                   disabled={!data?.pagination.hasPreviousPage || isFetching}
