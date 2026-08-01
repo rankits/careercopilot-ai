@@ -9,7 +9,7 @@ export const DashboardRoot = styled('section')({
 export const DashboardTopGrid = styled(Box)({
   display: 'grid',
   gap: spacing[5],
-  gridTemplateColumns: 'minmax(0, 0.82fr) minmax(26rem, 1.18fr)',
+  gridTemplateColumns: 'minmax(0, 1fr)',
 
   '@media (max-width: 80rem)': {
     gridTemplateColumns: '1fr',
@@ -71,10 +71,26 @@ export const DashboardFilterGrid = styled(Box)({
   },
 });
 
+export const RecommendationsEmptyState = styled(Box)({
+  alignItems: 'center',
+  display: 'grid',
+  gap: spacing[3],
+  justifyItems: 'start',
+  paddingBlock: spacing[4],
+});
+
+export const RecommendationsEmptyText = styled('p')({
+  color: colorTokens.textSecondary,
+  fontSize: fontSize.sm,
+  lineHeight: 1.5,
+  margin: 0,
+  maxWidth: '36rem',
+});
+
 export const DashboardMetricsGrid = styled(Box)({
   display: 'grid',
   gap: spacing[4],
-  gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
+  gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
   marginTop: spacing[4],
 
   '@media (max-width: 1180px)': {
