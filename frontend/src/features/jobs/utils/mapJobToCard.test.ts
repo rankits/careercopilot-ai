@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { mapJobToCard } from './mapJobToCard';
+import { mapJobListDtoToCard } from './mapJobToCard';
 
-describe('mapJobToCard', () => {
+describe('mapJobListDtoToCard', () => {
   it('maps JobListDto fields into JobCardData without fabricated match scores', () => {
-    const card = mapJobToCard({
+    const card = mapJobListDtoToCard({
       id: 'abc',
       title: 'Backend Engineer',
       company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
