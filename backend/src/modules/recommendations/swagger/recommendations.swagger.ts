@@ -282,6 +282,8 @@ export const recommendationsSwagger = {
     BASE_URL,
     {
       summary: 'List persisted recommendations for the current user',
+      description:
+        'Stable pagination order: createdAt DESC (newest first), then rank ASC, then id ASC.',
       queryParams: [
         {
           name: 'page',
