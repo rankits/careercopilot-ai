@@ -170,9 +170,7 @@ describe('PATCH /users/me', () => {
           .send({ firstName: 'ShouldNotApply' });
 
         expect(res.status).toBe(403);
-        expect(fakeDb.users.find((u) => u.id === user.id)?.firstName).not.toBe(
-          'ShouldNotApply',
-        );
+        expect(fakeDb.users.find((u) => u.id === user.id)?.firstName).not.toBe('ShouldNotApply');
       });
     });
   });

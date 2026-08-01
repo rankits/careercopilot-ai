@@ -915,6 +915,7 @@ export class FakeDb {
       job: {
         findMany: async () => [],
         findUnique: async () => null,
+        findFirst: async () => null,
       },
 
       $transaction: async (arg: unknown) => {

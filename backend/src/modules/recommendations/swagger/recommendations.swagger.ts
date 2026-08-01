@@ -76,7 +76,14 @@ const jobListSchema = {
 const scoreResultSchema = {
   type: 'object',
   properties: {
-    overallScore: { type: 'number', minimum: 0, maximum: 1, example: 0.82 },
+    overallScore: {
+      type: 'number',
+      minimum: 0,
+      maximum: 1,
+      example: 0.82,
+      description:
+        'Unit-interval match score in [0, 1]. UI should display Math.round(score * 100) as a percent. See docs/SCORE_SCALE.md.',
+    },
     components: {
       type: 'object',
       properties: Object.fromEntries(

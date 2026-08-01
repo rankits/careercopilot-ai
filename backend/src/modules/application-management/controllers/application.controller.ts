@@ -3,28 +3,20 @@ import { AppError } from '@/shared/utils/errors/AppError.js';
 import { successResponse } from '@/shared/utils/response.js';
 import { ApplicationManagementService } from '@/modules/application-management/services/application.service.js';
 import { PrismaApplicationRepository } from '@/modules/application-management/repositories/prisma-application.repository.js';
-import {
-  CreateApplicationSchema,
-  UpdateApplicationSchema,
-} from '@/modules/application-management/validations/application.validation.js';
 import { ApplicationStatus, ApplicationPriority } from '@prisma/client';
-import { ApplicationSortBy } from '@/modules/application-management/types/application.types.js';
+import { ListApplicationsQuerySchema } from '@/modules/application-management/validations/application.validation.js';
 
 const repository = new PrismaApplicationRepository();
 export const applicationService = new ApplicationManagementService(repository);
 
-function getUserId(req: Request): string {
-  const userId =
-    req.user?.principalId ||
-    (req as { user?: { id?: string } }).user?.id ||
-    req.header('x-user-id') ||
-    (typeof req.body?.userId === 'string' ? req.body.userId : undefined) ||
-    (typeof req.query?.userId === 'string' ? req.query.userId : undefined);
-
-  if (!userId) {
-    throw new AppError('Unauthorized: User ID is required', 401, 'UNAUTHORIZED');
+function requireUserPrincipalId(req: Request): string {
+  if (!req.user) {
+    throw new AppError('Authentication required', 401, 'UNAUTHORIZED');
   }
-  return userId;
+  if (req.user.principalType !== 'USER') {
+    throw new AppError('Applications are available only to user accounts', 403, 'FORBIDDEN');
+  }
+  return String(req.user.principalId);
 }
 
 function getParam(param: string | string[] | undefined, name: string): string {
@@ -39,10 +31,41 @@ export const createApplicationController = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = getUserId(req);
-    const input = CreateApplicationSchema.parse(req.body);
-    const application = await applicationService.createApplication(userId, input);
+    const userId = requireUserPrincipalId(req);
+    const application = await applicationService.createApplication(userId, req.body);
     return res.status(201).json(successResponse('Application created successfully', application));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const savePlatformJobController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = requireUserPrincipalId(req);
+    const jobId = String(req.body?.jobId ?? '');
+    const { application, created } = await applicationService.savePlatformJob(userId, jobId);
+    return res
+      .status(created ? 201 : 200)
+      .json(successResponse(created ? 'Job saved successfully' : 'Job already saved', application));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const unsavePlatformJobController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = requireUserPrincipalId(req);
+    const jobId = getParam(req.params.jobId, 'jobId');
+    await applicationService.unsavePlatformJob(userId, jobId);
+    return res.status(200).json(successResponse('Job unsaved successfully'));
   } catch (error) {
     return next(error);
   }
@@ -54,19 +77,15 @@ export const getApplicationsController = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = getUserId(req);
-    const page = Math.max(1, parseInt((req.query.page as string) || '1', 10));
-    const limit = Math.max(1, Math.min(100, parseInt((req.query.limit as string) || '20', 10)));
-    const search = typeof req.query.search === 'string' ? req.query.search : undefined;
-    const archived = req.query.archived as 'true' | 'false' | 'all' | undefined;
-    const sortBy = (req.query.sortBy as ApplicationSortBy) || 'updatedAt:desc';
+    const userId = requireUserPrincipalId(req);
+    const query = ListApplicationsQuerySchema.parse(req.query);
 
     let statusFilter: ApplicationStatus | ApplicationStatus[] | undefined;
-    if (req.query.status) {
-      if (Array.isArray(req.query.status)) {
-        statusFilter = req.query.status as ApplicationStatus[];
-      } else if (typeof req.query.status === 'string') {
-        statusFilter = req.query.status.split(',') as ApplicationStatus[];
+    if (query.status) {
+      if (Array.isArray(query.status)) {
+        statusFilter = query.status as ApplicationStatus[];
+      } else {
+        statusFilter = query.status.split(',') as ApplicationStatus[];
       }
     }
 
@@ -74,11 +93,11 @@ export const getApplicationsController = async (
       userId,
       filters: {
         status: statusFilter,
-        archived,
-        search,
+        archived: query.archived,
+        search: query.search,
       },
-      pagination: { page, limit },
-      sortBy,
+      pagination: { page: query.page, limit: query.limit },
+      sortBy: query.sortBy,
     });
 
     return res.status(200).json(successResponse('Applications fetched successfully', result));
@@ -93,7 +112,7 @@ export const getApplicationByIdController = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const application = await applicationService.getApplicationById(userId, id);
     return res.status(200).json(successResponse('Application fetched successfully', application));
@@ -108,10 +127,9 @@ export const updateApplicationController = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
-    const input = UpdateApplicationSchema.parse(req.body);
-    const application = await applicationService.updateApplication(userId, id, input);
+    const application = await applicationService.updateApplication(userId, id, req.body);
     return res.status(200).json(successResponse('Application updated successfully', application));
   } catch (error) {
     return next(error);
@@ -124,7 +142,7 @@ export const transitionStatusController = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const application = await applicationService.transitionStatus(userId, id, req.body);
     return res
@@ -141,7 +159,7 @@ export const archiveApplicationController = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const application = await applicationService.archiveApplication(userId, id);
     return res.status(200).json(successResponse('Application archived successfully', application));
@@ -156,7 +174,7 @@ export const unarchiveApplicationController = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const application = await applicationService.unarchiveApplication(userId, id);
     return res
@@ -173,7 +191,7 @@ export const deleteApplicationController = async (
   next: NextFunction,
 ) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     await applicationService.deleteApplication(userId, id);
     return res.status(200).json(successResponse('Application deleted successfully'));
@@ -184,7 +202,7 @@ export const deleteApplicationController = async (
 
 export const addNoteController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const note = await applicationService.addNote(userId, id, req.body);
     return res.status(201).json(successResponse('Note added successfully', note));
@@ -195,7 +213,7 @@ export const addNoteController = async (req: Request, res: Response, next: NextF
 
 export const deleteNoteController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const noteId = getParam(req.params.noteId, 'noteId');
     await applicationService.deleteNote(userId, id, noteId);
@@ -207,7 +225,7 @@ export const deleteNoteController = async (req: Request, res: Response, next: Ne
 
 export const addTaskController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const task = await applicationService.addTask(userId, id, req.body);
     return res.status(201).json(successResponse('Task added successfully', task));
@@ -218,7 +236,7 @@ export const addTaskController = async (req: Request, res: Response, next: NextF
 
 export const updateTaskController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const taskId = getParam(req.params.taskId, 'taskId');
     const task = await applicationService.updateTask(userId, id, taskId, req.body);
@@ -230,7 +248,7 @@ export const updateTaskController = async (req: Request, res: Response, next: Ne
 
 export const deleteTaskController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const userId = getUserId(req);
+    const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const taskId = getParam(req.params.taskId, 'taskId');
     await applicationService.deleteTask(userId, id, taskId);

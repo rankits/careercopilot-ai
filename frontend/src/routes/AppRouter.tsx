@@ -3,12 +3,15 @@ import { Route, Routes } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
 import { ApplicationsPage } from '@/pages/ApplicationsPage';
+import { ForYouPage } from '@/pages/ForYouPage';
 import { HomePage } from '@/pages/HomePage';
+import { JobDetailPage } from '@/pages/JobDetailPage';
 import { JobFeedPage } from '@/pages/JobFeedPage';
 import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { RegisterPage } from '@/pages/RegisterPage';
+import { SavedJobsPage } from '@/pages/SavedJobsPage';
 import {
   GuestRoute,
   OnboardingRoute,
@@ -34,6 +37,9 @@ export function AppRouter() {
         <Route element={<AppLayout />}>
           <Route path={ROUTES.DASHBOARD} element={<HomePage />} />
           <Route path={ROUTES.JOB_FEED} element={<JobFeedPage />} />
+          <Route path={ROUTES.JOB_DETAIL} element={<JobDetailPage />} />
+          <Route path={ROUTES.FOR_YOU} element={<ForYouPage />} />
+          <Route path={ROUTES.SAVED_JOBS} element={<SavedJobsPage />} />
           <Route path={ROUTES.APPLICATIONS} element={<ApplicationsPage />} />
           <Route path={ROUTES.PROFILE_EDIT} element={<ProfilePage mode="edit" />} />
         </Route>
