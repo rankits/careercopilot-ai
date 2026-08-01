@@ -30,3 +30,20 @@ When `retrievalScore` is missing (non-vector path), treat it as `0` and document
 **Implementation:** JR-SEC-001, JR-SEC-003; delete `recommendation.queue.ts` / `recommendation.worker.ts` stubs when safe.
 
 ---
+
+## JR-PROD-003 — Feedback and exclusion policy
+
+**Decision:** Negative feedback excludes jobs from future retrieval; applied jobs exclude; saved jobs do **not** exclude.
+
+| Action | Effect on future retrieval |
+|---|---|
+| DISMISSED, NOT_RELEVANT, LESS_LIKE_THIS | Exclude job |
+| APPLIED | Exclude job |
+| SAVED | Keep eligible (no exclude) |
+| VIEWED, OPENED, MORE_LIKE_THIS | No exclusion |
+
+Persist exclusions via `RecommendationFeedback` (and application tracker for applied).
+
+**Implementation:** JR-RET-001 (Wave 3); document now for retrieval work.
+
+---
