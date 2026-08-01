@@ -5,6 +5,7 @@ import { GreenhouseJobProvider } from '@/modules/jobs/providers/greenhouse/provi
 import { OpenPublicFeedProvider } from '@/modules/jobs/providers/public-feed/public-feed.provider.js';
 import { RemotiveJobProvider } from '@/modules/jobs/providers/remotive/provider.js';
 import { JobicyJobProvider } from '@/modules/jobs/providers/jobicy/provider.js';
+import { HimalayasJobProvider } from '@/modules/jobs/providers/himalayas/provider.js';
 import { JobsService } from '@/modules/jobs/services/jobs.service.js';
 import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
@@ -33,11 +34,21 @@ const jobicyProvider = new JobicyJobProvider({
   ],
   tier: ProviderTier.PUBLIC,
 });
+const himalayasProvider = new HimalayasJobProvider({
+  browse: { limit: 40, offset: 0 },
+  searches: [
+    { q: 'engineer', country: 'India' },
+    { q: 'software', country: 'US' },
+    { country: 'India' },
+  ],
+  tier: ProviderTier.PUBLIC,
+});
 
 jobProviderRegistry.register(defaultGreenhouseProvider);
 jobProviderRegistry.register(defaultPublicFeedProvider);
 jobProviderRegistry.register(remotiveProvider);
 jobProviderRegistry.register(jobicyProvider);
+jobProviderRegistry.register(himalayasProvider);
 
 jobsLogger.info(
   {
