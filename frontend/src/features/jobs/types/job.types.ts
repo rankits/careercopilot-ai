@@ -40,6 +40,6 @@ export interface JobListResult {
 export interface ListJobsParams {
   page?: number;
   limit?: number;
-  sortBy?: 'relevance' | 'newest' | 'salaryHighToLow' | 'salaryLowToHigh';
+  sortBy?: 'newest' | 'salaryHighToLow' | 'salaryLowToHigh';
   query?: string;
 }
