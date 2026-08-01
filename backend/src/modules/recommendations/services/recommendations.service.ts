@@ -48,6 +48,17 @@ export class RecommendationsService {
       { userId, sourceType: input.sourceType, sourceId: input.sourceId },
       'Recommendation generation requested',
     );
+    if (input.sourceType === 'JOB') {
+      this.logger.info(
+        {
+          userId,
+          sourceType: input.sourceType,
+          sourceId: input.sourceId,
+          audit: 'recommendation.job_source.generate',
+        },
+        'JOB source recommendation generation audit',
+      );
+    }
     const dependencies = this.requireOrchestration();
     const authorized = await dependencies.sourceAuthorization.authorizeForSource(userId, input);
     return this.generateAuthorized(authorized, {
