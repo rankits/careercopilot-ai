@@ -23,18 +23,20 @@ beforeEach(async () => {
 });
 
 describe('job recommendation HTTP gates', () => {
-  it('rejects anonymous list/detail/feedback/similar requests', async () => {
-    const [list, detail, feedback, similar] = await Promise.all([
+  it('rejects anonymous list/detail/feedback/similar/status requests', async () => {
+    const [list, detail, feedback, similar, status] = await Promise.all([
       request(app).get(API),
       request(app).get(`${API}/${recommendationId}`),
       request(app).post(`${API}/${recommendationId}/feedback`).send({ action: 'SAVED' }),
       request(app).get(`${API}/similar/${jobId}`),
+      request(app).get(`${API}/status`),
     ]);
 
     expect(list.status).toBe(401);
     expect(detail.status).toBe(401);
     expect(feedback.status).toBe(401);
     expect(similar.status).toBe(401);
+    expect(status.status).toBe(401);
   });
 
   it('rejects an ADMIN principal on user-owned recommendation routes', async () => {
@@ -83,5 +85,19 @@ describe('job recommendation HTTP gates', () => {
 
     expect(response.status).toBe(404);
     expect(response.body.code).toBe('RECOMMENDATION_NOT_FOUND');
+  });
+
+  it('returns readiness status for the authenticated user', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-status@example.com' });
+    const token = accessTokenForUser(user);
+
+    const response = await request(app).get(`${API}/status`).set(authHeader(token));
+
+    expect(response.status).toBe(200);
+    expect(response.body.data).toMatchObject({
+      canGenerateFromProfile: expect.any(Boolean),
+      blockers: expect.any(Array),
+      retrieval: expect.objectContaining({ configured: true }),
+    });
   });
 });
