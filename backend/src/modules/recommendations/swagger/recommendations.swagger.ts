@@ -82,7 +82,7 @@ const scoreResultSchema = {
       maximum: 1,
       example: 0.82,
       description:
-        'Unit-interval match score in [0, 1]. UI should display Math.round(score * 100) as a percent. See SCORE_SCALE.md.',
+        'Unit-interval match score in [0, 1]. UI should display Math.round(score * 100) as a percent. See docs/SCORE_SCALE.md.',
     },
     components: {
       type: 'object',

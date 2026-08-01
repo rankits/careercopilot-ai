@@ -20,6 +20,7 @@ const job: JobDetailDto = {
   salary: { minimum: 100_000, maximum: 140_000, currency: 'USD' },
   skills: ['TypeScript'],
   publishedAt: null,
+  applyUrl: null,
   descriptionHtml: '<p>Platform work</p>',
   descriptionText: 'Platform work',
   benefits: [],

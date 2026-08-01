@@ -6,14 +6,15 @@ import { Button } from '@/components/atoms/Button';
 import { JobCard, VirtualizedJobList } from '@/components/molecules';
 
 import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
-import { applicationsService } from '@/features/applications/services/applications.service';
-import { useAppSelector } from '@/hooks/redux';
 import {
   useGenerateRecommendations,
   useRecommendations,
 } from '@/features/recommendations/hooks/useRecommendations';
-import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
+import { useAppSelector } from '@/hooks/redux';
+
 import { jobDetailPath, ROUTES } from '@/constants/routes';
+import { applicationsService } from '@/features/applications/services/applications.service';
+import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
 import { Box, CircularProgress, Typography } from '@/lib/material';
 
 export function ForYouPage() {
@@ -37,9 +38,7 @@ export function ForYouPage() {
 
   const savedIdSet = useMemo(() => {
     const ids = new Set(
-      (savedQuery.data ?? [])
-        .map((app) => app.jobId)
-        .filter((id): id is string => Boolean(id)),
+      (savedQuery.data ?? []).map((app) => app.jobId).filter((id): id is string => Boolean(id)),
     );
     for (const [jobId, isSaved] of Object.entries(optimisticSaved)) {
       if (isSaved) ids.add(jobId);
@@ -50,9 +49,11 @@ export function ForYouPage() {
 
   const isEmpty = !isPending && !isError && (data?.items.length ?? 0) === 0;
   const generateError =
-    generate.error instanceof Error ? generate.error.message : generate.isError
-      ? 'Unable to generate recommendations.'
-      : null;
+    generate.error instanceof Error
+      ? generate.error.message
+      : generate.isError
+        ? 'Unable to generate recommendations.'
+        : null;
 
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3, py: 2 }}>
@@ -117,12 +118,7 @@ export function ForYouPage() {
           >
             Generate recommendations
           </Button>
-          <Button
-            component={RouterLink}
-            size="small"
-            to={ROUTES.JOB_FEED}
-            variant="outline"
-          >
+          <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
             Browse all jobs
           </Button>
         </Box>

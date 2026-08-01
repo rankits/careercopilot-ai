@@ -2,8 +2,8 @@ import { Route, Routes } from 'react-router-dom';
 
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
-import { HomePage } from '@/pages/HomePage';
 import { ForYouPage } from '@/pages/ForYouPage';
+import { HomePage } from '@/pages/HomePage';
 import { JobDetailPage } from '@/pages/JobDetailPage';
 import { JobFeedPage } from '@/pages/JobFeedPage';
 import { LoginPage } from '@/pages/LoginPage';
