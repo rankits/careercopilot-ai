@@ -256,36 +256,31 @@ class PrismaJobTransactionRunner implements JobTransactionRunner {
 class UnsupportedProviderError extends Error {}
 class InvalidJobInputError extends Error {}
 
+const PROVIDER_NAME_TO_TYPE: Record<string, ProviderType> = {
+  greenhouse: 'GREENHOUSE',
+  lever: 'LEVER',
+  arbeitnow: 'ARBEITNOW',
+  public_feed: 'ARBEITNOW',
+  remotive: 'REMOTIVE',
+  jobicy: 'JOBICY',
+  himalayas: 'HIMALAYAS',
+  remoteok: 'REMOTEOK',
+  remotejobs_org: 'REMOTEJOBS_ORG',
+  'remotejobs.org': 'REMOTEJOBS_ORG',
+  ashby: 'ASHBY',
+  recruitee: 'RECRUITEE',
+  personio: 'PERSONIO',
+};
+
 const mapProvider = (providerName: string): ProviderType => {
   const normalized = providerName.trim().toLowerCase();
-  switch (normalized) {
-    case 'greenhouse':
-      return ProviderType.GREENHOUSE;
-    case 'lever':
-      return ProviderType.LEVER;
-    case 'arbeitnow':
-    case 'public_feed':
-      return ProviderType.ARBEITNOW;
-    case 'remotive':
-      return ProviderType.REMOTIVE;
-    case 'jobicy':
-      return ProviderType.JOBICY;
-    case 'himalayas':
-      return ProviderType.HIMALAYAS;
-    case 'remoteok':
-      return ProviderType.REMOTEOK;
-    case 'remotejobs_org':
-    case 'remotejobs.org':
-      return ProviderType.REMOTEJOBS_ORG;
-    case 'ashby':
-      return ProviderType.ASHBY;
-    case 'recruitee':
-      return ProviderType.RECRUITEE;
-    case 'personio':
-      return ProviderType.PERSONIO;
-    default:
-      throw new UnsupportedProviderError(`Unsupported job provider: ${providerName}`);
+  const provider = PROVIDER_NAME_TO_TYPE[normalized];
+  // Use string literals (not ProviderType.X) so a stale generated client
+  // missing new enum keys cannot silently pass `undefined` into Prisma.
+  if (!provider) {
+    throw new UnsupportedProviderError(`Unsupported job provider: ${providerName}`);
   }
+  return provider;
 };
 
 const priorityForTier = (tier: ProviderTier): number => {
