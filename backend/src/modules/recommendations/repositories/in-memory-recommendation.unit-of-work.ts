@@ -18,6 +18,7 @@ import type {
   RecommendationSourceType,
   ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
+import { RETRIEVAL_EXCLUSION_FEEDBACK_ACTIONS } from '@/modules/recommendations/constants/recommendation-feedback.constants.js';
 
 /**
  * Process-local recommendation store for unit tests and ephemeral local runs.
@@ -200,6 +201,16 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       [...this.feedback.values()]
         .filter((item) => item.userId === userId && item.jobId === jobId)
         .map((item) => ({ ...item })),
+    listExcludedJobIds: async (userId) => {
+      const ids = new Set<string>();
+      for (const item of this.feedback.values()) {
+        if (item.userId !== userId) continue;
+        if ((RETRIEVAL_EXCLUSION_FEEDBACK_ACTIONS as readonly string[]).includes(item.action)) {
+          ids.add(item.jobId);
+        }
+      }
+      return [...ids];
+    },
   };
 
   async execute<T>(

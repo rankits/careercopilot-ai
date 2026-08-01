@@ -112,11 +112,17 @@ export class RecommendationsService {
       await dependencies.unitOfWork.execute(({ runs }) =>
         runs.updateStatus(input.userId, run.id, 'RETRIEVING'),
       );
+      const excludedJobIds = await dependencies.unitOfWork.execute(({ feedback }) =>
+        feedback.listExcludedJobIds(input.userId),
+      );
+      const excludeJobIds = [
+        ...new Set([...(options.excludeJobIds ?? []), ...excludedJobIds]),
+      ];
       const candidates = await dependencies.retrievalService.retrieve({
         context,
         backend: options.backend,
         limit: options.limit,
-        excludeJobIds: options.excludeJobIds,
+        excludeJobIds: excludeJobIds.length > 0 ? excludeJobIds : undefined,
       });
       await dependencies.unitOfWork.execute(async ({ runs }) => {
         await runs.updateCandidateCount(input.userId, run.id, candidates.length);
