@@ -3,6 +3,7 @@ import { DeduplicationEngine } from '@/modules/jobs/services/aggregation/dedupli
 import { AggregationService } from '@/modules/jobs/services/aggregation/aggregation.service.js';
 import { GreenhouseJobProvider } from '@/modules/jobs/providers/greenhouse/provider.js';
 import { OpenPublicFeedProvider } from '@/modules/jobs/providers/public-feed/public-feed.provider.js';
+import { RemotiveJobProvider } from '@/modules/jobs/providers/remotive/provider.js';
 import { JobsService } from '@/modules/jobs/services/jobs.service.js';
 import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
@@ -10,7 +11,7 @@ import { jobsLogger } from '@/shared/utils/logger.js';
 // 1. Initialize Registry
 export const jobProviderRegistry = new JobProviderRegistry();
 
-// 2. Instantiate and Register Providers (Greenhouse + Public Feed)
+// 2. Instantiate and Register Providers
 const defaultGreenhouseProvider = new GreenhouseJobProvider({
   boardToken: 'stripe',
   companyName: 'Stripe',
@@ -19,9 +20,14 @@ const defaultGreenhouseProvider = new GreenhouseJobProvider({
 });
 
 const defaultPublicFeedProvider = new OpenPublicFeedProvider();
+const remotiveProvider = new RemotiveJobProvider({
+  searches: ['software', 'India', 'engineer', 'developer'],
+  tier: ProviderTier.PUBLIC,
+});
 
 jobProviderRegistry.register(defaultGreenhouseProvider);
 jobProviderRegistry.register(defaultPublicFeedProvider);
+jobProviderRegistry.register(remotiveProvider);
 
 jobsLogger.info(
   {
