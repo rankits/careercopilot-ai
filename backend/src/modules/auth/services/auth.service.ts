@@ -35,6 +35,7 @@ import type {
   RequestContext,
   SafeUser,
 } from '@/modules/auth/types/auth.types.js';
+import { isProduction } from '@/shared/config/env.conf.js';
 
 const assertLoginable = (user: UserWithRole): void => {
   if (!user.isEmailVerified || user.status === Status.PendingVerification) {
@@ -64,13 +65,16 @@ const issueAndSendOtp = async (
   context: RequestContext,
 ): Promise<void> => {
   const code = await OtpService.issue(purpose, user.email);
-  await EmailQueue.sendOtpEmail({
-    to: user.email,
-    firstName: user.firstName,
-    code,
-    purposeLabel: OTP_PURPOSE_LABELS[purpose],
-    expiresInMinutes: Math.round(securityConfig.otp.ttlSeconds / 60),
-  });
+
+  if (isProduction) {
+    await EmailQueue.sendOtpEmail({
+      to: user.email,
+      firstName: user.firstName,
+      code,
+      purposeLabel: OTP_PURPOSE_LABELS[purpose],
+      expiresInMinutes: Math.round(securityConfig.otp.ttlSeconds / 60),
+    });
+  }
   await AuditService.write({
     userId: user.id,
     action: AuditAction.OtpRequested,
@@ -115,7 +119,7 @@ const publishAuthUpdated = async (
 ): Promise<void> => {
   await messageBus
     .publishEvent(MessageExchanges.DOMAIN_EVENTS, MessageRoutingKeys.AUTH_UPDATED, {
-      userId: user.publicId,
+      userId: user.id,
       email: user.email,
       reason,
       timestamp: new Date().toISOString(),
@@ -230,7 +234,7 @@ export const login = async (input: LoginInput, context: RequestContext): Promise
 
   messageBus
     .publishEvent(MessageExchanges.DOMAIN_EVENTS, MessageRoutingKeys.AUTH_SIGNIN, {
-      userId: user.publicId,
+      userId: user.id,
       email: user.email,
       timestamp: new Date().toISOString(),
     })
@@ -336,11 +340,11 @@ export const resetPassword = async (
 };
 
 export const changePassword = async (
-  principalId: string,
+  principalId: number,
   input: ChangePasswordInput,
   context: RequestContext,
 ): Promise<{ message: string }> => {
-  const user = await authRepository.findUserByPublicId(principalId);
+  const user = await authRepository.findUserById(principalId);
   if (!user) {
     throw new AppError('Account not found', 404);
   }
@@ -388,10 +392,10 @@ export const logout = async (
 };
 
 export const logoutAll = async (
-  principalId: string,
+  principalId: number,
   context: RequestContext,
 ): Promise<{ message: string }> => {
-  const user = await authRepository.findUserByPublicId(principalId);
+  const user = await authRepository.findUserById(principalId);
   if (!user) {
     throw new AppError('Account not found', 404);
   }
@@ -402,8 +406,8 @@ export const logoutAll = async (
   return { message: 'Logged out from all devices' };
 };
 
-export const getCurrentUser = async (principalId: string): Promise<SafeUser> => {
-  const user = await authRepository.findUserByPublicId(principalId);
+export const getCurrentUser = async (principalId: number): Promise<SafeUser> => {
+  const user = await authRepository.findUserById(principalId);
   if (!user) {
     throw new AppError('Account not found', 404);
   }

@@ -1,9 +1,9 @@
 import type { UserWithRole } from '@/modules/auth/repositories/auth.repository.js';
 import type { SafeUser, UserTokenContext } from '@/modules/auth/types/auth.types.js';
 
-/** Strips internal id/credential fields before a user record leaves the module - `id` is always the publicId. */
+/** Strips internal id/credential fields before a user record leaves the module; `id` is the internal db id. */
 export const toSafeUser = (user: UserWithRole): SafeUser => ({
-  id: user.publicId,
+  id: user.id,
   email: user.email,
   firstName: user.firstName,
   lastName: user.lastName,
@@ -19,7 +19,6 @@ export const toSafeUser = (user: UserWithRole): SafeUser => ({
 
 export const toTokenContext = (user: UserWithRole): UserTokenContext => ({
   id: user.id,
-  publicId: user.publicId,
   email: user.email,
   role: user.role.name,
   tokenVersion: user.tokenVersion,
@@ -27,7 +26,7 @@ export const toTokenContext = (user: UserWithRole): UserTokenContext => ({
 
 /** JSON-safe wire shape for `SafeUser` (Date -> ISO string). */
 export interface SafeUserResponseDto {
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;

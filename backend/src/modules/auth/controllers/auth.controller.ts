@@ -16,7 +16,7 @@ const getRequestContext = (req: Request): RequestContext => ({
   userAgent: req.headers['user-agent'],
 });
 
-const requirePrincipalId = (req: Request): string => {
+const requirePrincipalId = (req: Request): number => {
   if (!req.user) throw new AppError('Authentication required', 401);
   return req.user.principalId;
 };

@@ -40,10 +40,6 @@ export const authRepository = {
     return prisma.user.findUnique({ where: { id }, ...withRole });
   },
 
-  async findUserByPublicId(publicId: string): Promise<UserWithRole | null> {
-    return prisma.user.findUnique({ where: { publicId }, ...withRole });
-  },
-
   /** Deliberately separate from the general lookups above - credentials
    * should only ever be fetched by flows that are about to verify/rotate
    * a password, not joined onto every generic user read. */
@@ -107,9 +103,13 @@ export const authRepository = {
     });
   },
 
-  async markProfileCreated(publicId: string): Promise<void> {
+  async markProfileCreated(userId: string): Promise<void> {
+    const id = Number(userId);
+    if (!Number.isInteger(id)) {
+      throw new Error(`Invalid user id for markProfileCreated: ${userId}`);
+    }
     await prisma.user.update({
-      where: { publicId },
+      where: { id },
       data: { isProfileCreated: true },
     });
   },

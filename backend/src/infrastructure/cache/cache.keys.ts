@@ -9,13 +9,13 @@ export const CacheTTL = {
 
 export const CacheKeys = {
   AUTH: {
-    USER_SESSION: (userId: string) => `careercopilot:auth:session:${userId}`,
-    USER_PERMISSIONS: (userId: string) => `careercopilot:auth:permissions:${userId}`,
+    USER_SESSION: (userId: string | number) => `careercopilot:auth:session:${userId}`,
+    USER_PERMISSIONS: (userId: string | number) => `careercopilot:auth:permissions:${userId}`,
     FAILED_ATTEMPTS: (email: string) => `careercopilot:auth:failed_attempts:${email}`,
-    PREFIX: "careercopilot:auth:*",
+    PREFIX: 'careercopilot:auth:*',
   },
   USER: {
-    PROFILE: (userId: string) => `careercopilot:user:profile:${userId}`,
-    PREFIX: "careercopilot:user:*",
+    PROFILE: (userId: string | number) => `careercopilot:user:profile:${userId}`,
+    PREFIX: 'careercopilot:user:*',
   },
 } as const;

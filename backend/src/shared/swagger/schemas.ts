@@ -5,7 +5,7 @@ import type { ApiResponses } from '@/shared/types/swagger.types.js';
 export const safeUserSchema = {
   type: 'object',
   properties: {
-    id: { type: 'string', format: 'uuid', example: '3f6b1e2a-4b8e-4d2a-9c3a-2e6f1a2b3c4d' },
+    id: { type: 'integer', example: 123 },
     email: { type: 'string', format: 'email', example: 'jane.doe@example.com' },
     firstName: { type: 'string', example: 'Jane' },
     lastName: { type: 'string', example: 'Doe' },

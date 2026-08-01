@@ -7,7 +7,7 @@ import { successResponse } from '@/shared/utils/response.js';
 
 const requirePrincipalId = (req: Request): string => {
   if (!req.user) throw new AppError('Authentication required', 401);
-  return req.user.principalId;
+  return String(req.user.principalId);
 };
 
 export const resumeUploadMiddleware = multer({

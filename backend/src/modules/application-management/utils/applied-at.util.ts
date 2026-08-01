@@ -33,7 +33,7 @@ export function resolveAppliedAt(
   appliedAt: unknown,
   currentStatus: ApplicationStatus | undefined,
 ): Date | null {
-  const normalized = typeof appliedAt === 'string' ? appliedAt.trim() : undefined;
+  const normalized = typeof appliedAt === 'string' ? appliedAt.trim() : '';
   if (normalized) {
     return parseAppliedAtDate(normalized);
   }
