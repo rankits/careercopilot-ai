@@ -36,6 +36,10 @@ export interface PaginatedJobResult<T> {
   };
 }
 
+/**
+ * Frozen public listing contract for GET /api/v1/jobs and shared fields on detail.
+ * Additive fields only; do not rename/remove without a versioned migration.
+ */
 export interface JobListDto {
   id: string;
   title: string;
@@ -58,6 +62,8 @@ export interface JobListDto {
   skills: string[];
   publishedAt: string | null;
   expiresAt: string | null;
+  /** Primary JobSource apply URL (priority desc); http(s) only, else null. */
+  applyUrl: string | null;
 }
 
 export interface JobDetailDto extends JobListDto {
