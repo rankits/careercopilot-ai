@@ -11,7 +11,16 @@ import {
 import { RecommendationStrategyResolver } from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
 import { RecommendationContextService } from '@/modules/recommendations/services/recommendation-context.service.js';
 import { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
+import { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
+import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
 import { CandidateRetrievalRegistry } from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
+import { PgVectorCandidateRetrievalProvider } from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
+import { RecommendationScoringEngine } from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
+import { HEURISTIC_SCORE_CALCULATORS } from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
+import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
+import { InMemoryRecommendationUnitOfWork } from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
+import { jobEmbeddingRepository } from '@/modules/job-embeddings/index.js';
+import { prismaJobSearchRepository } from '@/modules/job-listing/index.js';
 import { createChildLogger } from '@/shared/logger/logger.js';
 
 export const recommendationsLogger = createChildLogger({ scope: 'job-recommendations' });
@@ -23,14 +32,36 @@ export const recommendationStrategyResolver = new RecommendationStrategyResolver
   new CareerGoalSourceStrategy(),
   new SavedSearchSourceStrategy(),
 ]);
-export const candidateRetrievalRegistry = new CandidateRetrievalRegistry();
+export const pgVectorCandidateRetrievalProvider = new PgVectorCandidateRetrievalProvider(
+  jobEmbeddingRepository,
+  prismaJobSearchRepository,
+);
+export const candidateRetrievalRegistry = new CandidateRetrievalRegistry([
+  pgVectorCandidateRetrievalProvider,
+]);
 export const recommendationContextService = new RecommendationContextService(
   recommendationStrategyResolver,
 );
 export const recommendationRetrievalService = new RecommendationRetrievalService(
   candidateRetrievalRegistry,
 );
-export const recommendationsService = new RecommendationsService(recommendationsLogger);
+export const recommendationScoringEngine = new RecommendationScoringEngine(
+  HEURISTIC_SCORE_CALCULATORS,
+  defaultMatchTypeClassifier,
+);
+export const recommendationScoringService = new RecommendationScoringService(
+  recommendationScoringEngine,
+);
+export const recommendationSourceAuthorizationService =
+  new RecommendationSourceAuthorizationService(prismaJobSearchRepository);
+export const recommendationUnitOfWork = new InMemoryRecommendationUnitOfWork();
+export const recommendationsService = new RecommendationsService(recommendationsLogger, {
+  contextService: recommendationContextService,
+  retrievalService: recommendationRetrievalService,
+  scoringService: recommendationScoringService,
+  unitOfWork: recommendationUnitOfWork,
+  sourceAuthorization: recommendationSourceAuthorizationService,
+});
 export const recommendationsRoutes = createRecommendationsRouter(recommendationsService);
 
 export * from '@/modules/recommendations/types/recommendations.types.js';
@@ -41,14 +72,21 @@ export * from '@/modules/recommendations/errors/recommendation.error.js';
 export * from '@/modules/recommendations/mappers/recommendation.mapper.js';
 export * from '@/modules/recommendations/matching/recommendation-access.js';
 export * from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
+export * from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
+export * from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
+export * from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
+export * from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 export * from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
 export * from '@/modules/recommendations/services/recommendation-context.service.js';
 export * from '@/modules/recommendations/services/recommendation-explanation.service.js';
 export * from '@/modules/recommendations/services/recommendation-feedback.service.js';
 export * from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 export * from '@/modules/recommendations/services/recommendation-scoring.service.js';
+export * from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
 export * from '@/modules/recommendations/services/recommendations.service.js';
 export * from '@/modules/recommendations/services/similar-jobs.service.js';
 export * from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 export * from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
+export * from '@/modules/recommendations/utils/apply-recommendation-filters.js';
+export * from '@/modules/recommendations/utils/recommendation-query-text.js';
 export * from '@/modules/recommendations/validations/recommendation.schema.js';

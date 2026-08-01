@@ -1,12 +1,18 @@
 import type { Logger } from 'pino';
 import type { RecommendationUnitOfWork } from '@/modules/recommendations/contracts/recommendation.repository.js';
 import {
+  DEFAULT_RECOMMENDATION_LIMIT,
+  DEFAULT_RETRIEVAL_BACKEND,
+} from '@/modules/recommendations/constants/recommendation.constants.js';
+import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
 import type { RecommendationContextService } from '@/modules/recommendations/services/recommendation-context.service.js';
 import type { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 import type { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
+import type { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
+import { applyRecommendationFilters } from '@/modules/recommendations/utils/apply-recommendation-filters.js';
 import type {
   BuildRecommendationContextInput,
   JobRecommendationRecord,
@@ -15,6 +21,7 @@ import type {
 import type {
   CreateRecommendationFromTextInput,
   CreateRecommendationInput,
+  RecommendationFiltersDto,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
 
 export interface RecommendationOrchestrationDependencies {
@@ -22,6 +29,7 @@ export interface RecommendationOrchestrationDependencies {
   retrievalService: RecommendationRetrievalService;
   scoringService: RecommendationScoringService;
   unitOfWork: RecommendationUnitOfWork;
+  sourceAuthorization: RecommendationSourceAuthorizationService;
 }
 
 export class RecommendationsService {
@@ -30,26 +38,52 @@ export class RecommendationsService {
     private readonly orchestration?: RecommendationOrchestrationDependencies,
   ) {}
 
-  async createForSource(userId: string, input: CreateRecommendationInput): Promise<never> {
+  async createForSource(
+    userId: string,
+    input: CreateRecommendationInput,
+  ): Promise<JobRecommendationRecord[]> {
     this.logger.info(
       { userId, sourceType: input.sourceType, sourceId: input.sourceId },
       'Recommendation generation requested',
     );
-    throw this.notImplemented(
-      'Source authorization, candidate retrieval provider, and recommendation persistence models must be selected before generation can run',
+    const dependencies = this.requireOrchestration();
+    const authorized = await dependencies.sourceAuthorization.authorizeForSource(userId, input);
+    return this.generateAuthorized(authorized, {
+      backend: DEFAULT_RETRIEVAL_BACKEND,
+      limit: DEFAULT_RECOMMENDATION_LIMIT,
+      filters: input.filters,
+      excludeJobIds:
+        authorized.sourceType === 'JOB' && authorized.sourceId ? [authorized.sourceId] : undefined,
+    });
+  }
+
+  async createFromText(
+    userId: string,
+    input: CreateRecommendationFromTextInput,
+  ): Promise<JobRecommendationRecord[]> {
+    this.logger.info(
+      { userId, targetTextLength: input.targetText.length },
+      'Text recommendation generation requested',
     );
+    const dependencies = this.requireOrchestration();
+    const authorized = dependencies.sourceAuthorization.authorizeFromText(userId, input);
+    return this.generateAuthorized(authorized, {
+      backend: DEFAULT_RETRIEVAL_BACKEND,
+      limit: DEFAULT_RECOMMENDATION_LIMIT,
+      filters: input.filters,
+    });
   }
 
   async generateAuthorized(
     input: BuildRecommendationContextInput,
-    options: { backend: RetrievalBackend; limit: number },
+    options: {
+      backend: RetrievalBackend;
+      limit: number;
+      filters?: RecommendationFiltersDto;
+      excludeJobIds?: string[];
+    },
   ): Promise<JobRecommendationRecord[]> {
-    if (!this.orchestration) {
-      throw this.notImplemented(
-        'Recommendation repositories, retrieval, and scoring dependencies are not configured',
-      );
-    }
-    const dependencies = this.orchestration;
+    const dependencies = this.requireOrchestration();
     const run = await dependencies.unitOfWork.execute(({ runs }) =>
       runs.create({
         userId: input.userId,
@@ -59,7 +93,8 @@ export class RecommendationsService {
     );
 
     try {
-      const context = await dependencies.contextService.build(input);
+      const built = await dependencies.contextService.build(input);
+      const context = applyRecommendationFilters(built, options.filters);
       await dependencies.unitOfWork.execute(({ runs }) =>
         runs.updateStatus(input.userId, run.id, 'RETRIEVING'),
       );
@@ -67,6 +102,7 @@ export class RecommendationsService {
         context,
         backend: options.backend,
         limit: options.limit,
+        excludeJobIds: options.excludeJobIds,
       });
       await dependencies.unitOfWork.execute(async ({ runs }) => {
         await runs.updateCandidateCount(input.userId, run.id, candidates.length);
@@ -91,17 +127,14 @@ export class RecommendationsService {
     }
   }
 
-  async createFromText(userId: string, input: CreateRecommendationFromTextInput): Promise<never> {
-    this.logger.info(
-      { userId, targetTextLength: input.targetText.length },
-      'Text recommendation generation requested',
-    );
-    throw this.notImplemented(
-      'A text extraction/embedding provider, candidate retrieval provider, and recommendation persistence models must be selected before generation can run',
-    );
-  }
-
-  private notImplemented(message: string): RecommendationError {
-    return new RecommendationError(message, 501, RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED);
+  private requireOrchestration(): RecommendationOrchestrationDependencies {
+    if (!this.orchestration) {
+      throw new RecommendationError(
+        'Recommendation repositories, retrieval, and scoring dependencies are not configured',
+        501,
+        RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
+      );
+    }
+    return this.orchestration;
   }
 }

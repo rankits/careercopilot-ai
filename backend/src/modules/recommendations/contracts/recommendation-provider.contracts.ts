@@ -19,6 +19,8 @@ export interface CandidateRetrievalResult {
   jobs: JobListDto[];
   backend: RetrievalBackend;
   totalCandidates?: number;
+  /** Cosine similarity (or equivalent) keyed by job id when the backend provides one. */
+  retrievalScores?: Readonly<Record<string, number>>;
 }
 
 export interface CandidateRetrievalProvider {

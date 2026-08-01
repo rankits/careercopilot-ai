@@ -14,6 +14,8 @@
     "worker:outbox:build": "node dist/workers/run-outbox-relay.js",
     "worker:job-embeddings": "tsx src/workers/run-job-embedding-worker.ts",
     "worker:job-embeddings:build": "node dist/workers/run-job-embedding-worker.js",
+    "job-embeddings:backfill": "tsx src/modules/job-embeddings/cli/run-job-embedding-backfill.ts",
+    "job-embeddings:backfill:build": "node dist/modules/job-embeddings/cli/run-job-embedding-backfill.js",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
