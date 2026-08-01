@@ -257,6 +257,13 @@ export const applicationSwagger = {
                 example: 'https://acme.com/jobs/123',
               },
               location: { type: 'string', example: 'San Francisco, CA' },
+              appliedAt: {
+                type: 'string',
+                format: 'date',
+                example: '2025-05-08',
+                description:
+                  'Date the application was submitted (YYYY-MM-DD, cannot be in the future)',
+              },
               currentStatus: {
                 type: 'string',
                 enum: applicationStatusEnum,
@@ -402,6 +409,14 @@ export const applicationSwagger = {
               employmentType: { type: 'string', nullable: true, example: 'FULL_TIME' },
               priority: { type: 'string', enum: applicationPriorityEnum, example: 'HIGH' },
               interestLevel: { type: 'integer', nullable: true, example: 5 },
+              appliedAt: {
+                type: 'string',
+                format: 'date',
+                nullable: true,
+                example: '2025-05-08',
+                description:
+                  'Date the application was submitted (YYYY-MM-DD, cannot be in the future)',
+              },
               salaryMin: { type: 'number', nullable: true, example: 160000 },
               salaryMax: { type: 'number', nullable: true, example: 190000 },
               salaryCurrency: { type: 'string', nullable: true, example: 'USD' },
