@@ -1,5 +1,6 @@
 import express from 'express';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
+import { jobListingRateLimiter } from '@/shared/middlewares/rateLimiter.js';
 import {
   searchJobsController,
   getJobByIdController,
@@ -11,9 +12,17 @@ import {
 
 const router = express.Router();
 
-// TODO: Add authentication middleware later if required
-
-router.get('/', validateResource(jobSearchQuerySchema), searchJobsController);
-router.get('/:jobId', validateResource(jobIdParamsSchema), getJobByIdController);
+router.get(
+  '/',
+  jobListingRateLimiter,
+  validateResource(jobSearchQuerySchema),
+  searchJobsController,
+);
+router.get(
+  '/:jobId',
+  jobListingRateLimiter,
+  validateResource(jobIdParamsSchema),
+  getJobByIdController,
+);
 
 export default router;
