@@ -13,3 +13,8 @@ frontend/coverage
 docs
 backend/docs/
 backend/storage/
+# Playwright
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
+
