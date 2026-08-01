@@ -4,6 +4,7 @@ import { AggregationService } from '@/modules/jobs/services/aggregation/aggregat
 import { GreenhouseJobProvider } from '@/modules/jobs/providers/greenhouse/provider.js';
 import { OpenPublicFeedProvider } from '@/modules/jobs/providers/public-feed/public-feed.provider.js';
 import { RemotiveJobProvider } from '@/modules/jobs/providers/remotive/provider.js';
+import { JobicyJobProvider } from '@/modules/jobs/providers/jobicy/provider.js';
 import { JobsService } from '@/modules/jobs/services/jobs.service.js';
 import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
@@ -24,10 +25,19 @@ const remotiveProvider = new RemotiveJobProvider({
   searches: ['software', 'India', 'engineer', 'developer'],
   tier: ProviderTier.PUBLIC,
 });
+const jobicyProvider = new JobicyJobProvider({
+  feeds: [
+    { count: 50, geo: 'apac' },
+    { count: 50, geo: 'usa', industry: 'engineering' },
+    { count: 30, tag: 'javascript' },
+  ],
+  tier: ProviderTier.PUBLIC,
+});
 
 jobProviderRegistry.register(defaultGreenhouseProvider);
 jobProviderRegistry.register(defaultPublicFeedProvider);
 jobProviderRegistry.register(remotiveProvider);
+jobProviderRegistry.register(jobicyProvider);
 
 jobsLogger.info(
   {
