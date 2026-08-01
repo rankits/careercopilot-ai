@@ -9,6 +9,7 @@ import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { RegisterPage } from '@/pages/RegisterPage';
+import { SavedJobsPage } from '@/pages/SavedJobsPage';
 import {
   GuestRoute,
   OnboardingRoute,
@@ -35,6 +36,7 @@ export function AppRouter() {
           <Route path={ROUTES.DASHBOARD} element={<HomePage />} />
           <Route path={ROUTES.JOB_FEED} element={<JobFeedPage />} />
           <Route path={ROUTES.JOB_DETAIL} element={<JobDetailPage />} />
+          <Route path={ROUTES.SAVED_JOBS} element={<SavedJobsPage />} />
           <Route path={ROUTES.PROFILE_EDIT} element={<ProfilePage mode="edit" />} />
         </Route>
       </Route>

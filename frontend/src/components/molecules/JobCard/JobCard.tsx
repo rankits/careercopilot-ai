@@ -5,6 +5,7 @@ import { Button } from '@/components/atoms/Button';
 import {
   AccessTimeOutlinedIcon,
   BookmarkBorderOutlinedIcon,
+  BookmarkOutlinedIcon,
   BusinessCenterOutlinedIcon,
   LocationOnOutlinedIcon,
   SmartToyOutlinedIcon,
@@ -55,12 +56,13 @@ export interface JobCardData {
 
 export interface JobCardProps {
   job: JobCardData;
+  isSaved?: boolean;
   onApply?: (job: JobCardData) => void;
   onOpen?: (job: JobCardData) => void;
   onSave?: (job: JobCardData) => void;
 }
 
-export function JobCard({ job, onApply, onOpen, onSave }: JobCardProps) {
+export function JobCard({ job, isSaved = false, onApply, onOpen, onSave }: JobCardProps) {
   const showMatch = typeof job.match === 'number';
   const showActions = Boolean(onApply || onSave);
   const canApply = Boolean(job.applyUrl);
@@ -150,13 +152,18 @@ export function JobCard({ job, onApply, onOpen, onSave }: JobCardProps) {
           ) : null}
           {onSave ? (
             <SaveButton
-              aria-label={`Save ${job.title}`}
+              aria-label={isSaved ? `Unsave ${job.title}` : `Save ${job.title}`}
+              aria-pressed={isSaved}
               onClick={(event) => {
                 event.stopPropagation();
                 onSave(job);
               }}
             >
-              <BookmarkBorderOutlinedIcon fontSize="small" />
+              {isSaved ? (
+                <BookmarkOutlinedIcon fontSize="small" />
+              ) : (
+                <BookmarkBorderOutlinedIcon fontSize="small" />
+              )}
             </SaveButton>
           ) : null}
           {onApply ? (
