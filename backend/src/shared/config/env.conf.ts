@@ -22,6 +22,12 @@ const booleanFromString = (defaultValue: boolean) =>
       return ['true', '1', 'yes', 'on'].includes(value.trim().toLowerCase());
     });
 
+/** Compose often injects "" for unset optional vars; treat blanks as missing. */
+const emptyToUndefined = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+  return value.trim() === '' ? undefined : value;
+};
+
 const envSchema = z
   .object({
     // Application
@@ -98,10 +104,10 @@ const envSchema = z
     RUN_SEEDS_ON_STARTUP: booleanFromString(false),
 
     // Default admin bootstrap (consumed by prisma/seed/admin.seed.ts)
-    ADMIN_DEFAULT_EMAIL: z.string().email().optional(),
-    ADMIN_DEFAULT_PASSWORD: z.string().min(8).optional(),
-    ADMIN_DEFAULT_FIRST_NAME: z.string().default('Platform'),
-    ADMIN_DEFAULT_LAST_NAME: z.string().default('Admin'),
+    ADMIN_DEFAULT_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),
+    ADMIN_DEFAULT_PASSWORD: z.preprocess(emptyToUndefined, z.string().min(8).optional()),
+    ADMIN_DEFAULT_FIRST_NAME: z.preprocess(emptyToUndefined, z.string().min(1).default('Platform')),
+    ADMIN_DEFAULT_LAST_NAME: z.preprocess(emptyToUndefined, z.string().min(1).default('Admin')),
   })
   .superRefine((value, ctx) => {
     if (value.NODE_ENV !== 'production') return;
