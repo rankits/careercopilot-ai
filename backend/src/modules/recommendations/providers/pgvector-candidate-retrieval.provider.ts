@@ -12,6 +12,7 @@ import {
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
 import { passesCandidateJobFilters } from '@/modules/recommendations/utils/candidate-job-filters.js';
+import { resolveQueryEmbedding } from '@/modules/recommendations/cache/recommendation-query-embedding.cache.js';
 import { buildRecommendationQueryText } from '@/modules/recommendations/utils/recommendation-query-text.js';
 import type { RetrievalBackend } from '@/modules/recommendations/types/recommendations.types.js';
 
@@ -44,8 +45,17 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
     }
 
     let queryEmbedding: number[];
+    let embeddingCacheHit = false;
     try {
-      queryEmbedding = await provider.generateEmbedding(queryText, 'QUERY');
+      const resolved = await resolveQueryEmbedding({
+        userId: request.context.userId,
+        provider: provider.provider,
+        model: provider.model,
+        queryText,
+        generate: () => provider.generateEmbedding(queryText, 'QUERY'),
+      });
+      queryEmbedding = resolved.embedding;
+      embeddingCacheHit = resolved.cacheHit;
     } catch {
       throw new RecommendationError(
         'Embedding provider failed while generating the recommendation query',
@@ -88,6 +98,7 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
       backend: 'PGVECTOR',
       totalCandidates: nearest.length,
       retrievalScores,
+      metadata: { embeddingCacheHit },
     };
   }
 }
