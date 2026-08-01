@@ -6,6 +6,8 @@ import { requirePermission, requirePrincipalType } from '@/shared/middlewares/rb
 import { APPLICATIONS_PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
 import {
   createApplicationController,
+  savePlatformJobController,
+  unsavePlatformJobController,
   getApplicationsController,
   getApplicationByIdController,
   updateApplicationController,
@@ -33,6 +35,10 @@ const router = express.Router();
 
 const requireUser = [authMiddleware, requirePrincipalType('USER')] as const;
 
+const SavePlatformJobSchema = z.object({
+  jobId: z.string().uuid('Invalid job ID format'),
+});
+
 // Application Root CRUD & Listing
 router.post(
   '/',
@@ -52,6 +58,22 @@ router.get(
   requirePermission(APPLICATIONS_PERMISSIONS.READ_OWN),
   validateResource(z.object({ query: ListApplicationsQuerySchema })),
   getApplicationsController,
+);
+
+// Idempotent platform-job bookmarks (JOB-BE-004) — before /:id
+router.post(
+  '/saved-jobs',
+  ...requireUser,
+  requirePermission(APPLICATIONS_PERMISSIONS.CREATE_OWN),
+  validateResource(z.object({ body: SavePlatformJobSchema })),
+  savePlatformJobController,
+);
+
+router.delete(
+  '/saved-jobs/:jobId',
+  ...requireUser,
+  requirePermission(APPLICATIONS_PERMISSIONS.DELETE_OWN),
+  unsavePlatformJobController,
 );
 
 router.get(
