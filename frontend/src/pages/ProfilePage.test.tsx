@@ -16,13 +16,20 @@ import type {
 
 import { ProfilePage } from './ProfilePage';
 
-const { confirmProfileMock, parseMock } = vi.hoisted(() => ({
+const { confirmProfileMock, parseMock, getMyProfileMock, updateProfileMock } = vi.hoisted(() => ({
   confirmProfileMock: vi.fn(),
+  getMyProfileMock: vi.fn(),
   parseMock: vi.fn(),
+  updateProfileMock: vi.fn(),
 }));
 
 vi.mock('@/features/resume/services/resume.service', () => ({
-  resumeService: { confirmProfile: confirmProfileMock, parse: parseMock },
+  resumeService: {
+    confirmProfile: confirmProfileMock,
+    getMyProfile: getMyProfileMock,
+    parse: parseMock,
+    updateProfile: updateProfileMock,
+  },
 }));
 
 const parsed = {
@@ -42,7 +49,7 @@ function LocationDisplay() {
   return <span data-testid="location">{useLocation().pathname}</span>;
 }
 
-function renderPage(onSave = vi.fn()) {
+function renderPage(onSave = vi.fn(), mode?: 'edit' | 'onboarding') {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
@@ -52,7 +59,7 @@ function renderPage(onSave = vi.fn()) {
       <Provider store={store}>
         <ToastProvider>
           <MemoryRouter>
-            <ProfilePage onSave={onSave} />
+            <ProfilePage mode={mode} onSave={onSave} />
             <LocationDisplay />
           </MemoryRouter>
         </ToastProvider>
@@ -215,4 +222,71 @@ describe('ProfilePage resume parsing', () => {
     expect(onSave).not.toHaveBeenCalled();
     expect(confirmProfileMock).not.toHaveBeenCalled();
   }, 15_000);
+});
+
+const existingProfile = {
+  certifications: [],
+  education: [],
+  experience: [],
+  isComplete: true,
+  personalDetails: {
+    designation: 'Engineer',
+    email: 'ada@example.com',
+    fullName: 'Ada Lovelace',
+    phone: '+44 1234',
+    summary: 'Computing pioneer',
+    totalExperience: '8',
+  },
+  skills: ['Algorithms'],
+  sourceResumeId: null,
+  userId: 'user-1',
+};
+
+describe('ProfilePage edit mode', () => {
+  beforeEach(() => {
+    getMyProfileMock.mockReset();
+    updateProfileMock.mockReset();
+  });
+
+  it('loads and pre-fills the form with the existing profile', async () => {
+    getMyProfileMock.mockResolvedValueOnce(existingProfile);
+    renderPage(vi.fn(), 'edit');
+
+    expect(await screen.findByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
+    expect(screen.getByRole('textbox', { name: /email/i })).toHaveValue('ada@example.com');
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled();
+  });
+
+  it('submits changes through the update API, shows a success message, and stays on the page', async () => {
+    const user = userEvent.setup();
+    getMyProfileMock.mockResolvedValueOnce(existingProfile);
+    updateProfileMock.mockResolvedValueOnce({
+      message: 'Candidate profile updated',
+      profile: existingProfile,
+    });
+    renderPage(vi.fn(), 'edit');
+
+    await screen.findByRole('textbox', { name: /full name/i });
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    expect(screen.getByRole('dialog', { name: /confirm profile changes/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /confirm & save/i }));
+
+    await waitFor(() => expect(updateProfileMock).toHaveBeenCalledTimes(1));
+    expect(await screen.findByText(/candidate profile updated/i)).toBeInTheDocument();
+    expect(screen.getByTestId('location')).toHaveTextContent('/');
+  });
+
+  it('shows an error toast when the update API call fails', async () => {
+    const user = userEvent.setup();
+    getMyProfileMock.mockResolvedValueOnce(existingProfile);
+    updateProfileMock.mockRejectedValueOnce(new Error('Unable to reach the resume service.'));
+    renderPage(vi.fn(), 'edit');
+
+    await screen.findByRole('textbox', { name: /full name/i });
+    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    await user.click(screen.getByRole('button', { name: /confirm & save/i }));
+
+    expect(await screen.findByText(/unable to reach the resume service/i)).toBeInTheDocument();
+  });
 });

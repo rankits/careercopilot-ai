@@ -490,6 +490,21 @@ export class FakeDb {
           const found = db.candidateProfiles.find((profile) => profile.userId === where.userId);
           return found ? { ...found } : null;
         },
+        update: async ({
+          where,
+          data,
+        }: {
+          where: { userId: string };
+          data: Partial<FakeCandidateProfile>;
+        }) => {
+          const index = db.candidateProfiles.findIndex((p) => p.userId === where.userId);
+          if (index === -1) throw new Error(`FakeDb: candidateProfile ${where.userId} not found`);
+          db.candidateProfiles[index] = applyIncrements(
+            db.candidateProfiles[index] as unknown as Record<string, unknown>,
+            data as Record<string, unknown>,
+          ) as unknown as FakeCandidateProfile;
+          return { ...db.candidateProfiles[index] };
+        },
       },
 
       userSession: {
