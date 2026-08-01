@@ -1,0 +1,135 @@
+import { configureStore } from '@reduxjs/toolkit';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { authReducer } from '@/features/auth/authSlice';
+
+import { ForYouPage } from './ForYouPage';
+
+const { listMock, generateMock, listSavedMock } = vi.hoisted(() => ({
+  listMock: vi.fn(),
+  generateMock: vi.fn(),
+  listSavedMock: vi.fn(),
+}));
+
+vi.mock('@/features/recommendations/services/recommendations.service', () => ({
+  recommendationsService: {
+    list: listMock,
+    generateFromProfile: generateMock,
+  },
+}));
+
+vi.mock('@/features/applications/services/applications.service', () => ({
+  applicationsService: {
+    listSavedJobs: listSavedMock,
+    saveJob: vi.fn(),
+    unsaveJob: vi.fn(),
+  },
+}));
+
+function renderPage(isProfileComplete = true) {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  const store = configureStore({
+    reducer: { auth: authReducer },
+    preloadedState: {
+      auth: {
+        user: { id: 'u1', email: 'a@b.com', name: 'A', role: 'USER', isProfileCreated: true },
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete,
+        isSessionResolved: true,
+        isLoading: false,
+        error: null,
+      },
+    },
+  });
+
+  return render(
+    <Provider store={store}>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={['/for-you']}>
+          <ForYouPage />
+        </MemoryRouter>
+      </QueryClientProvider>
+    </Provider>,
+  );
+}
+
+beforeEach(() => {
+  listMock.mockReset();
+  generateMock.mockReset();
+  listSavedMock.mockReset();
+  listSavedMock.mockResolvedValue([]);
+});
+
+describe('ForYouPage', () => {
+  it('shows profile CTA when incomplete and list empty', async () => {
+    listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
+    renderPage(false);
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/complete your profile/i);
+    expect(screen.getByRole('link', { name: /complete profile/i })).toHaveAttribute(
+      'href',
+      '/profile',
+    );
+    expect(screen.queryByRole('button', { name: /generate recommendations/i })).not.toBeInTheDocument();
+  });
+
+  it('shows generate CTA when profile complete and list empty without calling generate on load', async () => {
+    listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
+    renderPage(true);
+
+    expect(await screen.findByRole('button', { name: /generate recommendations/i })).toBeInTheDocument();
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+
+  it('renders match percent from unit-interval scores', async () => {
+    listMock.mockResolvedValue({
+      items: [
+        {
+          id: 'r1',
+          runId: 'run-1',
+          rank: 1,
+          job: {
+            id: 'job-1',
+            title: 'Frontend Engineer',
+            company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
+            location: { formatted: 'Remote', remoteType: 'REMOTE' },
+            employmentType: 'FULL_TIME',
+            salary: { minimum: 10, maximum: 20, currency: 'INR' },
+            skills: ['React'],
+            publishedAt: '2026-07-30T00:00:00.000Z',
+            applyUrl: 'https://example.com/apply',
+          },
+          scoreResult: { overallScore: 0.88, components: {}, matchedSkills: [], relatedSkills: [], missingSkills: [], reasons: [] },
+          category: 'BEST_MATCH',
+          matchType: 'EXACT',
+          createdAt: '2026-07-30T00:00:00.000Z',
+        },
+      ],
+      page: 1,
+      limit: 20,
+      total: 1,
+    });
+
+    renderPage(true);
+    expect(await screen.findByText(/88% Match/i)).toBeInTheDocument();
+    expect(screen.getByText(/ai recommended/i)).toBeInTheDocument();
+  });
+
+  it('generates only on explicit click', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
+    generateMock.mockResolvedValue([]);
+    renderPage(true);
+
+    await user.click(await screen.findByRole('button', { name: /generate recommendations/i }));
+    await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1));
+  });
+});

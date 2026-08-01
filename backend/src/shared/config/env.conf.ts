@@ -96,12 +96,14 @@ const envSchema = z
     AUTH_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
     AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
     OTP_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(5),
+    JOB_LISTING_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(1),
+    JOB_LISTING_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(60),
 
     // Feature flags
     ENABLE_EMAIL_WORKER: booleanFromString(true),
     ENABLE_SWAGGER: booleanFromString(true),
     // Run database seeds automatically when the server starts (dev only)
-    RUN_SEEDS_ON_STARTUP: booleanFromString(false),
+    RUN_SEEDS_ON_STARTUP: booleanFromString(true),
 
     // Default admin bootstrap (consumed by prisma/seed/admin.seed.ts)
     ADMIN_DEFAULT_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),

@@ -35,6 +35,9 @@ export interface DashboardJobRowProps {
 }
 
 export function DashboardJobRow({ featured = false, job, onApply, onSave }: DashboardJobRowProps) {
+  const showMatch = typeof job.match === 'number';
+  const showActions = Boolean(onApply || onSave);
+
   if (featured) {
     return (
       <FeaturedJobRoot>
@@ -60,17 +63,23 @@ export function DashboardJobRow({ featured = false, job, onApply, onSave }: Dash
         </JobCopy>
 
         <FeaturedSide>
-          <MatchBadge>97% Match</MatchBadge>
+          {showMatch ? <MatchBadge>{job.match}% Match</MatchBadge> : null}
           <SalaryText>{job.salary}</SalaryText>
-          <ActionGroup>
-            <SaveAction aria-label={`Save ${job.title}`} onClick={() => onSave?.(job)}>
-              <BookmarkBorderOutlinedIcon fontSize="small" />
-              Save
-            </SaveAction>
-            <Button onClick={() => onApply?.(job)} size="small">
-              Apply Now
-            </Button>
-          </ActionGroup>
+          {showActions ? (
+            <ActionGroup>
+              {onSave ? (
+                <SaveAction aria-label={`Save ${job.title}`} onClick={() => onSave(job)}>
+                  <BookmarkBorderOutlinedIcon fontSize="small" />
+                  Save
+                </SaveAction>
+              ) : null}
+              {onApply ? (
+                <Button onClick={() => onApply(job)} size="small">
+                  Apply Now
+                </Button>
+              ) : null}
+            </ActionGroup>
+          ) : null}
         </FeaturedSide>
       </FeaturedJobRoot>
     );
@@ -91,37 +100,41 @@ export function DashboardJobRow({ featured = false, job, onApply, onSave }: Dash
             <LocationOnOutlinedIcon fontSize="small" /> {job.location}
           </span>
           <span>{job.experience}</span>
-          {!featured ? <span>{job.type}</span> : null}
+          <span>{job.type}</span>
         </MetaLine>
       </JobCopy>
 
       <SalaryText>{job.salary}</SalaryText>
 
-      {!featured ? (
-        <PostedText>
-          {job.postedAt.replace('Posted ', '')}
-          <br />
-          {job.type}
-        </PostedText>
-      ) : null}
+      <PostedText>
+        {job.postedAt.replace('Posted ', '')}
+        <br />
+        {job.type}
+      </PostedText>
 
-      <MatchBadge>{featured ? 97 : job.match}% Match</MatchBadge>
+      {showMatch ? <MatchBadge>{job.match}% Match</MatchBadge> : null}
 
       <SkillList>
-        {job.skills.slice(0, featured ? 5 : 4).map((skill) => (
+        {job.skills.slice(0, 4).map((skill) => (
           <SkillChip key={skill}>{skill}</SkillChip>
         ))}
       </SkillList>
 
-      <ActionGroup>
-        <SaveAction aria-label={`Save ${job.title}`} onClick={() => onSave?.(job)}>
-          <BookmarkBorderOutlinedIcon fontSize="small" />
-          Save
-        </SaveAction>
-        <Button onClick={() => onApply?.(job)} size="small">
-          Apply Now
-        </Button>
-      </ActionGroup>
+      {showActions ? (
+        <ActionGroup>
+          {onSave ? (
+            <SaveAction aria-label={`Save ${job.title}`} onClick={() => onSave(job)}>
+              <BookmarkBorderOutlinedIcon fontSize="small" />
+              Save
+            </SaveAction>
+          ) : null}
+          {onApply ? (
+            <Button onClick={() => onApply(job)} size="small">
+              Apply Now
+            </Button>
+          ) : null}
+        </ActionGroup>
+      ) : null}
     </DashboardJobRowRoot>
   );
 }
