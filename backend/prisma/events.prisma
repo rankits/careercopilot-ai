@@ -15,9 +15,11 @@ model OutboxEvent {
   lockedAt     DateTime?   @map("locked_at")
   publishedAt  DateTime?   @map("published_at")
   attemptCount Int         @default(0) @map("attempt_count")
+  nextAttemptAt DateTime   @default(now()) @map("next_attempt_at")
+  lastError    String?     @map("last_error") @db.Text
   createdAt    DateTime    @default(now()) @map("created_at")
 
-  @@index([status, createdAt(sort: Asc)])
+  @@index([status, nextAttemptAt, createdAt(sort: Asc)])
   @@map("outbox_events")
 }
 
