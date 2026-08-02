@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 2 |
+| Implemented | 3 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,37 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-SCORE-001 - Expose displayScore 0-100 while keeping internal scores 0-1
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/mappers/recommendation.mapper.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `frontend/src/features/jobs/utils/formatRecommendationScore.ts`
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `docs/SCORE_SCALE.md`
+- API changes: additive `displayScore` on recommendation and similar-job response items
+- Database changes: none
+- Tests added:
+  - Backend displayScore mapper contract test
+  - Frontend formatter tests for displayScore preference and unit-score fallback
+  - For You page regression proving displayScore is not double-scaled
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation.mapper.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/similar-jobs.service.test.ts`
+  - `npm --prefix frontend run test -- src/features/jobs/utils/formatRecommendationScore.test.ts src/features/recommendations/services/recommendations.service.test.ts`
+  - `npm --prefix frontend run test -- src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `npm --prefix backend run typecheck`
+- Results:
+  - Focused backend and frontend tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+  - Backend typecheck still fails only in `src/workers/job-embedding.worker.ts`
+- Known limitations: missing-component scoring policy remains out of scope for `JRE-SCORE-002`
+- Next ticket: `JRE-FILTER-001`
 
 ### 2026-08-02 - JRE-SEC-001 - Verify and harden recommendation authz and IDOR regression suite
 

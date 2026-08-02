@@ -14,6 +14,7 @@ export interface RecommendationDto {
   runId: string;
   rank: number;
   job: JobListDto;
+  displayScore?: number | null;
   scoreResult: RecommendationScoreResult;
   category: string;
   matchType: string;

@@ -6,6 +6,8 @@ import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as RecommendationHooks from '@/features/recommendations/hooks/useRecommendations';
+
 import { authReducer } from '@/features/auth/authSlice';
 
 import { ForYouPage } from './ForYouPage';
@@ -28,7 +30,7 @@ vi.mock('@/features/recommendations/services/recommendations.service', () => ({
 }));
 
 vi.mock('@/features/recommendations/hooks/useRecommendations', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@/features/recommendations/hooks/useRecommendations')>();
+  const actual = await importOriginal<typeof RecommendationHooks>();
   return {
     ...actual,
     useRecommendationReadiness: () => ({
@@ -110,7 +112,7 @@ describe('ForYouPage', () => {
     expect(generateMock).not.toHaveBeenCalled();
   });
 
-  it('renders match percent from unit-interval scores', async () => {
+  it('renders match percent from displayScore without double scaling', async () => {
     listMock.mockResolvedValue({
       items: [
         {
@@ -128,7 +130,8 @@ describe('ForYouPage', () => {
             publishedAt: '2026-07-30T00:00:00.000Z',
             applyUrl: 'https://example.com/apply',
           },
-          scoreResult: { overallScore: 0.88, components: {}, matchedSkills: [], relatedSkills: [], missingSkills: [], reasons: [] },
+          displayScore: 88,
+          scoreResult: { overallScore: 0.12, components: {}, matchedSkills: [], relatedSkills: [], missingSkills: [], reasons: [] },
           category: 'BEST_MATCH',
           matchType: 'EXACT',
           createdAt: '2026-07-30T00:00:00.000Z',

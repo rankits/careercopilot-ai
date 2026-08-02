@@ -32,6 +32,7 @@ export interface RecommendationResponse {
   runId: string;
   job: JobRecommendationRecord['job'];
   rank: number;
+  displayScore?: number;
   scoreResult: JobRecommendationRecord['scoreResult'];
   category: JobRecommendationRecord['category'];
   matchType: JobRecommendationRecord['matchType'];
@@ -62,11 +63,17 @@ export const toRecommendationPersistenceInput: RecommendationMapper['toPersisten
   matchType: record.matchType,
 });
 
+export const toDisplayScore = (overallScore: number): number | undefined => {
+  if (!Number.isFinite(overallScore) || overallScore < 0 || overallScore > 1) return undefined;
+  return Math.round(overallScore * 100);
+};
+
 export const toRecommendationResponse: RecommendationMapper['toResponse'] = (record) => ({
   id: record.id,
   runId: record.runId,
   job: record.job,
   rank: record.rank,
+  displayScore: toDisplayScore(record.scoreResult.overallScore),
   scoreResult: record.scoreResult,
   category: record.category,
   matchType: record.matchType,
@@ -84,6 +91,7 @@ export const toRecommendationFeedbackResponse = (record: RecommendationFeedbackR
 export const toSimilarJobResponse = (item: ScoredJobRecommendation, rank: number) => ({
   rank,
   job: item.job,
+  displayScore: toDisplayScore(item.scoreResult.overallScore),
   scoreResult: item.scoreResult,
   category: item.category,
   matchType: item.matchType,

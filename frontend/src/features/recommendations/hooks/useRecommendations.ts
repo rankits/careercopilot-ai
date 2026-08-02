@@ -35,7 +35,10 @@ export function useRecommendations(params: ListRecommendationsParams = {}) {
         hasPreviousPage: result.page > 1,
         cards: result.items.map((rec, index) => {
           const card = mapJobListDtoToCard(rec.job, index);
-          const match = formatRecommendationScorePercent(rec.scoreResult?.overallScore);
+          const match = formatRecommendationScorePercent({
+            displayScore: rec.displayScore,
+            overallScore: rec.scoreResult?.overallScore,
+          });
           return {
             ...card,
             recommendationId: rec.id,

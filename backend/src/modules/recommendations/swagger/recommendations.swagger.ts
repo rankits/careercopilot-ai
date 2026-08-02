@@ -82,7 +82,7 @@ const scoreResultSchema = {
       maximum: 1,
       example: 0.82,
       description:
-        'Unit-interval match score in [0, 1]. UI should display Math.round(score * 100) as a percent. See docs/SCORE_SCALE.md.',
+        'Internal unit-interval match score in [0, 1]. Use the top-level displayScore for user-facing percentages. See docs/SCORE_SCALE.md.',
     },
     components: {
       type: 'object',
@@ -117,6 +117,14 @@ const recommendationItemSchema = {
     runId: { type: 'string', format: 'uuid' },
     rank: { type: 'integer', example: 1 },
     job: jobListSchema,
+    displayScore: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 100,
+      example: 87,
+      description:
+        'User-facing match score derived from scoreResult.overallScore and rounded to 0-100.',
+    },
     scoreResult: scoreResultSchema,
     category: { type: 'string', enum: [...RECOMMENDATION_CATEGORY_VALUES] },
     matchType: { type: 'string', enum: [...RECOMMENDATION_MATCH_TYPE_VALUES] },
@@ -129,6 +137,14 @@ const similarJobItemSchema = {
   properties: {
     rank: { type: 'integer', example: 1 },
     job: jobListSchema,
+    displayScore: {
+      type: 'integer',
+      minimum: 0,
+      maximum: 100,
+      example: 87,
+      description:
+        'User-facing match score derived from scoreResult.overallScore and rounded to 0-100.',
+    },
     scoreResult: scoreResultSchema,
     category: { type: 'string', enum: [...RECOMMENDATION_CATEGORY_VALUES] },
     matchType: { type: 'string', enum: [...RECOMMENDATION_MATCH_TYPE_VALUES] },
