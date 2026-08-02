@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 27 |
+| Implemented | 28 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,34 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-DATA-002 - Complete resume-to-context mapping for RESUME source
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/contracts/recommendation-source-loader.ts`
+  - `backend/src/modules/recommendations/adapters/resume-recommendation-source.loader.ts`
+  - `backend/src/modules/recommendations/services/recommendation-source-authorization.service.ts`
+  - `backend/src/modules/recommendations/__tests__/resume-recommendation-source.loader.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `docs/job-recommendation-engine-tickets/RESUME_CONTEXT_MAPPING_CONTRACT.md`
+- API changes: RESUME generation now returns 422 for owned but incomplete/unusable parse data instead of collapsing it into 404
+- Database changes: none
+- Tests added:
+  - Canonical resume parse JSON maps into recommendation source input
+  - Owned incomplete parse returns an incomplete lookup state
+  - Unowned/missing resume remains not found
+  - Authorization returns 422 for owned incomplete RESUME parse data
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/resume-recommendation-source.loader.test.ts recommendations/__tests__/candidate-profile-source.mapper.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendation-strategies.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused RESUME loader/mapper/generation/strategy tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: FE resume picker remains `JRE-FE-002`
+- Next ticket: `JRE-FE-002`
 
 ### 2026-08-02 - JRE-DATA-001 - Harden canonical candidate profile mapping for recommendations
 
