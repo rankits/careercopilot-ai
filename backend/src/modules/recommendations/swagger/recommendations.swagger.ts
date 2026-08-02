@@ -290,19 +290,20 @@ export const recommendationsSwagger = {
     {
       summary: 'Generate recommendations from an authorized source',
       description:
-        'Supports PROFILE, RESUME, JOB, and CAREER_GOAL. Uses PGVECTOR retrieval and hybrid scoring; results are persisted durably.',
+        'Supports PROFILE, RESUME, JOB, CAREER_GOAL, and SAVED_SEARCH. Uses PGVECTOR retrieval and hybrid scoring; results are persisted durably.',
       body: {
         required: ['sourceType'],
         properties: {
           sourceType: {
             type: 'string',
-            enum: ['PROFILE', 'RESUME', 'JOB', 'CAREER_GOAL'],
+            enum: ['PROFILE', 'RESUME', 'JOB', 'CAREER_GOAL', 'SAVED_SEARCH'],
             example: 'PROFILE',
           },
           sourceId: {
             type: 'string',
             format: 'uuid',
-            description: 'Required for RESUME, JOB, and CAREER_GOAL. Forbidden for PROFILE.',
+            description:
+              'Required for RESUME, JOB, CAREER_GOAL, and SAVED_SEARCH. Forbidden for PROFILE.',
           },
           filters: filtersSchema,
         },
@@ -388,14 +389,15 @@ export const recommendationsSwagger = {
         properties: {
           sourceType: {
             type: 'string',
-            enum: ['PROFILE', 'RESUME', 'JOB', 'CAREER_GOAL'],
+            enum: ['PROFILE', 'RESUME', 'JOB', 'CAREER_GOAL', 'SAVED_SEARCH'],
             default: 'PROFILE',
             example: 'PROFILE',
           },
           sourceId: {
             type: 'string',
             format: 'uuid',
-            description: 'Required for RESUME, JOB, and CAREER_GOAL. Forbidden for PROFILE.',
+            description:
+              'Required for RESUME, JOB, CAREER_GOAL, and SAVED_SEARCH. Forbidden for PROFILE.',
           },
           filters: filtersSchema,
         },

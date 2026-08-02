@@ -114,6 +114,7 @@ export * from '@/modules/recommendations/contracts/recommendation-source-loader.
 export * from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
 export * from '@/modules/recommendations/mappers/career-target-source.mapper.js';
 export * from '@/modules/recommendations/mappers/recommendation.mapper.js';
+export * from '@/modules/recommendations/mappers/saved-search-source.mapper.js';
 export * from '@/modules/recommendations/matching/recommendation-access.js';
 export * from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
 export * from '@/modules/recommendations/providers/heuristic-target-text-extraction.provider.js';
@@ -122,6 +123,7 @@ export * from '@/modules/recommendations/repositories/in-memory-recommendation.u
 export * from '@/modules/recommendations/repositories/prisma-career-target.repository.js';
 export * from '@/modules/recommendations/repositories/prisma-candidate-embedding.repository.js';
 export * from '@/modules/recommendations/repositories/prisma-recommendation.unit-of-work.js';
+export * from '@/modules/recommendations/repositories/prisma-saved-search.repository.js';
 export * from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
 export * from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 export * from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';

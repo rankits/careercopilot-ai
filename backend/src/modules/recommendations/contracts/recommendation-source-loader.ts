@@ -1,5 +1,6 @@
 import type { CandidateProfileSourceInput } from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
 import type { CareerTargetSourceRecord } from '@/modules/recommendations/mappers/career-target-source.mapper.js';
+import type { SavedSearchSourceRecord } from '@/modules/recommendations/mappers/saved-search-source.mapper.js';
 
 export type ResumeProfileSourceLookup =
   | { status: 'FOUND'; payload: CandidateProfileSourceInput }
@@ -27,4 +28,8 @@ export interface RecommendationSourceLoader {
     userId: string,
     careerTargetId: string,
   ): Promise<CareerTargetSourceRecord | null>;
+  findOwnedSavedSearchSource?(
+    userId: string,
+    savedSearchId: string,
+  ): Promise<SavedSearchSourceRecord | null>;
 }

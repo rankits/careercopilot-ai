@@ -145,4 +145,71 @@ describe('createResumeRecommendationSourceLoader', () => {
     await expect(loader.findOwnedCareerTargetSource!('user-1', 'target-1')).resolves.toBeNull();
     await expect(loader.findOwnedCareerTargetSource!('user-1', 'target-2')).resolves.toBeNull();
   });
+
+  it('loads only owned active saved searches', async () => {
+    const savedSearches = {
+      findById: vi.fn().mockResolvedValue({
+        id: 'search-1',
+        userId: 'user-1',
+        name: 'Remote backend',
+        query: 'backend typescript',
+        filters: { locations: ['Remote'] },
+        context: { targetTitles: ['Backend Engineer'] },
+        createdAt: new Date('2026-08-02T00:00:00.000Z'),
+        updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+        deletedAt: null,
+      }),
+    };
+    const loader = createResumeRecommendationSourceLoader(
+      repository({}),
+      { findById: vi.fn() },
+      savedSearches,
+    );
+
+    await expect(loader.findOwnedSavedSearchSource!('user-1', 'search-1')).resolves.toMatchObject({
+      id: 'search-1',
+      userId: 'user-1',
+      name: 'Remote backend',
+      query: 'backend typescript',
+      filters: { locations: ['Remote'] },
+    });
+    expect(savedSearches.findById).toHaveBeenCalledWith('search-1');
+  });
+
+  it('hides unowned and deleted saved searches', async () => {
+    const savedSearches = {
+      findById: vi
+        .fn()
+        .mockResolvedValueOnce({
+          id: 'search-1',
+          userId: 'other-user',
+          name: 'Backend',
+          query: null,
+          filters: {},
+          context: {},
+          createdAt: new Date('2026-08-02T00:00:00.000Z'),
+          updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+          deletedAt: null,
+        })
+        .mockResolvedValueOnce({
+          id: 'search-2',
+          userId: 'user-1',
+          name: 'Backend',
+          query: null,
+          filters: {},
+          context: {},
+          createdAt: new Date('2026-08-02T00:00:00.000Z'),
+          updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+          deletedAt: new Date(),
+        }),
+    };
+    const loader = createResumeRecommendationSourceLoader(
+      repository({}),
+      { findById: vi.fn() },
+      savedSearches,
+    );
+
+    await expect(loader.findOwnedSavedSearchSource!('user-1', 'search-1')).resolves.toBeNull();
+    await expect(loader.findOwnedSavedSearchSource!('user-1', 'search-2')).resolves.toBeNull();
+  });
 });

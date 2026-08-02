@@ -7,6 +7,10 @@ import {
   prismaCareerTargetRepository,
   type CareerTargetRepository,
 } from '@/modules/recommendations/repositories/prisma-career-target.repository.js';
+import {
+  prismaSavedSearchRepository,
+  type SavedSearchRepository,
+} from '@/modules/recommendations/repositories/prisma-saved-search.repository.js';
 import { resumeRepository } from '@/modules/resumes/repositories/resume.repository.js';
 import type { ParsedResumeData } from '@/modules/resumes/types/resume.types.js';
 
@@ -103,6 +107,7 @@ const toSourceInput = (parsed: ParsedResumeData): CandidateProfileSourceInput =>
 export const createResumeRecommendationSourceLoader = (
   repository: typeof resumeRepository = resumeRepository,
   careerTargets: CareerTargetRepository = prismaCareerTargetRepository,
+  savedSearches: SavedSearchRepository = prismaSavedSearchRepository,
 ): RecommendationSourceLoader => {
   const lookupOwnedResumeProfileSource = async (
     userId: string,
@@ -152,6 +157,20 @@ export const createResumeRecommendationSourceLoader = (
         userId: target.userId,
         goalText: target.goalText,
         structured: target.structured,
+      };
+    },
+
+    async findOwnedSavedSearchSource(userId, savedSearchId) {
+      const savedSearch = await savedSearches.findById(savedSearchId);
+      if (!savedSearch || savedSearch.userId !== userId || savedSearch.deletedAt) return null;
+      return {
+        id: savedSearch.id,
+        userId: savedSearch.userId,
+        name: savedSearch.name,
+        query: savedSearch.query,
+        filters: savedSearch.filters,
+        context: savedSearch.context,
+        updatedAt: savedSearch.updatedAt,
       };
     },
   };

@@ -50,13 +50,13 @@ export const targetTextBodySchema = z
 
 const sourceRequestBodySchema = z
   .object({
-    sourceType: z.enum(['PROFILE', 'RESUME', 'JOB', 'CAREER_GOAL']),
+    sourceType: z.enum(['PROFILE', 'RESUME', 'JOB', 'CAREER_GOAL', 'SAVED_SEARCH']),
     sourceId: uuid.optional(),
     filters: recommendationFiltersSchema.optional(),
   })
   .strict()
   .superRefine(({ sourceType, sourceId }, context) => {
-    const requiresId = ['RESUME', 'JOB', 'CAREER_GOAL'].includes(sourceType);
+    const requiresId = ['RESUME', 'JOB', 'CAREER_GOAL', 'SAVED_SEARCH'].includes(sourceType);
     if (requiresId && !sourceId) {
       context.addIssue({
         code: z.ZodIssueCode.custom,
