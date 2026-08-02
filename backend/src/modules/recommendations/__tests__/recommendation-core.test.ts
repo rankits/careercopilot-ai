@@ -6,13 +6,17 @@ import {
 } from '@/modules/recommendations/constants/recommendation.constants.js';
 import { assertRecommendationOwnership } from '@/modules/recommendations/matching/recommendation-access.js';
 import {
+  createSavedSearchSchema,
   createRecommendationSchema,
+  generateSavedSearchSchema,
   listRecommendationsSchema,
+  listSavedSearchesSchema,
   recommendationFeedbackSchema,
   recommendationRunDetailsSchema,
   refreshRecommendationSchema,
   similarJobParamsSchema,
   targetTextBodySchema,
+  updateSavedSearchSchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
 import {
   RECOMMENDATION_FEEDBACK_ACTION_VALUES,
@@ -289,6 +293,40 @@ describe('recommendation module invariants', () => {
       recommendationRunDetailsSchema.safeParse({
         params: { runId: uuid },
         query: { page: '1', limit: '20' },
+      }).success,
+    ).toBe(true);
+  });
+
+  it('validates saved-search CRUD and generate payloads', () => {
+    expect(
+      listSavedSearchesSchema.parse({ query: { page: '2', limit: '10' } }).query,
+    ).toMatchObject({ page: 2, limit: 10 });
+    expect(
+      createSavedSearchSchema.parse({
+        body: {
+          name: '  Remote TypeScript roles  ',
+          query: '  Backend engineer  ',
+          filters: { locations: ['Remote'] },
+        },
+      }).body,
+    ).toMatchObject({
+      name: 'Remote TypeScript roles',
+      query: 'Backend engineer',
+      filters: { locations: ['Remote'] },
+    });
+    expect(createSavedSearchSchema.safeParse({ body: { name: '' } }).success).toBe(false);
+    expect(updateSavedSearchSchema.safeParse({ params: { savedSearchId: uuid }, body: {} }).success)
+      .toBe(false);
+    expect(
+      updateSavedSearchSchema.safeParse({
+        params: { savedSearchId: uuid },
+        body: { filters: { workModes: ['REMOTE'] } },
+      }).success,
+    ).toBe(true);
+    expect(
+      generateSavedSearchSchema.safeParse({
+        params: { savedSearchId: uuid },
+        body: { filters: { filterMode: 'STRICT' } },
       }).success,
     ).toBe(true);
   });

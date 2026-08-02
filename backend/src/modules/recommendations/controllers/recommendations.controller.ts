@@ -8,16 +8,23 @@ import {
 } from '@/modules/recommendations/mappers/recommendation.mapper.js';
 import type { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
 import type { RecommendationsService } from '@/modules/recommendations/services/recommendations.service.js';
+import type { SavedSearchService } from '@/modules/recommendations/services/saved-search.service.js';
 import type { SimilarJobsService } from '@/modules/recommendations/services/similar-jobs.service.js';
 import {
   createRecommendationFromTextSchema,
   createRecommendationSchema,
+  createSavedSearchSchema,
+  deleteSavedSearchSchema,
+  generateSavedSearchSchema,
   listRecommendationsSchema,
+  listSavedSearchesSchema,
   recommendationFeedbackSchema,
   recommendationIdParamsSchema,
   recommendationRunDetailsSchema,
   refreshRecommendationSchema,
+  savedSearchDetailsSchema,
   similarJobParamsSchema,
+  updateSavedSearchSchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import { catchAsync } from '@/shared/utils/catchAsync.js';
@@ -31,6 +38,24 @@ const requireUserPrincipalId = (req: Request): string => {
   // Matches RecommendationRun.userId / JobRecommendation.userId (String(User.id)), not User.publicId.
   return String(req.user.principalId);
 };
+
+const toSavedSearchResponse = (savedSearch: {
+  id: string;
+  name: string;
+  query: string | null;
+  filters: unknown;
+  context: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+}) => ({
+  id: savedSearch.id,
+  name: savedSearch.name,
+  query: savedSearch.query,
+  filters: savedSearch.filters,
+  context: savedSearch.context,
+  createdAt: savedSearch.createdAt.toISOString(),
+  updatedAt: savedSearch.updatedAt.toISOString(),
+});
 
 export const getRecommendationReadinessController = (service: RecommendationsService) =>
   catchAsync(async (req: Request, res: Response) => {
@@ -63,6 +88,77 @@ export const refreshRecommendationsController = (service: RecommendationsService
     return res
       .status(200)
       .json(successResponse('Recommendations refreshed', toRecommendationRunPageResponse(result)));
+  });
+
+export const listSavedSearchesController = (service: SavedSearchService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const { query } = listSavedSearchesSchema.parse({ query: req.query });
+    const page = await service.list(requireUserPrincipalId(req), query);
+    return res.status(200).json(
+      successResponse('Saved searches retrieved', {
+        items: page.items.map(toSavedSearchResponse),
+        page: page.page,
+        limit: page.limit,
+        total: page.total,
+      }),
+    );
+  });
+
+export const createSavedSearchController = (service: SavedSearchService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const input = createSavedSearchSchema.shape.body.parse(req.body);
+    const savedSearch = await service.create(requireUserPrincipalId(req), input);
+    return res
+      .status(201)
+      .json(successResponse('Saved search created', toSavedSearchResponse(savedSearch)));
+  });
+
+export const getSavedSearchController = (service: SavedSearchService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const { params } = savedSearchDetailsSchema.parse({ params: req.params });
+    const savedSearch = await service.get(requireUserPrincipalId(req), params.savedSearchId);
+    return res
+      .status(200)
+      .json(successResponse('Saved search retrieved', toSavedSearchResponse(savedSearch)));
+  });
+
+export const updateSavedSearchController = (service: SavedSearchService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const { params, body } = updateSavedSearchSchema.parse({
+      params: req.params,
+      body: req.body,
+    });
+    const savedSearch = await service.update(
+      requireUserPrincipalId(req),
+      params.savedSearchId,
+      body,
+    );
+    return res
+      .status(200)
+      .json(successResponse('Saved search updated', toSavedSearchResponse(savedSearch)));
+  });
+
+export const deleteSavedSearchController = (service: SavedSearchService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const { params } = deleteSavedSearchSchema.parse({ params: req.params });
+    await service.delete(requireUserPrincipalId(req), params.savedSearchId);
+    return res.status(200).json(successResponse('Saved search deleted'));
+  });
+
+export const generateSavedSearchController = (service: RecommendationsService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const { params, body } = generateSavedSearchSchema.parse({
+      params: req.params,
+      body: req.body,
+    });
+    const result = await service.createForSource(requireUserPrincipalId(req), {
+      sourceType: 'SAVED_SEARCH',
+      sourceId: params.savedSearchId,
+      filters: body?.filters,
+    });
+    return res
+      .status(200)
+      .json(successResponse('Recommendations generated', result.map(toRecommendationResponse)));
   });
 
 export const createSimilarJobsController = (service: SimilarJobsService) =>
