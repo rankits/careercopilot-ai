@@ -85,6 +85,7 @@ model JobRecommendation {
   rank           Int
   matchedSkills  String[]                   @default([]) @map("matched_skills")
   relatedSkills  String[]                   @default([]) @map("related_skills")
+  transferableSkills String[]                @default([]) @map("transferable_skills")
   missingSkills  String[]                   @default([]) @map("missing_skills")
   reasons        Json                       @default("[]")
   createdAt      DateTime                   @default(now()) @map("created_at")

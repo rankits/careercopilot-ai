@@ -7,6 +7,12 @@ import type { RecommendationMatchType } from '@/modules/recommendations/types/re
  */
 export const defaultMatchTypeClassifier: MatchTypeClassifier = {
   classify(_context, _job, scoreResult): RecommendationMatchType {
+    const hasExactSkill = scoreResult.matchedSkills.length > 0;
+    const hasRelatedSkill = scoreResult.relatedSkills.length > 0;
+    const hasTransferableSkill = scoreResult.transferableSkills.length > 0;
+    if (!hasExactSkill && hasRelatedSkill) return 'RELATED';
+    if (!hasExactSkill && !hasRelatedSkill && hasTransferableSkill) return 'TRANSFERABLE';
+
     const required = scoreResult.components.requiredSkills;
     const overall = scoreResult.overallScore;
     if (required >= 0.9 && overall >= 0.85) return 'EXACT';

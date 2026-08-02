@@ -98,6 +98,7 @@ const scoreResultSchema = {
     },
     matchedSkills: { type: 'array', items: { type: 'string' } },
     relatedSkills: { type: 'array', items: { type: 'string' } },
+    transferableSkills: { type: 'array', items: { type: 'string' } },
     missingSkills: { type: 'array', items: { type: 'string' } },
     reasons: {
       type: 'array',
@@ -160,6 +161,7 @@ const recommendationItemSchema = {
         },
         matchedSkills: { type: 'array', items: { type: 'string' } },
         relatedSkills: { type: 'array', items: { type: 'string' } },
+        transferableSkills: { type: 'array', items: { type: 'string' } },
         missingSkills: { type: 'array', items: { type: 'string' } },
         scoreModel: {
           type: 'object',

@@ -4,7 +4,7 @@ import {
   textOverlapRatio,
   tokenize,
 } from '@/modules/recommendations/utils/recommendation-matching.js';
-import { canonicalSkillOverlap } from '@/modules/recommendations/skills/skill-canonicalization.service.js';
+import { defaultSkillRelationshipService } from '@/modules/recommendations/skills/skill-relationship.service.js';
 
 const reason = (
   component: RecommendationScoreCalculator['component'],
@@ -33,19 +33,29 @@ const requiredSkillsCalculator: RecommendationScoreCalculator = {
         reasons: reason('requiredSkills', 'Job skills unavailable; used neutral score'),
       };
     }
-    const { ratio, matched, missing } = canonicalSkillOverlap(context.requiredSkills, job.skills);
+    const { ratio, exact, related, transferable, missing, hits } =
+      defaultSkillRelationshipService.overlap(context.requiredSkills, job.skills);
+    const evidence = [
+      ...exact,
+      ...hits.map(
+        (hit) =>
+          `${hit.type.toLowerCase()}: ${hit.availableSkill} covers ${hit.requiredSkill}`,
+      ),
+    ];
     return {
       score: clampScore(ratio),
-      matchedSkills: matched,
+      matchedSkills: exact,
+      relatedSkills: related,
+      transferableSkills: transferable,
       missingSkills: missing,
       reasons: reason(
         'requiredSkills',
-        matched.length > 0
-          ? `Matched ${matched.length} of ${context.requiredSkills.length || matched.length} required skills`
+        evidence.length > 0
+          ? `Covered ${evidence.length} of ${context.requiredSkills.length || evidence.length} required skills with exact, related, or transferable skills`
           : context.requiredSkills.length === 0
             ? 'No required skills were specified'
             : 'No required skills matched the job',
-        matched,
+        evidence,
       ),
     };
   },
@@ -68,16 +78,27 @@ const preferredSkillsCalculator: RecommendationScoreCalculator = {
         reasons: reason('preferredSkills', 'Job skills unavailable; used neutral score'),
       };
     }
-    const { ratio, matched } = canonicalSkillOverlap(context.preferredSkills, job.skills);
+    const { ratio, exact, related, transferable, hits } = defaultSkillRelationshipService.overlap(
+      context.preferredSkills,
+      job.skills,
+    );
+    const evidence = [
+      ...exact,
+      ...hits.map(
+        (hit) =>
+          `${hit.type.toLowerCase()}: ${hit.availableSkill} supports ${hit.requiredSkill}`,
+      ),
+    ];
     return {
       score: clampScore(ratio),
-      relatedSkills: matched,
+      relatedSkills: [...exact, ...related],
+      transferableSkills: transferable,
       reasons: reason(
         'preferredSkills',
-        matched.length > 0
-          ? `Matched ${matched.length} preferred skills`
+        evidence.length > 0
+          ? `Covered ${evidence.length} preferred skills with exact, related, or transferable skills`
           : 'No preferred-skill overlap',
-        matched,
+        evidence,
       ),
     };
   },

@@ -66,7 +66,7 @@ export const buildRecommendationSkillGap = (
   const exact = uniqueSkills(scoreResult.matchedSkills);
   const alias: string[] = [];
   const related = uniqueSkills(scoreResult.relatedSkills);
-  const transferable: string[] = [];
+  const transferable = uniqueSkills(scoreResult.transferableSkills);
   const covered = new Set(
     [...exact, ...alias, ...related, ...transferable].map((skill) => skill.toLowerCase()),
   );
@@ -129,6 +129,7 @@ export const buildRecommendationExplanation = (
     bullets,
     matchedSkills: record.scoreResult.matchedSkills,
     relatedSkills: record.scoreResult.relatedSkills,
+    transferableSkills: record.scoreResult.transferableSkills,
     missingSkills: record.scoreResult.missingSkills,
     scoreModel: {
       overallScore: record.scoreResult.overallScore,

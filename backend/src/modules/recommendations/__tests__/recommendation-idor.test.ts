@@ -43,6 +43,7 @@ describe('recommendation repository IDOR guards', () => {
             },
             matchedSkills: [],
             relatedSkills: [],
+            transferableSkills: [],
             missingSkills: [],
             reasons: [],
           },
