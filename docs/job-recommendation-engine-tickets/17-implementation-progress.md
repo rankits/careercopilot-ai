@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 26 |
+| Implemented | 27 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,30 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-DATA-001 - Harden canonical candidate profile mapping for recommendations
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/mappers/candidate-profile-source.mapper.ts`
+  - `backend/src/modules/recommendations/adapters/resume-recommendation-source.loader.ts`
+  - `backend/src/modules/recommendations/utils/candidate-recommendation-document.ts`
+  - `backend/src/modules/recommendations/__tests__/candidate-profile-source.mapper.test.ts`
+  - `docs/job-recommendation-engine-tickets/CANDIDATE_PROFILE_MAPPING_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Full-engine profile fixture covering titles, preferred skills, industries, locations, work mode, salary, exclusions, work authorization, sponsorship, languages, education, certifications, and source text
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/candidate-profile-source.mapper.test.ts recommendations/__tests__/candidate-recommendation-document.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused mapper/document/generation tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: no CandidateProfile schema expansion or profile-editor UX changes in this ticket
+- Next ticket: `JRE-DATA-002`
 
 ### 2026-08-02 - JRE-FE-003 - Wire similar jobs UI on job detail and For You
 

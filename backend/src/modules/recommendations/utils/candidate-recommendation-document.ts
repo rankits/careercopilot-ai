@@ -75,6 +75,10 @@ export const mergeCandidateProfileSources = (
       Array.isArray(profile.certifications) && profile.certifications.length > 0
         ? profile.certifications
         : resume.certifications,
+    languages:
+      Array.isArray(profile.languages) && profile.languages.length > 0
+        ? profile.languages
+        : resume.languages,
     totalExperienceYears: pickPrimaryNumber(
       typeof profile.totalExperienceYears === 'number' ? profile.totalExperienceYears : undefined,
       typeof resume.totalExperienceYears === 'number' ? resume.totalExperienceYears : undefined,

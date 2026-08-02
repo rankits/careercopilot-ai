@@ -22,6 +22,9 @@ const asParsedResumeData = (value: unknown): ParsedResumeData | null => {
     certifications: Array.isArray(record.certifications)
       ? (record.certifications as Array<Record<string, unknown>>)
       : [],
+    languages: Array.isArray(record.languages)
+      ? (record.languages as Array<Record<string, unknown>>)
+      : undefined,
     totalExperienceYears:
       typeof record.totalExperienceYears === 'number' ? record.totalExperienceYears : undefined,
   };
@@ -35,6 +38,7 @@ const toSourceInput = (parsed: ParsedResumeData): CandidateProfileSourceInput =>
   education: parsed.education,
   skills: parsed.skills,
   certifications: parsed.certifications,
+  languages: parsed.languages,
   totalExperienceYears: parsed.totalExperienceYears,
 });
 
