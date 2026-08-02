@@ -1,6 +1,11 @@
 import { useQuery } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
-import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Link as RouterLink,
+  useLocation,
+  useNavigate,
+  useSearchParams,
+} from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
 import { JobCard, VirtualizedJobList } from '@/components/molecules';
@@ -19,26 +24,64 @@ import { applicationsService } from '@/features/applications/services/applicatio
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
 import { Alert, Box, CircularProgress, Typography } from '@/lib/material';
 
+type RecommendationMode = 'profile' | 'resume' | 'similar' | 'text-career' | 'saved';
+
+const recommendationModes: Array<{
+  id: RecommendationMode;
+  label: string;
+  panelLabel: string;
+  available: boolean;
+}> = [
+  { id: 'profile', label: 'Profile', panelLabel: 'Profile recommendations', available: true },
+  { id: 'resume', label: 'Resume', panelLabel: 'Resume recommendations', available: false },
+  { id: 'similar', label: 'Similar', panelLabel: 'Similar jobs', available: false },
+  { id: 'text-career', label: 'Text / Career', panelLabel: 'Text and career matches', available: false },
+  { id: 'saved', label: 'Saved', panelLabel: 'Saved search recommendations', available: false },
+];
+
+const recommendationModeIds = new Set(recommendationModes.map((mode) => mode.id));
+
+const getModeFromSearchParams = (searchParams: URLSearchParams): RecommendationMode => {
+  const requestedMode = searchParams.get('mode');
+
+  return requestedMode && recommendationModeIds.has(requestedMode as RecommendationMode)
+    ? (requestedMode as RecommendationMode)
+    : 'profile';
+};
+
+const getTabId = (mode: RecommendationMode) => `for-you-${mode}-tab`;
+const getPanelId = (mode: RecommendationMode) => `for-you-${mode}-panel`;
+
 export function ForYouPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeMode = getModeFromSearchParams(searchParams);
+  const activeModeMeta =
+    recommendationModes.find((mode) => mode.id === activeMode) ?? recommendationModes[0];
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
   const [page, setPage] = useState(1);
   const [generatedOnce, setGeneratedOnce] = useState(false);
   const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
 
   const readiness = useRecommendationReadiness();
-  const { data, isPending, isError, error, refetch, isFetching } = useRecommendations({
-    page,
-    limit: 20,
-    latestOnly: true,
-  });
+  const { data, isPending, isError, error, refetch, isFetching } = useRecommendations(
+    {
+      page,
+      limit: 20,
+      latestOnly: true,
+    },
+    {
+      enabled: activeMode === 'profile',
+    },
+  );
   const generate = useGenerateRecommendations();
   const feedback = useRecommendationFeedback();
   const { saveJob, unsaveJob } = useSaveJob();
   const savedQuery = useQuery({
     queryKey: savedJobsQueryKey,
     queryFn: () => applicationsService.listSavedJobs(),
+    enabled: activeMode === 'profile',
   });
   const [optimisticSaved, setOptimisticSaved] = useState<Record<string, boolean>>({});
 
@@ -84,6 +127,19 @@ export function ForYouPage() {
       .catch(() => setDismissedIds((prev) => ({ ...prev, [recommendationId]: false })));
   };
 
+  const selectMode = (mode: RecommendationMode) => {
+    setPage(1);
+    const nextParams = new URLSearchParams(searchParams);
+
+    if (mode === 'profile') {
+      nextParams.delete('mode');
+    } else {
+      nextParams.set('mode', mode);
+    }
+
+    setSearchParams(nextParams);
+  };
+
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3, py: 2 }}>
       <Box sx={{ display: 'grid', gap: 1 }}>
@@ -91,183 +147,305 @@ export function ForYouPage() {
           For You
         </Typography>
         <Typography sx={{ color: 'text.secondary' }}>
-          Personalized matches from your profile. Generation is explicit — loading this page never
+          Personalized matches from your profile. Generation is explicit - loading this page never
           starts a new run.
         </Typography>
       </Box>
 
-      {readiness.isError ? (
+      <Box
+        aria-label="Recommendation modes"
+        role="tablist"
+        sx={{
+          borderBottom: '1px solid',
+          borderColor: 'divider',
+          display: 'flex',
+          gap: 1,
+          maxWidth: '100%',
+          overflowX: 'auto',
+          pb: 1,
+          scrollbarWidth: 'thin',
+        }}
+      >
+        {recommendationModes.map((mode) => {
+          const isActive = mode.id === activeMode;
+
+          return (
+            <Box
+              aria-controls={getPanelId(mode.id)}
+              aria-selected={isActive}
+              component="button"
+              id={getTabId(mode.id)}
+              key={mode.id}
+              onClick={() => selectMode(mode.id)}
+              role="tab"
+              sx={{
+                alignItems: 'center',
+                bgcolor: isActive ? 'primary.main' : 'background.paper',
+                border: '1px solid',
+                borderColor: isActive ? 'primary.main' : 'divider',
+                borderRadius: 2,
+                color: isActive ? 'primary.contrastText' : 'text.primary',
+                cursor: 'pointer',
+                display: 'inline-flex',
+                flex: '0 0 auto',
+                font: 'inherit',
+                fontSize: '0.875rem',
+                fontWeight: 700,
+                gap: 1,
+                minHeight: 40,
+                px: 2,
+                py: 1,
+                whiteSpace: 'nowrap',
+                '&:focus-visible': {
+                  outline: '3px solid',
+                  outlineColor: 'primary.light',
+                  outlineOffset: 2,
+                },
+                '&:hover': {
+                  borderColor: 'primary.main',
+                },
+              }}
+              type="button"
+            >
+              <span>{mode.label}</span>
+              {!mode.available ? (
+                <Box
+                  component="span"
+                  sx={{
+                    bgcolor: isActive ? 'rgba(255, 255, 255, 0.2)' : 'action.hover',
+                    borderRadius: 999,
+                    color: isActive ? 'primary.contrastText' : 'text.secondary',
+                    fontSize: '0.6875rem',
+                    fontWeight: 800,
+                    lineHeight: 1,
+                    px: 1,
+                    py: 0.5,
+                  }}
+                >
+                  Soon
+                </Box>
+              ) : null}
+            </Box>
+          );
+        })}
+      </Box>
+
+      {activeMode !== 'profile' ? (
+        <Box
+          aria-labelledby={getTabId(activeMode)}
+          id={getPanelId(activeMode)}
+          role="tabpanel"
+          sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}
+        >
+          <Typography component="h2" sx={{ fontSize: '1rem', fontWeight: 800, m: 0 }}>
+            {activeModeMeta.panelLabel}
+          </Typography>
+          <Typography role="status" sx={{ color: 'text.secondary' }}>
+            This mode is being wired into the recommendation engine.
+          </Typography>
+          <Button onClick={() => selectMode('profile')} size="small" variant="outline">
+            View profile matches
+          </Button>
+        </Box>
+      ) : null}
+
+      {activeMode === 'profile' && readiness.isError ? (
         <Alert role="alert" severity="warning">
           Could not load recommendation readiness. You can still browse saved recommendations below.
         </Alert>
       ) : null}
 
-      {isStale ? (
+      {activeMode === 'profile' && isStale ? (
         <Alert role="status" severity="info">
           Your profile changed since these matches were generated. Refresh to update recommendations.
         </Alert>
       ) : null}
 
-      {isEmbeddingPending ? (
+      {activeMode === 'profile' && isEmbeddingPending ? (
         <Alert role="status" severity="warning">
           Job embedding index is still warming up. Results may be limited until indexing completes.
         </Alert>
       ) : null}
 
-      {isPending ? (
-        <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
+      {activeMode === 'profile' && isPending ? (
+        <Box
+          aria-labelledby={getTabId('profile')}
+          id={getPanelId('profile')}
+          role="tabpanel"
+          sx={{ display: 'grid', placeItems: 'center', py: 8 }}
+        >
           <CircularProgress aria-label="Loading recommendations" />
         </Box>
       ) : null}
 
-      {isError ? (
-        <Box role="alert" sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
-          <Typography>
-            {error instanceof Error ? error.message : 'Unable to load recommendations.'}
-          </Typography>
+      {activeMode === 'profile' && isError ? (
+        <Box
+          aria-labelledby={getTabId('profile')}
+          id={getPanelId('profile')}
+          role="tabpanel"
+          sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}
+        >
+          <Box role="alert">
+            <Typography>
+              {error instanceof Error ? error.message : 'Unable to load recommendations.'}
+            </Typography>
+          </Box>
           <Button disabled={isFetching} onClick={() => void refetch()} size="small">
             Retry
           </Button>
         </Box>
       ) : null}
 
-      {isEmpty && showProfileIncomplete ? (
-        <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
-          <Typography role="status">
-            Complete your profile so we can score jobs against your skills and experience.
-          </Typography>
-          <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
-            Complete profile
-          </Button>
-        </Box>
-      ) : null}
-
-      {isEmpty && showProfileMissing ? (
-        <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
-          <Typography role="status">
-            We could not find a candidate profile for your account. Complete onboarding to continue.
-          </Typography>
-          <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
-            Set up profile
-          </Button>
-        </Box>
-      ) : null}
-
-      {isEmpty && canGenerate && !showProfileIncomplete && !showProfileMissing ? (
-        <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
-          <Typography role="status">
-            {generatedOnce
-              ? 'No matching jobs were found for your current profile. Try updating your skills or generate again later.'
-              : 'No recommendations yet. Generate a personalized set from your profile when you are ready.'}
-          </Typography>
-          {generateError ? (
-            <Typography role="alert" sx={{ color: 'error.main' }}>
-              {generateError}
-            </Typography>
+      {activeMode === 'profile' &&
+      !isPending &&
+      !isError &&
+      (isEmpty || visibleCards.length > 0) ? (
+        <Box
+          aria-labelledby={getTabId('profile')}
+          id={getPanelId('profile')}
+          role="tabpanel"
+          sx={{ display: 'grid', gap: 3 }}
+        >
+          {isEmpty && showProfileIncomplete ? (
+            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
+              <Typography role="status">
+                Complete your profile so we can score jobs against your skills and experience.
+              </Typography>
+              <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
+                Complete profile
+              </Button>
+            </Box>
           ) : null}
-          <Button
-            disabled={generate.isPending}
-            isLoading={generate.isPending}
-            onClick={() => {
-              setGeneratedOnce(true);
-              void generate.mutateAsync().catch(() => undefined);
-            }}
-            size="small"
-          >
-            Generate recommendations
-          </Button>
-          <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
-            Browse all jobs
-          </Button>
-        </Box>
-      ) : null}
 
-      {!isPending && !isError && visibleCards.length > 0 ? (
-        <>
-          <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-            <Typography sx={{ color: 'text.secondary' }}>
-              {data?.total ?? 0} recommendation{(data?.total ?? 0) === 1 ? '' : 's'}
-            </Typography>
-            <Button
-              disabled={generate.isPending}
-              isLoading={generate.isPending}
-              onClick={() => {
-                setGeneratedOnce(true);
-                void generate.mutateAsync().catch(() => undefined);
-              }}
-              size="small"
-              variant="outline"
-            >
-              Refresh matches
-            </Button>
-          </Box>
-          {generateError ? (
-            <Typography role="alert" sx={{ color: 'error.main' }}>
-              {generateError}
-            </Typography>
+          {isEmpty && showProfileMissing ? (
+            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
+              <Typography role="status">
+                We could not find a candidate profile for your account. Complete onboarding to
+                continue.
+              </Typography>
+              <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
+                Set up profile
+              </Button>
+            </Box>
           ) : null}
-          <VirtualizedJobList
-            ariaLabel="For you recommendations"
-            getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
-            items={visibleCards}
-            renderItem={(job) => (
-              <JobCard
-                job={job}
-                isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                onApply={(selected) => {
-                  openExternalApply(selected.applyUrl);
+
+          {isEmpty && canGenerate && !showProfileIncomplete && !showProfileMissing ? (
+            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
+              <Typography role="status">
+                {generatedOnce
+                  ? 'No matching jobs were found for your current profile. Try updating your skills or generate again later.'
+                  : 'No recommendations yet. Generate a personalized set from your profile when you are ready.'}
+              </Typography>
+              {generateError ? (
+                <Typography role="alert" sx={{ color: 'error.main' }}>
+                  {generateError}
+                </Typography>
+              ) : null}
+              <Button
+                disabled={generate.isPending}
+                isLoading={generate.isPending}
+                onClick={() => {
+                  setGeneratedOnce(true);
+                  void generate.mutateAsync().catch(() => undefined);
                 }}
-                onDismiss={
-                  job.recommendationId
-                    ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
-                    : undefined
-                }
-                onNotRelevant={
-                  job.recommendationId
-                    ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
-                    : undefined
-                }
-                onOpen={(selected) => {
-                  if (!selected.id) return;
-                  void navigate(jobDetailPath(selected.id), {
-                    state: { fromFeed: `${location.pathname}${location.search}` },
-                  });
-                }}
-                onSave={(selected) => {
-                  if (!selected.id) return;
-                  const jobId = selected.id;
-                  const wasSaved = savedIdSet.has(jobId);
-                  setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
-                  void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
-                    setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
-                  });
-                }}
+                size="small"
+              >
+                Generate recommendations
+              </Button>
+              <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
+                Browse all jobs
+              </Button>
+            </Box>
+          ) : null}
+
+          {visibleCards.length > 0 ? (
+            <>
+              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
+                <Typography sx={{ color: 'text.secondary' }}>
+                  {data?.total ?? 0} recommendation{(data?.total ?? 0) === 1 ? '' : 's'}
+                </Typography>
+                <Button
+                  disabled={generate.isPending}
+                  isLoading={generate.isPending}
+                  onClick={() => {
+                    setGeneratedOnce(true);
+                    void generate.mutateAsync().catch(() => undefined);
+                  }}
+                  size="small"
+                  variant="outline"
+                >
+                  Refresh matches
+                </Button>
+              </Box>
+              {generateError ? (
+                <Typography role="alert" sx={{ color: 'error.main' }}>
+                  {generateError}
+                </Typography>
+              ) : null}
+              <VirtualizedJobList
+                ariaLabel="For you recommendations"
+                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
+                items={visibleCards}
+                renderItem={(job) => (
+                  <JobCard
+                    job={job}
+                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                    onApply={(selected) => {
+                      openExternalApply(selected.applyUrl);
+                    }}
+                    onDismiss={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
+                        : undefined
+                    }
+                    onNotRelevant={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
+                        : undefined
+                    }
+                    onOpen={(selected) => {
+                      if (!selected.id) return;
+                      void navigate(jobDetailPath(selected.id), {
+                        state: { fromFeed: `${location.pathname}${location.search}` },
+                      });
+                    }}
+                    onSave={(selected) => {
+                      if (!selected.id) return;
+                      const jobId = selected.id;
+                      const wasSaved = savedIdSet.has(jobId);
+                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
+                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
+                      });
+                    }}
+                  />
+                )}
               />
-            )}
-          />
-          <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 2 }}>
-            <Button
-              disabled={!data?.hasPreviousPage || isFetching}
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              size="small"
-              variant="outline"
-            >
-              Previous
-            </Button>
-            <Typography>
-              Page {data?.page ?? page}
-              {data?.totalPages ? ` of ${data.totalPages}` : ''}
-            </Typography>
-            <Button
-              disabled={!data?.hasNextPage || isFetching}
-              onClick={() => setPage((p) => p + 1)}
-              size="small"
-              variant="outline"
-            >
-              Next
-            </Button>
-          </Box>
-        </>
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 2 }}>
+                <Button
+                  disabled={!data?.hasPreviousPage || isFetching}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  size="small"
+                  variant="outline"
+                >
+                  Previous
+                </Button>
+                <Typography>
+                  Page {data?.page ?? page}
+                  {data?.totalPages ? ` of ${data.totalPages}` : ''}
+                </Typography>
+                <Button
+                  disabled={!data?.hasNextPage || isFetching}
+                  onClick={() => setPage((p) => p + 1)}
+                  size="small"
+                  variant="outline"
+                >
+                  Next
+                </Button>
+              </Box>
+            </>
+          ) : null}
+        </Box>
       ) : null}
     </Box>
   );

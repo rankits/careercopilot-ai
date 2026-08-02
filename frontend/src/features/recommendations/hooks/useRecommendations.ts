@@ -22,8 +22,12 @@ export function useRecommendationReadiness() {
   });
 }
 
-export function useRecommendations(params: ListRecommendationsParams = {}) {
+export function useRecommendations(
+  params: ListRecommendationsParams = {},
+  options: { enabled?: boolean } = {},
+) {
   return useQuery({
+    enabled: options.enabled ?? true,
     queryKey: recommendationsQueryKey(params),
     queryFn: ({ signal }) => recommendationsService.list(params, { signal }),
     select: (result) => {

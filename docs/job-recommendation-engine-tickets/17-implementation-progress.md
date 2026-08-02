@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 24 |
+| Implemented | 25 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,30 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FE-001 - Add For You recommendation mode tabs shell
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `docs/job-recommendation-engine-tickets/FOR_YOU_MODE_TABS_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Default Profile tab selection and linked tabpanel
+  - Unwired Similar tab placeholder without profile recommendation list fetch
+- Commands executed:
+  - `npm --prefix frontend run test -- src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused For You tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: Resume, Similar, Text/Career, and Saved modes remain placeholders until their mode-specific tickets
+- Next ticket: `JRE-FE-003`
 
 ### 2026-08-02 - JRE-VEC-003 - Improve similar-job retrieval quality and self-exclusion
 

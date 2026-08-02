@@ -54,7 +54,7 @@ vi.mock('@/features/applications/services/applications.service', () => ({
   },
 }));
 
-function renderPage(isProfileComplete = true) {
+function renderPage(isProfileComplete = true, route = '/for-you') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -76,7 +76,7 @@ function renderPage(isProfileComplete = true) {
   return render(
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <MemoryRouter initialEntries={['/for-you']}>
+        <MemoryRouter initialEntries={[route]}>
           <ForYouPage />
         </MemoryRouter>
       </QueryClientProvider>
@@ -92,6 +92,35 @@ beforeEach(() => {
 });
 
 describe('ForYouPage', () => {
+  it('renders recommendation mode tabs with profile selected by default', async () => {
+    listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
+    renderPage(true);
+
+    expect(await screen.findByRole('tablist', { name: /recommendation modes/i })).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: /^profile$/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: /resume/i })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+    expect(screen.getByRole('tabpanel', { name: /profile/i })).toBeInTheDocument();
+  });
+
+  it('navigates to unwired mode placeholders without loading profile recommendations', async () => {
+    const user = userEvent.setup();
+    renderPage(true, '/for-you?mode=similar');
+
+    expect(await screen.findByRole('tabpanel', { name: /similar/i })).toHaveTextContent(
+      /being wired/i,
+    );
+    expect(listMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('tab', { name: /^profile$/i }));
+    await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
+  });
+
   it('shows profile CTA when incomplete and list empty', async () => {
     listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
     renderPage(false);
