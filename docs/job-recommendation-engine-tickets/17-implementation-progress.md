@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 43 |
+| Implemented | 44 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,34 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-API-004 - Expose CAREER_GOAL generate API with ownership
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendations.api.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/services/recommendations.service.ts`
+  - `docs/job-recommendation-engine-tickets/CAREER_GOAL_API_CONTRACT.md`
+- API changes: `POST /api/v1/job-recommendations` is locked for `CAREER_GOAL` with required `sourceId`
+- Database changes: none
+- Tests added:
+  - Authenticated CAREER_GOAL API request forwards principal id and source id
+  - Missing/unowned CAREER_GOAL source returns 404
+  - Swagger source enum includes `CAREER_GOAL`
+  - CAREER_GOAL generation increments `careerGoalApiTotal`
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendation-core.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused API, generation, and schema tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: optional career-target CRUD remains outside this generate API ticket.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-API-001 - Expand status and readiness API contract with swagger
 

@@ -324,8 +324,21 @@ const commonRecommendationErrors = {
   },
 };
 
-export const recommendationsSwagger = {
-  ...createApiPost(
+const mergeSwaggerDocs = (
+  ...documents: Array<Record<string, Record<string, unknown>>>
+): Record<string, Record<string, unknown>> =>
+  documents.reduce(
+    (merged, document) => {
+      for (const [path, methods] of Object.entries(document)) {
+        merged[path] = { ...(merged[path] ?? {}), ...methods };
+      }
+      return merged;
+    },
+    {} as Record<string, Record<string, unknown>>,
+  );
+
+export const recommendationsSwagger = mergeSwaggerDocs(
+  createApiPost(
     BASE_URL,
     {
       summary: 'Generate recommendations from an authorized source',
@@ -367,7 +380,7 @@ export const recommendationsSwagger = {
     TAGS,
   ),
 
-  ...createApiPost(
+  createApiPost(
     `${BASE_URL}/from-text`,
     {
       summary: 'Generate recommendations from free-form target text',
@@ -401,7 +414,7 @@ export const recommendationsSwagger = {
     TAGS,
   ),
 
-  ...createApiGet(
+  createApiGet(
     `${BASE_URL}/status`,
     {
       summary: 'Get recommendation readiness and lifecycle status',
@@ -419,7 +432,7 @@ export const recommendationsSwagger = {
     TAGS,
   ),
 
-  ...createApiPost(
+  createApiPost(
     `${BASE_URL}/refresh`,
     {
       summary: 'Refresh recommendations and return the created run',
@@ -461,7 +474,7 @@ export const recommendationsSwagger = {
     TAGS,
   ),
 
-  ...createApiGet(
+  createApiGet(
     `${BASE_URL}/similar/{jobId}`,
     {
       summary: 'Find similar jobs for a catalog job',
@@ -504,7 +517,7 @@ export const recommendationsSwagger = {
     TAGS,
   ),
 
-  ...createApiGet(
+  createApiGet(
     BASE_URL,
     {
       summary: 'List persisted recommendations for the current user',
@@ -553,7 +566,7 @@ export const recommendationsSwagger = {
     TAGS,
   ),
 
-  ...createApiGet(
+  createApiGet(
     `${BASE_URL}/runs/{runId}`,
     {
       summary: 'Get an owned recommendation run and its recommendations',
@@ -601,7 +614,7 @@ export const recommendationsSwagger = {
     TAGS,
   ),
 
-  ...createApiGet(
+  createApiGet(
     `${BASE_URL}/{recommendationId}`,
     {
       summary: 'Get a persisted recommendation by id',
@@ -629,7 +642,7 @@ export const recommendationsSwagger = {
     TAGS,
   ),
 
-  ...createApiPost(
+  createApiPost(
     `${BASE_URL}/{recommendationId}/feedback`,
     {
       summary: 'Upsert feedback for a recommendation',
@@ -676,4 +689,4 @@ export const recommendationsSwagger = {
     true,
     TAGS,
   ),
-};
+);

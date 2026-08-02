@@ -529,6 +529,7 @@ describe('RecommendationsService generation', () => {
   });
 
   it('runs CAREER_GOAL generation from an owned career target', async () => {
+    resetRecommendationMetricsForTests();
     const targetId = '33333333-3333-3333-3333-333333333333';
     const retrievalService = {
       retrieve: vi.fn().mockResolvedValue([
@@ -593,6 +594,7 @@ describe('RecommendationsService generation', () => {
     );
     expect(records).toHaveLength(1);
     expect(records[0]).toMatchObject({ userId: 'user-1', rank: 1 });
+    expect(recommendationMetricsSnapshot().careerGoalApiTotal).toBe(1);
   });
 
   it('runs SAVED_SEARCH generation from an owned saved search', async () => {

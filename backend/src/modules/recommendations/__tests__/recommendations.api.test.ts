@@ -211,6 +211,50 @@ describe('job recommendation HTTP gates', () => {
     expect(response.body.data.items).toEqual([]);
   });
 
+  it('accepts CAREER_GOAL generation with an owned source id', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-career-goal@example.com' });
+    const token = accessTokenForUser(user);
+    const careerTargetId = '33333333-3333-3333-3333-333333333333';
+    const createSpy = vi.spyOn(recommendationsService, 'createForSource').mockResolvedValue([]);
+
+    const response = await request(app).post(API).set(authHeader(token)).send({
+      sourceType: 'CAREER_GOAL',
+      sourceId: careerTargetId,
+    });
+
+    expect(response.status).toBe(200);
+    expect(createSpy).toHaveBeenCalledWith(String(user.id), {
+      sourceType: 'CAREER_GOAL',
+      sourceId: careerTargetId,
+    });
+    expect(response.body.data).toEqual([]);
+  });
+
+  it('returns 404 for missing or unowned CAREER_GOAL sources', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-career-goal-idor@example.com' });
+    const token = accessTokenForUser(user);
+    const careerTargetId = '33333333-3333-3333-3333-333333333333';
+    const createSpy = vi.spyOn(recommendationsService, 'createForSource').mockRejectedValue(
+      new RecommendationError(
+        'Owned career target was not found',
+        404,
+        RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+      ),
+    );
+
+    const response = await request(app).post(API).set(authHeader(token)).send({
+      sourceType: 'CAREER_GOAL',
+      sourceId: careerTargetId,
+    });
+
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe(RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND);
+    expect(createSpy).toHaveBeenCalledWith(String(user.id), {
+      sourceType: 'CAREER_GOAL',
+      sourceId: careerTargetId,
+    });
+  });
+
   it('returns 404 for non-owned recommendation run details', async () => {
     const user = await seedVerifiedUser({ email: 'recs-run-idor@example.com' });
     const token = accessTokenForUser(user);
@@ -285,6 +329,24 @@ describe('job recommendation HTTP gates', () => {
     expect(schema?.properties?.data?.properties?.lifecycleState).toMatchObject({
       enum: expect.arrayContaining(['READY', 'STALE', 'FAILED_PROVIDER']),
     });
+  });
+
+  it('documents CAREER_GOAL as a generate source in swagger', () => {
+    const operation = recommendationsSwagger[API]?.post as
+      | {
+          requestBody?: {
+            content?: {
+              'application/json'?: {
+                schema?: { properties?: { sourceType?: { enum?: string[] } } };
+              };
+            };
+          };
+        }
+      | undefined;
+    const sourceType =
+      operation?.requestBody?.content?.['application/json']?.schema?.properties?.sourceType;
+
+    expect(sourceType?.enum).toEqual(expect.arrayContaining(['CAREER_GOAL']));
   });
 
   it('returns similar jobs through the authenticated route without the source job', async () => {

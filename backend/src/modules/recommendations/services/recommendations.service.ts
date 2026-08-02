@@ -23,6 +23,7 @@ import {
 import {
   recordRecommendationGenerate,
   recordRecommendationRerank,
+  recordCareerGoalApiRequest,
 } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import { withRecommendationTimeout } from '@/modules/recommendations/utils/recommendation-timeout.js';
 import { applyRecommendationFilters } from '@/modules/recommendations/utils/apply-recommendation-filters.js';
@@ -80,6 +81,9 @@ export class RecommendationsService {
         },
         'JOB source recommendation generation audit',
       );
+    }
+    if (input.sourceType === 'CAREER_GOAL') {
+      recordCareerGoalApiRequest();
     }
     const dependencies = this.requireOrchestration();
     const authorized = await dependencies.sourceAuthorization.authorizeForSource(userId, input);
