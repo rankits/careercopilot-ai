@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 35 |
+| Implemented | 36 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,27 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-UI-005 - Mobile and zoom usability pass
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/components/molecules/JobCard/styles.ts`
+  - `frontend/src/components/molecules/VirtualizedJobList/styles.ts`
+  - `docs/job-recommendation-engine-tickets/MOBILE_ZOOM_USABILITY_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added: none; existing JobCard, VirtualizedJobList, and For You coverage was rerun after CSS changes
+- Commands executed:
+  - `npm --prefix frontend run test -- src/components/molecules/JobCard/JobCard.test.tsx src/components/molecules/VirtualizedJobList/VirtualizedJobList.test.tsx src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused JobCard, VirtualizedJobList, and For You tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: full device/browser matrix remains for `JRE-QA-003`
+- Next ticket: `JRE-QA-003`
 
 ### 2026-08-02 - JRE-UI-004 - Accessibility pass for recommendation navigation and cards
 

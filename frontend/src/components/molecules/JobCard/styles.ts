@@ -30,6 +30,10 @@ export const JobCardRoot = styled('article')({
     gridTemplateColumns: '0.125rem 3.75rem minmax(0, 1fr)',
     paddingRight: spacing[3],
   },
+
+  '@media (max-width: 30rem)': {
+    gridTemplateColumns: '0.125rem minmax(0, 1fr)',
+  },
 });
 
 export const Accent = styled('span', {
@@ -59,12 +63,20 @@ export const CompanyLogo = styled('div')({
     objectFit: 'cover',
     width: '100%',
   },
+
+  '@media (max-width: 30rem)': {
+    gridColumn: '2 / -1',
+  },
 });
 
 export const JobDetails = styled('div')({
   display: 'grid',
   gap: spacing[1],
   minWidth: 0,
+
+  '@media (max-width: 30rem)': {
+    gridColumn: '2 / -1',
+  },
 });
 
 export const RecommendationPill = styled('span')({
@@ -131,7 +143,7 @@ export const JobMeta = styled('div')({
   display: 'flex',
   flexWrap: 'wrap',
   fontSize: fontSize.xs,
-  gap: spacing[4],
+  gap: `${spacing[2]} ${spacing[4]}`,
 
   '& span': {
     alignItems: 'center',
@@ -172,14 +184,17 @@ export const JobActions = styled('div')({
   },
 
   '@media (max-width: 36rem)': {
-    gridTemplateColumns: '1fr auto',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr))',
+  },
+
+  '@media (max-width: 30rem)': {
+    gridColumn: '2 / -1',
   },
 
   '& > button:last-child': {
     minWidth: '7.5rem',
 
     '@media (max-width: 36rem)': {
-      gridColumn: '1 / -1',
       width: '100%',
     },
   },
@@ -234,6 +249,10 @@ export const RecommendationDetails = styled('div')({
   },
 
   '@media (max-width: 48rem)': {
+    gridColumn: '2 / -1',
+  },
+
+  '@media (max-width: 30rem)': {
     gridColumn: '2 / -1',
   },
 });
