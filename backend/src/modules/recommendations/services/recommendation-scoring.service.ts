@@ -8,6 +8,8 @@ import {
   getCandidateJobFilterViolations,
   resolveRecommendationFilterMode,
 } from '@/modules/recommendations/utils/candidate-job-filters.js';
+import { recordCareerCategory } from '@/modules/recommendations/observability/recommendation.metrics.js';
+import { classifyCareerGoalCategory } from '@/modules/recommendations/utils/career-goal-category.js';
 import type {
   RecommendationCandidate,
   RecommendationContext,
@@ -79,10 +81,19 @@ export class RecommendationScoringService {
                 (violation) => violation !== 'EXCLUDED_COMPANY',
               )
             : [];
+        const baseCategory = assignRecommendationCategory(overallScore);
+        const careerCategory = classifyCareerGoalCategory(
+          context,
+          job,
+          { ...scored.scoreResult, overallScore },
+          scored.matchType,
+          baseCategory,
+        );
         const category = capFlexibleCategory(
-          assignRecommendationCategory(overallScore),
+          careerCategory?.category ?? baseCategory,
           filterViolations.length > 0,
         );
+        if (context.sourceType === 'CAREER_GOAL') recordCareerCategory(category);
         return {
           ...scored,
           scoreResult: {
@@ -91,6 +102,7 @@ export class RecommendationScoringService {
             reasons: [
               ...scored.scoreResult.reasons,
               hybridReason(heuristicScore, retrievalScore),
+              ...(careerCategory ? [careerCategory.reason] : []),
               ...(filterViolations.length > 0 ? [flexibleFilterReason(filterViolations)] : []),
             ],
           },

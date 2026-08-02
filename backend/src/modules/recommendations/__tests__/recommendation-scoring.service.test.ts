@@ -7,9 +7,14 @@ import {
   HEURISTIC_SCORE_BLEND_WEIGHT,
   RETRIEVAL_SCORE_BLEND_WEIGHT,
 } from '@/modules/recommendations/constants/recommendation.constants.js';
+import {
+  recommendationMetricsSnapshot,
+  resetRecommendationMetricsForTests,
+} from '@/modules/recommendations/observability/recommendation.metrics.js';
 import type { JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
 import {
   RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+  type RecommendationScoreResult,
   type RecommendationContext,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
@@ -43,6 +48,31 @@ const context = (): RecommendationContext => ({
   excludedCompanies: [],
   excludedSkills: [],
   sourceText: 'Backend engineer',
+});
+
+const scoreResult = (
+  overallScore: number,
+  overrides: Partial<RecommendationScoreResult> = {},
+): RecommendationScoreResult => ({
+  overallScore,
+  components: {
+    requiredSkills: 0.8,
+    title: 0.8,
+    experience: 0.5,
+    responsibilities: 0.5,
+    preferredSkills: 0.5,
+    location: 0.5,
+    industry: 0.5,
+    salary: 0.5,
+    qualifications: 0.5,
+  },
+  matchedSkills: ['Playwright'],
+  aliasSkills: [],
+  relatedSkills: [],
+  transferableSkills: [],
+  missingSkills: [],
+  reasons: [],
+  ...overrides,
 });
 
 describe('RecommendationScoringService hybrid fusion', () => {
@@ -219,5 +249,68 @@ describe('RecommendationScoringService hybrid fusion', () => {
     const sorted = sortRecommendationsForRanking(results);
     expect(sorted[0]!.job.id).toBe('job-b');
     expect(sorted.map((item) => item.job.id)).toEqual(['job-b', 'job-a']);
+  });
+
+  it('classifies CAREER_GOAL results into path-aware categories and records distribution', async () => {
+    resetRecommendationMetricsForTests();
+    const fakeEngine = {
+      score: async (_context: RecommendationContext, candidateJob: JobListDto) => ({
+        job: candidateJob,
+        scoreResult:
+          candidateJob.id === 'stretch'
+            ? scoreResult(0.7, {
+                components: { ...scoreResult(0.7).components, requiredSkills: 0.2 },
+                matchedSkills: [],
+                missingSkills: ['Playwright', 'TypeScript'],
+              })
+            : scoreResult(candidateJob.id === 'bridge' ? 0.6 : 0.75),
+        category: 'GOOD_MATCH' as const,
+        matchType: candidateJob.id === 'stretch' ? ('MISSING' as const) : ('EXACT' as const),
+      }),
+    };
+    const careerService = new RecommendationScoringService(
+      fakeEngine as unknown as RecommendationScoringEngine,
+    );
+    const careerContext: RecommendationContext = {
+      ...context(),
+      sourceType: 'CAREER_GOAL',
+      targetTitles: ['Automation QA Engineer'],
+      relatedTitles: ['QA Analyst'],
+      goalIntent: {
+        currentRole: 'Manual Tester',
+        targetRole: 'Automation QA Engineer',
+        targetIndustries: [],
+        summary: 'Move into automation QA',
+      },
+      currentRole: 'Manual Tester',
+      targetRole: 'Automation QA Engineer',
+    };
+
+    const scored = await careerService.score(careerContext, [
+      { job: { ...job(), id: 'target', title: 'Automation QA Engineer' }, retrievalScore: 0.75 },
+      { job: { ...job(), id: 'bridge', title: 'QA Analyst' }, retrievalScore: 0.6 },
+      { job: { ...job(), id: 'current', title: 'Manual Tester' }, retrievalScore: 0.75 },
+      { job: { ...job(), id: 'stretch', title: 'Automation QA Engineer' }, retrievalScore: 0.7 },
+    ]);
+
+    expect(scored.map((item) => [item.job.id, item.category])).toEqual([
+      ['target', 'BEST_MATCH'],
+      ['bridge', 'GOOD_MATCH'],
+      ['current', 'RELATED_CAREER_PATH'],
+      ['stretch', 'STRETCH_OPPORTUNITY'],
+    ]);
+    expect(
+      scored.every((item) =>
+        item.scoreResult.reasons.some((reason) =>
+          reason.message.startsWith('Career goal path classification:'),
+        ),
+      ),
+    ).toBe(true);
+    expect(recommendationMetricsSnapshot().careerCategoryDistribution).toEqual({
+      BEST_MATCH: 1,
+      GOOD_MATCH: 1,
+      STRETCH_OPPORTUNITY: 1,
+      RELATED_CAREER_PATH: 1,
+    });
   });
 });
