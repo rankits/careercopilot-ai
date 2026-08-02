@@ -6,6 +6,7 @@ import type {
   RecommendationSourceType,
   ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
+import { normalizeExtractedRecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
 
 export interface RecommendationContextMapper {
   toContext(input: {
@@ -47,7 +48,7 @@ export const toRecommendationContext: RecommendationContextMapper['toContext'] =
   sourceType,
   sourceId,
   extracted,
-}) => ({ userId, sourceType, sourceId, ...extracted });
+}) => ({ userId, sourceType, sourceId, ...normalizeExtractedRecommendationContext(extracted) });
 
 export const toRecommendationPersistenceInput: RecommendationMapper['toPersistenceInput'] = (
   record,

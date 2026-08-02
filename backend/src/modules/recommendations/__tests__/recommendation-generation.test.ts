@@ -18,7 +18,10 @@ import {
 } from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 import { InMemoryRecommendationUnitOfWork } from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
 import { applyRecommendationFilters } from '@/modules/recommendations/utils/apply-recommendation-filters.js';
-import type { RecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
+import {
+  RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+  type RecommendationContext,
+} from '@/modules/recommendations/types/recommendations.types.js';
 import type { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 import { createChildLogger } from '@/shared/logger/logger.js';
 
@@ -60,6 +63,7 @@ const jobList = (id: string, overrides: Partial<JobListDto> = {}): JobListDto =>
 const baseContext = (): RecommendationContext => ({
   userId: 'user-1',
   sourceType: 'TARGET_TEXT',
+  contextSchemaVersion: RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
   targetTitles: ['Backend Engineer'],
   relatedTitles: [],
   requiredSkills: ['TypeScript'],

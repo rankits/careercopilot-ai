@@ -6,12 +6,16 @@ import type { JobEmbeddingRepository } from '@/modules/job-embeddings/contracts/
 import { CandidateRetrievalRegistry } from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
 import { PgVectorCandidateRetrievalProvider } from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
 import { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
-import type { RecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
+import {
+  RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+  type RecommendationContext,
+} from '@/modules/recommendations/types/recommendations.types.js';
 import { buildRecommendationQueryText } from '@/modules/recommendations/utils/recommendation-query-text.js';
 
 const baseContext = (): RecommendationContext => ({
   userId: 'user-1',
   sourceType: 'PROFILE',
+  contextSchemaVersion: RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
   targetTitles: ['Backend Engineer'],
   relatedTitles: ['Software Engineer'],
   requiredSkills: ['TypeScript', 'PostgreSQL'],
