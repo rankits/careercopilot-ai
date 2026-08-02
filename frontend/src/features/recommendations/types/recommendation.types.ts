@@ -131,6 +131,23 @@ export interface CareerTargetListResult {
   total: number;
 }
 
+export interface SavedSearchDto {
+  id: string;
+  name: string;
+  query: string | null;
+  filters: Record<string, unknown>;
+  context: Record<string, unknown> | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SavedSearchListResult {
+  items: SavedSearchDto[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
 export interface RecommendationReadinessStatus {
   ready: boolean;
   lifecycleState: RecommendationLifecycleState;

@@ -20,6 +20,10 @@ const {
   generateTextMock,
   createCareerTargetMock,
   generateCareerGoalMock,
+  listSavedSearchesMock,
+  createSavedSearchMock,
+  deleteSavedSearchMock,
+  generateSavedSearchMock,
   listSavedMock,
   profileMock,
   readinessMock,
@@ -33,6 +37,10 @@ const {
     generateTextMock: vi.fn(),
     createCareerTargetMock: vi.fn(),
     generateCareerGoalMock: vi.fn(),
+    listSavedSearchesMock: vi.fn(),
+    createSavedSearchMock: vi.fn(),
+    deleteSavedSearchMock: vi.fn(),
+    generateSavedSearchMock: vi.fn(),
     listSavedMock: vi.fn(),
     profileMock: vi.fn(),
     readinessMock: vi.fn(),
@@ -49,6 +57,10 @@ vi.mock('@/features/recommendations/services/recommendations.service', () => ({
     generateFromText: generateTextMock,
     createCareerTarget: createCareerTargetMock,
     generateFromCareerGoal: generateCareerGoalMock,
+    listSavedSearches: listSavedSearchesMock,
+    createSavedSearch: createSavedSearchMock,
+    deleteSavedSearch: deleteSavedSearchMock,
+    generateFromSavedSearch: generateSavedSearchMock,
     getReadiness: readinessMock,
     getSimilarJobs: similarMock,
     submitFeedback: feedbackMock,
@@ -127,11 +139,16 @@ beforeEach(() => {
   generateTextMock.mockReset();
   createCareerTargetMock.mockReset();
   generateCareerGoalMock.mockReset();
+  listSavedSearchesMock.mockReset();
+  createSavedSearchMock.mockReset();
+  deleteSavedSearchMock.mockReset();
+  generateSavedSearchMock.mockReset();
   similarMock.mockReset();
   profileMock.mockReset();
   readinessMock.mockReset();
   listSavedMock.mockReset();
   listSavedMock.mockResolvedValue([]);
+  listSavedSearchesMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
   refreshMock.mockResolvedValue({
     items: [],
     page: 1,
@@ -200,13 +217,12 @@ describe('ForYouPage', () => {
     expect(resumeTab).toHaveAttribute('tabindex', '0');
   });
 
-  it('navigates to unwired mode placeholders without loading profile recommendations', async () => {
+  it('opens the Saved tab without loading profile recommendations', async () => {
     const user = userEvent.setup();
     renderPage(true, '/for-you?mode=saved');
 
-    expect(await screen.findByRole('tabpanel', { name: /saved/i })).toHaveTextContent(
-      /being wired/i,
-    );
+    expect(await screen.findByText(/no saved searches yet/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /create saved search/i })).toBeDisabled();
     expect(listMock).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('tab', { name: /^profile$/i }));
@@ -318,6 +334,76 @@ describe('ForYouPage', () => {
       'Move from manual testing into automation QA',
     );
     expect(generateCareerGoalMock).toHaveBeenCalledWith('target-1');
+    expect(listMock).not.toHaveBeenCalled();
+  });
+
+  it('creates, reruns, and deletes saved searches from the Saved tab', async () => {
+    const user = userEvent.setup();
+    listSavedSearchesMock.mockResolvedValue({
+      items: [
+        {
+          id: 'search-1',
+          name: 'Remote TypeScript',
+          query: 'Remote TypeScript platform engineer',
+          filters: {},
+          context: {},
+          createdAt: '2026-08-02T00:00:00.000Z',
+          updatedAt: '2026-08-02T00:00:00.000Z',
+        },
+      ],
+      page: 1,
+      limit: 20,
+      total: 1,
+    });
+    createSavedSearchMock.mockResolvedValue({
+      id: 'search-2',
+      name: 'Backend',
+      query: 'Backend engineer',
+      filters: {},
+      context: {},
+      createdAt: '2026-08-02T00:00:00.000Z',
+      updatedAt: '2026-08-02T00:00:00.000Z',
+    });
+    generateSavedSearchMock.mockResolvedValue([
+      {
+        id: 'rec-saved-1',
+        runId: 'run-saved-1',
+        rank: 1,
+        job: {
+          id: 'saved-job-1',
+          title: 'Saved Search Backend Engineer',
+          company: { slug: 'theta', name: 'Theta', logoUrl: null, verified: true },
+          location: { formatted: 'Remote', remoteType: 'REMOTE' },
+          employmentType: 'FULL_TIME',
+          salary: { minimum: 10, maximum: 20, currency: 'INR' },
+          skills: ['TypeScript'],
+          publishedAt: '2026-07-30T00:00:00.000Z',
+          applyUrl: 'https://example.com/apply',
+        },
+        displayScore: 84,
+        scoreResult: scoreResult(0.84),
+        category: 'GOOD_MATCH',
+        matchType: 'RELATED',
+        createdAt: '2026-07-30T00:00:00.000Z',
+      },
+    ]);
+    deleteSavedSearchMock.mockResolvedValue(undefined);
+
+    renderPage(true, '/for-you?mode=saved');
+
+    expect(await screen.findByText(/remote typescript platform engineer/i)).toBeInTheDocument();
+    await user.type(screen.getByLabelText(/saved search name/i), 'Backend');
+    await user.type(screen.getByLabelText(/search query/i), 'Backend engineer');
+    await user.click(screen.getByRole('button', { name: /create saved search/i }));
+    await waitFor(() => expect(createSavedSearchMock).toHaveBeenCalledTimes(1));
+
+    await user.click(screen.getByRole('button', { name: /rerun saved search/i }));
+    expect(await screen.findByText(/saved search backend engineer/i)).toBeInTheDocument();
+    expect(generateSavedSearchMock).toHaveBeenCalledWith('search-2');
+
+    await user.click(screen.getByRole('button', { name: /delete saved search/i }));
+    await waitFor(() => expect(deleteSavedSearchMock).toHaveBeenCalledWith('search-2'));
+    expect(await screen.findByText(/saved search deleted/i)).toBeInTheDocument();
     expect(listMock).not.toHaveBeenCalled();
   });
 
