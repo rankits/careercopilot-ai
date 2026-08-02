@@ -82,6 +82,7 @@ class FakeSourceRepository implements JobEmbeddingSourceRepository {
     employmentType: 'FULL_TIME',
     skills: ['TypeScript'],
     tags: ['Backend'],
+    effectivePostedAt: new Date(),
   };
 
   async findByJobId(): Promise<JobEmbeddingSource | null> {
@@ -249,5 +250,41 @@ describe('JobEmbeddingIndexerService', () => {
       jobVersion: 2,
       contentHash: createJobEmbeddingContentHash(sources.source),
     });
+  });
+
+  it('skips jobs outside the storage and embedding age windows', async () => {
+    const provider = new FakeProvider();
+    const embeddings = new FakeEmbeddingRepository();
+    const sources = new FakeSourceRepository();
+    const consumed = new FakeConsumedEvents();
+    if (!sources.source) throw new Error('source fixture missing');
+    sources.source = {
+      ...sources.source,
+      effectivePostedAt: new Date('2020-01-01T00:00:00.000Z'),
+    };
+    const service = new JobEmbeddingIndexerService(
+      provider,
+      embeddings,
+      sources,
+      consumed,
+      'worker-a',
+    );
+
+    await expect(service.process('old-storage', event())).resolves.toBe(
+      'SKIPPED_OUTSIDE_STORAGE_WINDOW',
+    );
+    expect(embeddings.deletes).toEqual(['job-id']);
+    expect(provider.calls).toHaveLength(0);
+
+    embeddings.deletes = [];
+    sources.source = {
+      ...sources.source,
+      effectivePostedAt: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000),
+    };
+    await expect(service.process('old-embedding', event())).resolves.toBe(
+      'SKIPPED_OUTSIDE_EMBEDDING_WINDOW',
+    );
+    expect(embeddings.deletes).toEqual(['job-id']);
+    expect(provider.calls).toHaveLength(0);
   });
 });

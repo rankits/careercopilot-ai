@@ -11,13 +11,21 @@ import {
   createJobEmbeddingContentHash,
 } from '@/modules/job-embeddings/utils/job-embedding-content.js';
 import type { JobSemanticContentChangedEvent } from '@/modules/jobs/events/job.events.js';
+import { jobAgePolicy } from '@/modules/jobs/policies/job-age-policy.js';
+import { env } from '@/shared/config/env.conf.js';
 import { logJobEmbeddingIndexOutcome } from '@/modules/job-embeddings/observability/job-embedding-coverage.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
 export const JOB_EMBEDDING_CONSUMER_NAME = 'job-embedding-indexer.v1';
 
 export type JobEmbeddingIndexOutcome =
-  'INDEXED' | 'ALREADY_PROCESSED' | 'ALREADY_CURRENT' | 'STALE_EVENT' | 'JOB_REMOVED';
+  | 'INDEXED'
+  | 'ALREADY_PROCESSED'
+  | 'ALREADY_CURRENT'
+  | 'STALE_EVENT'
+  | 'JOB_REMOVED'
+  | 'SKIPPED_OUTSIDE_STORAGE_WINDOW'
+  | 'SKIPPED_OUTSIDE_EMBEDDING_WINDOW';
 
 export class JobEmbeddingIndexerService {
   constructor(
@@ -74,6 +82,27 @@ export class JobEmbeddingIndexerService {
     if (source.status !== 'ACTIVE') {
       await this.embeddings.deleteForJob(source.jobId);
       return 'JOB_REMOVED';
+    }
+
+    const storageEligibility = jobAgePolicy.evaluateStorageEligibility({
+      effectiveDate: source.effectivePostedAt,
+    });
+    if (!storageEligibility.eligible) {
+      if (env.JOB_REMOVE_OUTDATED_EMBEDDINGS) {
+        await this.embeddings.deleteForJob(source.jobId);
+      }
+      return 'SKIPPED_OUTSIDE_STORAGE_WINDOW';
+    }
+
+    const embeddingEligibility = jobAgePolicy.evaluateEmbeddingEligibility({
+      effectiveDate: source.effectivePostedAt,
+      isActive: true,
+    });
+    if (!embeddingEligibility.eligible) {
+      if (env.JOB_REMOVE_OUTDATED_EMBEDDINGS) {
+        await this.embeddings.deleteForJob(source.jobId);
+      }
+      return 'SKIPPED_OUTSIDE_EMBEDDING_WINDOW';
     }
 
     const contentHash = createJobEmbeddingContentHash(

@@ -89,6 +89,7 @@ class FakeSourceRepository implements JobEmbeddingSourceRepository {
     employmentType: 'FULL_TIME',
     skills: ['TypeScript'],
     tags: ['Backend'],
+    effectivePostedAt: new Date(),
   };
 
   async findByJobId(): Promise<JobEmbeddingSource | null> {

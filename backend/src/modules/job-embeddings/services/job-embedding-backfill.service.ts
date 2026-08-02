@@ -9,6 +9,7 @@ import type {
 } from '@/modules/job-embeddings/types/job-embedding-backfill.types.js';
 import { createJobEmbeddingContentHash } from '@/modules/job-embeddings/utils/job-embedding-content.js';
 import type { JobSemanticContentChangedEvent } from '@/modules/jobs/events/job.events.js';
+import { jobAgePolicy } from '@/modules/jobs/policies/job-age-policy.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import { logger } from '@/shared/logger/logger.js';
 
@@ -57,8 +58,12 @@ export class JobEmbeddingBackfillService {
     }
 
     let scanned = 0;
-    let enqueued = 0;
-    let skippedCurrent = 0;
+    let storageEligible = 0;
+    let storageIneligible = 0;
+    let embeddingEligible = 0;
+    let embeddingIneligible = 0;
+    let queued = 0;
+    let alreadyCurrent = 0;
     let failed = 0;
     let cursorJobId = options.afterJobId;
 
@@ -80,13 +85,32 @@ export class JobEmbeddingBackfillService {
       for (const candidate of batch.candidates) {
         scanned++;
         try {
+          const storageStatus = jobAgePolicy.evaluateStorageEligibility({
+            effectiveDate: candidate.effectivePostedAt,
+          });
+          if (!storageStatus.eligible) {
+            storageIneligible++;
+            continue;
+          }
+          storageEligible++;
+
+          const embeddingStatus = jobAgePolicy.evaluateEmbeddingEligibility({
+            effectiveDate: candidate.effectivePostedAt,
+            isActive: true, // We already filtered by ACTIVE in the sql
+          });
+          if (!embeddingStatus.eligible) {
+            embeddingIneligible++;
+            continue;
+          }
+          embeddingEligible++;
+
           const contentHash = createJobEmbeddingContentHash(
             candidate,
             options.documentSchemaVersion,
           );
           const current = isCurrentEmbedding(candidate, contentHash, options.dimensions);
           if (current && !options.force) {
-            skippedCurrent++;
+            alreadyCurrent++;
             continue;
           }
 
@@ -100,7 +124,7 @@ export class JobEmbeddingBackfillService {
           if (!options.dryRun) {
             await this.repository.enqueueSemanticChange(event);
           }
-          enqueued++;
+          queued++;
         } catch (error) {
           failed++;
           this.backfillLogger.error(
@@ -117,8 +141,12 @@ export class JobEmbeddingBackfillService {
       this.backfillLogger.info(
         {
           scanned,
-          enqueued,
-          skippedCurrent,
+          storageEligible,
+          storageIneligible,
+          embeddingEligible,
+          embeddingIneligible,
+          queued,
+          alreadyCurrent,
           failed,
           cursorJobId,
           dryRun: options.dryRun === true,
@@ -131,8 +159,12 @@ export class JobEmbeddingBackfillService {
 
     return {
       scanned,
-      enqueued,
-      skippedCurrent,
+      storageEligible,
+      storageIneligible,
+      embeddingEligible,
+      embeddingIneligible,
+      queued,
+      alreadyCurrent,
       failed,
       dryRun: options.dryRun === true,
       force: options.force === true,
