@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 18 |
+| Implemented | 19 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,35 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-SKILL-005 - Align skill arrays with match semantics
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/skills/recommendation-skill-buckets.ts`
+  - `backend/src/modules/recommendations/scoring/recommendation-scoring.engine.ts`
+  - `backend/src/modules/recommendations/services/recommendation-explanation.service.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-skill-buckets.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-scoring.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-explanation.service.test.ts`
+  - `docs/job-recommendation-engine-tickets/SKILL_BUCKET_CONSISTENCY_CONTRACT.md`
+- API changes: none; existing arrays are normalized consistently before response mapping
+- Database changes: none
+- Tests added:
+  - Shared bucket normalizer canonicalizes labels and applies exact > alias > related > transferable > missing priority
+  - Scoring output keeps all five skill arrays disjoint
+  - Explanation arrays use the same priority as `skillGap`
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-skill-buckets.test.ts recommendations/__tests__/skill-relationship.service.test.ts recommendations/__tests__/recommendation-scoring.service.test.ts recommendations/__tests__/recommendation-explanation.service.test.ts recommendations/__tests__/recommendation.mapper.test.ts recommendations/__tests__/recommendations.api.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused skill bucket/scoring/explanation/API tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: pair-level relationship evidence remains reason text only
+- Next ticket: `JRE-EMB-002`
 
 ### 2026-08-02 - JRE-SKILL-004 - Explain transferable skills explicitly
 

@@ -184,6 +184,31 @@ describe('RecommendationScoringService hybrid fusion', () => {
     ).toBe(true);
   });
 
+  it('keeps exact, alias, related, transferable, and missing skill arrays disjoint', async () => {
+    const [scored] = await service.score(
+      {
+        ...context(),
+        requiredSkills: ['TypeScript', 'Node.js', 'React', 'Amazon Web Services', 'Redis'],
+        preferredSkills: [],
+      },
+      [
+        {
+          job: {
+            ...job(),
+            skills: ['TypeScript', 'NodeJS', 'NextJS', 'Google Cloud Platform'],
+          },
+          retrievalScore: 0.5,
+        },
+      ],
+    );
+
+    expect(scored.scoreResult.matchedSkills).toEqual(['TypeScript']);
+    expect(scored.scoreResult.aliasSkills).toEqual(['Node.js']);
+    expect(scored.scoreResult.relatedSkills).toEqual(['Next.js']);
+    expect(scored.scoreResult.transferableSkills).toEqual(['Google Cloud Platform']);
+    expect(scored.scoreResult.missingSkills).toEqual(['Redis']);
+  });
+
   it('supports deterministic tie-break when sorted by the production comparator', async () => {
     const jobB = { ...job(), id: 'job-b' };
     const jobA = { ...job(), id: 'job-a', title: 'Platform Engineer', skills: ['Go'] };
