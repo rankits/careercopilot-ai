@@ -78,6 +78,54 @@ describe('RecommendationScoringService hybrid fusion', () => {
     expect(hybrid?.evidence.some((entry) => entry.startsWith('retrievalWeight='))).toBe(true);
   });
 
+  it('uses neutral component scores for missing candidate preferences', async () => {
+    const sparseContext: RecommendationContext = {
+      ...context(),
+      requiredSkills: [],
+      preferredSkills: [],
+      locations: [],
+      industries: [],
+      salaryExpectation: {},
+      education: [],
+      certifications: [],
+      sourceText: '',
+    };
+    const [scored] = await service.score(sparseContext, [{ job: job(), retrievalScore: 0.5 }]);
+
+    expect(scored.scoreResult.components).toMatchObject({
+      requiredSkills: 0.5,
+      preferredSkills: 0.5,
+      experience: 0.5,
+      responsibilities: 0.5,
+      location: 0.5,
+      industry: 0.5,
+      salary: 0.5,
+      qualifications: 0.5,
+    });
+    expect(
+      scored.scoreResult.reasons.some((reason) =>
+        reason.message.includes('No salary expectation provided; used neutral score'),
+      ),
+    ).toBe(true);
+    expect(
+      scored.scoreResult.reasons.some((reason) =>
+        reason.message.includes('No location preference provided; used neutral score'),
+      ),
+    ).toBe(true);
+  });
+
+  it('uses neutral skill scores when job skills are unavailable', async () => {
+    const [scored] = await service.score({ ...context(), preferredSkills: ['React'] }, [
+      { job: { ...job(), skills: [] }, retrievalScore: 0.5 },
+    ]);
+
+    expect(scored.scoreResult.components.requiredSkills).toBe(0.5);
+    expect(scored.scoreResult.components.preferredSkills).toBe(0.5);
+    expect(scored.scoreResult.reasons.filter((reason) =>
+      reason.message.includes('Job skills unavailable; used neutral score'),
+    )).toHaveLength(2);
+  });
+
   it('supports deterministic tie-break when sorted by the production comparator', async () => {
     const jobB = { ...job(), id: 'job-b' };
     const jobA = { ...job(), id: 'job-a', title: 'Platform Engineer', skills: ['Go'] };

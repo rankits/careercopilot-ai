@@ -12,9 +12,27 @@ const reason = (
   evidence: string[] = [],
 ) => [{ component, message, evidence }];
 
+const MISSING_SIGNAL_SCORE = 0.5;
+
 const requiredSkillsCalculator: RecommendationScoreCalculator = {
   component: 'requiredSkills',
   async calculate(context, job) {
+    if (context.requiredSkills.length === 0) {
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        matchedSkills: [],
+        missingSkills: [],
+        reasons: reason('requiredSkills', 'No required skills specified; used neutral score'),
+      };
+    }
+    if (job.skills.length === 0) {
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        matchedSkills: [],
+        missingSkills: context.requiredSkills,
+        reasons: reason('requiredSkills', 'Job skills unavailable; used neutral score'),
+      };
+    }
     const { ratio, matched, missing } = listOverlapRatio(context.requiredSkills, job.skills);
     return {
       score: clampScore(ratio),
@@ -36,6 +54,20 @@ const requiredSkillsCalculator: RecommendationScoreCalculator = {
 const preferredSkillsCalculator: RecommendationScoreCalculator = {
   component: 'preferredSkills',
   async calculate(context, job) {
+    if (context.preferredSkills.length === 0) {
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        relatedSkills: [],
+        reasons: reason('preferredSkills', 'No preferred skills specified; used neutral score'),
+      };
+    }
+    if (job.skills.length === 0) {
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        relatedSkills: [],
+        reasons: reason('preferredSkills', 'Job skills unavailable; used neutral score'),
+      };
+    }
     const { ratio, matched } = listOverlapRatio(context.preferredSkills, job.skills);
     return {
       score: clampScore(ratio),
@@ -59,7 +91,7 @@ const titleCalculator: RecommendationScoreCalculator = {
       return {
         score: context.sourceText
           ? clampScore(textOverlapRatio(context.sourceText, job.title))
-          : 0.5,
+          : MISSING_SIGNAL_SCORE,
         reasons: reason('title', 'No target titles provided; used neutral/source-text title score'),
       };
     }
@@ -79,8 +111,8 @@ const experienceCalculator: RecommendationScoreCalculator = {
   async calculate(context, job) {
     if (!context.seniority && context.yearsOfExperience === undefined) {
       return {
-        score: 0.5,
-        reasons: reason('experience', 'No experience preference provided'),
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('experience', 'No experience preference provided; used neutral score'),
       };
     }
     const haystack = `${job.title} ${job.skills.join(' ')}`.toLowerCase();
@@ -116,8 +148,11 @@ const responsibilitiesCalculator: RecommendationScoreCalculator = {
   async calculate(context, job) {
     if (!context.sourceText?.trim()) {
       return {
-        score: 0.5,
-        reasons: reason('responsibilities', 'No source text available for responsibility matching'),
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason(
+          'responsibilities',
+          'No source text available for responsibility matching; used neutral score',
+        ),
       };
     }
     const jobText = `${job.title} ${job.skills.join(' ')}`;
@@ -136,7 +171,10 @@ const locationCalculator: RecommendationScoreCalculator = {
   component: 'location',
   async calculate(context, job) {
     if (!context.locations.length && !context.remotePreference) {
-      return { score: 1, reasons: reason('location', 'No location preference provided') };
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('location', 'No location preference provided; used neutral score'),
+      };
     }
     const jobLocation = `${job.location.formatted} ${job.location.remoteType ?? ''}`.toLowerCase();
     let score = 0;
@@ -166,7 +204,10 @@ const industryCalculator: RecommendationScoreCalculator = {
   component: 'industry',
   async calculate(context, job) {
     if (!context.industries.length) {
-      return { score: 1, reasons: reason('industry', 'No industry preference provided') };
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('industry', 'No industry preference provided; used neutral score'),
+      };
     }
     // JobListDto does not expose industry; use company name as a weak signal only.
     const company = job.company.name.toLowerCase();
@@ -193,10 +234,16 @@ const salaryCalculator: RecommendationScoreCalculator = {
   async calculate(context, job) {
     const expectation = context.salaryExpectation;
     if (expectation.minimum === undefined && expectation.maximum === undefined) {
-      return { score: 1, reasons: reason('salary', 'No salary expectation provided') };
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('salary', 'No salary expectation provided; used neutral score'),
+      };
     }
     if (job.salary.minimum === null && job.salary.maximum === null) {
-      return { score: 0.5, reasons: reason('salary', 'Job salary is undisclosed') };
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('salary', 'Job salary is undisclosed; used neutral score'),
+      };
     }
     const jobMin = job.salary.minimum ?? job.salary.maximum ?? 0;
     const jobMax = job.salary.maximum ?? job.salary.minimum ?? 0;
@@ -231,8 +278,11 @@ const qualificationsCalculator: RecommendationScoreCalculator = {
     const signals = [...context.education, ...context.certifications];
     if (signals.length === 0) {
       return {
-        score: 1,
-        reasons: reason('qualifications', 'No qualification preferences provided'),
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason(
+          'qualifications',
+          'No qualification preferences provided; used neutral score',
+        ),
       };
     }
     const haystack = `${job.title} ${job.skills.join(' ')}`.toLowerCase();

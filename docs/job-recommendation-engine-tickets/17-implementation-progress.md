@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 11 |
+| Implemented | 12 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,30 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-SCORE-002 - Define and implement missing-component scoring policy
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/scoring/calculators/heuristic-score.calculators.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-scoring.service.test.ts`
+  - `docs/SCORE_SCALE.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Missing candidate preferences score neutral `0.5`
+  - Missing salary/location reasons document neutral scoring
+  - Missing job skills score neutral for required and preferred skill components
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-scoring.service.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/similar-jobs.service.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused scoring/generation/core/similar tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: missing-value policy uses neutral scores, not dynamic weight redistribution
+- Next ticket: `JRE-EXPLAIN-001`
 
 ### 2026-08-02 - JRE-RANK-001 - Implement stable ranking and deterministic tie-breaking
 
