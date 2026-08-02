@@ -24,12 +24,14 @@ import { HEURISTIC_SCORE_CALCULATORS } from '@/modules/recommendations/scoring/c
 import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 import { PrismaRecommendationUnitOfWork } from '@/modules/recommendations/repositories/prisma-recommendation.unit-of-work.js';
 import { CandidateEmbeddingService } from '@/modules/recommendations/services/candidate-embedding.service.js';
+import { CareerTargetService } from '@/modules/recommendations/services/career-target.service.js';
 import { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
 import { SavedSearchService } from '@/modules/recommendations/services/saved-search.service.js';
 import { createResumeRecommendationSourceLoader } from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
 import { profileUpdatedAfter } from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
 import { jobEmbeddingRepository } from '@/modules/job-embeddings/index.js';
 import { prismaJobSearchRepository } from '@/modules/job-listing/index.js';
+import { prismaCareerTargetRepository } from '@/modules/recommendations/repositories/prisma-career-target.repository.js';
 import { prismaSavedSearchRepository } from '@/modules/recommendations/repositories/prisma-saved-search.repository.js';
 import { createChildLogger } from '@/shared/logger/logger.js';
 
@@ -105,11 +107,13 @@ export const similarJobsService = new SimilarJobsService(
   recommendationScoringService,
 );
 export const savedSearchService = new SavedSearchService(prismaSavedSearchRepository);
+export const careerTargetService = new CareerTargetService(prismaCareerTargetRepository);
 export const recommendationsRoutes = createRecommendationsRouter(
   recommendationsService,
   similarJobsService,
   recommendationFeedbackService,
   savedSearchService,
+  careerTargetService,
 );
 
 export * from '@/modules/recommendations/types/recommendations.types.js';
@@ -140,6 +144,7 @@ export * from '@/modules/recommendations/scoring/calculators/heuristic-score.cal
 export * from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 export * from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
 export * from '@/modules/recommendations/services/candidate-embedding.service.js';
+export * from '@/modules/recommendations/services/career-target.service.js';
 export * from '@/modules/recommendations/services/recommendation-context.service.js';
 export * from '@/modules/recommendations/services/recommendation-explanation.service.js';
 export * from '@/modules/recommendations/services/recommendation-feedback.service.js';

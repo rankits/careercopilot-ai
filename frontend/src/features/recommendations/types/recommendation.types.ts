@@ -116,6 +116,21 @@ export interface RecommendationRunDetailsResult extends RecommendationListResult
   run: RecommendationRunDto;
 }
 
+export interface CareerTargetDto {
+  id: string;
+  goalText: string;
+  structured: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CareerTargetListResult {
+  items: CareerTargetDto[];
+  page: number;
+  limit: number;
+  total: number;
+}
+
 export interface RecommendationReadinessStatus {
   ready: boolean;
   lifecycleState: RecommendationLifecycleState;

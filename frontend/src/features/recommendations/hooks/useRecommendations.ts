@@ -150,6 +150,19 @@ export function useGenerateTextRecommendations() {
   });
 }
 
+export function useGenerateCareerGoalRecommendations() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (goalText: string) => {
+      const target = await recommendationsService.createCareerTarget(goalText);
+      return recommendationsService.generateFromCareerGoal(target.id);
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    },
+  });
+}
+
 export function useRecommendationFeedback() {
   const queryClient = useQueryClient();
   return useMutation({

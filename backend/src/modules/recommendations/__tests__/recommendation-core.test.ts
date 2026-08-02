@@ -7,8 +7,10 @@ import {
 import { assertRecommendationOwnership } from '@/modules/recommendations/matching/recommendation-access.js';
 import {
   createSavedSearchSchema,
+  createCareerTargetSchema,
   createRecommendationSchema,
   generateSavedSearchSchema,
+  listCareerTargetsSchema,
   listRecommendationsSchema,
   listSavedSearchesSchema,
   recommendationFeedbackSchema,
@@ -17,6 +19,7 @@ import {
   similarJobParamsSchema,
   targetTextBodySchema,
   updateSavedSearchSchema,
+  careerTargetDetailsSchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
 import {
   RECOMMENDATION_FEEDBACK_ACTION_VALUES,
@@ -327,6 +330,29 @@ describe('recommendation module invariants', () => {
       generateSavedSearchSchema.safeParse({
         params: { savedSearchId: uuid },
         body: { filters: { filterMode: 'STRICT' } },
+      }).success,
+    ).toBe(true);
+  });
+
+  it('validates career-target CRUD payloads', () => {
+    expect(
+      listCareerTargetsSchema.parse({ query: { page: '2', limit: '10' } }).query,
+    ).toMatchObject({ page: 2, limit: 10 });
+    expect(
+      createCareerTargetSchema.parse({
+        body: {
+          goalText: '  Move into automation QA  ',
+          structured: { targetRole: 'Automation QA Engineer' },
+        },
+      }).body,
+    ).toMatchObject({
+      goalText: 'Move into automation QA',
+      structured: { targetRole: 'Automation QA Engineer' },
+    });
+    expect(createCareerTargetSchema.safeParse({ body: { goalText: '' } }).success).toBe(false);
+    expect(
+      careerTargetDetailsSchema.safeParse({
+        params: { careerTargetId: uuid },
       }).success,
     ).toBe(true);
   });

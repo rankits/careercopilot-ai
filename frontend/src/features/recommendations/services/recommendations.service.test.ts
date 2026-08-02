@@ -69,6 +69,17 @@ describe('recommendationsService', () => {
     expect(items).toHaveLength(1);
   });
 
+  it('posts CAREER_GOAL generate with sourceId', async () => {
+    postMock.mockResolvedValue({ data: { data: [{ id: 'r1' }] } });
+    const items = await recommendationsService.generateFromCareerGoal('target-1');
+    expect(postMock).toHaveBeenCalledWith(
+      '/job-recommendations',
+      { sourceType: 'CAREER_GOAL', sourceId: 'target-1' },
+      expect.objectContaining({ timeout: 60_000 }),
+    );
+    expect(items).toHaveLength(1);
+  });
+
   it('posts target text generate to the from-text route', async () => {
     postMock.mockResolvedValue({ data: { data: [{ id: 'r1' }] } });
     const items = await recommendationsService.generateFromText('remote Node.js backend');
@@ -168,6 +179,28 @@ describe('recommendationsService', () => {
     );
     expect(result).toHaveLength(1);
     expect(result[0].displayScore).toBe(84);
+  });
+
+  it('creates a career target from goal text', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        data: {
+          id: 'target-1',
+          goalText: 'Move into automation QA',
+          structured: {},
+          createdAt: '2026-08-02T00:00:00.000Z',
+          updatedAt: '2026-08-02T00:00:00.000Z',
+        },
+      },
+    });
+
+    const result = await recommendationsService.createCareerTarget('Move into automation QA');
+    expect(postMock).toHaveBeenCalledWith(
+      '/job-recommendations/career-targets',
+      { goalText: 'Move into automation QA' },
+      expect.objectContaining({ signal: undefined }),
+    );
+    expect(result.id).toBe('target-1');
   });
 
   it('loads readiness lifecycle status with retrieval metadata', async () => {

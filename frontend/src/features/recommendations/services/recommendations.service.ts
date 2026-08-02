@@ -1,4 +1,6 @@
 import type {
+  CareerTargetDto,
+  CareerTargetListResult,
   ListRecommendationsParams,
   RecommendationDto,
   RecommendationFeedbackAction,
@@ -91,6 +93,31 @@ const unwrapSimilarJobs = (response: unknown): SimilarJobDto[] => {
   return response.data.data as SimilarJobDto[];
 };
 
+const unwrapCareerTarget = (response: unknown): CareerTargetDto => {
+  if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
+    throw new Error('Unexpected career-target response shape');
+  }
+  const payload = response.data.data;
+  if (typeof payload.id !== 'string' || typeof payload.goalText !== 'string') {
+    throw new Error('Unexpected career-target response shape');
+  }
+  return payload as unknown as CareerTargetDto;
+};
+
+const unwrapCareerTargetList = (response: unknown): CareerTargetListResult => {
+  if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
+    throw new Error('Unexpected career-target list response shape');
+  }
+  const payload = response.data.data;
+  const items = Array.isArray(payload.items) ? (payload.items as CareerTargetDto[]) : [];
+  return {
+    items,
+    page: typeof payload.page === 'number' ? payload.page : 1,
+    limit: typeof payload.limit === 'number' ? payload.limit : items.length,
+    total: typeof payload.total === 'number' ? payload.total : items.length,
+  };
+};
+
 export const recommendationsService = {
   async list(
     params: ListRecommendationsParams = {},
@@ -138,6 +165,21 @@ export const recommendationsService = {
     );
     if (!isRecord(response) || !isRecord(response.data) || !Array.isArray(response.data.data)) {
       throw new Error('Unexpected generate-resume-recommendations response shape');
+    }
+    return response.data.data as RecommendationDto[];
+  },
+
+  async generateFromCareerGoal(
+    careerTargetId: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<RecommendationDto[]> {
+    const response = await httpClient.post(
+      '/job-recommendations',
+      { sourceType: 'CAREER_GOAL', sourceId: careerTargetId },
+      { signal: options.signal, timeout: 60_000 },
+    );
+    if (!isRecord(response) || !isRecord(response.data) || !Array.isArray(response.data.data)) {
+      throw new Error('Unexpected career-goal recommendations response shape');
     }
     return response.data.data as RecommendationDto[];
   },
@@ -195,6 +237,32 @@ export const recommendationsService = {
       signal: options.signal,
     });
     return unwrapSimilarJobs(response);
+  },
+
+  async listCareerTargets(
+    params: Pick<ListRecommendationsParams, 'page' | 'limit'> = {},
+    options: { signal?: AbortSignal } = {},
+  ): Promise<CareerTargetListResult> {
+    const response = await httpClient.get('/job-recommendations/career-targets', {
+      params: {
+        page: params.page ?? 1,
+        limit: params.limit ?? 20,
+      },
+      signal: options.signal,
+    });
+    return unwrapCareerTargetList(response);
+  },
+
+  async createCareerTarget(
+    goalText: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<CareerTargetDto> {
+    const response = await httpClient.post(
+      '/job-recommendations/career-targets',
+      { goalText },
+      { signal: options.signal },
+    );
+    return unwrapCareerTarget(response);
   },
 
   async submitFeedback(

@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createResumeRecommendationSourceLoader } from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
+import type { CareerTargetRepository } from '@/modules/recommendations/repositories/prisma-career-target.repository.js';
 import type { SavedSearchRepository } from '@/modules/recommendations/repositories/prisma-saved-search.repository.js';
 import { resumeRepository } from '@/modules/resumes/repositories/resume.repository.js';
 
@@ -20,6 +21,17 @@ const savedSearchRepository = (
   create: vi.fn(),
   updateOwned: vi.fn(),
   softDeleteOwned: vi.fn(),
+  ...overrides,
+});
+
+const careerTargetRepository = (
+  overrides: Partial<CareerTargetRepository>,
+): CareerTargetRepository => ({
+  findById: vi.fn(),
+  findOwned: vi.fn(),
+  listByUser: vi.fn(),
+  create: vi.fn(),
+  archiveOwned: vi.fn(),
   ...overrides,
 });
 
@@ -108,7 +120,7 @@ describe('createResumeRecommendationSourceLoader', () => {
   });
 
   it('loads only owned active career targets', async () => {
-    const careerTargets = {
+    const careerTargets = careerTargetRepository({
       findById: vi.fn().mockResolvedValue({
         id: 'target-1',
         userId: 'user-1',
@@ -118,7 +130,7 @@ describe('createResumeRecommendationSourceLoader', () => {
         updatedAt: new Date('2026-08-02T00:00:00.000Z'),
         archivedAt: null,
       }),
-    };
+    });
     const loader = createResumeRecommendationSourceLoader(repository({}), careerTargets);
 
     await expect(loader.findOwnedCareerTargetSource!('user-1', 'target-1')).resolves.toMatchObject({
@@ -131,7 +143,7 @@ describe('createResumeRecommendationSourceLoader', () => {
   });
 
   it('hides unowned and archived career targets', async () => {
-    const careerTargets = {
+    const careerTargets = careerTargetRepository({
       findById: vi
         .fn()
         .mockResolvedValueOnce({
@@ -152,7 +164,7 @@ describe('createResumeRecommendationSourceLoader', () => {
           updatedAt: new Date('2026-08-02T00:00:00.000Z'),
           archivedAt: new Date(),
         }),
-    };
+    });
     const loader = createResumeRecommendationSourceLoader(repository({}), careerTargets);
 
     await expect(loader.findOwnedCareerTargetSource!('user-1', 'target-1')).resolves.toBeNull();
@@ -175,7 +187,7 @@ describe('createResumeRecommendationSourceLoader', () => {
     });
     const loader = createResumeRecommendationSourceLoader(
       repository({}),
-      { findById: vi.fn() },
+      careerTargetRepository({}),
       savedSearches,
     );
 
@@ -218,7 +230,7 @@ describe('createResumeRecommendationSourceLoader', () => {
     });
     const loader = createResumeRecommendationSourceLoader(
       repository({}),
-      { findById: vi.fn() },
+      careerTargetRepository({}),
       savedSearches,
     );
 

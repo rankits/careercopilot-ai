@@ -6,16 +6,21 @@ import {
   toRecommendationRunPageResponse,
   toSimilarJobResponse,
 } from '@/modules/recommendations/mappers/recommendation.mapper.js';
+import type { CareerTargetService } from '@/modules/recommendations/services/career-target.service.js';
 import type { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
 import type { RecommendationsService } from '@/modules/recommendations/services/recommendations.service.js';
 import type { SavedSearchService } from '@/modules/recommendations/services/saved-search.service.js';
 import type { SimilarJobsService } from '@/modules/recommendations/services/similar-jobs.service.js';
 import {
+  archiveCareerTargetSchema,
+  careerTargetDetailsSchema,
+  createCareerTargetSchema,
   createRecommendationFromTextSchema,
   createRecommendationSchema,
   createSavedSearchSchema,
   deleteSavedSearchSchema,
   generateSavedSearchSchema,
+  listCareerTargetsSchema,
   listRecommendationsSchema,
   listSavedSearchesSchema,
   recommendationFeedbackSchema,
@@ -57,6 +62,20 @@ const toSavedSearchResponse = (savedSearch: {
   updatedAt: savedSearch.updatedAt.toISOString(),
 });
 
+const toCareerTargetResponse = (target: {
+  id: string;
+  goalText: string;
+  structured: unknown;
+  createdAt: Date;
+  updatedAt: Date;
+}) => ({
+  id: target.id,
+  goalText: target.goalText,
+  structured: target.structured,
+  createdAt: target.createdAt.toISOString(),
+  updatedAt: target.updatedAt.toISOString(),
+});
+
 export const getRecommendationReadinessController = (service: RecommendationsService) =>
   catchAsync(async (req: Request, res: Response) => {
     const status = await service.getReadinessStatus(requireUserPrincipalId(req));
@@ -88,6 +107,45 @@ export const refreshRecommendationsController = (service: RecommendationsService
     return res
       .status(200)
       .json(successResponse('Recommendations refreshed', toRecommendationRunPageResponse(result)));
+  });
+
+export const listCareerTargetsController = (service: CareerTargetService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const { query } = listCareerTargetsSchema.parse({ query: req.query });
+    const page = await service.list(requireUserPrincipalId(req), query);
+    return res.status(200).json(
+      successResponse('Career targets retrieved', {
+        items: page.items.map(toCareerTargetResponse),
+        page: page.page,
+        limit: page.limit,
+        total: page.total,
+      }),
+    );
+  });
+
+export const createCareerTargetController = (service: CareerTargetService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const input = createCareerTargetSchema.shape.body.parse(req.body);
+    const target = await service.create(requireUserPrincipalId(req), input);
+    return res
+      .status(201)
+      .json(successResponse('Career target created', toCareerTargetResponse(target)));
+  });
+
+export const getCareerTargetController = (service: CareerTargetService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const { params } = careerTargetDetailsSchema.parse({ params: req.params });
+    const target = await service.get(requireUserPrincipalId(req), params.careerTargetId);
+    return res
+      .status(200)
+      .json(successResponse('Career target retrieved', toCareerTargetResponse(target)));
+  });
+
+export const archiveCareerTargetController = (service: CareerTargetService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const { params } = archiveCareerTargetSchema.parse({ params: req.params });
+    await service.archive(requireUserPrincipalId(req), params.careerTargetId);
+    return res.status(200).json(successResponse('Career target archived'));
   });
 
 export const listSavedSearchesController = (service: SavedSearchService) =>
