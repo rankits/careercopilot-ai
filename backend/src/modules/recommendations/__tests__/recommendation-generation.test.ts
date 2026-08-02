@@ -319,6 +319,8 @@ describe('RecommendationsService generation', () => {
         backend: 'PGVECTOR',
         limit: 20,
         context: expect.objectContaining({
+          targetTitles: ['Backend Engineer'],
+          requiredSkills: ['TypeScript', 'PostgreSQL'],
           remotePreference: 'REMOTE',
           salaryExpectation: expect.objectContaining({ minimum: 100000 }),
         }),

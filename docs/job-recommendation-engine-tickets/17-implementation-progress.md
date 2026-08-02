@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 29 |
+| Implemented | 30 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,33 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-CONTEXT-002 - Implement TARGET_TEXT structured extraction into context
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/providers/heuristic-target-text-extraction.provider.ts`
+  - `backend/src/modules/recommendations/strategies/recommendation-source.strategy.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-strategies.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `docs/job-recommendation-engine-tickets/TARGET_TEXT_EXTRACTION_CONTRACT.md`
+- API changes: none; `from-text` response shape preserved while structured context is used internally
+- Database changes: none
+- Tests added:
+  - Target text extraction for remote Node.js backend intent
+  - Provider failure falls back to deterministic heuristic extraction
+  - From-text generation passes extracted titles and skills into retrieval
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-strategies.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused strategy/generation tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: LLM extraction provider and prompt-injection hardening remain later tickets
+- Next ticket: `JRE-FE-004`
 
 ### 2026-08-02 - JRE-FE-002 - Wire Resume recommendation mode UI
 
