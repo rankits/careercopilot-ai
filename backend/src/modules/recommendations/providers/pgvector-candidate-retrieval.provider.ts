@@ -16,6 +16,7 @@ import { passesCandidateJobFilters } from '@/modules/recommendations/utils/candi
 import { resolveQueryEmbedding } from '@/modules/recommendations/cache/recommendation-query-embedding.cache.js';
 import { buildRecommendationQueryText } from '@/modules/recommendations/utils/recommendation-query-text.js';
 import type { RetrievalBackend } from '@/modules/recommendations/types/recommendations.types.js';
+import type { CandidateEmbeddingService } from '@/modules/recommendations/services/candidate-embedding.service.js';
 
 export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalProvider {
   readonly supportedBackends: readonly RetrievalBackend[] = ['PGVECTOR'];
@@ -24,6 +25,7 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
     private readonly embeddings: JobEmbeddingRepository,
     private readonly jobs: IJobSearchRepository,
     private readonly createProvider: () => EmbeddingProvider = createEmbeddingProvider,
+    private readonly candidateEmbeddings?: CandidateEmbeddingService,
   ) {}
 
   async retrieve(request: CandidateRetrievalRequest): Promise<CandidateRetrievalResult> {
@@ -55,13 +57,24 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
     let queryEmbedding: number[];
     let embeddingCacheHit = false;
     try {
-      const resolved = await resolveQueryEmbedding({
-        userId: request.context.userId,
-        provider: provider.provider,
-        model: provider.model,
-        queryText,
-        generate: () => provider.generateEmbedding(queryText, 'QUERY'),
-      });
+      const resolved = this.candidateEmbeddings
+        ? await this.candidateEmbeddings.resolve({
+            userId: request.context.userId,
+            sourceType: request.context.sourceType,
+            sourceId: request.context.sourceId,
+            provider: provider.provider,
+            model: provider.model,
+            dimensions: provider.dimensions,
+            content: queryText,
+            generate: () => provider.generateEmbedding(queryText, 'QUERY'),
+          })
+        : await resolveQueryEmbedding({
+            userId: request.context.userId,
+            provider: provider.provider,
+            model: provider.model,
+            queryText,
+            generate: () => provider.generateEmbedding(queryText, 'QUERY'),
+          });
       queryEmbedding = resolved.embedding;
       embeddingCacheHit = resolved.cacheHit;
     } catch {
@@ -106,7 +119,10 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
       backend: 'PGVECTOR',
       totalCandidates: nearest.length,
       retrievalScores,
-      metadata: { embeddingCacheHit },
+      metadata: {
+        embeddingCacheHit,
+        candidateEmbeddingCacheHit: this.candidateEmbeddings ? embeddingCacheHit : undefined,
+      },
     };
   }
 }

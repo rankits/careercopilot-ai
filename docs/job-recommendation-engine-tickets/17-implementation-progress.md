@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 19 |
+| Implemented | 20 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,44 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-EMB-002 - Persist CandidateEmbedding table with lifecycle upsert
+
+- Status: Implemented
+- Implemented files:
+  - `backend/prisma/candidate-embeddings.prisma`
+  - `backend/prisma/migrations/20260802154000_add_candidate_embeddings/migration.sql`
+  - `backend/src/modules/recommendations/types/candidate-embedding.types.ts`
+  - `backend/src/modules/recommendations/contracts/candidate-embedding.repository.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-candidate-embedding.repository.ts`
+  - `backend/src/modules/recommendations/services/candidate-embedding.service.ts`
+  - `backend/src/modules/recommendations/providers/pgvector-candidate-retrieval.provider.ts`
+  - `backend/src/modules/recommendations/contracts/recommendation-provider.contracts.ts`
+  - `backend/src/modules/recommendations/services/recommendation-lifecycle.service.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/__tests__/candidate-embedding.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/prisma-candidate-embedding.repository.test.ts`
+  - `backend/src/modules/recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `docs/job-recommendation-engine-tickets/CANDIDATE_EMBEDDING_CONTRACT.md`
+- API changes: none; raw vectors are not exposed
+- Database changes: added `candidate_embeddings` table with user/source/provider/model natural key and vector(768)
+- Tests added:
+  - Candidate embedding service reuses unchanged profile content without provider calls
+  - Content hash changes miss and upsert a new vector
+  - Repository upsert/find/delete validate dimensions and use bound SQL parameters
+  - Pgvector retrieval reuses durable candidate embeddings on second identical retrieve
+- Commands executed:
+  - `npm --prefix backend run prisma:generate`
+  - `npm --prefix backend run test -- recommendations/__tests__/candidate-embedding.service.test.ts recommendations/__tests__/prisma-candidate-embedding.repository.test.ts recommendations/__tests__/pgvector-candidate-retrieval.test.ts recommendations/cache/__tests__/recommendation-query-embedding.cache.test.ts`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `npm --prefix backend run typecheck`
+- Results:
+  - Prisma client generation passed
+  - Focused candidate embedding/retrieval/cache tests passed
+  - Touched-file lint passed
+  - Backend typecheck passed
+- Known limitations: async embedding, stale failure UX, and cross-source reuse remain follow-up tickets
+- Next ticket: `JRE-EMB-003`
 
 ### 2026-08-02 - JRE-SKILL-005 - Align skill arrays with match semantics
 
