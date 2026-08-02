@@ -1,5 +1,8 @@
 import type { Logger } from 'pino';
-import type { RecommendationFilterMode } from '@/modules/recommendations/types/recommendations.types.js';
+import type {
+  RecommendationCategory,
+  RecommendationFilterMode,
+} from '@/modules/recommendations/types/recommendations.types.js';
 
 export interface RecommendationGenerateMetricEvent {
   userId: string;
@@ -32,6 +35,12 @@ let rerankFallbackCount = 0;
 let rerankTotalLatencyMs = 0;
 let careerGoalApiTotal = 0;
 let savedSearchApiTotal = 0;
+let careerCategoryDistribution: Record<RecommendationCategory, number> = {
+  BEST_MATCH: 0,
+  GOOD_MATCH: 0,
+  STRETCH_OPPORTUNITY: 0,
+  RELATED_CAREER_PATH: 0,
+};
 
 export const recommendationMetricsSnapshot = () => ({
   generateCount,
@@ -48,6 +57,7 @@ export const recommendationMetricsSnapshot = () => ({
       : 0,
   careerGoalApiTotal,
   savedSearchApiTotal,
+  careerCategoryDistribution: { ...careerCategoryDistribution },
 });
 
 export const recordCertificationFilterExclusion = (): void => {
@@ -60,6 +70,10 @@ export const recordCareerGoalApiRequest = (): void => {
 
 export const recordSavedSearchApiRequest = (): void => {
   savedSearchApiTotal += 1;
+};
+
+export const recordCareerCategory = (category: RecommendationCategory): void => {
+  careerCategoryDistribution[category] += 1;
 };
 
 export const recordRecommendationGenerate = (
@@ -122,4 +136,10 @@ export const resetRecommendationMetricsForTests = (): void => {
   rerankTotalLatencyMs = 0;
   careerGoalApiTotal = 0;
   savedSearchApiTotal = 0;
+  careerCategoryDistribution = {
+    BEST_MATCH: 0,
+    GOOD_MATCH: 0,
+    STRETCH_OPPORTUNITY: 0,
+    RELATED_CAREER_PATH: 0,
+  };
 };

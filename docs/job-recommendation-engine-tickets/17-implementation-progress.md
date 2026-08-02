@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 45 |
+| Implemented | 46 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,38 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-BE-002 - Classify career-path recommendation categories for goals
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/utils/career-goal-category.ts`
+  - `backend/src/modules/recommendations/services/recommendation-scoring.service.ts`
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/__tests__/career-goal-category.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-scoring.service.test.ts`
+  - `docs/job-recommendation-engine-tickets/CAREER_GOAL_CATEGORY_CONTRACT.md`
+- API changes: none; existing category enum is reused with career-goal-specific semantics
+- Database changes: none
+- Tests added:
+  - Target-role matches classify as `BEST_MATCH`
+  - Transitional bridge roles classify as `GOOD_MATCH`
+  - Target roles with severe skill gaps classify as `STRETCH_OPPORTUNITY`
+  - Current-role matches classify as `RELATED_CAREER_PATH`
+  - Scoring service appends career-goal classification reasons and records category distribution
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/career-goal-category.test.ts recommendations/__tests__/recommendation-scoring.service.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `git diff --check`
+- Results:
+  - Focused career-goal classifier, scoring, core, and generation tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+  - Whitespace check passed
+- Known limitations: no new category enum was added; frontend grouping can use existing category values.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-API-005 - Expose SavedSearch CRUD and generate API
 
