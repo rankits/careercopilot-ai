@@ -567,6 +567,56 @@ describe('RecommendationsService generation', () => {
     expect(allHistoryPage.total).toBe(2);
   });
 
+  it('assigns persisted ranks by score, match quality, then job id', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const run = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+    );
+    const recommendation = (
+      jobId: string,
+      overallScore: number,
+      matchType: 'EXACT' | 'RELATED' | 'MISSING',
+    ) => ({
+      job: jobList(jobId, { title: 'Backend Engineer' }),
+      category: 'GOOD_MATCH' as const,
+      matchType,
+      scoreResult: {
+        overallScore,
+        components: {
+          requiredSkills: overallScore,
+          title: overallScore,
+          experience: overallScore,
+          responsibilities: overallScore,
+          preferredSkills: overallScore,
+          location: overallScore,
+          industry: overallScore,
+          salary: overallScore,
+          qualifications: overallScore,
+        },
+        matchedSkills: [],
+        relatedSkills: [],
+        missingSkills: [],
+        reasons: [],
+      },
+    });
+
+    const records = await unitOfWork.execute(({ recommendations }) =>
+      recommendations.createMany('user-1', run.id, [
+        recommendation('job-c', 0.8, 'RELATED'),
+        recommendation('job-b', 0.8, 'EXACT'),
+        recommendation('job-a', 0.9, 'MISSING'),
+        recommendation('job-d', 0.8, 'EXACT'),
+      ]),
+    );
+
+    expect(records.map((item) => [item.rank, item.job.id])).toEqual([
+      [1, 'job-a'],
+      [2, 'job-b'],
+      [3, 'job-d'],
+      [4, 'job-c'],
+    ]);
+  });
+
   it('lists, loads, and stores feedback for persisted recommendations', async () => {
     const unitOfWork = new InMemoryRecommendationUnitOfWork();
     const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {

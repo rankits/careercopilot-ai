@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 10 |
+| Implemented | 11 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,37 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-RANK-001 - Implement stable ranking and deterministic tie-breaking
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/utils/recommendation-ranking.ts`
+  - `backend/src/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/services/similar-jobs.service.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-core.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-scoring.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `backend/src/modules/recommendations/__tests__/similar-jobs.service.test.ts`
+  - `docs/job-recommendation-engine-tickets/RANKING_STABILITY_CONTRACT.md`
+- API changes: none; existing list `latestOnly`/`runId` semantics preserved
+- Database changes: none
+- Tests added:
+  - Comparator unit test for score, match quality, and job id tie-breaks
+  - Persistence rank assignment regression using the shared comparator
+  - Similar jobs equal-score regression using the shared comparator
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-scoring.service.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/similar-jobs.service.test.ts recommendations/__tests__/recommendations.api.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused ranking/scoring/generation/API tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: no LLM rerank; duplicate canonical job merging remains `JRE-VEC-002`
+- Next ticket: `JRE-SCORE-002`
 
 ### 2026-08-02 - JRE-API-003 - Scope recommendation list to latest run by default for For You
 

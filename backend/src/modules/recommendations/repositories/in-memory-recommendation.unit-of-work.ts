@@ -9,6 +9,7 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
 import type {
   JobRecommendationRecord,
   RecommendationFeedbackRecord,
@@ -115,11 +116,7 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       recommendations: readonly ScoredJobRecommendation[],
     ): Promise<JobRecommendationRecord[]> => {
       this.requireRun(userId, runId);
-      const ranked = [...recommendations].sort(
-        (left, right) =>
-          right.scoreResult.overallScore - left.scoreResult.overallScore ||
-          left.job.id.localeCompare(right.job.id),
-      );
+      const ranked = sortRecommendationsForRanking(recommendations);
       const created = ranked.map((item, index): JobRecommendationRecord => {
         const record: JobRecommendationRecord = {
           id: randomUUID(),

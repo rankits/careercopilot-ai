@@ -92,4 +92,57 @@ describe('SimilarJobsService', () => {
       result[1]?.scoreResult.overallScore ?? 0,
     );
   });
+
+  it('uses deterministic tie-breaking for equal-score similar jobs', async () => {
+    const service = new SimilarJobsService(
+      {
+        authorizeForSource: vi.fn().mockResolvedValue({
+          userId: 'user-1',
+          sourceType: 'JOB',
+          sourceId: sourceJobId,
+          authorizedSourcePayload: sourceJob,
+        }),
+      } as unknown as RecommendationSourceAuthorizationService,
+      {
+        build: vi.fn().mockResolvedValue({ userId: 'user-1', sourceType: 'JOB' }),
+      } as unknown as RecommendationContextService,
+      {
+        retrieve: vi.fn().mockResolvedValue([]),
+      } as unknown as RecommendationRetrievalService,
+      {
+        score: vi.fn().mockResolvedValue([
+          {
+            job: candidate('job-b', 'Backend Engineer'),
+            scoreResult: {
+              overallScore: 0.8,
+              components: {},
+              matchedSkills: [],
+              relatedSkills: [],
+              missingSkills: [],
+              reasons: [],
+            },
+            category: 'GOOD_MATCH',
+            matchType: 'MISSING',
+          },
+          {
+            job: candidate('job-a', 'Backend Engineer'),
+            scoreResult: {
+              overallScore: 0.8,
+              components: {},
+              matchedSkills: [],
+              relatedSkills: [],
+              missingSkills: [],
+              reasons: [],
+            },
+            category: 'GOOD_MATCH',
+            matchType: 'EXACT',
+          },
+        ]),
+      } as unknown as RecommendationScoringService,
+    );
+
+    const result = await service.findSimilar('user-1', sourceJobId, 5);
+
+    expect(result.map((item) => item.job.id)).toEqual(['job-a', 'job-b']);
+  });
 });

@@ -7,6 +7,7 @@ import type { RecommendationRetrievalService } from '@/modules/recommendations/s
 import type { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
 import type { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
 import type { ScoredJobRecommendation } from '@/modules/recommendations/types/recommendations.types.js';
+import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
 
 export class SimilarJobsService {
   constructor(
@@ -33,8 +34,6 @@ export class SimilarJobsService {
       excludeJobIds: [jobId],
     });
     const scored = await this.scoringService.score(context, candidates);
-    return [...scored].sort(
-      (left, right) => right.scoreResult.overallScore - left.scoreResult.overallScore,
-    );
+    return sortRecommendationsForRanking(scored);
   }
 }
