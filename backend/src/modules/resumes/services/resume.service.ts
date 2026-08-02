@@ -18,6 +18,7 @@ import {
 import { resumeProcessingService } from '@/modules/resumes/services/resume-processing.service.js';
 import { resumeParsingOrchestrator } from '@/modules/resumes/services/resume-parsing.orchestrator.js';
 import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
+import { invalidateUserRecommendationState } from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -210,6 +211,12 @@ export const resumeService = {
       throw new AppError('Resume parsed data is not available yet', 404);
     }
 
+    await invalidateUserRecommendationState({
+      userId: principalId,
+      sourceType: 'RESUME',
+      sourceId: resumeId,
+    });
+
     const fileName = resume.fileName;
     const mimeType = resume.mimeType;
 
@@ -236,6 +243,12 @@ export const resumeService = {
     if (!extraction?.extractedText) {
       throw new AppError('Resume parsed data is not available yet', 404);
     }
+
+    await invalidateUserRecommendationState({
+      userId: principalId,
+      sourceType: 'RESUME',
+      sourceId: resumeId,
+    });
 
     setImmediate(() => {
       void resumeParsingOrchestrator.parseExistingResume({
@@ -280,6 +293,7 @@ export const resumeService = {
     }
 
     const updated = await resumeRepository.updateCandidateProfile(userId, input);
+    await invalidateUserRecommendationState(userId);
     return toCandidateProfileResponse(updated);
   },
 
@@ -301,6 +315,7 @@ export const resumeService = {
     });
 
     await authRepository.markProfileCreated(Number(input.userId));
+    await invalidateUserRecommendationState(input.userId);
 
     return profile;
   },

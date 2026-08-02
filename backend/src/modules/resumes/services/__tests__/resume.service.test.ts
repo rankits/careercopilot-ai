@@ -1,10 +1,18 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
-const { findResumeByIdMock, findLatestExtractionMock, upsertCandidateProfileMock } = vi.hoisted(
+const {
+  findResumeByIdMock,
+  findLatestExtractionMock,
+  findCandidateProfileByUserIdMock,
+  updateCandidateProfileMock,
+  upsertCandidateProfileMock,
+} = vi.hoisted(
   () => ({
     findResumeByIdMock: vi.fn(),
     findLatestExtractionMock: vi.fn(),
+    findCandidateProfileByUserIdMock: vi.fn(),
+    updateCandidateProfileMock: vi.fn(),
     upsertCandidateProfileMock: vi.fn(),
   }),
 );
@@ -15,8 +23,8 @@ vi.mock('@/modules/resumes/repositories/resume.repository.js', () => ({
     findResumeById: findResumeByIdMock,
     findLatestExtraction: findLatestExtractionMock,
     findLatestParseRun: vi.fn(),
-    findCandidateProfileByUserId: vi.fn(),
-    updateCandidateProfile: vi.fn(),
+    findCandidateProfileByUserId: findCandidateProfileByUserIdMock,
+    updateCandidateProfile: updateCandidateProfileMock,
     upsertCandidateProfile: upsertCandidateProfileMock,
   },
 }));
@@ -35,6 +43,14 @@ const { parseExistingResumeMock } = vi.hoisted(() => ({
 
 vi.mock('@/modules/resumes/services/resume-parsing.orchestrator.js', () => ({
   resumeParsingOrchestrator: { parseExistingResume: parseExistingResumeMock },
+}));
+
+const { invalidateUserRecommendationStateMock } = vi.hoisted(() => ({
+  invalidateUserRecommendationStateMock: vi.fn(),
+}));
+
+vi.mock('@/modules/recommendations/services/recommendation-lifecycle.service.js', () => ({
+  invalidateUserRecommendationState: invalidateUserRecommendationStateMock,
 }));
 
 vi.mock('@/modules/resumes/services/resume-processing.service.js', () => ({
@@ -123,6 +139,11 @@ describe('resumeService ownership guards (AUTH-BE-003)', () => {
         expect(parseExistingResumeMock).toHaveBeenCalledWith(
           expect.objectContaining({ resumeId: 'resume-1', userId: ownerId, reason: 'bad parse' }),
         );
+        expect(invalidateUserRecommendationStateMock).toHaveBeenCalledWith({
+          userId: ownerId,
+          sourceType: 'RESUME',
+          sourceId: 'resume-1',
+        });
       });
     });
   });
@@ -182,7 +203,34 @@ describe('resumeService.confirmProfile ownership (AUTH-BE-002 / AUTH-BE-003)', (
           expect.objectContaining({ userId: '42', sourceResumeId: 'resume-1' }),
         );
         expect(markProfileCreatedMock).toHaveBeenCalledWith(42);
+        expect(invalidateUserRecommendationStateMock).toHaveBeenCalledWith('42');
       });
     });
+  });
+});
+
+describe('resumeService recommendation invalidation hooks (JRE-LIFE-001)', () => {
+  it('invalidates recommendation state after a material candidate profile update', async () => {
+    const existing = {
+      userId: ownerId,
+      personalDetails: {},
+      experience: [],
+      education: [],
+      skills: ['Node.js'],
+      certifications: [],
+      sourceResumeId: 'resume-1',
+      confirmedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    findCandidateProfileByUserIdMock.mockResolvedValue(existing);
+    updateCandidateProfileMock.mockResolvedValue({ ...existing, skills: ['Node.js', 'AWS'] });
+
+    await resumeService.updateCandidateProfile(ownerId, { skills: ['Node.js', 'AWS'] });
+
+    expect(updateCandidateProfileMock).toHaveBeenCalledWith(ownerId, {
+      skills: ['Node.js', 'AWS'],
+    });
+    expect(invalidateUserRecommendationStateMock).toHaveBeenCalledWith(ownerId);
   });
 });
