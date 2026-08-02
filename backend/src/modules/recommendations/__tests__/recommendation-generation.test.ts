@@ -442,6 +442,51 @@ describe('RecommendationsService generation', () => {
     });
   });
 
+  it('returns owned run details and rejects cross-user run access', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+          ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const [record] = await service.createFromText('owner', {
+      targetText: 'Backend engineer TypeScript',
+    });
+
+    const ownerDetails = await service.getRunDetailsForUser('owner', record!.runId, {
+      page: 1,
+      limit: 20,
+    });
+    await expect(
+      service.getRunDetailsForUser('intruder', record!.runId, { page: 1, limit: 20 }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: RECOMMENDATION_ERROR_CODES.RUN_NOT_FOUND,
+    });
+
+    expect(ownerDetails.run).toMatchObject({ id: record!.runId, userId: 'owner' });
+    expect(ownerDetails.items.map((item) => item.id)).toEqual([record!.id]);
+  });
+
   it('lists, loads, and stores feedback for persisted recommendations', async () => {
     const unitOfWork = new InMemoryRecommendationUnitOfWork();
     const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
@@ -622,6 +667,63 @@ describe('RecommendationsService readiness', () => {
       stale: true,
       blockers: ['RECOMMENDATIONS_STALE'],
       lastGeneratedAt: expect.any(String),
+    });
+  });
+
+  it('refreshes stale recommendations into a completed latest READY run', async () => {
+    let profileUpdatedAfterRun = true;
+    const findCandidateProfileByUserId = vi.fn().mockResolvedValue({
+      personalDetails: { currentTitle: 'Backend Engineer', summary: 'APIs' },
+      skills: ['TypeScript'],
+      experience: [],
+      education: [],
+      certifications: [],
+    });
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const previousRun = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+    );
+    await unitOfWork.execute(({ runs }) => runs.markCompleted('user-1', previousRun.id));
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+          ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId,
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+      profileUpdatedAfter: vi.fn().mockImplementation(() => Promise.resolve(profileUpdatedAfterRun)),
+    });
+
+    await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({
+      lifecycleState: 'STALE',
+      stale: true,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    profileUpdatedAfterRun = false;
+    const refresh = await service.refreshForSource('user-1');
+
+    expect(refresh.run).toMatchObject({ status: 'COMPLETED', userId: 'user-1' });
+    expect(refresh.items).toHaveLength(1);
+    await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({
+      lifecycleState: 'READY',
+      stale: false,
+      blockers: [],
     });
   });
 });

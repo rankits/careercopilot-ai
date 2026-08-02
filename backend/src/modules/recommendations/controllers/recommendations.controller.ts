@@ -1,7 +1,9 @@
 import type { Request, Response } from 'express';
 import {
+  toRecommendationPageResponse,
   toRecommendationFeedbackResponse,
   toRecommendationResponse,
+  toRecommendationRunPageResponse,
   toSimilarJobResponse,
 } from '@/modules/recommendations/mappers/recommendation.mapper.js';
 import type { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
@@ -13,6 +15,8 @@ import {
   listRecommendationsSchema,
   recommendationFeedbackSchema,
   recommendationIdParamsSchema,
+  recommendationRunDetailsSchema,
+  refreshRecommendationSchema,
   similarJobParamsSchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
@@ -52,6 +56,15 @@ export const createRecommendationsFromTextController = (service: Recommendations
       .json(successResponse('Recommendations generated', result.map(toRecommendationResponse)));
   });
 
+export const refreshRecommendationsController = (service: RecommendationsService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const input = refreshRecommendationSchema.shape.body.parse(req.body);
+    const result = await service.refreshForSource(requireUserPrincipalId(req), input);
+    return res
+      .status(200)
+      .json(successResponse('Recommendations refreshed', toRecommendationRunPageResponse(result)));
+  });
+
 export const createSimilarJobsController = (service: SimilarJobsService) =>
   catchAsync(async (req: Request, res: Response) => {
     const { params, query } = similarJobParamsSchema.parse({
@@ -74,13 +87,30 @@ export const createSimilarJobsController = (service: SimilarJobsService) =>
 export const listRecommendationsController = (service: RecommendationsService) =>
   catchAsync(async (req: Request, res: Response) => {
     const { query } = listRecommendationsSchema.parse({ query: req.query });
-    const page = await service.listForUser(requireUserPrincipalId(req), query);
-    return res.status(200).json(
-      successResponse('Recommendations retrieved', {
-        ...page,
-        items: page.items.map(toRecommendationResponse),
-      }),
+    const { runId, latestOnly, ...pagination } = query;
+    const page = await service.listForUser(requireUserPrincipalId(req), pagination, {
+      runId,
+      latestOnly,
+    });
+    return res
+      .status(200)
+      .json(successResponse('Recommendations retrieved', toRecommendationPageResponse(page)));
+  });
+
+export const getRecommendationRunController = (service: RecommendationsService) =>
+  catchAsync(async (req: Request, res: Response) => {
+    const { params, query } = recommendationRunDetailsSchema.parse({
+      params: req.params,
+      query: req.query,
+    });
+    const page = await service.getRunDetailsForUser(
+      requireUserPrincipalId(req),
+      params.runId,
+      query,
     );
+    return res
+      .status(200)
+      .json(successResponse('Recommendation run retrieved', toRecommendationRunPageResponse(page)));
   });
 
 export const getRecommendationController = (service: RecommendationsService) =>

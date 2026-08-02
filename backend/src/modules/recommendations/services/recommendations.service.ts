@@ -27,6 +27,7 @@ import type {
   JobRecommendationRecord,
   RecommendationPage,
   RecommendationReadinessStatus,
+  RecommendationRunPage,
   RetrievalBackend,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import type {
@@ -97,6 +98,38 @@ export class RecommendationsService {
       backend: DEFAULT_RETRIEVAL_BACKEND,
       limit: DEFAULT_RECOMMENDATION_LIMIT,
       filters: input.filters,
+    });
+  }
+
+  async refreshForSource(
+    userId: string,
+    input: CreateRecommendationInput = { sourceType: 'PROFILE' },
+  ): Promise<RecommendationRunPage> {
+    this.logger.info(
+      { userId, sourceType: input.sourceType, sourceId: input.sourceId },
+      'Recommendation refresh requested',
+    );
+    const dependencies = this.requireOrchestration();
+    const authorized = await dependencies.sourceAuthorization.authorizeForSource(userId, input);
+    const records = await this.generateAuthorized(authorized, {
+      expectedUserId: userId,
+      backend: DEFAULT_RETRIEVAL_BACKEND,
+      limit: DEFAULT_RECOMMENDATION_LIMIT,
+      filters: input.filters,
+      excludeJobIds:
+        authorized.sourceType === 'JOB' && authorized.sourceId ? [authorized.sourceId] : undefined,
+    });
+    const runId = records[0]?.runId;
+    if (!runId) {
+      throw new RecommendationError(
+        'Recommendation run was not found',
+        404,
+        RECOMMENDATION_ERROR_CODES.RUN_NOT_FOUND,
+      );
+    }
+    return this.getRunDetailsForUser(userId, runId, {
+      page: 1,
+      limit: Math.max(records.length, DEFAULT_RECOMMENDATION_LIMIT),
     });
   }
 
@@ -209,11 +242,46 @@ export class RecommendationsService {
   async listForUser(
     userId: string,
     pagination: { page: number; limit: number },
+    filters: { runId?: string; latestOnly?: boolean } = {},
   ): Promise<RecommendationPage> {
     const dependencies = this.requireOrchestration();
+    if (filters.runId) {
+      return this.getRunDetailsForUser(userId, filters.runId, pagination);
+    }
+    if (filters.latestOnly) {
+      const latestRun = await dependencies.unitOfWork.execute(({ runs }) =>
+        runs.findLatestByUser(userId),
+      );
+      if (!latestRun) {
+        return { items: [], page: pagination.page, limit: pagination.limit, total: 0 };
+      }
+      return dependencies.unitOfWork.execute(({ recommendations }) =>
+        recommendations.listByRun(userId, latestRun.id, pagination),
+      );
+    }
     return dependencies.unitOfWork.execute(({ recommendations }) =>
       recommendations.listByUser(userId, pagination),
     );
+  }
+
+  async getRunDetailsForUser(
+    userId: string,
+    runId: string,
+    pagination: { page: number; limit: number },
+  ): Promise<RecommendationRunPage> {
+    const dependencies = this.requireOrchestration();
+    return dependencies.unitOfWork.execute(async ({ runs, recommendations }) => {
+      const run = await runs.findById(userId, runId);
+      if (!run) {
+        throw new RecommendationError(
+          'Recommendation run was not found',
+          404,
+          RECOMMENDATION_ERROR_CODES.RUN_NOT_FOUND,
+        );
+      }
+      const page = await recommendations.listByRun(userId, run.id, pagination);
+      return { ...page, run };
+    });
   }
 
   async getForUser(userId: string, recommendationId: string): Promise<JobRecommendationRecord> {

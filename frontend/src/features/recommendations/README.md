@@ -5,6 +5,8 @@ The following backend recommendation APIs are **intentionally not wired in the f
 | API | Reason |
 |---|---|
 | `POST /job-recommendations/from-text` | PROFILE-primary product decision (JR-PROD-004) |
+| `POST /job-recommendations/refresh` | Service support exists; For You still uses the existing generate action until refresh UX is prioritized |
+| `GET /job-recommendations/runs/:runId` | Service support exists; no run-history/detail screen in the frontend MVP |
 | `GET /job-recommendations/similar/:jobId` | Deferred; job detail similar-jobs panel not in For You MVP |
 | `GET /job-recommendations/:recommendationId` | List endpoint supplies sufficient card data for For You |
 

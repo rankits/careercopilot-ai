@@ -14,9 +14,14 @@ import {
   ROLE_PERMISSION_MAP,
 } from '@/shared/rbac/permission.catalog.js';
 import { recommendationsService } from '@/modules/recommendations/index.js';
+import {
+  RECOMMENDATION_ERROR_CODES,
+  RecommendationError,
+} from '@/modules/recommendations/errors/recommendation.error.js';
 
 const API = '/api/v1/job-recommendations';
 const recommendationId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+const runId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const jobId = '11111111-1111-1111-1111-111111111111';
 
 beforeEach(async () => {
@@ -29,10 +34,13 @@ afterEach(() => {
 
 describe('job recommendation HTTP gates', () => {
   it('rejects anonymous requests on every personalized recommendation route', async () => {
-    const [create, fromText, list, detail, feedback, similar, status] = await Promise.all([
+    const [create, fromText, refresh, list, runDetail, detail, feedback, similar, status] =
+      await Promise.all([
       request(app).post(API).send({ sourceType: 'PROFILE' }),
       request(app).post(`${API}/from-text`).send({ targetText: 'Backend engineer' }),
+      request(app).post(`${API}/refresh`).send({}),
       request(app).get(API),
+      request(app).get(`${API}/runs/${runId}`),
       request(app).get(`${API}/${recommendationId}`),
       request(app).post(`${API}/${recommendationId}/feedback`).send({ action: 'SAVED' }),
       request(app).get(`${API}/similar/${jobId}`),
@@ -41,7 +49,9 @@ describe('job recommendation HTTP gates', () => {
 
     expect(create.status).toBe(401);
     expect(fromText.status).toBe(401);
+    expect(refresh.status).toBe(401);
     expect(list.status).toBe(401);
+    expect(runDetail.status).toBe(401);
     expect(detail.status).toBe(401);
     expect(feedback.status).toBe(401);
     expect(similar.status).toBe(401);
@@ -78,16 +88,18 @@ describe('job recommendation HTTP gates', () => {
       ROLE_PERMISSION_MAP.USER.filter((key) => key !== RECOMMENDATIONS_PERMISSIONS.CREATE_OWN),
     );
 
-    const [profileGenerate, textGenerate] = await Promise.all([
+    const [profileGenerate, textGenerate, refreshGenerate] = await Promise.all([
       request(app).post(API).set(authHeader(token)).send({ sourceType: 'PROFILE' }),
       request(app)
         .post(`${API}/from-text`)
         .set(authHeader(token))
         .send({ targetText: 'Backend engineer' }),
+      request(app).post(`${API}/refresh`).set(authHeader(token)).send({}),
     ]);
 
     expect(profileGenerate.status).toBe(403);
     expect(textGenerate.status).toBe(403);
+    expect(refreshGenerate.status).toBe(403);
   });
 
   it('rejects a USER missing recommendations.update.own on feedback routes', async () => {
@@ -138,8 +150,82 @@ describe('job recommendation HTTP gates', () => {
       .set('x-user-id', 'public-user-id');
 
     expect(response.status).toBe(200);
-    expect(listSpy).toHaveBeenCalledWith(String(user.id), { page: 1, limit: 20 });
+    expect(listSpy).toHaveBeenCalledWith(String(user.id), { page: 1, limit: 20 }, {
+      latestOnly: false,
+      runId: undefined,
+    });
     expect(listSpy).not.toHaveBeenCalledWith('public-user-id', expect.anything());
+  });
+
+  it('forwards latestOnly list semantics to the service', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-latest@example.com' });
+    const token = accessTokenForUser(user);
+    const listSpy = vi.spyOn(recommendationsService, 'listForUser').mockResolvedValue({
+      items: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+    });
+
+    const response = await request(app).get(`${API}?latestOnly=true`).set(authHeader(token));
+
+    expect(response.status).toBe(200);
+    expect(listSpy).toHaveBeenCalledWith(String(user.id), { page: 1, limit: 20 }, {
+      latestOnly: true,
+      runId: undefined,
+    });
+  });
+
+  it('refreshes recommendations from PROFILE by default and returns run details', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-refresh@example.com' });
+    const token = accessTokenForUser(user);
+    const refreshSpy = vi.spyOn(recommendationsService, 'refreshForSource').mockResolvedValue({
+      run: {
+        id: runId,
+        userId: String(user.id),
+        sourceType: 'PROFILE',
+        sourceId: null,
+        status: 'COMPLETED',
+        candidateCount: 1,
+        failureCode: null,
+        createdAt: new Date('2026-08-02T00:00:00.000Z'),
+        completedAt: new Date('2026-08-02T00:00:01.000Z'),
+      },
+      items: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+    });
+
+    const response = await request(app).post(`${API}/refresh`).set(authHeader(token)).send({});
+
+    expect(response.status).toBe(200);
+    expect(refreshSpy).toHaveBeenCalledWith(String(user.id), { sourceType: 'PROFILE' });
+    expect(response.body.data.run).toMatchObject({
+      id: runId,
+      sourceType: 'PROFILE',
+      status: 'COMPLETED',
+      lifecycleState: 'READY',
+    });
+    expect(response.body.data.items).toEqual([]);
+  });
+
+  it('returns 404 for non-owned recommendation run details', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-run-idor@example.com' });
+    const token = accessTokenForUser(user);
+    const getRunSpy = vi.spyOn(recommendationsService, 'getRunDetailsForUser').mockRejectedValue(
+      new RecommendationError(
+        'Recommendation run was not found',
+        404,
+        RECOMMENDATION_ERROR_CODES.RUN_NOT_FOUND,
+      ),
+    );
+
+    const response = await request(app).get(`${API}/runs/${runId}`).set(authHeader(token));
+
+    expect(response.status).toBe(404);
+    expect(response.body.code).toBe(RECOMMENDATION_ERROR_CODES.RUN_NOT_FOUND);
+    expect(getRunSpy).toHaveBeenCalledWith(String(user.id), runId, { page: 1, limit: 20 });
   });
 
   it('returns 404 for a missing recommendation detail', async () => {

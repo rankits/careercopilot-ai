@@ -4,6 +4,7 @@ import type {
   RecommendationFeedbackAction,
   RecommendationListResult,
   RecommendationReadinessStatus,
+  RecommendationRunDetailsResult,
 } from '@/features/recommendations/types/recommendation.types';
 import { httpClient } from '@/services/httpClient';
 
@@ -24,6 +25,21 @@ const unwrapList = (response: unknown): RecommendationListResult => {
   };
 };
 
+const unwrapRunDetails = (response: unknown): RecommendationRunDetailsResult => {
+  if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
+    throw new Error('Unexpected recommendation run response shape');
+  }
+  const payload = response.data.data;
+  if (!isRecord(payload.run)) {
+    throw new Error('Unexpected recommendation run response shape');
+  }
+  const list = unwrapList(response);
+  return {
+    ...list,
+    run: payload.run as RecommendationRunDetailsResult['run'],
+  };
+};
+
 const unwrapReadiness = (response: unknown): RecommendationReadinessStatus => {
   if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
     throw new Error('Unexpected recommendation readiness response shape');
@@ -40,6 +56,8 @@ export const recommendationsService = {
       params: {
         page: params.page ?? 1,
         limit: params.limit ?? 20,
+        ...(params.runId ? { runId: params.runId } : {}),
+        ...(params.latestOnly !== undefined ? { latestOnly: params.latestOnly } : {}),
       },
       signal: options.signal,
     });
@@ -63,6 +81,32 @@ export const recommendationsService = {
       throw new Error('Unexpected generate-recommendations response shape');
     }
     return response.data.data as RecommendationDto[];
+  },
+
+  async refreshFromProfile(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<RecommendationRunDetailsResult> {
+    const response = await httpClient.post(
+      '/job-recommendations/refresh',
+      { sourceType: 'PROFILE' },
+      { signal: options.signal, timeout: 60_000 },
+    );
+    return unwrapRunDetails(response);
+  },
+
+  async getRunDetails(
+    runId: string,
+    params: Pick<ListRecommendationsParams, 'page' | 'limit'> = {},
+    options: { signal?: AbortSignal } = {},
+  ): Promise<RecommendationRunDetailsResult> {
+    const response = await httpClient.get(`/job-recommendations/runs/${runId}`, {
+      params: {
+        page: params.page ?? 1,
+        limit: params.limit ?? 20,
+      },
+      signal: options.signal,
+    });
+    return unwrapRunDetails(response);
   },
 
   async submitFeedback(

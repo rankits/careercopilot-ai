@@ -3,10 +3,15 @@ import type {
   JobRecommendationRecord,
   RecommendationContext,
   RecommendationFeedbackRecord,
+  RecommendationLifecycleState,
+  RecommendationPage,
+  RecommendationRunPage,
+  RecommendationRunRecord,
   RecommendationSourceType,
   ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import { normalizeExtractedRecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
+import { mapRecommendationLifecycleState } from '@/modules/recommendations/services/recommendation-readiness.helpers.js';
 
 export interface RecommendationContextMapper {
   toContext(input: {
@@ -37,6 +42,26 @@ export interface RecommendationResponse {
   category: JobRecommendationRecord['category'];
   matchType: JobRecommendationRecord['matchType'];
   createdAt: string;
+}
+
+export interface RecommendationRunResponse {
+  id: string;
+  sourceType: RecommendationRunRecord['sourceType'];
+  sourceId: string | null;
+  status: RecommendationRunRecord['status'];
+  lifecycleState: RecommendationLifecycleState;
+  candidateCount: number;
+  failureCode: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface RecommendationRunPageResponse {
+  run: RecommendationRunResponse;
+  items: RecommendationResponse[];
+  page: number;
+  limit: number;
+  total: number;
 }
 
 export interface RecommendationMapper {
@@ -86,6 +111,43 @@ export const toRecommendationFeedbackResponse = (record: RecommendationFeedbackR
   action: record.action,
   note: record.note,
   createdAt: record.createdAt.toISOString(),
+});
+
+export const toRecommendationRunResponse = (
+  record: RecommendationRunRecord,
+  options: { stale?: boolean } = {},
+): RecommendationRunResponse => ({
+  id: record.id,
+  sourceType: record.sourceType,
+  sourceId: record.sourceId,
+  status: record.status,
+  lifecycleState: mapRecommendationLifecycleState({
+    latestRun: record,
+    stale: options.stale ?? false,
+  }),
+  candidateCount: record.candidateCount,
+  failureCode: record.failureCode,
+  createdAt: record.createdAt.toISOString(),
+  completedAt: record.completedAt?.toISOString() ?? null,
+});
+
+export const toRecommendationRunPageResponse = (
+  page: RecommendationRunPage,
+): RecommendationRunPageResponse => ({
+  run: toRecommendationRunResponse(page.run),
+  items: page.items.map(toRecommendationResponse),
+  page: page.page,
+  limit: page.limit,
+  total: page.total,
+});
+
+export const toRecommendationPageResponse = (
+  page: RecommendationPage,
+): Omit<RecommendationRunPageResponse, 'run'> => ({
+  items: page.items.map(toRecommendationResponse),
+  page: page.page,
+  limit: page.limit,
+  total: page.total,
 });
 
 export const toSimilarJobResponse = (item: ScoredJobRecommendation, rank: number) => ({

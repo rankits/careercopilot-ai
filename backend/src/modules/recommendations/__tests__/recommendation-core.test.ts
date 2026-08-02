@@ -7,7 +7,10 @@ import {
 import { assertRecommendationOwnership } from '@/modules/recommendations/matching/recommendation-access.js';
 import {
   createRecommendationSchema,
+  listRecommendationsSchema,
   recommendationFeedbackSchema,
+  recommendationRunDetailsSchema,
+  refreshRecommendationSchema,
   similarJobParamsSchema,
   targetTextBodySchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
@@ -101,6 +104,26 @@ describe('recommendation module invariants', () => {
         body: { sourceType: 'SAVED_SEARCH', sourceId: uuid },
       }).success,
     ).toBe(false);
+  });
+
+  it('defaults refresh to PROFILE and enforces run list query semantics', () => {
+    expect(refreshRecommendationSchema.parse({ body: {} }).body).toEqual({
+      sourceType: 'PROFILE',
+    });
+    expect(
+      listRecommendationsSchema.parse({ query: { latestOnly: 'true', page: '2' } }).query,
+    ).toMatchObject({ latestOnly: true, page: 2, limit: 20 });
+    expect(
+      listRecommendationsSchema.safeParse({
+        query: { runId: uuid, latestOnly: 'true' },
+      }).success,
+    ).toBe(false);
+    expect(
+      recommendationRunDetailsSchema.safeParse({
+        params: { runId: uuid },
+        query: { page: '1', limit: '20' },
+      }).success,
+    ).toBe(true);
   });
 
   it('accepts every feedback action and rejects values outside the enum', () => {

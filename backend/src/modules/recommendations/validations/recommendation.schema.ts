@@ -4,6 +4,17 @@ import { RECOMMENDATION_FEEDBACK_ACTION_VALUES } from '@/modules/recommendations
 const emptyParams = z.object({}).optional();
 const emptyQuery = z.object({}).optional();
 const uuid = z.string().uuid();
+const optionalBooleanQuery = z
+  .union([z.boolean(), z.enum(['true', 'false']).transform((value) => value === 'true')])
+  .optional();
+
+const defaultProfileRefreshBody = (value: unknown): unknown => {
+  if (value === undefined || value === null) return { sourceType: 'PROFILE' };
+  if (typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length === 0) {
+    return { sourceType: 'PROFILE' };
+  }
+  return value;
+};
 
 const stringList = z.array(z.string().trim().min(1)).max(100);
 
@@ -74,15 +85,34 @@ export const createRecommendationFromTextSchema = z.object({
   params: emptyParams,
 });
 
-const paginationQuerySchema = z.object({
+export const refreshRecommendationSchema = z.object({
+  body: z.preprocess(defaultProfileRefreshBody, sourceRequestBodySchema),
+  query: emptyQuery,
+  params: emptyParams,
+});
+
+const paginationBaseQuerySchema = z.object({
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+});
+
+const paginationQuerySchema = paginationBaseQuerySchema.extend({
+  runId: uuid.optional(),
+  latestOnly: optionalBooleanQuery.default(false),
+}).refine((query) => !(query.runId && query.latestOnly), {
+  message: 'runId and latestOnly cannot be combined',
 });
 
 export const listRecommendationsSchema = z.object({
   body: z.object({}).optional(),
   query: paginationQuerySchema,
   params: emptyParams,
+});
+
+export const recommendationRunDetailsSchema = z.object({
+  body: z.object({}).optional(),
+  query: paginationBaseQuerySchema,
+  params: z.object({ runId: uuid }),
 });
 
 export const recommendationReadinessSchema = z.object({
