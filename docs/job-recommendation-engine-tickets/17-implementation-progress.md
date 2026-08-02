@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 22 |
+| Implemented | 23 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,34 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-VEC-002 - Deduplicate canonical jobs in retrieval results
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/utils/deduplicate-retrieved-jobs.ts`
+  - `backend/src/modules/recommendations/providers/pgvector-candidate-retrieval.provider.ts`
+  - `backend/src/modules/recommendations/contracts/recommendation-provider.contracts.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/__tests__/deduplicate-retrieved-jobs.test.ts`
+  - `backend/src/modules/recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `docs/job-recommendation-engine-tickets/RETRIEVAL_DEDUP_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Public job fingerprint treats equivalent listings as duplicates
+  - Collapse keeps highest vector-scored duplicate and stable job ID tie-break
+  - Pgvector retrieval returns only one duplicate and reports `retrievalDedupRemoved`
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/deduplicate-retrieved-jobs.test.ts recommendations/__tests__/pgvector-candidate-retrieval.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused dedup/retrieval/generation tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: uses public listing fingerprint until internal canonical hash is available in retrieval DTOs
+- Next ticket: `JRE-VEC-003`
 
 ### 2026-08-02 - JRE-VEC-001 - Harden vector index metadata and retrieval filters contract
 

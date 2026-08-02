@@ -141,6 +141,7 @@ export * from '@/modules/recommendations/skills/skill-relationship.service.js';
 export * from '@/modules/recommendations/swagger/index.js';
 export * from '@/modules/recommendations/utils/apply-recommendation-filters.js';
 export * from '@/modules/recommendations/utils/candidate-job-filters.js';
+export * from '@/modules/recommendations/utils/deduplicate-retrieved-jobs.js';
 export * from '@/modules/recommendations/utils/recommendation-query-text.js';
 export * from '@/modules/recommendations/utils/recommendation-ranking.js';
 export * from '@/modules/recommendations/validations/recommendation.schema.js';

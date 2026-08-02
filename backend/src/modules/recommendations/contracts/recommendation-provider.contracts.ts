@@ -25,6 +25,7 @@ export interface CandidateRetrievalResult {
     embeddingCacheHit?: boolean;
     candidateEmbeddingCacheHit?: boolean;
     retrievalCandidateCount?: number;
+    retrievalDedupRemoved?: number;
     retrievalLatencyMs?: number;
   };
 }
