@@ -71,4 +71,17 @@ export class MemoryCacheDriver implements ICacheDriver {
   async disconnect(): Promise<void> {
     this.store.clear();
   }
+
+  async tryAcquireLock(key: string, ttlSeconds: number): Promise<boolean> {
+    const existing = await this.get(key);
+    if (existing !== null) {
+      return false;
+    }
+    await this.set(key, 1, ttlSeconds);
+    return true;
+  }
+
+  async releaseLock(key: string): Promise<void> {
+    await this.delete(key);
+  }
 }
