@@ -487,6 +487,86 @@ describe('RecommendationsService generation', () => {
     expect(ownerDetails.items.map((item) => item.id)).toEqual([record!.id]);
   });
 
+  it('lists only the latest run when latestOnly is requested', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+    const createRunRecommendation = async () => {
+      const run = await unitOfWork.execute(({ runs }) =>
+        runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+      );
+      await unitOfWork.execute(({ recommendations, runs }) =>
+        recommendations
+          .createMany('user-1', run.id, [
+            {
+              job: jobList('duplicate-job', { title: 'Backend Engineer' }),
+              category: 'GOOD_MATCH',
+              matchType: 'RELATED',
+              scoreResult: {
+                overallScore: 0.7,
+                components: {
+                  requiredSkills: 0.7,
+                  title: 0.7,
+                  experience: 0.7,
+                  responsibilities: 0.7,
+                  preferredSkills: 0.7,
+                  location: 0.7,
+                  industry: 0.7,
+                  salary: 0.7,
+                  qualifications: 0.7,
+                },
+                matchedSkills: [],
+                relatedSkills: [],
+                missingSkills: [],
+                reasons: [],
+              },
+            },
+          ])
+          .then(async (records) => {
+            await runs.markCompleted('user-1', run.id);
+            return { run, record: records[0]! };
+          }),
+      );
+      return run;
+    };
+
+    await createRunRecommendation();
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    const latestRun = await createRunRecommendation();
+
+    const latestPage = await service.listForUser(
+      'user-1',
+      { page: 1, limit: 20 },
+      { latestOnly: true },
+    );
+    const allHistoryPage = await service.listForUser('user-1', { page: 1, limit: 20 });
+
+    expect(latestPage.total).toBe(1);
+    expect(latestPage.items[0]).toMatchObject({
+      runId: latestRun.id,
+      job: expect.objectContaining({ id: 'duplicate-job' }),
+    });
+    expect(new Set(latestPage.items.map((item) => item.job.id)).size).toBe(
+      latestPage.items.length,
+    );
+    expect(allHistoryPage.total).toBe(2);
+  });
+
   it('lists, loads, and stores feedback for persisted recommendations', async () => {
     const unitOfWork = new InMemoryRecommendationUnitOfWork();
     const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {

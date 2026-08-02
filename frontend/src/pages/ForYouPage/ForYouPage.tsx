@@ -31,6 +31,7 @@ export function ForYouPage() {
   const { data, isPending, isError, error, refetch, isFetching } = useRecommendations({
     page,
     limit: 20,
+    latestOnly: true,
   });
   const generate = useGenerateRecommendations();
   const feedback = useRecommendationFeedback();

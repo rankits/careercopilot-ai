@@ -109,6 +109,10 @@ describe('ForYouPage', () => {
     renderPage(true);
 
     expect(await screen.findByRole('button', { name: /generate recommendations/i })).toBeInTheDocument();
+    expect(listMock).toHaveBeenCalledWith(
+      { page: 1, limit: 20, latestOnly: true },
+      expect.anything(),
+    );
     expect(generateMock).not.toHaveBeenCalled();
   });
 
