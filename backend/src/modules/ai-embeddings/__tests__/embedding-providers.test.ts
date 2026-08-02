@@ -34,11 +34,23 @@ const vector = (value = 1): number[] => Array(JOB_EMBEDDING_DIMENSIONS).fill(val
 const base = {
   model: 'configured-model',
   dimensions: JOB_EMBEDDING_DIMENSIONS,
+  requestDimensions: undefined,
   batchSize: 32,
+  maxRetries: 3,
   documentPrefix: '',
   queryPrefix: '',
   apiKey: 'secret',
   timeoutMs: 12_000,
+};
+
+const mockOpenRouterConfig = {
+  apiKey: 'openrouter-key',
+  baseUrl: 'https://openrouter.example',
+  httpReferer: undefined,
+  appTitle: 'Career Copilot',
+  allowFallbacks: undefined,
+  providerOrder: undefined,
+  dataCollectionPolicy: undefined,
 };
 
 describe('embedding providers', () => {
@@ -47,12 +59,15 @@ describe('embedding providers', () => {
       provider: 'groq',
       model: 'env-selected-model',
       dimensions: JOB_EMBEDDING_DIMENSIONS,
+      requestDimensions: undefined,
       timeoutMs: 10_000,
       batchSize: 16,
+      maxRetries: 3,
       documentPrefix: 'doc: ',
       queryPrefix: 'query: ',
       google: { apiKey: undefined, baseUrl: 'https://google.example' },
       groq: { apiKey: 'groq-key', baseUrl: 'https://groq.example' },
+      openrouter: mockOpenRouterConfig,
     };
 
     const provider = createEmbeddingProvider(
@@ -69,12 +84,15 @@ describe('embedding providers', () => {
       provider: 'groq',
       model: 'env-selected-model',
       dimensions: JOB_EMBEDDING_DIMENSIONS + 1,
+      requestDimensions: undefined,
       timeoutMs: 10_000,
       batchSize: 16,
+      maxRetries: 3,
       documentPrefix: 'doc: ',
       queryPrefix: 'query: ',
       google: { apiKey: undefined, baseUrl: 'https://google.example' },
       groq: { apiKey: 'groq-key', baseUrl: 'https://groq.example' },
+      openrouter: mockOpenRouterConfig,
     };
 
     expect(() =>
