@@ -7,6 +7,11 @@ import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/de
 import { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
 import { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
 import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
+import type { RecommendationReranker } from '@/modules/recommendations/contracts/recommendation-provider.contracts.js';
+import {
+  recommendationMetricsSnapshot,
+  resetRecommendationMetricsForTests,
+} from '@/modules/recommendations/observability/recommendation.metrics.js';
 import { RECOMMENDATION_ERROR_CODES } from '@/modules/recommendations/errors/recommendation.error.js';
 import { RecommendationsService } from '@/modules/recommendations/services/recommendations.service.js';
 import { RecommendationContextService } from '@/modules/recommendations/services/recommendation-context.service.js';
@@ -24,6 +29,7 @@ import { applyRecommendationFilters } from '@/modules/recommendations/utils/appl
 import {
   RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
   type RecommendationContext,
+  type ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import type { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 import { createChildLogger } from '@/shared/logger/logger.js';
@@ -61,6 +67,32 @@ const jobList = (id: string, overrides: Partial<JobListDto> = {}): JobListDto =>
   skills: overrides.skills ?? ['TypeScript', 'PostgreSQL'],
   publishedAt: null,
   applyUrl: null,
+});
+
+const scoredRecommendation = (id: string, overallScore: number): ScoredJobRecommendation => ({
+  job: jobList(id, { title: id === 'job-high' ? 'Backend Engineer' : 'Platform Engineer' }),
+  scoreResult: {
+    overallScore,
+    components: {
+      requiredSkills: overallScore,
+      title: overallScore,
+      experience: overallScore,
+      responsibilities: overallScore,
+      preferredSkills: overallScore,
+      location: overallScore,
+      industry: overallScore,
+      salary: overallScore,
+      qualifications: overallScore,
+    },
+    matchedSkills: [],
+    aliasSkills: [],
+    relatedSkills: [],
+    transferableSkills: [],
+    missingSkills: [],
+    reasons: [],
+  },
+  category: 'GOOD_MATCH',
+  matchType: 'EXACT',
 });
 
 const baseContext = (): RecommendationContext => ({
@@ -1101,6 +1133,121 @@ describe('RecommendationsService generation', () => {
         }),
       ]),
     );
+  });
+
+  it('persists reranked order when a reranker is configured', async () => {
+    resetRecommendationMetricsForTests();
+    const scoringService = {
+      score: vi
+        .fn()
+        .mockResolvedValue([
+          scoredRecommendation('job-low', 0.7),
+          scoredRecommendation('job-high', 0.95),
+        ]),
+    } as unknown as RecommendationScoringService;
+    const reranker = {
+      rerank: vi
+        .fn()
+        .mockImplementation(
+          async (
+            _context: RecommendationContext,
+            recommendations: readonly ScoredJobRecommendation[],
+          ) => [recommendations[1]!, recommendations[0]!],
+        ),
+    } satisfies RecommendationReranker;
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: jobList('job-low'), retrievalScore: 0.5 },
+            { job: jobList('job-high'), retrievalScore: 0.9 },
+          ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService,
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+      reranker,
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Backend engineer TypeScript',
+    });
+
+    expect(reranker.rerank).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.arrayContaining([
+        expect.objectContaining({ job: expect.objectContaining({ id: 'job-high' }) }),
+        expect.objectContaining({ job: expect.objectContaining({ id: 'job-low' }) }),
+      ]),
+    );
+    expect(records.map((item) => [item.rank, item.job.id])).toEqual([
+      [1, 'job-low'],
+      [2, 'job-high'],
+    ]);
+    expect(recommendationMetricsSnapshot()).toMatchObject({
+      rerankSuccessCount: 1,
+      rerankFallbackCount: 0,
+    });
+  });
+
+  it('falls back to deterministic order when reranker fails', async () => {
+    resetRecommendationMetricsForTests();
+    const scoringService = {
+      score: vi
+        .fn()
+        .mockResolvedValue([
+          scoredRecommendation('job-low', 0.7),
+          scoredRecommendation('job-high', 0.95),
+        ]),
+    } as unknown as RecommendationScoringService;
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: jobList('job-low'), retrievalScore: 0.5 },
+            { job: jobList('job-high'), retrievalScore: 0.9 },
+          ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService,
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+      reranker: {
+        rerank: vi.fn().mockRejectedValue(new Error('rerank unavailable')),
+      },
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Backend engineer TypeScript',
+    });
+
+    expect(records.map((item) => [item.rank, item.job.id])).toEqual([
+      [1, 'job-high'],
+      [2, 'job-low'],
+    ]);
+    expect(recommendationMetricsSnapshot()).toMatchObject({
+      rerankFailureCount: 1,
+      rerankFallbackCount: 1,
+    });
   });
 });
 

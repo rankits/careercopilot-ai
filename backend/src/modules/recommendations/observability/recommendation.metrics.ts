@@ -12,11 +12,24 @@ export interface RecommendationGenerateMetricEvent {
   empty: boolean;
 }
 
+export interface RecommendationRerankMetricEvent {
+  userId: string;
+  runId?: string;
+  candidateCount: number;
+  durationMs: number;
+  success: boolean;
+  fallback: boolean;
+}
+
 let generateCount = 0;
 let emptyCount = 0;
 let failureCount = 0;
 let totalLatencyMs = 0;
 let filterCertExcludeTotal = 0;
+let rerankSuccessCount = 0;
+let rerankFailureCount = 0;
+let rerankFallbackCount = 0;
+let rerankTotalLatencyMs = 0;
 
 export const recommendationMetricsSnapshot = () => ({
   generateCount,
@@ -24,6 +37,13 @@ export const recommendationMetricsSnapshot = () => ({
   failureCount,
   averageLatencyMs: generateCount > 0 ? totalLatencyMs / generateCount : 0,
   filterCertExcludeTotal,
+  rerankSuccessCount,
+  rerankFailureCount,
+  rerankFallbackCount,
+  rerankAverageLatencyMs:
+    rerankSuccessCount + rerankFailureCount > 0
+      ? rerankTotalLatencyMs / (rerankSuccessCount + rerankFailureCount)
+      : 0,
 });
 
 export const recordCertificationFilterExclusion = (): void => {
@@ -55,10 +75,37 @@ export const recordRecommendationGenerate = (
   );
 };
 
+export const recordRecommendationRerank = (
+  logger: Logger,
+  event: RecommendationRerankMetricEvent,
+): void => {
+  rerankTotalLatencyMs += event.durationMs;
+  if (event.success) rerankSuccessCount += 1;
+  else rerankFailureCount += 1;
+  if (event.fallback) rerankFallbackCount += 1;
+
+  logger.info(
+    {
+      metric: 'recommendation.rerank',
+      userId: event.userId,
+      runId: event.runId,
+      candidateCount: event.candidateCount,
+      durationMs: event.durationMs,
+      success: event.success,
+      fallback: event.fallback,
+    },
+    'Recommendation rerank metric',
+  );
+};
+
 export const resetRecommendationMetricsForTests = (): void => {
   generateCount = 0;
   emptyCount = 0;
   failureCount = 0;
   totalLatencyMs = 0;
   filterCertExcludeTotal = 0;
+  rerankSuccessCount = 0;
+  rerankFailureCount = 0;
+  rerankFallbackCount = 0;
+  rerankTotalLatencyMs = 0;
 };

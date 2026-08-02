@@ -303,7 +303,7 @@ const createRecommendationRepository = (
   };
 
   return {
-    async createMany(userId, runId, recommendations) {
+    async createMany(userId, runId, recommendations, options) {
       const run = await tx.recommendationRun.findFirst({ where: { id: runId, userId } });
       if (!run) {
         throw new RecommendationError(
@@ -313,7 +313,9 @@ const createRecommendationRepository = (
         );
       }
 
-      const ranked = sortRecommendationsForRanking(recommendations);
+      const ranked = options?.preserveOrder
+        ? [...recommendations]
+        : sortRecommendationsForRanking(recommendations);
 
       const created: RecommendationRowWithComponents[] = [];
       for (const [index, item] of ranked.entries()) {

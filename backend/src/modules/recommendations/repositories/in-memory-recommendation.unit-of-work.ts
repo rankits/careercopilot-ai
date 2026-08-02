@@ -114,9 +114,12 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       userId: string,
       runId: string,
       recommendations: readonly ScoredJobRecommendation[],
+      options?: { preserveOrder?: boolean },
     ): Promise<JobRecommendationRecord[]> => {
       this.requireRun(userId, runId);
-      const ranked = sortRecommendationsForRanking(recommendations);
+      const ranked = options?.preserveOrder
+        ? [...recommendations]
+        : sortRecommendationsForRanking(recommendations);
       const created = ranked.map((item, index): JobRecommendationRecord => {
         const record: JobRecommendationRecord = {
           id: randomUUID(),

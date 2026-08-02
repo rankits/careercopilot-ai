@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 41 |
+| Implemented | 42 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,41 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-RANK-002 - Optional LLM rerank for top candidates with safe fallback
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/contracts/recommendation-provider.contracts.ts`
+  - `backend/src/modules/recommendations/config/recommendation-rerank.config.ts`
+  - `backend/src/modules/recommendations/providers/openai-compatible-recommendation-reranker.ts`
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/contracts/recommendation.repository.ts`
+  - `backend/src/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/services/recommendations.service.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/__tests__/openai-compatible-recommendation-reranker.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `docs/job-recommendation-engine-tickets/RERANK_FALLBACK_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Reranker disabled mode returns deterministic order without provider calls
+  - OpenAI-compatible adapter reranks only top-N and appends omitted/tail jobs deterministically
+  - Adapter ignores invented ids and omits raw candidate source text from prompts
+  - Generation persists reranked order when configured
+  - Generation falls back to deterministic order when reranker fails
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/openai-compatible-recommendation-reranker.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-scoring.service.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused rerank, generation, ranking, and scoring tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: production rerank remains disabled until `ENABLE_RECOMMENDATION_RERANK` and provider config are set.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-FILTER-003 - Extend hard filters for work authorization and certifications
 
