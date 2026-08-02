@@ -1396,10 +1396,23 @@ describe('RecommendationsService generation', () => {
       [1, 'job-low'],
       [2, 'job-high'],
     ]);
-    expect(recommendationMetricsSnapshot()).toMatchObject({
+    const metrics = recommendationMetricsSnapshot();
+    expect(metrics).toMatchObject({
+      generateCount: 1,
       rerankSuccessCount: 1,
       rerankFallbackCount: 0,
+      stageAverageLatencyMs: {
+        context: expect.any(Number),
+        feedback: expect.any(Number),
+        retrieval: expect.any(Number),
+        scoring: expect.any(Number),
+        ranking: expect.any(Number),
+        persistence: expect.any(Number),
+      },
     });
+    for (const histogram of Object.values(metrics.stageLatencyHistogram)) {
+      expect(Object.values(histogram).reduce((total, count) => total + count, 0)).toBe(1);
+    }
   });
 
   it('falls back to deterministic order when reranker fails', async () => {

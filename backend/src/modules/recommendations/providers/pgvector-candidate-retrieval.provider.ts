@@ -21,6 +21,7 @@ import { buildRecommendationQueryText } from '@/modules/recommendations/utils/re
 import type { RetrievalBackend } from '@/modules/recommendations/types/recommendations.types.js';
 import type { CandidateEmbeddingService } from '@/modules/recommendations/services/candidate-embedding.service.js';
 import { deduplicateRetrievedJobs } from '@/modules/recommendations/utils/deduplicate-retrieved-jobs.js';
+import { resolveRecommendationRetrievalSearchLimit } from '@/modules/recommendations/utils/recommendation-retrieval-budget.js';
 
 export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalProvider {
   readonly supportedBackends: readonly RetrievalBackend[] = ['PGVECTOR'];
@@ -101,8 +102,7 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
       provider: provider.provider,
       model: provider.model,
       embedding: queryEmbedding,
-      // Over-fetch so hydrated post-filters can still fill the limit.
-      limit: Math.min(request.limit * 4, 200),
+      limit: resolveRecommendationRetrievalSearchLimit(request.limit),
       filters: {
         excludeJobIds: request.excludeJobIds,
         remoteTypes,

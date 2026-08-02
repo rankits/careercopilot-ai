@@ -100,6 +100,7 @@ model JobRecommendation {
   @@unique([runId, jobId])
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, runId, rank])
+  @@index([runId, rank])
   @@index([userId, id])
   @@index([jobId])
   @@map("job_recommendations")

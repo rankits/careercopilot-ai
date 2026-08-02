@@ -24,6 +24,7 @@ import {
   recordRecommendationGenerate,
   recordRecommendationRerank,
   recordCareerGoalApiRequest,
+  type RecommendationGenerateStage,
 } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import { withRecommendationTimeout } from '@/modules/recommendations/utils/recommendation-timeout.js';
 import { applyRecommendationFilters } from '@/modules/recommendations/utils/apply-recommendation-filters.js';
@@ -161,6 +162,18 @@ export class RecommendationsService {
     },
   ): Promise<JobRecommendationRecord[]> {
     const startedAt = Date.now();
+    const stageDurationsMs: Partial<Record<RecommendationGenerateStage, number>> = {};
+    const measureStage = async <T>(
+      stage: RecommendationGenerateStage,
+      operation: () => Promise<T>,
+    ): Promise<T> => {
+      const stageStartedAt = Date.now();
+      try {
+        return await operation();
+      } finally {
+        stageDurationsMs[stage] = (stageDurationsMs[stage] ?? 0) + Date.now() - stageStartedAt;
+      }
+    };
     let filterMode: RecommendationFilterMode | undefined = options.filters?.filterMode;
     const dependencies = this.requireOrchestration();
     this.assertPrincipalUserId(input.userId, options.expectedUserId);
@@ -174,14 +187,18 @@ export class RecommendationsService {
 
     try {
       return await withRecommendationTimeout(async () => {
-        const built = await dependencies.contextService.build(input);
-        const context = applyRecommendationFilters(built, options.filters);
-        filterMode = resolveRecommendationFilterMode(context);
+        const context = await measureStage('context', async () => {
+          const built = await dependencies.contextService.build(input);
+          const filtered = applyRecommendationFilters(built, options.filters);
+          filterMode = resolveRecommendationFilterMode(filtered);
+          return filtered;
+        });
         await dependencies.unitOfWork.execute(({ runs }) =>
           runs.updateStatus(input.userId, run.id, 'RETRIEVING'),
         );
-        const { excludedJobIds, affinityAnchorJobs } = await dependencies.unitOfWork.execute(
-          async ({ feedback, recommendations }) => {
+        const { excludedJobIds, affinityAnchorJobs } = await measureStage(
+          'feedback',
+          async () => dependencies.unitOfWork.execute(async ({ feedback, recommendations }) => {
             const [feedbackExcludedJobIds, moreLikeThisFeedback] = await Promise.all([
               feedback.listExcludedJobIds(input.userId),
               feedback.listByAction(input.userId, 'MORE_LIKE_THIS', {
@@ -200,20 +217,24 @@ export class RecommendationsService {
                 .filter((item): item is JobRecommendationRecord => Boolean(item))
                 .map((item) => item.job),
             };
-          },
+          }),
         );
         const excludeJobIds = [...new Set([...(options.excludeJobIds ?? []), ...excludedJobIds])];
-        const candidates = await dependencies.retrievalService.retrieve({
-          context,
-          backend: options.backend,
-          limit: options.limit,
-          excludeJobIds: excludeJobIds.length > 0 ? excludeJobIds : undefined,
-        });
+        const candidates = await measureStage('retrieval', async () =>
+          dependencies.retrievalService.retrieve({
+            context,
+            backend: options.backend,
+            limit: options.limit,
+            excludeJobIds: excludeJobIds.length > 0 ? excludeJobIds : undefined,
+          }),
+        );
         await dependencies.unitOfWork.execute(async ({ runs }) => {
           await runs.updateCandidateCount(input.userId, run.id, candidates.length);
           await runs.updateStatus(input.userId, run.id, 'SCORING');
         });
-        const scored = await dependencies.scoringService.score(context, candidates);
+        const scored = await measureStage('scoring', async () =>
+          dependencies.scoringService.score(context, candidates),
+        );
         const affinityBoosted = applyMoreLikeThisAffinityBoost(scored, affinityAnchorJobs);
         const eligible =
           options.filters?.includeStretchOpportunities === false
@@ -228,21 +249,20 @@ export class RecommendationsService {
             RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
           );
         }
-        const deterministic = sortRecommendationsForRanking(eligible);
-        const ranked = await this.rerankWithFallback(
-          dependencies.reranker,
-          context,
-          deterministic,
-          run.id,
-        );
-        const records = await dependencies.unitOfWork.execute(async ({ recommendations, runs }) => {
-          const created = await recommendations.createMany(input.userId, run.id, ranked, {
-            preserveOrder: true,
-          });
-          this.assertPersistedOwnership(input.userId, run.id, created);
-          await runs.markCompleted(input.userId, run.id);
-          return created;
+        const ranked = await measureStage('ranking', async () => {
+          const deterministic = sortRecommendationsForRanking(eligible);
+          return this.rerankWithFallback(dependencies.reranker, context, deterministic, run.id);
         });
+        const records = await measureStage('persistence', async () =>
+          dependencies.unitOfWork.execute(async ({ recommendations, runs }) => {
+            const created = await recommendations.createMany(input.userId, run.id, ranked, {
+              preserveOrder: true,
+            });
+            this.assertPersistedOwnership(input.userId, run.id, created);
+            await runs.markCompleted(input.userId, run.id);
+            return created;
+          }),
+        );
         recordRecommendationGenerate(this.logger, {
           userId: input.userId,
           runId: run.id,
@@ -251,6 +271,7 @@ export class RecommendationsService {
           success: true,
           filterMode,
           empty: false,
+          stageDurationsMs,
         });
         this.logger.info(
           { userId: input.userId, runId: run.id, candidateCount: eligible.length },
@@ -277,6 +298,7 @@ export class RecommendationsService {
         filterMode,
         failureCode,
         empty: failureCode === RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
+        stageDurationsMs,
       });
       if (error instanceof Error && error.message === 'RECOMMENDATION_GENERATION_TIMEOUT') {
         throw new RecommendationError(
