@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 17 |
+| Implemented | 18 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,30 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-SKILL-004 - Explain transferable skills explicitly
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/scoring/calculators/heuristic-score.calculators.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-scoring.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-explanation.service.test.ts`
+  - `docs/job-recommendation-engine-tickets/TRANSFERABLE_SKILL_EXPLANATION_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Transferable-only required skill match emits explicit lower-confidence reason text
+  - Deterministic explanation bullets surface transferable reason text and evidence unchanged
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-scoring.service.test.ts recommendations/__tests__/recommendation-explanation.service.test.ts recommendations/__tests__/recommendation-core.test.ts`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `npm --prefix backend run typecheck`
+- Results:
+  - Focused scoring/explanation/classifier tests passed
+  - Touched-file lint passed
+  - Backend typecheck passed
+- Known limitations: no LLM coaching prose; deterministic transferable text is intentionally concise
+- Next ticket: `JRE-SKILL-005`
 
 ### 2026-08-02 - JRE-SKILL-003 - Wire skill graph into match type classification
 

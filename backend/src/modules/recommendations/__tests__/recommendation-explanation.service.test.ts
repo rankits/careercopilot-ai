@@ -132,4 +132,35 @@ describe('buildRecommendationExplanation', () => {
       missing: ['Redis'],
     });
   });
+
+  it('surfaces explicit transferable skill wording from deterministic reasons', () => {
+    const explanation = buildRecommendationExplanation(
+      recommendation({
+        scoreResult: {
+          ...recommendation().scoreResult,
+          matchedSkills: [],
+          aliasSkills: [],
+          relatedSkills: [],
+          transferableSkills: ['JavaScript'],
+          missingSkills: [],
+          reasons: [
+            {
+              component: 'requiredSkills',
+              message:
+                'Transferable skill JavaScript can help with TypeScript, but it is lower confidence than an exact required-skill match',
+              evidence: ['transferable: JavaScript covers TypeScript'],
+            },
+          ],
+        },
+        matchType: 'TRANSFERABLE',
+      }),
+    );
+
+    expect(explanation.bullets[0]).toMatchObject({
+      component: 'requiredSkills',
+      message:
+        'Transferable skill JavaScript can help with TypeScript, but it is lower confidence than an exact required-skill match',
+      evidence: ['transferable: JavaScript covers TypeScript'],
+    });
+  });
 });
