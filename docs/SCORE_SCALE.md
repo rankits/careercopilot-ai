@@ -1,4 +1,4 @@
-# Recommendation Score Scale (JRE-SCORE-001)
+# Recommendation Score Scale (JRE-SCORE-001/JRE-SCORE-002)
 
 ## Contract
 
@@ -24,7 +24,24 @@ overallScore = 0.4 * retrievalScore + 0.6 * heuristicScore
 displayScore = Math.round(overallScore * 100)
 ```
 
-If `retrievalScore` is absent, `overallScore` equals the heuristic-only score.
+If `retrievalScore` is absent, retrieval contributes `0` and the same blend
+formula is used.
+
+## Missing Component Policy
+
+Component scores stay on the same `[0, 1]` scale. Missing or unavailable signals
+use neutral `0.5`; explicit mismatches can score below neutral.
+
+Neutral examples:
+
+- No candidate salary expectation, or undisclosed job salary
+- No candidate location preference
+- No candidate preferred/required skills
+- Job skills unavailable while candidate skills exist
+- No qualification, industry, experience, or responsibility signal
+
+Reasons must mention that a neutral score was used when a signal is unavailable
+or not specified.
 
 ## Frontend Formatting
 
