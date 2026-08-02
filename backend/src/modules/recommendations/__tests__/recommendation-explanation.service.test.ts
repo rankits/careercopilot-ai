@@ -133,6 +133,27 @@ describe('buildRecommendationExplanation', () => {
     });
   });
 
+  it('normalizes explanation skill arrays with the same bucket priority as skill gap output', () => {
+    const explanation = buildRecommendationExplanation(
+      recommendation({
+        scoreResult: {
+          ...recommendation().scoreResult,
+          matchedSkills: ['typescript'],
+          aliasSkills: ['TypeScript', 'NodeJS'],
+          relatedSkills: ['Node.js', 'NextJS'],
+          transferableSkills: ['Next.js', 'JavaScript'],
+          missingSkills: ['TypeScript', 'Node.js', 'Next.js', 'JavaScript', 'Redis'],
+        },
+      }),
+    );
+
+    expect(explanation.matchedSkills).toEqual(['TypeScript']);
+    expect(explanation.aliasSkills).toEqual(['Node.js']);
+    expect(explanation.relatedSkills).toEqual(['Next.js']);
+    expect(explanation.transferableSkills).toEqual(['JavaScript']);
+    expect(explanation.missingSkills).toEqual(['Redis']);
+  });
+
   it('surfaces explicit transferable skill wording from deterministic reasons', () => {
     const explanation = buildRecommendationExplanation(
       recommendation({

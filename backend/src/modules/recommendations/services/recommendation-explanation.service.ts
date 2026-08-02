@@ -12,6 +12,7 @@ import type {
   RecommendationScoreResult,
   RecommendationSkillGap,
 } from '@/modules/recommendations/types/recommendations.types.js';
+import { normalizeRecommendationSkillBuckets } from '@/modules/recommendations/skills/recommendation-skill-buckets.js';
 
 const COMPONENT_LABELS: Record<RecommendationScoreComponentName, string> = {
   requiredSkills: 'Required skills',
@@ -46,34 +47,17 @@ const displayScore = (overallScore: number): number | undefined => {
   return Math.round(overallScore * 100);
 };
 
-const uniqueSkills = (skills: readonly string[]): string[] => {
-  const seen = new Set<string>();
-  const result: string[] = [];
-  for (const skill of skills) {
-    const trimmed = skill.trim();
-    if (!trimmed) continue;
-    const key = trimmed.toLowerCase();
-    if (seen.has(key)) continue;
-    seen.add(key);
-    result.push(trimmed);
-  }
-  return result;
-};
-
 export const buildRecommendationSkillGap = (
   scoreResult: RecommendationScoreResult,
 ): RecommendationSkillGap => {
-  const exact = uniqueSkills(scoreResult.matchedSkills);
-  const alias = uniqueSkills(scoreResult.aliasSkills);
-  const related = uniqueSkills(scoreResult.relatedSkills);
-  const transferable = uniqueSkills(scoreResult.transferableSkills);
-  const covered = new Set(
-    [...exact, ...alias, ...related, ...transferable].map((skill) => skill.toLowerCase()),
-  );
-  const missing = uniqueSkills(scoreResult.missingSkills).filter(
-    (skill) => !covered.has(skill.toLowerCase()),
-  );
-  return { exact, alias, related, transferable, missing };
+  const buckets = normalizeRecommendationSkillBuckets(scoreResult);
+  return {
+    exact: buckets.matchedSkills,
+    alias: buckets.aliasSkills,
+    related: buckets.relatedSkills,
+    transferable: buckets.transferableSkills,
+    missing: buckets.missingSkills,
+  };
 };
 
 export const buildRecommendationExplanation = (
@@ -117,21 +101,22 @@ export const buildRecommendationExplanation = (
     }));
 
   const percent = displayScore(record.scoreResult.overallScore);
+  const skillBuckets = normalizeRecommendationSkillBuckets(record.scoreResult);
   const skillSummary =
-    record.scoreResult.matchedSkills.length > 0
-      ? `${record.scoreResult.matchedSkills.length} matched skill${
-          record.scoreResult.matchedSkills.length === 1 ? '' : 's'
+    skillBuckets.matchedSkills.length > 0
+      ? `${skillBuckets.matchedSkills.length} matched skill${
+          skillBuckets.matchedSkills.length === 1 ? '' : 's'
         }`
       : 'No matched skills';
 
   return {
     summary: `${percent ?? Math.round(record.scoreResult.overallScore * 100)}% match with ${skillSummary}`,
     bullets,
-    matchedSkills: record.scoreResult.matchedSkills,
-    aliasSkills: record.scoreResult.aliasSkills,
-    relatedSkills: record.scoreResult.relatedSkills,
-    transferableSkills: record.scoreResult.transferableSkills,
-    missingSkills: record.scoreResult.missingSkills,
+    matchedSkills: skillBuckets.matchedSkills,
+    aliasSkills: skillBuckets.aliasSkills,
+    relatedSkills: skillBuckets.relatedSkills,
+    transferableSkills: skillBuckets.transferableSkills,
+    missingSkills: skillBuckets.missingSkills,
     scoreModel: {
       overallScore: record.scoreResult.overallScore,
       displayScore: percent,
