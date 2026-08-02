@@ -152,6 +152,7 @@ export * from '@/modules/recommendations/services/career-target.service.js';
 export * from '@/modules/recommendations/services/recommendation-context.service.js';
 export * from '@/modules/recommendations/services/recommendation-explanation.service.js';
 export * from '@/modules/recommendations/services/recommendation-feedback.service.js';
+export * from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
 export * from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 export * from '@/modules/recommendations/services/recommendation-scoring.service.js';
 export * from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
