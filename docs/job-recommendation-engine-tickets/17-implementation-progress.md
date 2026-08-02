@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 25 |
+| Implemented | 26 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,38 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FE-003 - Wire similar jobs UI on job detail and For You
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.test.ts`
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `frontend/src/features/recommendations/README.md`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `frontend/src/pages/JobDetailPage/JobDetailPage.tsx`
+  - `frontend/src/pages/JobDetailPage/JobDetailPage.test.tsx`
+  - `frontend/src/pages/JobDetailPage/styles.ts`
+  - `docs/job-recommendation-engine-tickets/SIMILAR_JOBS_FRONTEND_CONTRACT.md`
+- API changes: none; FE now consumes existing `GET /job-recommendations/similar/:jobId`
+- Database changes: none
+- Tests added:
+  - Service unwrap and limit forwarding for similar jobs
+  - For You Similar tab lazy fetch by `jobId`, source-job filtering, and displayScore rendering
+  - Job detail `Find similar` lazy fetch, source-job filtering, and displayScore rendering
+- Commands executed:
+  - `npm --prefix frontend run test -- src/features/recommendations/services/recommendations.service.test.ts src/pages/ForYouPage/ForYouPage.test.tsx src/pages/JobDetailPage/JobDetailPage.test.tsx`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused recommendation service, For You, and job detail tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: Similar tab requires a source `jobId`; broader source-picking UX remains out of scope
+- Next ticket: `JRE-FE-002`
 
 ### 2026-08-02 - JRE-FE-001 - Add For You recommendation mode tabs shell
 

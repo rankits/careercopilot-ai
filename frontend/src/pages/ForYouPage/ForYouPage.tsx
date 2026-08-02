@@ -16,6 +16,7 @@ import {
   useRecommendationFeedback,
   useRecommendationReadiness,
   useRecommendations,
+  useSimilarJobs,
 } from '@/features/recommendations/hooks/useRecommendations';
 import { useAppSelector } from '@/hooks/redux';
 
@@ -34,7 +35,7 @@ const recommendationModes: Array<{
 }> = [
   { id: 'profile', label: 'Profile', panelLabel: 'Profile recommendations', available: true },
   { id: 'resume', label: 'Resume', panelLabel: 'Resume recommendations', available: false },
-  { id: 'similar', label: 'Similar', panelLabel: 'Similar jobs', available: false },
+  { id: 'similar', label: 'Similar', panelLabel: 'Similar jobs', available: true },
   { id: 'text-career', label: 'Text / Career', panelLabel: 'Text and career matches', available: false },
   { id: 'saved', label: 'Saved', panelLabel: 'Saved search recommendations', available: false },
 ];
@@ -57,6 +58,7 @@ export function ForYouPage() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeMode = getModeFromSearchParams(searchParams);
+  const similarSourceJobId = searchParams.get('jobId') || undefined;
   const activeModeMeta =
     recommendationModes.find((mode) => mode.id === activeMode) ?? recommendationModes[0];
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
@@ -81,7 +83,11 @@ export function ForYouPage() {
   const savedQuery = useQuery({
     queryKey: savedJobsQueryKey,
     queryFn: () => applicationsService.listSavedJobs(),
-    enabled: activeMode === 'profile',
+    enabled: activeMode === 'profile' || (activeMode === 'similar' && Boolean(similarSourceJobId)),
+  });
+  const similarJobs = useSimilarJobs(similarSourceJobId, {
+    enabled: activeMode === 'similar' && Boolean(similarSourceJobId),
+    limit: 20,
   });
   const [optimisticSaved, setOptimisticSaved] = useState<Record<string, boolean>>({});
 
@@ -119,6 +125,7 @@ export function ForYouPage() {
       : generate.isError
         ? 'Unable to generate recommendations.'
         : null;
+  const similarCards = similarJobs.data?.cards ?? [];
 
   const submitFeedback = (recommendationId: string, action: 'DISMISSED' | 'NOT_RELEVANT') => {
     setDismissedIds((prev) => ({ ...prev, [recommendationId]: true }));
@@ -135,6 +142,10 @@ export function ForYouPage() {
       nextParams.delete('mode');
     } else {
       nextParams.set('mode', mode);
+    }
+
+    if (mode !== 'similar') {
+      nextParams.delete('jobId');
     }
 
     setSearchParams(nextParams);
@@ -230,7 +241,101 @@ export function ForYouPage() {
         })}
       </Box>
 
-      {activeMode !== 'profile' ? (
+      {activeMode === 'similar' ? (
+        <Box
+          aria-labelledby={getTabId('similar')}
+          id={getPanelId('similar')}
+          role="tabpanel"
+          sx={{ display: 'grid', gap: 3 }}
+        >
+          {!similarSourceJobId ? (
+            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
+              <Typography component="h2" sx={{ fontSize: '1rem', fontWeight: 800, m: 0 }}>
+                Similar jobs
+              </Typography>
+              <Typography role="status" sx={{ color: 'text.secondary' }}>
+                Open a job detail page to choose the source job for this mode.
+              </Typography>
+              <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
+                Browse jobs
+              </Button>
+            </Box>
+          ) : null}
+
+          {similarSourceJobId && similarJobs.isPending ? (
+            <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
+              <CircularProgress aria-label="Loading similar jobs" />
+            </Box>
+          ) : null}
+
+          {similarSourceJobId && similarJobs.isError ? (
+            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+              <Box role="alert">
+                <Typography>
+                  {similarJobs.error instanceof Error
+                    ? similarJobs.error.message
+                    : 'Unable to load similar jobs.'}
+                </Typography>
+              </Box>
+              <Button
+                disabled={similarJobs.isFetching}
+                onClick={() => void similarJobs.refetch()}
+                size="small"
+              >
+                Retry
+              </Button>
+            </Box>
+          ) : null}
+
+          {similarSourceJobId &&
+          !similarJobs.isPending &&
+          !similarJobs.isError &&
+          similarCards.length === 0 ? (
+            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
+              No similar jobs found for this job.
+            </Typography>
+          ) : null}
+
+          {similarCards.length > 0 ? (
+            <>
+              <Typography sx={{ color: 'text.secondary' }}>
+                {similarCards.length} similar job{similarCards.length === 1 ? '' : 's'}
+              </Typography>
+              <VirtualizedJobList
+                ariaLabel="Similar jobs"
+                getKey={(job) => job.id ?? `${job.company}-${job.title}`}
+                items={similarCards}
+                renderItem={(job) => (
+                  <JobCard
+                    job={job}
+                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                    onApply={(selected) => {
+                      openExternalApply(selected.applyUrl);
+                    }}
+                    onOpen={(selected) => {
+                      if (!selected.id) return;
+                      void navigate(jobDetailPath(selected.id), {
+                        state: { fromFeed: `${location.pathname}${location.search}` },
+                      });
+                    }}
+                    onSave={(selected) => {
+                      if (!selected.id) return;
+                      const jobId = selected.id;
+                      const wasSaved = savedIdSet.has(jobId);
+                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
+                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
+                      });
+                    }}
+                  />
+                )}
+              />
+            </>
+          ) : null}
+        </Box>
+      ) : null}
+
+      {activeMode !== 'profile' && activeMode !== 'similar' ? (
         <Box
           aria-labelledby={getTabId(activeMode)}
           id={getPanelId(activeMode)}

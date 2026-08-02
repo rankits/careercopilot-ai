@@ -14,6 +14,9 @@ export const recommendationsQueryKey = (params: ListRecommendationsParams) =>
 
 export const recommendationsReadinessQueryKey = ['recommendations', 'readiness'] as const;
 
+export const similarJobsQueryKey = (jobId: string, limit: number) =>
+  ['recommendations', 'similar', jobId, limit] as const;
+
 export function useRecommendationReadiness() {
   return useQuery({
     queryKey: recommendationsReadinessQueryKey,
@@ -48,6 +51,38 @@ export function useRecommendations(
             recommendationId: rec.id,
             match: match ?? undefined,
             matchSubtitle: formatRecommendationCardSubtitle(rec.category, rec.matchType),
+            isRecommended: true,
+          };
+        }),
+      };
+    },
+  });
+}
+
+export function useSimilarJobs(
+  jobId: string | undefined,
+  options: { enabled?: boolean; limit?: number } = {},
+) {
+  const limit = options.limit ?? 10;
+
+  return useQuery({
+    enabled: Boolean(jobId) && (options.enabled ?? true),
+    queryKey: similarJobsQueryKey(jobId ?? 'missing', limit),
+    queryFn: ({ signal }) => recommendationsService.getSimilarJobs(jobId!, { limit }, { signal }),
+    select: (items) => {
+      const filteredItems = items.filter((item) => item.job.id !== jobId);
+      return {
+        items: filteredItems,
+        cards: filteredItems.map((item, index) => {
+          const card = mapJobListDtoToCard(item.job, index);
+          const match = formatRecommendationScorePercent({
+            displayScore: item.displayScore,
+            overallScore: item.scoreResult?.overallScore,
+          });
+          return {
+            ...card,
+            match: match ?? undefined,
+            matchSubtitle: formatRecommendationCardSubtitle(item.category, item.matchType),
             isRecommended: true,
           };
         }),

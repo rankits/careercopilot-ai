@@ -122,4 +122,29 @@ describe('recommendationsService', () => {
     expect(result.total).toBe(8);
     expect(result.run.id).toBe('run-1');
   });
+
+  it('loads similar jobs with a bounded limit', async () => {
+    getMock.mockResolvedValue({
+      data: {
+        data: [
+          {
+            rank: 1,
+            job: { id: 'job-2' },
+            displayScore: 84,
+            scoreResult: { overallScore: 0.84 },
+            category: 'BEST_MATCH',
+            matchType: 'RELATED',
+          },
+        ],
+      },
+    });
+
+    const result = await recommendationsService.getSimilarJobs('job-1', { limit: 5 });
+    expect(getMock).toHaveBeenCalledWith(
+      '/job-recommendations/similar/job-1',
+      expect.objectContaining({ params: { limit: 5 } }),
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].displayScore).toBe(84);
+  });
 });
