@@ -12,6 +12,7 @@ import { JobCard, VirtualizedJobList } from '@/components/molecules';
 
 import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
 import {
+  useGenerateCareerGoalRecommendations,
   useGenerateRecommendations,
   useGenerateResumeRecommendations,
   useGenerateTextRecommendations,
@@ -27,13 +28,18 @@ import { useAppSelector } from '@/hooks/redux';
 import { jobDetailPath, ROUTES } from '@/constants/routes';
 import { applicationsService } from '@/features/applications/services/applications.service';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
-import type { RecommendationReadinessStatus } from '@/features/recommendations/types/recommendation.types';
+import type {
+  RecommendationDto,
+  RecommendationReadinessStatus,
+} from '@/features/recommendations/types/recommendation.types';
+import { formatRecommendationCategoryLabel } from '@/features/recommendations/utils/formatRecommendationMatchLabel';
 import { resumeService } from '@/features/resume/services/resume.service';
 import { Alert, Box, CircularProgress, MenuItem, TextField, Typography } from '@/lib/material';
 
-type RecommendationMode = 'profile' | 'resume' | 'similar' | 'text-career' | 'saved';
+type RecommendationMode = 'profile' | 'resume' | 'similar' | 'text-career' | 'career' | 'saved';
 type RecommendationLifecycleState = NonNullable<RecommendationReadinessStatus['lifecycleState']>;
 const TARGET_TEXT_MAX_LENGTH = 20_000;
+const CAREER_GOAL_MAX_LENGTH = 20_000;
 
 const recommendationModes: Array<{
   id: RecommendationMode;
@@ -44,9 +50,36 @@ const recommendationModes: Array<{
   { id: 'profile', label: 'Profile', panelLabel: 'Profile recommendations', available: true },
   { id: 'resume', label: 'Resume', panelLabel: 'Resume recommendations', available: true },
   { id: 'similar', label: 'Similar', panelLabel: 'Similar jobs', available: true },
-  { id: 'text-career', label: 'Text / Career', panelLabel: 'Text and career matches', available: true },
+  { id: 'text-career', label: 'Text', panelLabel: 'Text matches', available: true },
+  { id: 'career', label: 'Career', panelLabel: 'Career goal matches', available: true },
   { id: 'saved', label: 'Saved', panelLabel: 'Saved search recommendations', available: false },
 ];
+
+const careerCategoryOrder = [
+  'BEST_MATCH',
+  'GOOD_MATCH',
+  'STRETCH_OPPORTUNITY',
+  'RELATED_CAREER_PATH',
+];
+
+const careerCategoryCopy: Record<string, string> = {
+  BEST_MATCH: 'Target-role matches',
+  GOOD_MATCH: 'Transitional matches',
+  STRETCH_OPPORTUNITY: 'Stretch matches',
+  RELATED_CAREER_PATH: 'Current and adjacent paths',
+};
+
+const groupCareerRecommendations = (items: readonly RecommendationDto[]) => {
+  const byCategory = new Map<string, RecommendationDto[]>();
+  for (const item of items) {
+    const category = item.category || 'RELATED_CAREER_PATH';
+    byCategory.set(category, [...(byCategory.get(category) ?? []), item]);
+  }
+  return [
+    ...careerCategoryOrder.map((category) => [category, byCategory.get(category) ?? []] as const),
+    ...[...byCategory.entries()].filter(([category]) => !careerCategoryOrder.includes(category)),
+  ].filter(([, categoryItems]) => categoryItems.length > 0);
+};
 
 const recommendationModeIds = new Set(recommendationModes.map((mode) => mode.id));
 
@@ -96,8 +129,10 @@ export function ForYouPage() {
   const [generatedOnce, setGeneratedOnce] = useState(false);
   const [resumeGeneratedOnce, setResumeGeneratedOnce] = useState(false);
   const [textGeneratedOnce, setTextGeneratedOnce] = useState(false);
+  const [careerGeneratedOnce, setCareerGeneratedOnce] = useState(false);
   const [selectedResumeId, setSelectedResumeId] = useState('');
   const [targetText, setTargetText] = useState('');
+  const [careerGoalText, setCareerGoalText] = useState('');
   const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
   const [resumeRecommendations, setResumeRecommendations] = useState<
     ReturnType<typeof mapRecommendationDtoToCard>[]
@@ -105,6 +140,7 @@ export function ForYouPage() {
   const [textRecommendations, setTextRecommendations] = useState<
     ReturnType<typeof mapRecommendationDtoToCard>[]
   >([]);
+  const [careerRecommendations, setCareerRecommendations] = useState<RecommendationDto[]>([]);
   const modeTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const readiness = useRecommendationReadiness();
@@ -122,6 +158,7 @@ export function ForYouPage() {
   const refreshProfile = useRefreshProfileRecommendations();
   const generateResume = useGenerateResumeRecommendations();
   const generateText = useGenerateTextRecommendations();
+  const generateCareerGoal = useGenerateCareerGoalRecommendations();
   const feedback = useRecommendationFeedback();
   const { saveJob, unsaveJob } = useSaveJob();
   const resumeProfile = useQuery({
@@ -136,6 +173,7 @@ export function ForYouPage() {
       activeMode === 'profile' ||
       activeMode === 'resume' ||
       activeMode === 'text-career' ||
+      activeMode === 'career' ||
       (activeMode === 'similar' && Boolean(similarSourceJobId)),
   });
   const similarJobs = useSimilarJobs(similarSourceJobId, {
@@ -207,12 +245,24 @@ export function ForYouPage() {
       : generateText.isError
         ? 'Unable to generate text recommendations.'
         : null;
+  const generateCareerError =
+    generateCareerGoal.error instanceof Error
+      ? generateCareerGoal.error.message
+      : generateCareerGoal.isError
+        ? 'Unable to generate career goal recommendations.'
+        : null;
   const similarCards = similarJobs.data?.cards ?? [];
   const selectedResumeOption = resumeProfile.data?.sourceResumeId
     ? [{ id: resumeProfile.data.sourceResumeId, label: 'Confirmed resume' }]
     : [];
   const trimmedTargetText = targetText.trim();
   const targetTextTooLong = trimmedTargetText.length > TARGET_TEXT_MAX_LENGTH;
+  const trimmedCareerGoalText = careerGoalText.trim();
+  const careerGoalTooLong = trimmedCareerGoalText.length > CAREER_GOAL_MAX_LENGTH;
+  const visibleCareerRecommendations = careerRecommendations.filter(
+    (item) => !dismissedIds[item.id],
+  );
+  const careerGroups = groupCareerRecommendations(visibleCareerRecommendations);
 
   const submitFeedback = (recommendationId: string, action: 'DISMISSED' | 'NOT_RELEVANT') => {
     setDismissedIds((prev) => ({ ...prev, [recommendationId]: true }));
@@ -607,6 +657,127 @@ export function ForYouPage() {
         </Box>
       ) : null}
 
+      {activeMode === 'career' ? (
+        <Box
+          aria-labelledby={getTabId('career')}
+          id={getPanelId('career')}
+          role="tabpanel"
+          sx={{ display: 'grid', gap: 3 }}
+        >
+          <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+            <TextField
+              error={careerGoalTooLong}
+              fullWidth
+              helperText={
+                careerGoalTooLong
+                  ? `Use ${CAREER_GOAL_MAX_LENGTH.toLocaleString()} characters or fewer.`
+                  : `${trimmedCareerGoalText.length.toLocaleString()} / ${CAREER_GOAL_MAX_LENGTH.toLocaleString()}`
+              }
+              label="Career goal"
+              multiline
+              minRows={5}
+              onChange={(event) => setCareerGoalText(event.target.value)}
+              placeholder="Describe the role, transition, or direction you want to pursue."
+              value={careerGoalText}
+            />
+
+            {generateCareerError ? (
+              <Typography role="alert" sx={{ color: 'error.main' }}>
+                {generateCareerError}
+              </Typography>
+            ) : null}
+
+            <Button
+              disabled={
+                !trimmedCareerGoalText || careerGoalTooLong || generateCareerGoal.isPending
+              }
+              isLoading={generateCareerGoal.isPending}
+              onClick={() => {
+                if (!trimmedCareerGoalText || careerGoalTooLong) return;
+                setCareerGeneratedOnce(true);
+                void generateCareerGoal
+                  .mutateAsync(trimmedCareerGoalText)
+                  .then((items) => setCareerRecommendations(items))
+                  .catch(() => undefined);
+              }}
+              size="small"
+            >
+              Generate career matches
+            </Button>
+          </Box>
+
+          {!careerGeneratedOnce &&
+          !generateCareerGoal.isPending &&
+          careerRecommendations.length === 0 ? (
+            <Typography role="status" sx={{ color: 'text.secondary', py: 2 }}>
+              Enter a career goal to generate target, transition, stretch, and adjacent-path
+              matches.
+            </Typography>
+          ) : null}
+
+          {careerGeneratedOnce &&
+          !generateCareerGoal.isPending &&
+          !generateCareerGoal.isError &&
+          visibleCareerRecommendations.length === 0 ? (
+            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
+              No matching jobs were found for this career goal.
+            </Typography>
+          ) : null}
+
+          {careerGroups.map(([category, items]) => (
+            <Box component="section" key={category} sx={{ display: 'grid', gap: 2 }}>
+              <Box sx={{ alignItems: 'baseline', display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                <Typography component="h2" sx={{ fontSize: '1rem', fontWeight: 800, m: 0 }}>
+                  {careerCategoryCopy[category] ?? formatRecommendationCategoryLabel(category)}
+                </Typography>
+                <Typography sx={{ color: 'text.secondary' }}>
+                  {items.length} {items.length === 1 ? 'match' : 'matches'}
+                </Typography>
+              </Box>
+              <VirtualizedJobList
+                ariaLabel={`${careerCategoryCopy[category] ?? category} career recommendations`}
+                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
+                items={items.map((item, index) => mapRecommendationDtoToCard(item, index))}
+                renderItem={(job) => (
+                  <JobCard
+                    job={job}
+                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                    onApply={(selected) => {
+                      openExternalApply(selected.applyUrl);
+                    }}
+                    onDismiss={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
+                        : undefined
+                    }
+                    onNotRelevant={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
+                        : undefined
+                    }
+                    onOpen={(selected) => {
+                      if (!selected.id) return;
+                      void navigate(jobDetailPath(selected.id), {
+                        state: { fromFeed: `${location.pathname}${location.search}` },
+                      });
+                    }}
+                    onSave={(selected) => {
+                      if (!selected.id) return;
+                      const jobId = selected.id;
+                      const wasSaved = savedIdSet.has(jobId);
+                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
+                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
+                      });
+                    }}
+                  />
+                )}
+              />
+            </Box>
+          ))}
+        </Box>
+      ) : null}
+
       {activeMode === 'text-career' ? (
         <Box
           aria-labelledby={getTabId('text-career')}
@@ -722,6 +893,7 @@ export function ForYouPage() {
       {activeMode !== 'profile' &&
       activeMode !== 'resume' &&
       activeMode !== 'similar' &&
+      activeMode !== 'career' &&
       activeMode !== 'text-career' ? (
         <Box
           aria-labelledby={getTabId(activeMode)}

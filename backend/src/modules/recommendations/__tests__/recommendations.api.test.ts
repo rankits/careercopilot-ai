@@ -14,6 +14,7 @@ import {
   ROLE_PERMISSION_MAP,
 } from '@/shared/rbac/permission.catalog.js';
 import {
+  careerTargetService,
   recommendationsService,
   savedSearchService,
   similarJobsService,
@@ -29,6 +30,7 @@ const recommendationId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 const runId = 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb';
 const jobId = '11111111-1111-1111-1111-111111111111';
 const savedSearchId = '44444444-4444-4444-4444-444444444444';
+const careerTargetId = '33333333-3333-3333-3333-333333333333';
 
 const savedSearchResponse = {
   id: savedSearchId,
@@ -40,6 +42,15 @@ const savedSearchResponse = {
   createdAt: new Date('2026-08-02T00:00:00.000Z'),
   updatedAt: new Date('2026-08-02T00:00:01.000Z'),
   deletedAt: null,
+};
+const careerTargetResponse = {
+  id: careerTargetId,
+  userId: '1',
+  goalText: 'Move from manual testing into automation QA',
+  structured: { targetRole: 'Automation QA Engineer' },
+  createdAt: new Date('2026-08-02T00:00:00.000Z'),
+  updatedAt: new Date('2026-08-02T00:00:01.000Z'),
+  archivedAt: null,
 };
 
 beforeEach(async () => {
@@ -64,6 +75,7 @@ describe('job recommendation HTTP gates', () => {
       status,
       savedSearches,
       savedSearchGenerate,
+      careerTargets,
     ] = await Promise.all([
       request(app).post(API).send({ sourceType: 'PROFILE' }),
       request(app).post(`${API}/from-text`).send({ targetText: 'Backend engineer' }),
@@ -76,6 +88,7 @@ describe('job recommendation HTTP gates', () => {
       request(app).get(`${API}/status`),
       request(app).get(`${API}/saved-searches`),
       request(app).post(`${API}/saved-searches/${savedSearchId}/generate`).send({}),
+      request(app).get(`${API}/career-targets`),
     ]);
 
     expect(create.status).toBe(401);
@@ -89,6 +102,7 @@ describe('job recommendation HTTP gates', () => {
     expect(status.status).toBe(401);
     expect(savedSearches.status).toBe(401);
     expect(savedSearchGenerate.status).toBe(401);
+    expect(careerTargets.status).toBe(401);
   });
 
   it('rejects an ADMIN principal on user-owned recommendation routes', async () => {
@@ -295,6 +309,56 @@ describe('job recommendation HTTP gates', () => {
       sourceType: 'CAREER_GOAL',
       sourceId: careerTargetId,
     });
+  });
+
+  it('creates, lists, retrieves, and archives career targets for the user', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-career-target-crud@example.com' });
+    const token = accessTokenForUser(user);
+    const listSpy = vi.spyOn(careerTargetService, 'list').mockResolvedValue({
+      items: [careerTargetResponse],
+      page: 1,
+      limit: 10,
+      total: 1,
+    });
+    const createSpy = vi
+      .spyOn(careerTargetService, 'create')
+      .mockResolvedValue({ ...careerTargetResponse, userId: String(user.id) });
+    const getSpy = vi
+      .spyOn(careerTargetService, 'get')
+      .mockResolvedValue({ ...careerTargetResponse, userId: String(user.id) });
+    const archiveSpy = vi.spyOn(careerTargetService, 'archive').mockResolvedValue(undefined);
+
+    const list = await request(app).get(`${API}/career-targets?limit=10`).set(authHeader(token));
+    const create = await request(app)
+      .post(`${API}/career-targets`)
+      .set(authHeader(token))
+      .send({
+        goalText: '  Move from manual testing into automation QA  ',
+        structured: { targetRole: 'Automation QA Engineer' },
+      });
+    const detail = await request(app)
+      .get(`${API}/career-targets/${careerTargetId}`)
+      .set(authHeader(token));
+    const archived = await request(app)
+      .delete(`${API}/career-targets/${careerTargetId}`)
+      .set(authHeader(token));
+
+    expect(list.status).toBe(200);
+    expect(list.body.data).toMatchObject({ page: 1, limit: 10, total: 1 });
+    expect(create.status).toBe(201);
+    expect(create.body.data).toMatchObject({
+      id: careerTargetId,
+      goalText: 'Move from manual testing into automation QA',
+    });
+    expect(detail.status).toBe(200);
+    expect(archived.status).toBe(200);
+    expect(listSpy).toHaveBeenCalledWith(String(user.id), { page: 1, limit: 10 });
+    expect(createSpy).toHaveBeenCalledWith(String(user.id), {
+      goalText: 'Move from manual testing into automation QA',
+      structured: { targetRole: 'Automation QA Engineer' },
+    });
+    expect(getSpy).toHaveBeenCalledWith(String(user.id), careerTargetId);
+    expect(archiveSpy).toHaveBeenCalledWith(String(user.id), careerTargetId);
   });
 
   it('creates, lists, updates, deletes, and retrieves saved searches for the user', async () => {

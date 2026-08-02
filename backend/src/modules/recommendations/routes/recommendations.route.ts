@@ -1,9 +1,12 @@
 import express from 'express';
+import type { CareerTargetService } from '@/modules/recommendations/services/career-target.service.js';
 import type { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
 import type { RecommendationsService } from '@/modules/recommendations/services/recommendations.service.js';
 import type { SavedSearchService } from '@/modules/recommendations/services/saved-search.service.js';
 import type { SimilarJobsService } from '@/modules/recommendations/services/similar-jobs.service.js';
 import {
+  archiveCareerTargetController,
+  createCareerTargetController,
   createSavedSearchController,
   createRecommendationsController,
   createRecommendationsFromTextController,
@@ -13,7 +16,9 @@ import {
   getRecommendationController,
   getRecommendationReadinessController,
   getRecommendationRunController,
+  getCareerTargetController,
   getSavedSearchController,
+  listCareerTargetsController,
   listRecommendationsController,
   listSavedSearchesController,
   refreshRecommendationsController,
@@ -21,11 +26,15 @@ import {
   upsertRecommendationFeedbackController,
 } from '@/modules/recommendations/controllers/recommendations.controller.js';
 import {
+  archiveCareerTargetSchema,
+  careerTargetDetailsSchema,
+  createCareerTargetSchema,
   createRecommendationFromTextSchema,
   createRecommendationSchema,
   createSavedSearchSchema,
   deleteSavedSearchSchema,
   generateSavedSearchSchema,
+  listCareerTargetsSchema,
   listRecommendationsSchema,
   listSavedSearchesSchema,
   recommendationFeedbackSchema,
@@ -48,6 +57,7 @@ export const createRecommendationsRouter = (
   similarJobsService: SimilarJobsService,
   feedbackService: RecommendationFeedbackService,
   savedSearchService: SavedSearchService,
+  careerTargetService: CareerTargetService,
 ) => {
   const router = express.Router();
 
@@ -106,6 +116,42 @@ export const createRecommendationsRouter = (
     requirePermission(RECOMMENDATIONS_PERMISSIONS.READ_OWN),
     validateResource(similarJobParamsSchema),
     createSimilarJobsController(similarJobsService),
+  );
+
+  router.get(
+    '/career-targets',
+    authMiddleware,
+    requirePrincipalType('USER'),
+    requirePermission(RECOMMENDATIONS_PERMISSIONS.READ_OWN),
+    validateResource(listCareerTargetsSchema),
+    listCareerTargetsController(careerTargetService),
+  );
+
+  router.post(
+    '/career-targets',
+    authMiddleware,
+    requirePrincipalType('USER'),
+    requirePermission(RECOMMENDATIONS_PERMISSIONS.CREATE_OWN),
+    validateResource(createCareerTargetSchema),
+    createCareerTargetController(careerTargetService),
+  );
+
+  router.get(
+    '/career-targets/:careerTargetId',
+    authMiddleware,
+    requirePrincipalType('USER'),
+    requirePermission(RECOMMENDATIONS_PERMISSIONS.READ_OWN),
+    validateResource(careerTargetDetailsSchema),
+    getCareerTargetController(careerTargetService),
+  );
+
+  router.delete(
+    '/career-targets/:careerTargetId',
+    authMiddleware,
+    requirePrincipalType('USER'),
+    requirePermission(RECOMMENDATIONS_PERMISSIONS.UPDATE_OWN),
+    validateResource(archiveCareerTargetSchema),
+    archiveCareerTargetController(careerTargetService),
   );
 
   router.get(

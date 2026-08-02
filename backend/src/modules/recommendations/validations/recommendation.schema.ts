@@ -118,6 +118,15 @@ const savedSearchUpdateBodySchema = savedSearchBodySchema.partial().refine(
 
 const savedSearchParamsSchema = z.object({ savedSearchId: uuid });
 
+const careerTargetBodySchema = z
+  .object({
+    goalText: z.string().trim().min(1).max(20_000),
+    structured: jsonObject.default({}),
+  })
+  .strict();
+
+const careerTargetParamsSchema = z.object({ careerTargetId: uuid });
+
 const paginationQuerySchema = paginationBaseQuerySchema.extend({
   runId: uuid.optional(),
   latestOnly: optionalBooleanQuery.default(false),
@@ -173,6 +182,30 @@ export const generateSavedSearchSchema = z.object({
   params: savedSearchParamsSchema,
 });
 
+export const listCareerTargetsSchema = z.object({
+  body: z.object({}).optional(),
+  query: paginationBaseQuerySchema,
+  params: emptyParams,
+});
+
+export const createCareerTargetSchema = z.object({
+  body: careerTargetBodySchema,
+  query: emptyQuery,
+  params: emptyParams,
+});
+
+export const careerTargetDetailsSchema = z.object({
+  body: z.object({}).optional(),
+  query: emptyQuery,
+  params: careerTargetParamsSchema,
+});
+
+export const archiveCareerTargetSchema = z.object({
+  body: z.object({}).optional(),
+  query: emptyQuery,
+  params: careerTargetParamsSchema,
+});
+
 export const recommendationReadinessSchema = z.object({
   body: z.object({}).optional(),
   query: emptyQuery,
@@ -208,3 +241,4 @@ export type RecommendationFeedbackInput = z.infer<typeof recommendationFeedbackS
 export type SimilarJobParams = z.infer<typeof similarJobParamsSchema>['params'];
 export type CreateSavedSearchDto = z.infer<typeof savedSearchBodySchema>;
 export type UpdateSavedSearchDto = z.infer<typeof savedSearchUpdateBodySchema>;
+export type CreateCareerTargetDto = z.infer<typeof careerTargetBodySchema>;

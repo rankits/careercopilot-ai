@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 46 |
+| Implemented | 47 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,48 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FE-005 - Build career goal recommendation UI
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/repositories/prisma-career-target.repository.ts`
+  - `backend/src/modules/recommendations/services/career-target.service.ts`
+  - `backend/src/modules/recommendations/validations/recommendation.schema.ts`
+  - `backend/src/modules/recommendations/controllers/recommendations.controller.ts`
+  - `backend/src/modules/recommendations/routes/recommendations.route.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendations.api.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-core.test.ts`
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.test.ts`
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/CAREER_GOAL_FRONTEND_CONTRACT.md`
+- API changes: additive owner-scoped career-target create/list/detail/archive API
+- Database changes: none; reuses `career_targets`
+- Tests added:
+  - Career-target API CRUD route forwarding and validation
+  - Frontend service create target and `CAREER_GOAL` generate calls
+  - Career tab creates a target, generates recommendations, and groups categories
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/resume-recommendation-source.loader.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix frontend run test -- src/features/recommendations/services/recommendations.service.test.ts src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `git diff --check`
+- Results:
+  - Focused backend career-target/API/schema/source-loader/generation tests passed
+  - Focused frontend service and For You page tests passed
+  - Backend and frontend typechecks passed
+  - Touched-file lint passed
+  - Whitespace check passed
+- Known limitations: long-term learning plans remain out of scope.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-BE-002 - Classify career-path recommendation categories for goals
 

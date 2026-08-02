@@ -18,6 +18,8 @@ const {
   refreshMock,
   generateResumeMock,
   generateTextMock,
+  createCareerTargetMock,
+  generateCareerGoalMock,
   listSavedMock,
   profileMock,
   readinessMock,
@@ -29,6 +31,8 @@ const {
     refreshMock: vi.fn(),
     generateResumeMock: vi.fn(),
     generateTextMock: vi.fn(),
+    createCareerTargetMock: vi.fn(),
+    generateCareerGoalMock: vi.fn(),
     listSavedMock: vi.fn(),
     profileMock: vi.fn(),
     readinessMock: vi.fn(),
@@ -43,6 +47,8 @@ vi.mock('@/features/recommendations/services/recommendations.service', () => ({
     refreshFromProfile: refreshMock,
     generateFromResume: generateResumeMock,
     generateFromText: generateTextMock,
+    createCareerTarget: createCareerTargetMock,
+    generateFromCareerGoal: generateCareerGoalMock,
     getReadiness: readinessMock,
     getSimilarJobs: similarMock,
     submitFeedback: feedbackMock,
@@ -119,6 +125,8 @@ beforeEach(() => {
   refreshMock.mockReset();
   generateResumeMock.mockReset();
   generateTextMock.mockReset();
+  createCareerTargetMock.mockReset();
+  generateCareerGoalMock.mockReset();
   similarMock.mockReset();
   profileMock.mockReset();
   readinessMock.mockReset();
@@ -240,6 +248,76 @@ describe('ForYouPage', () => {
     expect(await screen.findByText(/text matched backend engineer/i)).toBeInTheDocument();
     expect(screen.getByText(/86% Match/i)).toBeInTheDocument();
     expect(generateTextMock).toHaveBeenCalledWith('Remote Node.js backend role');
+    expect(listMock).not.toHaveBeenCalled();
+  });
+
+  it('creates a career target and groups career goal recommendations by category', async () => {
+    const user = userEvent.setup();
+    createCareerTargetMock.mockResolvedValue({
+      id: 'target-1',
+      goalText: 'Move from manual testing into automation QA',
+      structured: {},
+      createdAt: '2026-08-02T00:00:00.000Z',
+      updatedAt: '2026-08-02T00:00:00.000Z',
+    });
+    generateCareerGoalMock.mockResolvedValue([
+      {
+        id: 'rec-career-1',
+        runId: 'run-career-1',
+        rank: 1,
+        job: {
+          id: 'career-job-1',
+          title: 'Automation QA Engineer',
+          company: { slug: 'alpha', name: 'Alpha', logoUrl: null, verified: true },
+          location: { formatted: 'Remote', remoteType: 'REMOTE' },
+          employmentType: 'FULL_TIME',
+          salary: { minimum: 10, maximum: 20, currency: 'INR' },
+          skills: ['Playwright'],
+          publishedAt: '2026-07-30T00:00:00.000Z',
+          applyUrl: 'https://example.com/apply',
+        },
+        displayScore: 90,
+        scoreResult: scoreResult(0.9),
+        category: 'BEST_MATCH',
+        matchType: 'EXACT',
+        createdAt: '2026-07-30T00:00:00.000Z',
+      },
+      {
+        id: 'rec-career-2',
+        runId: 'run-career-1',
+        rank: 2,
+        job: {
+          id: 'career-job-2',
+          title: 'QA Analyst',
+          company: { slug: 'beta', name: 'Beta', logoUrl: null, verified: true },
+          location: { formatted: 'Hybrid', remoteType: 'HYBRID' },
+          employmentType: 'FULL_TIME',
+          salary: { minimum: 10, maximum: 20, currency: 'INR' },
+          skills: ['Selenium'],
+          publishedAt: '2026-07-30T00:00:00.000Z',
+          applyUrl: 'https://example.com/apply',
+        },
+        displayScore: 76,
+        scoreResult: scoreResult(0.76),
+        category: 'GOOD_MATCH',
+        matchType: 'RELATED',
+        createdAt: '2026-07-30T00:00:00.000Z',
+      },
+    ]);
+
+    renderPage(true, '/for-you?mode=career');
+
+    const textarea = await screen.findByLabelText(/career goal/i);
+    await user.type(textarea, 'Move from manual testing into automation QA');
+    await user.click(screen.getByRole('button', { name: /generate career matches/i }));
+
+    expect(await screen.findByText(/automation qa engineer/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /target-role matches/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /transitional matches/i })).toBeInTheDocument();
+    expect(createCareerTargetMock).toHaveBeenCalledWith(
+      'Move from manual testing into automation QA',
+    );
+    expect(generateCareerGoalMock).toHaveBeenCalledWith('target-1');
     expect(listMock).not.toHaveBeenCalled();
   });
 

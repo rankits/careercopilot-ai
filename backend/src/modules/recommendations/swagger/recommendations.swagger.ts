@@ -344,6 +344,48 @@ const savedSearchPageSchema = {
   },
 };
 
+const careerTargetSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    goalText: {
+      type: 'string',
+      example: 'Move from manual testing into automation QA roles',
+    },
+    structured: {
+      type: 'object',
+      additionalProperties: true,
+      example: { targetRole: 'Automation QA Engineer' },
+    },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+};
+
+const careerTargetPageSchema = {
+  type: 'object',
+  properties: {
+    items: { type: 'array', items: careerTargetSchema },
+    page: { type: 'integer', minimum: 1 },
+    limit: { type: 'integer', minimum: 1, maximum: 100 },
+    total: { type: 'integer', minimum: 0 },
+  },
+};
+
+const careerTargetIdParam = [
+  {
+    name: 'careerTargetId',
+    in: 'path',
+    required: true,
+    description: 'Owned career target UUID',
+    schema: {
+      type: 'string',
+      format: 'uuid',
+      example: '33333333-3333-3333-3333-333333333333',
+    },
+  },
+] satisfies PathParameter[];
+
 const savedSearchWriteBody = {
   required: ['name'],
   properties: {
@@ -539,6 +581,109 @@ export const recommendationsSwagger = mergeSwaggerDocs(
           ),
         },
         ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiGet(
+    `${BASE_URL}/career-targets`,
+    {
+      summary: 'List career targets for the current user',
+      description:
+        'Returns only active career targets owned by the authenticated USER principal.',
+      queryParams: [
+        {
+          name: 'page',
+          in: 'query',
+          required: false,
+          schema: { type: 'integer', minimum: 1, default: 1 },
+        },
+        {
+          name: 'limit',
+          in: 'query',
+          required: false,
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Career targets retrieved',
+          schema: successSchema('Career targets retrieved', careerTargetPageSchema),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiPost(
+    `${BASE_URL}/career-targets`,
+    {
+      summary: 'Create a career target for the current user',
+      description:
+        'Persists a user-owned career goal that can be used as a CAREER_GOAL recommendation source.',
+      body: {
+        required: ['goalText'],
+        properties: {
+          goalText: { type: 'string', minLength: 1, maxLength: 20000 },
+          structured: {
+            type: 'object',
+            additionalProperties: true,
+            example: { targetRole: 'Automation QA Engineer' },
+          },
+        },
+      },
+      responses: {
+        201: {
+          description: 'Career target created',
+          schema: successSchema('Career target created', careerTargetSchema),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiGet(
+    `${BASE_URL}/career-targets/{careerTargetId}`,
+    {
+      summary: 'Get an owned career target',
+      params: careerTargetIdParam,
+      responses: {
+        200: {
+          description: 'Career target retrieved',
+          schema: successSchema('Career target retrieved', careerTargetSchema),
+        },
+        ...commonRecommendationErrors,
+        404: {
+          description: 'Career target missing or not owned by caller',
+          schema: errorSchema('Career target was not found', 'RECOMMENDATION_SOURCE_NOT_FOUND'),
+        },
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiDelete(
+    `${BASE_URL}/career-targets/{careerTargetId}`,
+    {
+      summary: 'Archive an owned career target',
+      params: careerTargetIdParam,
+      responses: {
+        200: {
+          description: 'Career target archived',
+          schema: successSchema('Career target archived'),
+        },
+        ...commonRecommendationErrors,
+        404: {
+          description: 'Career target missing or not owned by caller',
+          schema: errorSchema('Career target was not found', 'RECOMMENDATION_SOURCE_NOT_FOUND'),
+        },
       },
     },
     true,
