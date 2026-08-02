@@ -13,6 +13,7 @@ import {
   type PersistedJobSource,
 } from '@/modules/jobs/repositories/job.repository.js';
 import { JobSalaryPeriod, ProviderTier } from '@/modules/jobs/types/job.types.js';
+import { env } from '@/shared/config/env.conf.js';
 
 class MemoryTransaction implements JobPersistenceTransaction {
   private companyName: string | null = null;
@@ -46,7 +47,10 @@ class MemoryTransaction implements JobPersistenceTransaction {
     return this.job?.canonicalHash === canonicalHash ? this.job : null;
   }
 
+  lastWrite: CanonicalJobWrite | null = null;
+
   async upsertJob(input: CanonicalJobWrite): Promise<{ id: string; version: number }> {
+    this.lastWrite = input;
     this.job = {
       id: this.job?.id ?? 'canonical-job-id',
       canonicalHash: input.canonicalHash,
@@ -59,6 +63,8 @@ class MemoryTransaction implements JobPersistenceTransaction {
       skills: input.skills,
       tags: input.tags,
       version: input.version,
+      firstSeen: this.job?.firstSeen ?? input.now,
+      createdAt: this.job?.createdAt ?? input.now,
     };
     return { id: this.job.id, version: this.job.version };
   }
@@ -233,7 +239,57 @@ describe('PrismaJobRepository semantic persistence', () => {
       metadataOnly: 0,
       unchanged: 0,
       failed: 1,
+      storageAgeSkipped: 0,
+      embeddingAgeSkipped: 0,
     });
+  });
+
+  it('skips storage-ineligible jobs and skips embedding events for embedding-ineligible jobs', async () => {
+    const envSnapshot = {
+      JOB_STORAGE_AGE_FILTER_ENABLED: env.JOB_STORAGE_AGE_FILTER_ENABLED,
+      JOB_STORAGE_MAX_AGE_MONTHS: env.JOB_STORAGE_MAX_AGE_MONTHS,
+      JOB_EMBEDDING_AGE_FILTER_ENABLED: env.JOB_EMBEDDING_AGE_FILTER_ENABLED,
+      JOB_EMBEDDING_MAX_AGE_MONTHS: env.JOB_EMBEDDING_MAX_AGE_MONTHS,
+    };
+    Object.assign(env, {
+      JOB_STORAGE_AGE_FILTER_ENABLED: true,
+      JOB_STORAGE_MAX_AGE_MONTHS: 3,
+      JOB_EMBEDDING_AGE_FILTER_ENABLED: true,
+      JOB_EMBEDDING_MAX_AGE_MONTHS: 2,
+    });
+
+    try {
+      const runner = new MemoryRunner();
+      const repository = new PrismaJobRepository(runner);
+
+      const storageSkipped = await repository.upsertMany([
+        makeJob({
+          providerJobId: 'old-job',
+          postedAt: '2020-01-01T00:00:00.000Z',
+          canonicalHash: 'hash-old',
+        }),
+      ]);
+      expect(storageSkipped.outcomes[0]?.outcome).toBe('STORAGE_AGE_SKIPPED');
+      expect(storageSkipped.summary.storageAgeSkipped).toBe(1);
+      expect(runner.transaction.outboxEvents).toHaveLength(0);
+
+      // Within storage (3mo) but outside embedding (2mo) relative to today (2026-08-03)
+      const embeddingSkipped = await repository.upsertMany([
+        makeJob({
+          providerJobId: 'mid-age-job',
+          postedAt: '2026-05-15T00:00:00.000Z',
+          canonicalHash: 'hash-mid',
+        }),
+      ]);
+      expect(embeddingSkipped.outcomes[0]?.outcome).toBe('EMBEDDING_AGE_SKIPPED');
+      expect(embeddingSkipped.summary.embeddingAgeSkipped).toBe(1);
+      expect(runner.transaction.lastWrite?.effectivePostedAt).toEqual(
+        new Date('2026-05-15T00:00:00.000Z'),
+      );
+      expect(runner.transaction.outboxEvents).toHaveLength(0);
+    } finally {
+      Object.assign(env, envSnapshot);
+    }
   });
 
   it('reports persistence failure when the transactional outbox write fails', async () => {
