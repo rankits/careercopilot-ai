@@ -1,7 +1,10 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { InMemoryRecommendationUnitOfWork } from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
 import type { JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
 import { RECOMMENDATION_ERROR_CODES } from '@/modules/recommendations/errors/recommendation.error.js';
+import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
+import { CareerTargetService } from '@/modules/recommendations/services/career-target.service.js';
+import { SavedSearchService } from '@/modules/recommendations/services/saved-search.service.js';
 
 const sampleJob = (id: string): JobListDto => ({
   id,
@@ -131,5 +134,105 @@ describe('recommendation repository IDOR guards', () => {
     expect(intruderFeedback).toBeNull();
     expect(ownerExclusions).toEqual([record.job.id]);
     expect(intruderExclusions).toEqual([]);
+  });
+
+  it('scopes resume, career goal, and saved search recommendation sources to the owning user', async () => {
+    const mockJobs = { findById: vi.fn() } as any;
+    const mockProfiles = {
+      findCandidateProfileByUserId: vi.fn(),
+      findOwnedResumeProfileSource: vi.fn(async (userId: string, id: string) =>
+        userId === 'owner'
+          ? {
+              personalDetails: {},
+              experience: [],
+              education: [],
+              skills: ['ts'],
+              certifications: [],
+            }
+          : null,
+      ),
+      findOwnedCareerTargetSource: vi.fn(async (userId: string, id: string) =>
+        userId === 'owner' ? { id, userId, goalText: 'Goal', structured: {} } : null,
+      ),
+      findOwnedSavedSearchSource: vi.fn(async (userId: string, id: string) =>
+        userId === 'owner'
+          ? { id, userId, name: 'Search', query: 'TS', filters: {}, context: {} }
+          : null,
+      ),
+    } as any;
+    const authService = new RecommendationSourceAuthorizationService(mockJobs, mockProfiles);
+
+    await expect(
+      authService.authorizeForSource('intruder', {
+        sourceType: 'RESUME',
+        sourceId: 'owner-resume',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+    });
+
+    await expect(
+      authService.authorizeForSource('intruder', {
+        sourceType: 'CAREER_GOAL',
+        sourceId: 'owner-goal',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+    });
+
+    await expect(
+      authService.authorizeForSource('intruder', {
+        sourceType: 'SAVED_SEARCH',
+        sourceId: 'owner-search',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+    });
+  });
+
+  it('rejects cross-user access to career targets and saved searches via service layer', async () => {
+    const careerTargetRepo = {
+      findOwned: vi.fn(async (userId: string, id: string) =>
+        userId === 'owner' ? { id, userId, goalText: 'Goal' } : null,
+      ),
+    } as any;
+    const savedSearchRepo = {
+      findOwned: vi.fn(async (userId: string, id: string) =>
+        userId === 'owner' ? { id, userId, name: 'Search' } : null,
+      ),
+    } as any;
+
+    const careerTargetService = new CareerTargetService(careerTargetRepo);
+    const savedSearchService = new SavedSearchService(savedSearchRepo);
+
+    await expect(careerTargetService.get('intruder', 'target-1')).rejects.toMatchObject({
+      statusCode: 404,
+      code: RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+    });
+
+    await expect(savedSearchService.get('intruder', 'search-1')).rejects.toMatchObject({
+      statusCode: 404,
+      code: RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+    });
+  });
+
+  it('prevents IDOR on from-text, career goal, and saved search runs by isolating user runs in repository', async () => {
+    const uow = new InMemoryRecommendationUnitOfWork();
+    const runText = await uow.execute(({ runs }) =>
+      runs.create({ userId: 'owner', sourceType: 'TARGET_TEXT' }),
+    );
+    const runGoal = await uow.execute(({ runs }) =>
+      runs.create({ userId: 'owner', sourceType: 'CAREER_GOAL', sourceId: 'goal-1' }),
+    );
+    const runSearch = await uow.execute(({ runs }) =>
+      runs.create({ userId: 'owner', sourceType: 'SAVED_SEARCH', sourceId: 'search-1' }),
+    );
+
+    expect(await uow.execute(({ runs }) => runs.findById('intruder', runText.id))).toBeNull();
+    expect(await uow.execute(({ runs }) => runs.findById('intruder', runGoal.id))).toBeNull();
+    expect(await uow.execute(({ runs }) => runs.findById('intruder', runSearch.id))).toBeNull();
   });
 });
