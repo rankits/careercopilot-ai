@@ -1,5 +1,5 @@
 import { env } from '@/shared/config/env.conf.js';
-import { subtractCalendarMonths } from '@/modules/jobs/utils/calendar-months.js';
+import { subtractDays } from '@/modules/jobs/utils/calendar-days.js';
 
 export interface JobAgePolicyInput {
   effectiveDate: Date | null;
@@ -37,12 +37,12 @@ export class JobAgePolicy {
 
   getStorageCutoffDate(referenceDate: Date = this.now()): Date | null {
     if (!env.JOB_STORAGE_AGE_FILTER_ENABLED) return null;
-    return subtractCalendarMonths(referenceDate, env.JOB_STORAGE_MAX_AGE_MONTHS);
+    return subtractDays(referenceDate, env.JOB_STORAGE_MAX_AGE_DAYS);
   }
 
   getEmbeddingCutoffDate(referenceDate: Date = this.now()): Date | null {
     if (!env.JOB_EMBEDDING_AGE_FILTER_ENABLED) return null;
-    return subtractCalendarMonths(referenceDate, env.JOB_EMBEDDING_MAX_AGE_MONTHS);
+    return subtractDays(referenceDate, env.JOB_EMBEDDING_MAX_AGE_DAYS);
   }
 
   evaluateStorageEligibility(input: JobAgePolicyInput): JobStorageEligibility {
