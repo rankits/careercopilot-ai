@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 42 |
+| Implemented | 43 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,37 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-API-001 - Expand status and readiness API contract with swagger
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendations.api.test.ts`
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.test.ts`
+  - `docs/job-recommendation-engine-tickets/STATUS_READINESS_API_CONTRACT.md`
+- API changes: readiness Swagger now marks core fields required and documents lifecycle/blocker examples
+- Database changes: none
+- Tests added:
+  - Backend API readiness response asserts full lifecycle/retrieval shape
+  - Backend Swagger test asserts authenticated status route and lifecycle schema
+  - Frontend readiness unwrap validates lifecycle and retrieval backend enums
+  - Frontend service rejects invalid lifecycle payloads
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts`
+  - `npm --prefix frontend run test -- recommendations.service.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused backend API/swagger tests passed
+  - Focused frontend recommendation service tests passed
+  - Backend and frontend typechecks passed
+  - Touched-file lint passed
+- Known limitations: no endpoint behavior change; this ticket is contract, docs, and client type alignment.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-RANK-002 - Optional LLM rerank for top candidates with safe fallback
 

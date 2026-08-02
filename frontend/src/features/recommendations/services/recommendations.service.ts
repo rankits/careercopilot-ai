@@ -3,7 +3,9 @@ import type {
   RecommendationDto,
   RecommendationFeedbackAction,
   RecommendationListResult,
+  RecommendationLifecycleState,
   RecommendationReadinessStatus,
+  RecommendationRetrievalBackend,
   RecommendationRunDetailsResult,
   SimilarJobDto,
 } from '@/features/recommendations/types/recommendation.types';
@@ -11,6 +13,26 @@ import { httpClient } from '@/services/httpClient';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const lifecycleStates = new Set<RecommendationLifecycleState>([
+  'NOT_STARTED',
+  'QUEUED',
+  'PROCESSING',
+  'READY',
+  'STALE',
+  'FAILED',
+  'FAILED_TIMEOUT',
+  'FAILED_PROVIDER',
+  'FAILED_EMPTY',
+]);
+
+const retrievalBackends = new Set<RecommendationRetrievalBackend>([
+  'DATABASE',
+  'PGVECTOR',
+  'ELASTICSEARCH',
+  'OPENSEARCH',
+  'EXTERNAL_VECTOR',
+]);
 
 const unwrapList = (response: unknown): RecommendationListResult => {
   if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
@@ -45,7 +67,21 @@ const unwrapReadiness = (response: unknown): RecommendationReadinessStatus => {
   if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
     throw new Error('Unexpected recommendation readiness response shape');
   }
-  return response.data.data as RecommendationReadinessStatus;
+  const payload = response.data.data;
+  if (
+    typeof payload.ready !== 'boolean' ||
+    typeof payload.canGenerateFromProfile !== 'boolean' ||
+    typeof payload.lifecycleState !== 'string' ||
+    !lifecycleStates.has(payload.lifecycleState as RecommendationLifecycleState) ||
+    !Array.isArray(payload.blockers) ||
+    !isRecord(payload.retrieval) ||
+    typeof payload.retrieval.backend !== 'string' ||
+    !retrievalBackends.has(payload.retrieval.backend as RecommendationRetrievalBackend) ||
+    typeof payload.retrieval.configured !== 'boolean'
+  ) {
+    throw new Error('Unexpected recommendation readiness response shape');
+  }
+  return payload as unknown as RecommendationReadinessStatus;
 };
 
 const unwrapSimilarJobs = (response: unknown): SimilarJobDto[] => {

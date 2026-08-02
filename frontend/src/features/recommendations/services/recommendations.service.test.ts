@@ -169,4 +169,55 @@ describe('recommendationsService', () => {
     expect(result).toHaveLength(1);
     expect(result[0].displayScore).toBe(84);
   });
+
+  it('loads readiness lifecycle status with retrieval metadata', async () => {
+    getMock.mockResolvedValue({
+      data: {
+        data: {
+          ready: true,
+          lifecycleState: 'READY',
+          canGenerateFromProfile: true,
+          blockers: [],
+          stale: false,
+          lastGeneratedAt: '2026-08-02T00:00:00.000Z',
+          retrieval: {
+            backend: 'PGVECTOR',
+            configured: true,
+            embeddingCoverageRatio: 0.9,
+          },
+        },
+      },
+    });
+
+    const result = await recommendationsService.getReadiness();
+
+    expect(getMock).toHaveBeenCalledWith(
+      '/job-recommendations/status',
+      expect.objectContaining({ signal: undefined }),
+    );
+    expect(result).toMatchObject({
+      ready: true,
+      lifecycleState: 'READY',
+      canGenerateFromProfile: true,
+      retrieval: { backend: 'PGVECTOR', configured: true },
+    });
+  });
+
+  it('rejects invalid readiness lifecycle payloads', async () => {
+    getMock.mockResolvedValue({
+      data: {
+        data: {
+          ready: true,
+          lifecycleState: 'DONE',
+          canGenerateFromProfile: true,
+          blockers: [],
+          retrieval: { backend: 'PGVECTOR', configured: true },
+        },
+      },
+    });
+
+    await expect(recommendationsService.getReadiness()).rejects.toThrow(
+      'Unexpected recommendation readiness response shape',
+    );
+  });
 });
