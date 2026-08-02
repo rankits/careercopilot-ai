@@ -2,6 +2,7 @@ import { createEmbeddingProvider } from '@/modules/ai-embeddings/index.js';
 import type { EmbeddingProvider } from '@/modules/ai-embeddings/contracts/embedding-provider.js';
 import type { IJobSearchRepository } from '@/modules/job-listing/contracts/IJobSearchRepository.js';
 import type { JobEmbeddingRepository } from '@/modules/job-embeddings/contracts/job-embedding.repository.js';
+import { JOB_EMBEDDING_DIMENSIONS } from '@/modules/job-embeddings/constants/job-embedding.constants.js';
 import type {
   CandidateRetrievalProvider,
   CandidateRetrievalRequest,
@@ -35,6 +36,13 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
     }
 
     const provider = this.createProvider();
+    if (provider.dimensions !== JOB_EMBEDDING_DIMENSIONS) {
+      throw new RecommendationError(
+        `Embedding provider dimensions ${provider.dimensions} do not match job embedding index dimensions ${JOB_EMBEDDING_DIMENSIONS}`,
+        503,
+        RECOMMENDATION_ERROR_CODES.EMBEDDING_DIMENSION_MISMATCH,
+      );
+    }
     const queryText = buildRecommendationQueryText(request.context);
     if (!queryText.trim()) {
       throw new RecommendationError(

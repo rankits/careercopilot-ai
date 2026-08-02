@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 5 |
+| Implemented | 6 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,32 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-EMB-001 - Verify compatible embedding model and dimension contract
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/providers/pgvector-candidate-retrieval.provider.ts`
+  - `backend/src/modules/recommendations/errors/recommendation.error.ts`
+  - `backend/src/modules/ai-embeddings/__tests__/embedding-providers.test.ts`
+  - `backend/src/modules/recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `backend/src/workers/job-embedding.worker.ts`
+  - `docs/job-recommendation-engine-tickets/EMBEDDING_COMPATIBILITY_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Provider factory rejects configured dimensions that do not match `JOB_EMBEDDING_DIMENSIONS`
+  - Recommendation retrieval fails closed with `EMBEDDING_DIMENSION_MISMATCH` before vector search
+- Commands executed:
+  - `npm --prefix backend run test -- modules/ai-embeddings/__tests__/embedding-providers.test.ts recommendations/__tests__/pgvector-candidate-retrieval.test.ts modules/job-embeddings/services/__tests__/job-embedding-indexer.service.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused embedding tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: CandidateEmbedding persistence remains out of scope for `JRE-EMB-002`
+- Next ticket: `JRE-CONTEXT-001`
 
 ### 2026-08-02 - JRE-ARCH-002 - Expand readiness status model toward lifecycle states
 

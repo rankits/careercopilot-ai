@@ -182,6 +182,34 @@ describe('PgVectorCandidateRetrievalProvider', () => {
     expect(result.retrievalScores).toEqual({ 'active-job': 0.91 });
   });
 
+  it('fails closed when query embedding dimensions do not match the job index', async () => {
+    const searchNearest = vi.fn();
+    const provider = new PgVectorCandidateRetrievalProvider(
+      { searchNearest } as unknown as JobEmbeddingRepository,
+      { findByIds: vi.fn() } as unknown as IJobSearchRepository,
+      () => ({
+        provider: 'google',
+        model: 'text-embedding-004',
+        dimensions: 384,
+        generateEmbedding: vi.fn(),
+        generateEmbeddings: vi.fn(),
+      }),
+    );
+
+    await expect(
+      provider.retrieve({
+        userId: 'user-1',
+        context: baseContext(),
+        backend: 'PGVECTOR',
+        limit: 10,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 503,
+      code: 'EMBEDDING_DIMENSION_MISMATCH',
+    });
+    expect(searchNearest).not.toHaveBeenCalled();
+  });
+
   it('maps embedding failures to EMBEDDING_PROVIDER_UNAVAILABLE', async () => {
     const provider = new PgVectorCandidateRetrievalProvider(
       { searchNearest: vi.fn() } as unknown as JobEmbeddingRepository,
