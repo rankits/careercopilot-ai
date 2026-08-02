@@ -8,6 +8,7 @@ import { commonSecureResponses, paginatedSchema } from '@/shared/swagger/schemas
 import {
   RECOMMENDATION_CATEGORY_VALUES,
   RECOMMENDATION_FEEDBACK_ACTION_VALUES,
+  RECOMMENDATION_LIFECYCLE_STATE_VALUES,
   RECOMMENDATION_MATCH_TYPE_VALUES,
   RECOMMENDATION_SCORE_COMPONENT_VALUES,
 } from '@/modules/recommendations/types/recommendations.types.js';
@@ -156,6 +157,35 @@ const recommendationArraySchema = {
   items: recommendationItemSchema,
 };
 
+const readinessStatusSchema = {
+  type: 'object',
+  properties: {
+    ready: {
+      type: 'boolean',
+      description: 'Backward-compatible readiness boolean for existing clients.',
+    },
+    lifecycleState: {
+      type: 'string',
+      enum: [...RECOMMENDATION_LIFECYCLE_STATE_VALUES],
+      example: 'READY',
+      description:
+        'Lifecycle state derived from the latest recommendation run and freshness checks.',
+    },
+    canGenerateFromProfile: { type: 'boolean' },
+    blockers: { type: 'array', items: { type: 'string' } },
+    stale: { type: 'boolean' },
+    lastGeneratedAt: { type: 'string', format: 'date-time', nullable: true },
+    retrieval: {
+      type: 'object',
+      properties: {
+        backend: { type: 'string', example: 'PGVECTOR' },
+        configured: { type: 'boolean' },
+        embeddingCoverageRatio: { type: 'number', minimum: 0, maximum: 1 },
+      },
+    },
+  },
+};
+
 const commonRecommendationErrors = {
   ...commonSecureResponses,
   403: {
@@ -243,6 +273,24 @@ export const recommendationsSwagger = {
         422: {
           description: 'Target text missing or invalid filters',
           schema: errorSchema('Target text is required', 'TARGET_TEXT_REQUIRED'),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  ...createApiGet(
+    `${BASE_URL}/status`,
+    {
+      summary: 'Get recommendation readiness and lifecycle status',
+      description:
+        'Returns backward-compatible readiness booleans plus a lifecycleState for richer UI state handling.',
+      responses: {
+        200: {
+          description: 'Recommendation readiness retrieved',
+          schema: successSchema('Recommendation readiness retrieved', readinessStatusSchema),
         },
         ...commonRecommendationErrors,
       },

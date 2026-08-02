@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 4 |
+| Implemented | 5 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,38 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-ARCH-002 - Expand readiness status model toward lifecycle states
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/types/recommendations.types.ts`
+  - `backend/src/modules/recommendations/contracts/recommendation.repository.ts`
+  - `backend/src/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/services/recommendation-readiness.helpers.ts`
+  - `backend/src/modules/recommendations/services/recommendations.service.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `docs/job-recommendation-engine-tickets/LIFECYCLE_STATUS_CONTRACT.md`
+- API changes: additive `lifecycleState` on `GET /api/v1/job-recommendations/status`
+- Database changes: none
+- Tests added:
+  - Lifecycle mapping unit tests for NOT_STARTED, QUEUED, PROCESSING, READY, STALE, and FAILED variants
+  - Readiness service STALE regression
+  - Status API additive-field assertion
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-readiness.helpers.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `npm --prefix backend run typecheck`
+- Results:
+  - Focused lifecycle/status tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+  - Backend typecheck still fails only in `src/workers/job-embedding.worker.ts`
+- Known limitations: async queue status transitions remain out of scope
+- Next ticket: `JRE-EMB-001`
 
 ### 2026-08-02 - JRE-FILTER-001 - Ensure closed expired inactive jobs excluded on retrieve and list
 

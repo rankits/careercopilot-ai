@@ -95,6 +95,17 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       if (!run || run.userId !== userId) return null;
       return { ...run };
     },
+
+    findLatestByUser: async (userId: string): Promise<RecommendationRunRecord | null> => {
+      const [latest] = [...this.runs.values()]
+        .filter((run) => run.userId === userId)
+        .sort(
+          (left, right) =>
+            right.createdAt.getTime() - left.createdAt.getTime() ||
+            right.id.localeCompare(left.id),
+        );
+      return latest ? { ...latest } : null;
+    },
   };
 
   private readonly recommendationRepository: JobRecommendationRepository = {

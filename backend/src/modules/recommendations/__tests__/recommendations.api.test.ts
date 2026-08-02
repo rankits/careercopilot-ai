@@ -135,6 +135,7 @@ describe('job recommendation HTTP gates', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({
+      lifecycleState: 'NOT_STARTED',
       canGenerateFromProfile: expect.any(Boolean),
       blockers: expect.any(Array),
       retrieval: expect.objectContaining({ configured: true }),

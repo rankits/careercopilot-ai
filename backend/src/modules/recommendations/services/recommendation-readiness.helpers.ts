@@ -1,4 +1,9 @@
 import type { RecommendationUnitOfWork } from '@/modules/recommendations/contracts/recommendation.repository.js';
+import { RECOMMENDATION_ERROR_CODES } from '@/modules/recommendations/errors/recommendation.error.js';
+import type {
+  RecommendationLifecycleState,
+  RecommendationRunRecord,
+} from '@/modules/recommendations/types/recommendations.types.js';
 import { computeEmbeddingCoverageRatio } from '@/modules/job-embeddings/observability/job-embedding-coverage.js';
 import type { JobEmbeddingRepository } from '@/modules/job-embeddings/contracts/job-embedding.repository.js';
 import { prisma } from '@/shared/config/db.conf.js';
@@ -40,6 +45,12 @@ export const findLatestRecommendationGeneratedAt = async (
   return page.items[0]?.createdAt ?? null;
 };
 
+export const findLatestRecommendationRun = async (
+  unitOfWork: RecommendationUnitOfWork,
+  userId: string,
+): Promise<RecommendationRunRecord | null> =>
+  unitOfWork.execute(({ runs }) => runs.findLatestByUser(userId));
+
 export const isRecommendationSetStale = async (
   deps: RecommendationReadinessDependencies,
   userId: string,
@@ -50,4 +61,29 @@ export const isRecommendationSetStale = async (
     return deps.profileUpdatedAfter(userId, lastGeneratedAt);
   }
   return false;
+};
+
+export const mapRecommendationLifecycleState = (input: {
+  latestRun: RecommendationRunRecord | null;
+  stale: boolean;
+}): RecommendationLifecycleState => {
+  if (!input.latestRun) return 'NOT_STARTED';
+  if (input.latestRun.status === 'PENDING') return 'QUEUED';
+  if (input.latestRun.status === 'RETRIEVING' || input.latestRun.status === 'SCORING') {
+    return 'PROCESSING';
+  }
+  if (input.latestRun.status === 'FAILED') {
+    switch (input.latestRun.failureCode) {
+      case 'RECOMMENDATION_GENERATION_TIMEOUT':
+        return 'FAILED_TIMEOUT';
+      case RECOMMENDATION_ERROR_CODES.EMBEDDING_PROVIDER_UNAVAILABLE:
+        return 'FAILED_PROVIDER';
+      case RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND:
+        return 'FAILED_EMPTY';
+      default:
+        return 'FAILED';
+    }
+  }
+  if (input.stale) return 'STALE';
+  return 'READY';
 };
