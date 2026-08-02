@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 21 |
+| Implemented | 22 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,33 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-VEC-001 - Harden vector index metadata and retrieval filters contract
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/contracts/recommendation-provider.contracts.ts`
+  - `backend/src/modules/recommendations/providers/pgvector-candidate-retrieval.provider.ts`
+  - `backend/src/modules/recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `backend/src/modules/job-embeddings/repositories/__tests__/prisma-job-embedding.repository.test.ts`
+  - `backend/src/modules/job-embeddings/__tests__/job-embedding-index-contract.test.ts`
+  - `docs/job-recommendation-engine-tickets/VECTOR_RETRIEVAL_FILTER_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - HNSW cosine index and 768-dimension check migration contract
+  - Repository search SQL asserts active/current-version/exclude/filter pushdown
+  - Pgvector retrieval metadata includes candidate count and latency
+- Commands executed:
+  - `npm --prefix backend run test -- modules/job-embeddings/__tests__/job-embedding-index-contract.test.ts modules/job-embeddings/repositories/__tests__/prisma-job-embedding.repository.test.ts recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused vector index/repository/retrieval tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: canonical duplicate collapse remains `JRE-VEC-002`
+- Next ticket: `JRE-VEC-002`
 
 ### 2026-08-02 - JRE-EMB-003 - Unify context embedding reuse across recommendation sources
 

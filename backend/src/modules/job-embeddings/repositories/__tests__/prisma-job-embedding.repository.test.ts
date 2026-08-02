@@ -106,6 +106,7 @@ describe('PrismaJobEmbeddingRepository', () => {
     const queryText = statement.strings.join('');
     expect(queryText).toContain('je."job_version" = j."version"');
     expect(queryText).toContain('j."status" = ');
+    expect(queryText).toContain('j."id" NOT IN');
     expect(queryText).toContain('salary_min');
     expect(queryText).toContain('UPPER(j."currency")');
     expect(queryText).not.toContain('DELETE FROM jobs');
