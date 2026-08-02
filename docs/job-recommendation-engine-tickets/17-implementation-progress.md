@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 12 |
+| Implemented | 13 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,38 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-EXPLAIN-001 - Build deterministic explanations from score components
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/types/recommendations.types.ts`
+  - `backend/src/modules/recommendations/services/recommendation-explanation.service.ts`
+  - `backend/src/modules/recommendations/mappers/recommendation.mapper.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-explanation.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation.mapper.test.ts`
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `docs/job-recommendation-engine-tickets/DETERMINISTIC_EXPLANATION_CONTRACT.md`
+- API changes: additive `explanation` object on recommendation list/detail/generate items
+- Database changes: none
+- Tests added:
+  - Explanation bullets align to component reasons and do not invent missing signals
+  - Hybrid scoring factors are exposed in scoreModel, not as component bullets
+  - Skill arrays are copied for future skill-gap UI
+  - Mapper includes the additive explanation field
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-explanation.service.test.ts recommendations/__tests__/recommendation.mapper.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused explanation/mapper/API/generation tests passed
+  - Backend and frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: no LLM prose and no dedicated skillGap DTO until `JRE-EXPLAIN-002`
+- Next ticket: `JRE-EXPLAIN-002`
 
 ### 2026-08-02 - JRE-SCORE-002 - Define and implement missing-component scoring policy
 

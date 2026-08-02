@@ -9,12 +9,37 @@ export interface RecommendationScoreResult {
   reasons: Array<{ component: string; message: string; evidence: string[] }>;
 }
 
+export interface RecommendationExplanation {
+  summary: string;
+  bullets: Array<{
+    component: string;
+    label: string;
+    score: number;
+    weight: number;
+    contribution: number;
+    message: string;
+    evidence: string[];
+  }>;
+  matchedSkills: string[];
+  relatedSkills: string[];
+  missingSkills: string[];
+  scoreModel: {
+    overallScore: number;
+    displayScore?: number;
+    heuristicWeight: number;
+    retrievalWeight: number;
+    heuristicScore?: number;
+    retrievalScore?: number;
+  };
+}
+
 export interface RecommendationDto {
   id: string;
   runId: string;
   rank: number;
   job: JobListDto;
   displayScore?: number | null;
+  explanation?: RecommendationExplanation;
   scoreResult: RecommendationScoreResult;
   category: string;
   matchType: string;

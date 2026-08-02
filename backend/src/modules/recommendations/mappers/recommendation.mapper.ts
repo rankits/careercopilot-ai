@@ -2,6 +2,7 @@ import type {
   ExtractedRecommendationContext,
   JobRecommendationRecord,
   RecommendationContext,
+  RecommendationExplanation,
   RecommendationFeedbackRecord,
   RecommendationLifecycleState,
   RecommendationPage,
@@ -12,6 +13,7 @@ import type {
 } from '@/modules/recommendations/types/recommendations.types.js';
 import { normalizeExtractedRecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
 import { mapRecommendationLifecycleState } from '@/modules/recommendations/services/recommendation-readiness.helpers.js';
+import { buildRecommendationExplanation } from '@/modules/recommendations/services/recommendation-explanation.service.js';
 
 export interface RecommendationContextMapper {
   toContext(input: {
@@ -38,6 +40,7 @@ export interface RecommendationResponse {
   job: JobRecommendationRecord['job'];
   rank: number;
   displayScore?: number;
+  explanation: RecommendationExplanation;
   scoreResult: JobRecommendationRecord['scoreResult'];
   category: JobRecommendationRecord['category'];
   matchType: JobRecommendationRecord['matchType'];
@@ -99,6 +102,7 @@ export const toRecommendationResponse: RecommendationMapper['toResponse'] = (rec
   job: record.job,
   rank: record.rank,
   displayScore: toDisplayScore(record.scoreResult.overallScore),
+  explanation: buildRecommendationExplanation(record),
   scoreResult: record.scoreResult,
   category: record.category,
   matchType: record.matchType,

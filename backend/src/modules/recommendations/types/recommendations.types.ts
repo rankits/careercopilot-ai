@@ -281,6 +281,32 @@ export interface RecommendationReason {
   evidence: string[];
 }
 
+export interface RecommendationExplanationBullet {
+  component: RecommendationScoreComponentName;
+  label: string;
+  score: number;
+  weight: number;
+  contribution: number;
+  message: string;
+  evidence: string[];
+}
+
+export interface RecommendationExplanation {
+  summary: string;
+  bullets: RecommendationExplanationBullet[];
+  matchedSkills: string[];
+  relatedSkills: string[];
+  missingSkills: string[];
+  scoreModel: {
+    overallScore: number;
+    displayScore?: number;
+    heuristicWeight: number;
+    retrievalWeight: number;
+    heuristicScore?: number;
+    retrievalScore?: number;
+  };
+}
+
 export interface RecommendationScoreResult {
   overallScore: number;
   components: RecommendationScoreComponents;

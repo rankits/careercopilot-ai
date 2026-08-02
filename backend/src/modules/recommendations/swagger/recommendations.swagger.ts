@@ -128,6 +128,41 @@ const recommendationItemSchema = {
       description:
         'User-facing match score derived from scoreResult.overallScore and rounded to 0-100.',
     },
+    explanation: {
+      type: 'object',
+      properties: {
+        summary: { type: 'string', example: '87% match with 3 matched skills' },
+        bullets: {
+          type: 'array',
+          items: {
+            type: 'object',
+            properties: {
+              component: { type: 'string', enum: [...RECOMMENDATION_SCORE_COMPONENT_VALUES] },
+              label: { type: 'string', example: 'Required skills' },
+              score: { type: 'number', minimum: 0, maximum: 1 },
+              weight: { type: 'number', minimum: 0, maximum: 1 },
+              contribution: { type: 'number', minimum: 0, maximum: 1 },
+              message: { type: 'string' },
+              evidence: { type: 'array', items: { type: 'string' } },
+            },
+          },
+        },
+        matchedSkills: { type: 'array', items: { type: 'string' } },
+        relatedSkills: { type: 'array', items: { type: 'string' } },
+        missingSkills: { type: 'array', items: { type: 'string' } },
+        scoreModel: {
+          type: 'object',
+          properties: {
+            overallScore: { type: 'number', minimum: 0, maximum: 1 },
+            displayScore: { type: 'integer', minimum: 0, maximum: 100 },
+            heuristicWeight: { type: 'number', example: 0.6 },
+            retrievalWeight: { type: 'number', example: 0.4 },
+            heuristicScore: { type: 'number', minimum: 0, maximum: 1 },
+            retrievalScore: { type: 'number', minimum: 0, maximum: 1 },
+          },
+        },
+      },
+    },
     scoreResult: scoreResultSchema,
     category: { type: 'string', enum: [...RECOMMENDATION_CATEGORY_VALUES] },
     matchType: { type: 'string', enum: [...RECOMMENDATION_MATCH_TYPE_VALUES] },
