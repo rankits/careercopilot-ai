@@ -58,6 +58,17 @@ describe('recommendationsService', () => {
     expect(items).toHaveLength(1);
   });
 
+  it('posts RESUME generate with sourceId', async () => {
+    postMock.mockResolvedValue({ data: { data: [{ id: 'r1' }] } });
+    const items = await recommendationsService.generateFromResume('resume-1');
+    expect(postMock).toHaveBeenCalledWith(
+      '/job-recommendations',
+      { sourceType: 'RESUME', sourceId: 'resume-1' },
+      expect.objectContaining({ timeout: 60_000 }),
+    );
+    expect(items).toHaveLength(1);
+  });
+
   it('posts PROFILE refresh and unwraps run details', async () => {
     postMock.mockResolvedValue({
       data: {
