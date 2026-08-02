@@ -12,15 +12,19 @@ import { JobCard, VirtualizedJobList } from '@/components/molecules';
 
 import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
 import {
+  useCreateSavedSearch,
+  useDeleteSavedSearch,
   useGenerateCareerGoalRecommendations,
   useGenerateRecommendations,
   useGenerateResumeRecommendations,
+  useGenerateSavedSearchRecommendations,
   useGenerateTextRecommendations,
   mapRecommendationDtoToCard,
   useRefreshProfileRecommendations,
   useRecommendationFeedback,
   useRecommendationReadiness,
   useRecommendations,
+  useSavedSearches,
   useSimilarJobs,
 } from '@/features/recommendations/hooks/useRecommendations';
 import { useAppSelector } from '@/hooks/redux';
@@ -52,7 +56,7 @@ const recommendationModes: Array<{
   { id: 'similar', label: 'Similar', panelLabel: 'Similar jobs', available: true },
   { id: 'text-career', label: 'Text', panelLabel: 'Text matches', available: true },
   { id: 'career', label: 'Career', panelLabel: 'Career goal matches', available: true },
-  { id: 'saved', label: 'Saved', panelLabel: 'Saved search recommendations', available: false },
+  { id: 'saved', label: 'Saved', panelLabel: 'Saved search recommendations', available: true },
 ];
 
 const careerCategoryOrder = [
@@ -133,6 +137,11 @@ export function ForYouPage() {
   const [selectedResumeId, setSelectedResumeId] = useState('');
   const [targetText, setTargetText] = useState('');
   const [careerGoalText, setCareerGoalText] = useState('');
+  const [savedSearchName, setSavedSearchName] = useState('');
+  const [savedSearchQueryText, setSavedSearchQueryText] = useState('');
+  const [selectedSavedSearchId, setSelectedSavedSearchId] = useState('');
+  const [savedSearchGeneratedOnce, setSavedSearchGeneratedOnce] = useState(false);
+  const [savedSearchNotice, setSavedSearchNotice] = useState<string | null>(null);
   const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
   const [resumeRecommendations, setResumeRecommendations] = useState<
     ReturnType<typeof mapRecommendationDtoToCard>[]
@@ -141,6 +150,9 @@ export function ForYouPage() {
     ReturnType<typeof mapRecommendationDtoToCard>[]
   >([]);
   const [careerRecommendations, setCareerRecommendations] = useState<RecommendationDto[]>([]);
+  const [savedSearchRecommendations, setSavedSearchRecommendations] = useState<
+    ReturnType<typeof mapRecommendationDtoToCard>[]
+  >([]);
   const modeTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const readiness = useRecommendationReadiness();
@@ -159,6 +171,9 @@ export function ForYouPage() {
   const generateResume = useGenerateResumeRecommendations();
   const generateText = useGenerateTextRecommendations();
   const generateCareerGoal = useGenerateCareerGoalRecommendations();
+  const createSavedSearch = useCreateSavedSearch();
+  const deleteSavedSearch = useDeleteSavedSearch();
+  const generateSavedSearch = useGenerateSavedSearchRecommendations();
   const feedback = useRecommendationFeedback();
   const { saveJob, unsaveJob } = useSaveJob();
   const resumeProfile = useQuery({
@@ -174,12 +189,14 @@ export function ForYouPage() {
       activeMode === 'resume' ||
       activeMode === 'text-career' ||
       activeMode === 'career' ||
+      activeMode === 'saved' ||
       (activeMode === 'similar' && Boolean(similarSourceJobId)),
   });
   const similarJobs = useSimilarJobs(similarSourceJobId, {
     enabled: activeMode === 'similar' && Boolean(similarSourceJobId),
     limit: 20,
   });
+  const savedSearches = useSavedSearches({ enabled: activeMode === 'saved' });
   const [optimisticSaved, setOptimisticSaved] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
@@ -188,6 +205,13 @@ export function ForYouPage() {
       setSelectedResumeId(sourceResumeId);
     }
   }, [resumeProfile.data?.sourceResumeId, selectedResumeId]);
+
+  useEffect(() => {
+    const firstSearchId = savedSearches.data?.items[0]?.id;
+    if (activeMode === 'saved' && firstSearchId && !selectedSavedSearchId) {
+      setSelectedSavedSearchId(firstSearchId);
+    }
+  }, [activeMode, savedSearches.data?.items, selectedSavedSearchId]);
 
   const savedIdSet = useMemo(() => {
     const ids = new Set(
@@ -251,6 +275,24 @@ export function ForYouPage() {
       : generateCareerGoal.isError
         ? 'Unable to generate career goal recommendations.'
         : null;
+  const savedSearchError =
+    savedSearches.error instanceof Error
+      ? savedSearches.error.message
+      : savedSearches.isError
+        ? 'Unable to load saved searches.'
+        : createSavedSearch.error instanceof Error
+          ? createSavedSearch.error.message
+          : createSavedSearch.isError
+            ? 'Unable to create saved search.'
+            : deleteSavedSearch.error instanceof Error
+              ? deleteSavedSearch.error.message
+              : deleteSavedSearch.isError
+                ? 'Unable to delete saved search.'
+                : generateSavedSearch.error instanceof Error
+                  ? generateSavedSearch.error.message
+                  : generateSavedSearch.isError
+                    ? 'Unable to generate saved-search recommendations.'
+                    : null;
   const similarCards = similarJobs.data?.cards ?? [];
   const selectedResumeOption = resumeProfile.data?.sourceResumeId
     ? [{ id: resumeProfile.data.sourceResumeId, label: 'Confirmed resume' }]
@@ -259,8 +301,15 @@ export function ForYouPage() {
   const targetTextTooLong = trimmedTargetText.length > TARGET_TEXT_MAX_LENGTH;
   const trimmedCareerGoalText = careerGoalText.trim();
   const careerGoalTooLong = trimmedCareerGoalText.length > CAREER_GOAL_MAX_LENGTH;
+  const trimmedSavedSearchName = savedSearchName.trim();
+  const trimmedSavedSearchQuery = savedSearchQueryText.trim();
+  const savedSearchesList = savedSearches.data?.items ?? [];
+  const selectedSavedSearch = savedSearchesList.find((item) => item.id === selectedSavedSearchId);
   const visibleCareerRecommendations = careerRecommendations.filter(
     (item) => !dismissedIds[item.id],
+  );
+  const visibleSavedSearchRecommendations = savedSearchRecommendations.filter(
+    (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
   );
   const careerGroups = groupCareerRecommendations(visibleCareerRecommendations);
 
@@ -890,10 +939,207 @@ export function ForYouPage() {
         </Box>
       ) : null}
 
+      {activeMode === 'saved' ? (
+        <Box
+          aria-labelledby={getTabId('saved')}
+          id={getPanelId('saved')}
+          role="tabpanel"
+          sx={{ display: 'grid', gap: 3 }}
+        >
+          {savedSearches.isPending ? (
+            <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
+              <CircularProgress aria-label="Loading saved searches" />
+            </Box>
+          ) : null}
+
+          {savedSearchError ? (
+            <Typography role="alert" sx={{ color: 'error.main' }}>
+              {savedSearchError}
+            </Typography>
+          ) : null}
+
+          {savedSearchNotice ? (
+            <Alert onClose={() => setSavedSearchNotice(null)} role="status" severity="success">
+              {savedSearchNotice}
+            </Alert>
+          ) : null}
+
+          <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+            <TextField
+              fullWidth
+              label="Saved search name"
+              onChange={(event) => setSavedSearchName(event.target.value)}
+              size="small"
+              value={savedSearchName}
+            />
+            <TextField
+              fullWidth
+              label="Search query"
+              multiline
+              minRows={3}
+              onChange={(event) => setSavedSearchQueryText(event.target.value)}
+              placeholder="Example: Remote TypeScript platform engineer"
+              value={savedSearchQueryText}
+            />
+            <Button
+              disabled={!trimmedSavedSearchName || createSavedSearch.isPending}
+              isLoading={createSavedSearch.isPending}
+              onClick={() => {
+                if (!trimmedSavedSearchName) return;
+                void createSavedSearch
+                  .mutateAsync({
+                    name: trimmedSavedSearchName,
+                    ...(trimmedSavedSearchQuery ? { query: trimmedSavedSearchQuery } : {}),
+                  })
+                  .then((savedSearch) => {
+                    setSelectedSavedSearchId(savedSearch.id);
+                    setSavedSearchName('');
+                    setSavedSearchQueryText('');
+                    setSavedSearchNotice('Saved search created.');
+                  })
+                  .catch(() => undefined);
+              }}
+              size="small"
+            >
+              Create saved search
+            </Button>
+          </Box>
+
+          {!savedSearches.isPending && !savedSearches.isError && savedSearchesList.length === 0 ? (
+            <Typography role="status" sx={{ color: 'text.secondary', py: 2 }}>
+              No saved searches yet.
+            </Typography>
+          ) : null}
+
+          {savedSearchesList.length > 0 ? (
+            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+              <TextField
+                label="Saved search"
+                onChange={(event) => setSelectedSavedSearchId(event.target.value)}
+                select
+                size="small"
+                sx={{ maxWidth: 420, width: '100%' }}
+                value={selectedSavedSearchId}
+              >
+                {savedSearchesList.map((savedSearch) => (
+                  <MenuItem key={savedSearch.id} value={savedSearch.id}>
+                    {savedSearch.name}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              {selectedSavedSearch?.query ? (
+                <Typography sx={{ color: 'text.secondary' }}>
+                  {selectedSavedSearch.query}
+                </Typography>
+              ) : null}
+
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                <Button
+                  disabled={!selectedSavedSearchId || generateSavedSearch.isPending}
+                  isLoading={generateSavedSearch.isPending}
+                  onClick={() => {
+                    if (!selectedSavedSearchId) return;
+                    setSavedSearchGeneratedOnce(true);
+                    void generateSavedSearch
+                      .mutateAsync(selectedSavedSearchId)
+                      .then((items) =>
+                        setSavedSearchRecommendations(items.map(mapRecommendationDtoToCard)),
+                      )
+                      .catch(() => undefined);
+                  }}
+                  size="small"
+                >
+                  Rerun saved search
+                </Button>
+                <Button
+                  disabled={!selectedSavedSearchId || deleteSavedSearch.isPending}
+                  isLoading={deleteSavedSearch.isPending}
+                  onClick={() => {
+                    if (!selectedSavedSearchId) return;
+                    const deletedId = selectedSavedSearchId;
+                    void deleteSavedSearch
+                      .mutateAsync(deletedId)
+                      .then(() => {
+                        setSelectedSavedSearchId('');
+                        setSavedSearchRecommendations([]);
+                        setSavedSearchNotice('Saved search deleted.');
+                      })
+                      .catch(() => undefined);
+                  }}
+                  size="small"
+                  variant="outline"
+                >
+                  Delete saved search
+                </Button>
+              </Box>
+            </Box>
+          ) : null}
+
+          {savedSearchGeneratedOnce &&
+          !generateSavedSearch.isPending &&
+          !generateSavedSearch.isError &&
+          visibleSavedSearchRecommendations.length === 0 ? (
+            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
+              No matching jobs were found for this saved search.
+            </Typography>
+          ) : null}
+
+          {visibleSavedSearchRecommendations.length > 0 ? (
+            <>
+              <Typography sx={{ color: 'text.secondary' }}>
+                {visibleSavedSearchRecommendations.length} saved-search recommendation
+                {visibleSavedSearchRecommendations.length === 1 ? '' : 's'}
+              </Typography>
+              <VirtualizedJobList
+                ariaLabel="Saved search recommendations"
+                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
+                items={visibleSavedSearchRecommendations}
+                renderItem={(job) => (
+                  <JobCard
+                    job={job}
+                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                    onApply={(selected) => {
+                      openExternalApply(selected.applyUrl);
+                    }}
+                    onDismiss={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
+                        : undefined
+                    }
+                    onNotRelevant={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
+                        : undefined
+                    }
+                    onOpen={(selected) => {
+                      if (!selected.id) return;
+                      void navigate(jobDetailPath(selected.id), {
+                        state: { fromFeed: `${location.pathname}${location.search}` },
+                      });
+                    }}
+                    onSave={(selected) => {
+                      if (!selected.id) return;
+                      const jobId = selected.id;
+                      const wasSaved = savedIdSet.has(jobId);
+                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
+                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
+                      });
+                    }}
+                  />
+                )}
+              />
+            </>
+          ) : null}
+        </Box>
+      ) : null}
+
       {activeMode !== 'profile' &&
       activeMode !== 'resume' &&
       activeMode !== 'similar' &&
       activeMode !== 'career' &&
+      activeMode !== 'saved' &&
       activeMode !== 'text-career' ? (
         <Box
           aria-labelledby={getTabId(activeMode)}

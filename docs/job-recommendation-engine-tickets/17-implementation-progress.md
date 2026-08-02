@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 47 |
+| Implemented | 48 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,35 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FE-006 - Build saved search recommendation UI
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.test.ts`
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/SAVED_SEARCH_FRONTEND_CONTRACT.md`
+- API changes: none; consumes existing saved-search API from `JRE-API-005`
+- Database changes: none
+- Tests added:
+  - Frontend service list/create/delete saved search and rerun generate calls
+  - Saved tab creates, reruns, renders, and deletes a saved search
+- Commands executed:
+  - `npm --prefix frontend run test -- src/features/recommendations/services/recommendations.service.test.ts src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `git diff --check`
+- Results:
+  - Focused frontend saved-search service and For You page tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+  - Whitespace check passed
+- Known limitations: rich saved-search filter builder remains out of scope.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-FE-005 - Build career goal recommendation UI
 

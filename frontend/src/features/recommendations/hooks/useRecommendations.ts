@@ -18,6 +18,8 @@ export const recommendationsReadinessQueryKey = ['recommendations', 'readiness']
 export const similarJobsQueryKey = (jobId: string, limit: number) =>
   ['recommendations', 'similar', jobId, limit] as const;
 
+export const savedSearchesQueryKey = ['recommendations', 'saved-searches'] as const;
+
 export function useRecommendationReadiness() {
   return useQuery({
     queryKey: recommendationsReadinessQueryKey,
@@ -157,6 +159,46 @@ export function useGenerateCareerGoalRecommendations() {
       const target = await recommendationsService.createCareerTarget(goalText);
       return recommendationsService.generateFromCareerGoal(target.id);
     },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    },
+  });
+}
+
+export function useSavedSearches(options: { enabled?: boolean } = {}) {
+  return useQuery({
+    enabled: options.enabled ?? true,
+    queryKey: savedSearchesQueryKey,
+    queryFn: ({ signal }) => recommendationsService.listSavedSearches({}, { signal }),
+  });
+}
+
+export function useCreateSavedSearch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: { name: string; query?: string }) =>
+      recommendationsService.createSavedSearch(input),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: savedSearchesQueryKey });
+    },
+  });
+}
+
+export function useDeleteSavedSearch() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (savedSearchId: string) => recommendationsService.deleteSavedSearch(savedSearchId),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: savedSearchesQueryKey });
+    },
+  });
+}
+
+export function useGenerateSavedSearchRecommendations() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (savedSearchId: string) =>
+      recommendationsService.generateFromSavedSearch(savedSearchId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['recommendations'] });
     },

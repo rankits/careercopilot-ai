@@ -9,6 +9,8 @@ import type {
   RecommendationReadinessStatus,
   RecommendationRetrievalBackend,
   RecommendationRunDetailsResult,
+  SavedSearchDto,
+  SavedSearchListResult,
   SimilarJobDto,
 } from '@/features/recommendations/types/recommendation.types';
 import { httpClient } from '@/services/httpClient';
@@ -118,6 +120,31 @@ const unwrapCareerTargetList = (response: unknown): CareerTargetListResult => {
   };
 };
 
+const unwrapSavedSearch = (response: unknown): SavedSearchDto => {
+  if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
+    throw new Error('Unexpected saved-search response shape');
+  }
+  const payload = response.data.data;
+  if (typeof payload.id !== 'string' || typeof payload.name !== 'string') {
+    throw new Error('Unexpected saved-search response shape');
+  }
+  return payload as unknown as SavedSearchDto;
+};
+
+const unwrapSavedSearchList = (response: unknown): SavedSearchListResult => {
+  if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
+    throw new Error('Unexpected saved-search list response shape');
+  }
+  const payload = response.data.data;
+  const items = Array.isArray(payload.items) ? (payload.items as SavedSearchDto[]) : [];
+  return {
+    items,
+    page: typeof payload.page === 'number' ? payload.page : 1,
+    limit: typeof payload.limit === 'number' ? payload.limit : items.length,
+    total: typeof payload.total === 'number' ? payload.total : items.length,
+  };
+};
+
 export const recommendationsService = {
   async list(
     params: ListRecommendationsParams = {},
@@ -180,6 +207,21 @@ export const recommendationsService = {
     );
     if (!isRecord(response) || !isRecord(response.data) || !Array.isArray(response.data.data)) {
       throw new Error('Unexpected career-goal recommendations response shape');
+    }
+    return response.data.data as RecommendationDto[];
+  },
+
+  async generateFromSavedSearch(
+    savedSearchId: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<RecommendationDto[]> {
+    const response = await httpClient.post(
+      `/job-recommendations/saved-searches/${savedSearchId}/generate`,
+      {},
+      { signal: options.signal, timeout: 60_000 },
+    );
+    if (!isRecord(response) || !isRecord(response.data) || !Array.isArray(response.data.data)) {
+      throw new Error('Unexpected saved-search recommendations response shape');
     }
     return response.data.data as RecommendationDto[];
   },
@@ -263,6 +305,40 @@ export const recommendationsService = {
       { signal: options.signal },
     );
     return unwrapCareerTarget(response);
+  },
+
+  async listSavedSearches(
+    params: Pick<ListRecommendationsParams, 'page' | 'limit'> = {},
+    options: { signal?: AbortSignal } = {},
+  ): Promise<SavedSearchListResult> {
+    const response = await httpClient.get('/job-recommendations/saved-searches', {
+      params: {
+        page: params.page ?? 1,
+        limit: params.limit ?? 20,
+      },
+      signal: options.signal,
+    });
+    return unwrapSavedSearchList(response);
+  },
+
+  async createSavedSearch(
+    input: { name: string; query?: string },
+    options: { signal?: AbortSignal } = {},
+  ): Promise<SavedSearchDto> {
+    const response = await httpClient.post(
+      '/job-recommendations/saved-searches',
+      {
+        name: input.name,
+        ...(input.query ? { query: input.query } : {}),
+        filters: {},
+      },
+      { signal: options.signal },
+    );
+    return unwrapSavedSearch(response);
+  },
+
+  async deleteSavedSearch(savedSearchId: string): Promise<void> {
+    await httpClient.delete(`/job-recommendations/saved-searches/${savedSearchId}`);
   },
 
   async submitFeedback(

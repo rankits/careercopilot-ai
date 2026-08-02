@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { recommendationsService } from './recommendations.service';
 
-const { getMock, postMock } = vi.hoisted(() => ({
+const { deleteMock, getMock, postMock } = vi.hoisted(() => ({
+  deleteMock: vi.fn(),
   getMock: vi.fn(),
   postMock: vi.fn(),
 }));
@@ -11,6 +12,7 @@ vi.mock('@/services/httpClient', () => ({
   httpClient: {
     get: getMock,
     post: postMock,
+    delete: deleteMock,
   },
 }));
 
@@ -18,6 +20,7 @@ describe('recommendationsService', () => {
   beforeEach(() => {
     getMock.mockReset();
     postMock.mockReset();
+    deleteMock.mockReset();
   });
 
   it('unwraps list envelope and pagination fields', async () => {
@@ -75,6 +78,17 @@ describe('recommendationsService', () => {
     expect(postMock).toHaveBeenCalledWith(
       '/job-recommendations',
       { sourceType: 'CAREER_GOAL', sourceId: 'target-1' },
+      expect.objectContaining({ timeout: 60_000 }),
+    );
+    expect(items).toHaveLength(1);
+  });
+
+  it('posts saved-search generate to the rerun route', async () => {
+    postMock.mockResolvedValue({ data: { data: [{ id: 'r1' }] } });
+    const items = await recommendationsService.generateFromSavedSearch('search-1');
+    expect(postMock).toHaveBeenCalledWith(
+      '/job-recommendations/saved-searches/search-1/generate',
+      {},
       expect.objectContaining({ timeout: 60_000 }),
     );
     expect(items).toHaveLength(1);
@@ -201,6 +215,60 @@ describe('recommendationsService', () => {
       expect.objectContaining({ signal: undefined }),
     );
     expect(result.id).toBe('target-1');
+  });
+
+  it('lists, creates, and deletes saved searches', async () => {
+    getMock.mockResolvedValueOnce({
+      data: {
+        data: {
+          items: [
+            {
+              id: 'search-1',
+              name: 'Remote TypeScript',
+              query: 'TypeScript',
+              filters: {},
+              context: {},
+              createdAt: '2026-08-02T00:00:00.000Z',
+              updatedAt: '2026-08-02T00:00:00.000Z',
+            },
+          ],
+          page: 1,
+          limit: 20,
+          total: 1,
+        },
+      },
+    });
+    postMock.mockResolvedValueOnce({
+      data: {
+        data: {
+          id: 'search-2',
+          name: 'Backend',
+          query: null,
+          filters: {},
+          context: {},
+          createdAt: '2026-08-02T00:00:00.000Z',
+          updatedAt: '2026-08-02T00:00:00.000Z',
+        },
+      },
+    });
+    deleteMock.mockResolvedValueOnce({ data: { status: 'success' } });
+
+    const list = await recommendationsService.listSavedSearches();
+    const created = await recommendationsService.createSavedSearch({ name: 'Backend' });
+    await recommendationsService.deleteSavedSearch('search-1');
+
+    expect(getMock).toHaveBeenCalledWith(
+      '/job-recommendations/saved-searches',
+      expect.objectContaining({ params: { page: 1, limit: 20 } }),
+    );
+    expect(postMock).toHaveBeenCalledWith(
+      '/job-recommendations/saved-searches',
+      { name: 'Backend', filters: {} },
+      expect.objectContaining({ signal: undefined }),
+    );
+    expect(deleteMock).toHaveBeenCalledWith('/job-recommendations/saved-searches/search-1');
+    expect(list.items).toHaveLength(1);
+    expect(created.id).toBe('search-2');
   });
 
   it('loads readiness lifecycle status with retrieval metadata', async () => {
