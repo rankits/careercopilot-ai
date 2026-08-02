@@ -295,6 +295,7 @@ export interface RecommendationExplanation {
   summary: string;
   bullets: RecommendationExplanationBullet[];
   matchedSkills: string[];
+  aliasSkills: string[];
   relatedSkills: string[];
   transferableSkills: string[];
   missingSkills: string[];
@@ -320,6 +321,7 @@ export interface RecommendationScoreResult {
   overallScore: number;
   components: RecommendationScoreComponents;
   matchedSkills: string[];
+  aliasSkills: string[];
   relatedSkills: string[];
   transferableSkills: string[];
   missingSkills: string[];

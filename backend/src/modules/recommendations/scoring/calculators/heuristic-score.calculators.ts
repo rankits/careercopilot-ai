@@ -33,10 +33,11 @@ const requiredSkillsCalculator: RecommendationScoreCalculator = {
         reasons: reason('requiredSkills', 'Job skills unavailable; used neutral score'),
       };
     }
-    const { ratio, exact, related, transferable, missing, hits } =
+    const { ratio, exact, alias, related, transferable, missing, hits } =
       defaultSkillRelationshipService.overlap(context.requiredSkills, job.skills);
     const evidence = [
       ...exact,
+      ...alias.map((skill) => `alias: ${skill}`),
       ...hits.map(
         (hit) =>
           `${hit.type.toLowerCase()}: ${hit.availableSkill} covers ${hit.requiredSkill}`,
@@ -45,6 +46,7 @@ const requiredSkillsCalculator: RecommendationScoreCalculator = {
     return {
       score: clampScore(ratio),
       matchedSkills: exact,
+      aliasSkills: alias,
       relatedSkills: related,
       transferableSkills: transferable,
       missingSkills: missing,
@@ -78,12 +80,13 @@ const preferredSkillsCalculator: RecommendationScoreCalculator = {
         reasons: reason('preferredSkills', 'Job skills unavailable; used neutral score'),
       };
     }
-    const { ratio, exact, related, transferable, hits } = defaultSkillRelationshipService.overlap(
+    const { ratio, exact, alias, related, transferable, hits } = defaultSkillRelationshipService.overlap(
       context.preferredSkills,
       job.skills,
     );
     const evidence = [
       ...exact,
+      ...alias.map((skill) => `alias: ${skill}`),
       ...hits.map(
         (hit) =>
           `${hit.type.toLowerCase()}: ${hit.availableSkill} supports ${hit.requiredSkill}`,
@@ -91,6 +94,7 @@ const preferredSkillsCalculator: RecommendationScoreCalculator = {
     ];
     return {
       score: clampScore(ratio),
+      aliasSkills: alias,
       relatedSkills: [...exact, ...related],
       transferableSkills: transferable,
       reasons: reason(

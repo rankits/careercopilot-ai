@@ -23,6 +23,7 @@ export interface SkillRelationshipHit {
 export interface SkillGraphOverlap {
   ratio: number;
   exact: string[];
+  alias: string[];
   related: string[];
   transferable: string[];
   missing: string[];
@@ -53,12 +54,13 @@ export class SkillRelationshipService {
   overlap(required: readonly string[], available: readonly string[]): SkillGraphOverlap {
     const requiredCanonical = this.canonicalizer.canonicalizeList(required);
     if (requiredCanonical.length === 0) {
-      return { ratio: 1, exact: [], related: [], transferable: [], missing: [], hits: [] };
+      return { ratio: 1, exact: [], alias: [], related: [], transferable: [], missing: [], hits: [] };
     }
 
     const availableCanonical = this.canonicalizer.canonicalizeList(available);
     const availableByKey = new Map(availableCanonical.map((skill) => [skill.normalized, skill]));
     const exact: string[] = [];
+    const alias: string[] = [];
     const related: string[] = [];
     const transferable: string[] = [];
     const missing: string[] = [];
@@ -68,7 +70,8 @@ export class SkillRelationshipService {
     for (const requiredSkill of requiredCanonical) {
       const exactHit = availableByKey.get(requiredSkill.normalized);
       if (exactHit) {
-        exact.push(requiredSkill.canonical);
+        if (requiredSkill.isAlias || exactHit.isAlias) alias.push(requiredSkill.canonical);
+        else exact.push(requiredSkill.canonical);
         weightedHits += 1;
         continue;
       }
@@ -93,6 +96,7 @@ export class SkillRelationshipService {
     return {
       ratio: weightedHits / requiredCanonical.length,
       exact,
+      alias,
       related,
       transferable,
       missing,

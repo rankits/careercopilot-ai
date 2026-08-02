@@ -19,6 +19,7 @@ import {
   type ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
+import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 
 const uuid = '4ea7733c-51ca-4df2-9201-72f08786d215';
 
@@ -52,6 +53,7 @@ const scored = (
       qualifications: overallScore,
     },
     matchedSkills: [],
+    aliasSkills: [],
     relatedSkills: [],
     transferableSkills: [],
     missingSkills: [],
@@ -110,6 +112,96 @@ describe('recommendation module invariants', () => {
     ]);
 
     expect(ranked.map((item) => item.job.id)).toEqual(['job-a', 'job-b', 'job-d', 'job-c']);
+  });
+
+  it.each([
+    [
+      {
+        matchedSkills: ['React'],
+        aliasSkills: [],
+        relatedSkills: [],
+        transferableSkills: [],
+        missingSkills: [],
+      },
+      'EXACT',
+    ],
+    [
+      {
+        matchedSkills: [],
+        aliasSkills: ['React'],
+        relatedSkills: [],
+        transferableSkills: [],
+        missingSkills: [],
+      },
+      'ALIAS',
+    ],
+    [
+      {
+        matchedSkills: [],
+        aliasSkills: [],
+        relatedSkills: ['Next.js'],
+        transferableSkills: [],
+        missingSkills: [],
+      },
+      'RELATED',
+    ],
+    [
+      {
+        matchedSkills: [],
+        aliasSkills: [],
+        relatedSkills: [],
+        transferableSkills: ['JavaScript'],
+        missingSkills: [],
+      },
+      'TRANSFERABLE',
+    ],
+    [
+      {
+        matchedSkills: [],
+        aliasSkills: [],
+        relatedSkills: [],
+        transferableSkills: [],
+        missingSkills: ['React'],
+      },
+      'MISSING',
+    ],
+  ] satisfies Array<
+    [
+      Pick<
+        ScoredJobRecommendation['scoreResult'],
+        | 'matchedSkills'
+        | 'aliasSkills'
+        | 'relatedSkills'
+        | 'transferableSkills'
+        | 'missingSkills'
+      >,
+      ScoredJobRecommendation['matchType'],
+    ]
+  >)('classifies graph skill buckets as %s -> %s', (skills, matchType) => {
+    const item = scored('job-match-type', 0.95, 'MISSING');
+    expect(
+      defaultMatchTypeClassifier.classify(
+        {
+          userId: 'user-1',
+          sourceType: 'PROFILE',
+          contextSchemaVersion: '1.1.0',
+          targetTitles: [],
+          relatedTitles: [],
+          requiredSkills: [],
+          preferredSkills: [],
+          industries: [],
+          locations: [],
+          employmentTypes: [],
+          salaryExpectation: {},
+          education: [],
+          certifications: [],
+          excludedCompanies: [],
+          excludedSkills: [],
+        },
+        item.job,
+        { ...item.scoreResult, ...skills },
+      ),
+    ).toBe(matchType);
   });
 
   it('validates trimmed target text and shared filters', () => {

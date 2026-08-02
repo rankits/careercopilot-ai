@@ -126,7 +126,7 @@ describe('RecommendationScoringService hybrid fusion', () => {
     )).toHaveLength(2);
   });
 
-  it('treats curated skill aliases as exact required-skill matches', async () => {
+  it('treats curated skill aliases as full-credit alias matches', async () => {
     const [scored] = await service.score(
       { ...context(), requiredSkills: ['Node.js'], preferredSkills: ['Postgres'] },
       [{ job: { ...job(), skills: ['NodeJS', 'PostgreSQL'] }, retrievalScore: 0.5 }],
@@ -134,10 +134,12 @@ describe('RecommendationScoringService hybrid fusion', () => {
 
     expect(scored.scoreResult.components.requiredSkills).toBe(1);
     expect(scored.scoreResult.components.preferredSkills).toBe(1);
-    expect(scored.scoreResult.matchedSkills).toEqual(['Node.js']);
-    expect(scored.scoreResult.relatedSkills).toEqual(['PostgreSQL']);
+    expect(scored.scoreResult.matchedSkills).toEqual([]);
+    expect(scored.scoreResult.aliasSkills).toEqual(['Node.js', 'PostgreSQL']);
+    expect(scored.scoreResult.relatedSkills).toEqual([]);
     expect(scored.scoreResult.transferableSkills).toEqual([]);
     expect(scored.scoreResult.missingSkills).toEqual([]);
+    expect(scored.matchType).toBe('ALIAS');
   });
 
   it('uses related skill edges as partial matches without marking them exact', async () => {
@@ -148,6 +150,7 @@ describe('RecommendationScoringService hybrid fusion', () => {
 
     expect(scored.scoreResult.components.requiredSkills).toBe(0.65);
     expect(scored.scoreResult.matchedSkills).toEqual([]);
+    expect(scored.scoreResult.aliasSkills).toEqual([]);
     expect(scored.scoreResult.relatedSkills).toEqual(['Next.js']);
     expect(scored.scoreResult.transferableSkills).toEqual([]);
     expect(scored.scoreResult.missingSkills).toEqual([]);
@@ -162,6 +165,7 @@ describe('RecommendationScoringService hybrid fusion', () => {
 
     expect(scored.scoreResult.components.requiredSkills).toBe(0.35);
     expect(scored.scoreResult.matchedSkills).toEqual([]);
+    expect(scored.scoreResult.aliasSkills).toEqual([]);
     expect(scored.scoreResult.relatedSkills).toEqual([]);
     expect(scored.scoreResult.transferableSkills).toEqual(['JavaScript']);
     expect(scored.scoreResult.missingSkills).toEqual([]);

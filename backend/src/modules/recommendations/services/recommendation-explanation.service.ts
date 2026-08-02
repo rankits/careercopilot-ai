@@ -64,7 +64,7 @@ export const buildRecommendationSkillGap = (
   scoreResult: RecommendationScoreResult,
 ): RecommendationSkillGap => {
   const exact = uniqueSkills(scoreResult.matchedSkills);
-  const alias: string[] = [];
+  const alias = uniqueSkills(scoreResult.aliasSkills);
   const related = uniqueSkills(scoreResult.relatedSkills);
   const transferable = uniqueSkills(scoreResult.transferableSkills);
   const covered = new Set(
@@ -128,6 +128,7 @@ export const buildRecommendationExplanation = (
     summary: `${percent ?? Math.round(record.scoreResult.overallScore * 100)}% match with ${skillSummary}`,
     bullets,
     matchedSkills: record.scoreResult.matchedSkills,
+    aliasSkills: record.scoreResult.aliasSkills,
     relatedSkills: record.scoreResult.relatedSkills,
     transferableSkills: record.scoreResult.transferableSkills,
     missingSkills: record.scoreResult.missingSkills,

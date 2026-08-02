@@ -4,6 +4,7 @@ export interface RecommendationScoreResult {
   overallScore: number;
   components: Record<string, number>;
   matchedSkills: string[];
+  aliasSkills: string[];
   relatedSkills: string[];
   transferableSkills: string[];
   missingSkills: string[];
@@ -22,6 +23,7 @@ export interface RecommendationExplanation {
     evidence: string[];
   }>;
   matchedSkills: string[];
+  aliasSkills: string[];
   relatedSkills: string[];
   transferableSkills: string[];
   missingSkills: string[];
