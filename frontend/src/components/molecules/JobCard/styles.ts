@@ -200,3 +200,56 @@ export const SaveButton = styled(IconButton)({
   borderRadius: borderRadius.lg,
   color: colorTokens.textSecondary,
 });
+
+export const RecommendationDetails = styled('div')({
+  borderTop: `0.0625rem solid ${colorTokens.borderSubtle}`,
+  color: colorTokens.textSecondary,
+  display: 'grid',
+  gap: spacing[3],
+  gridColumn: '2 / -1',
+  paddingTop: spacing[3],
+
+  '& p': {
+    fontSize: fontSize.sm,
+    lineHeight: 1.5,
+    margin: 0,
+  },
+
+  '@media (max-width: 48rem)': {
+    gridColumn: '2 / -1',
+  },
+});
+
+export const RecommendationDetailsGrid = styled('div')({
+  display: 'grid',
+  gap: spacing[2],
+  gridTemplateColumns: 'repeat(auto-fit, minmax(12rem, 1fr))',
+
+  '& h3': {
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.extraBold,
+    margin: `0 0 ${spacing[1]}`,
+  },
+});
+
+export const RecommendationDetailSkillGroup = styled('div')({
+  display: 'grid',
+  gap: spacing[1],
+
+  '& div': {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[1],
+  },
+
+  '& span': {
+    background: jobFeedTokens.skillBackground,
+    border: `0.0625rem solid ${colorTokens.borderSubtle}`,
+    borderRadius: borderRadius.md,
+    color: colorTokens.textSecondary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    padding: `${spacing[1]} ${spacing[2]}`,
+  },
+});

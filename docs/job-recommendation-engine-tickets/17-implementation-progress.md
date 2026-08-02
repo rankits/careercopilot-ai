@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 31 |
+| Implemented | 32 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,32 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-UI-001 - Show displayScore breakdown explanations and skill gaps on cards
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/components/molecules/JobCard/JobCard.tsx`
+  - `frontend/src/components/molecules/JobCard/styles.ts`
+  - `frontend/src/components/molecules/JobCard/JobCard.test.tsx`
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `docs/job-recommendation-engine-tickets/RECOMMENDATION_CARD_DETAILS_CONTRACT.md`
+- API changes: none; FE now renders existing `displayScore`, `explanation`, and `skillGap` fields
+- Database changes: none
+- Tests added:
+  - Recommendation card expands deterministic explanation details
+  - Related and missing skills render in distinct skill-gap groups
+  - Details button exposes `aria-expanded` and controls the details panel
+- Commands executed:
+  - `npm --prefix frontend run test -- src/components/molecules/JobCard/JobCard.test.tsx src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused JobCard and For You tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: details render only the deterministic API fields already present on a recommendation
+- Next ticket: `JRE-UI-002`
 
 ### 2026-08-02 - JRE-FE-004 - Wire text-to-job recommendation UI
 

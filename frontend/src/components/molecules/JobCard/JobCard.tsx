@@ -7,6 +7,7 @@ import {
   BookmarkBorderOutlinedIcon,
   BookmarkOutlinedIcon,
   BusinessCenterOutlinedIcon,
+  ExpandMoreIcon,
   LocationOnOutlinedIcon,
   SmartToyOutlinedIcon,
   Typography,
@@ -20,15 +21,35 @@ import {
   JobCardRoot,
   JobDetails,
   JobMeta,
-  RecommendationPill,
   MatchPill,
   MatchRing,
+  RecommendationDetails,
+  RecommendationDetailsGrid,
+  RecommendationDetailSkillGroup,
+  RecommendationPill,
   SaveButton,
   SkillList,
   SkillPill,
   TitleRow,
   VerifiedIcon,
 } from './styles';
+
+export interface JobCardRecommendationDetails {
+  summary?: string;
+  bullets: Array<{
+    label: string;
+    score?: number;
+    message: string;
+    evidence: string[];
+  }>;
+  skillGap?: {
+    exact: string[];
+    alias: string[];
+    related: string[];
+    transferable: string[];
+    missing: string[];
+  };
+}
 
 export interface JobCardData {
   id?: string;
@@ -48,6 +69,7 @@ export interface JobCardData {
   matchSubtitle?: string;
   postedAt: string;
   isRecommended?: boolean;
+  recommendationDetails?: JobCardRecommendationDetails;
   salary: string;
   salaryBand: string;
   skills: string[];
@@ -76,10 +98,22 @@ export function JobCard({
   onNotRelevant,
 }: JobCardProps) {
   const showMatch = typeof job.match === 'number';
-  const showActions = Boolean(onApply || onSave || onDismiss || onNotRelevant);
+  const showWiredActions = Boolean(onApply || onSave || onDismiss || onNotRelevant);
   const canApply = Boolean(job.applyUrl);
   const [logoFailed, setLogoFailed] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const showLogoImage = Boolean(job.logoUrl) && !logoFailed;
+  const details = job.recommendationDetails;
+  const detailsId = job.recommendationId
+    ? `${job.recommendationId}-recommendation-details`
+    : undefined;
+  const hasSkillGap = details?.skillGap
+    ? Object.values(details.skillGap).some((values) => values.length > 0)
+    : false;
+  const hasDetails = Boolean(
+    details && (details.summary || details.bullets.length > 0 || hasSkillGap),
+  );
+  const showActions = showWiredActions || hasDetails;
 
   return (
     <JobCardRoot
@@ -223,7 +257,75 @@ export function JobCard({
               Apply Now
             </Button>
           ) : null}
+          {hasDetails ? (
+            <Button
+              aria-controls={detailsId}
+              aria-expanded={detailsOpen}
+              onClick={(event) => {
+                event.stopPropagation();
+                setDetailsOpen((open) => !open);
+              }}
+              size="small"
+              startIcon={
+                <ExpandMoreIcon
+                  fontSize="small"
+                  sx={{ transform: detailsOpen ? 'rotate(180deg)' : undefined }}
+                />
+              }
+              variant="text"
+            >
+              Details
+            </Button>
+          ) : null}
         </JobActions>
+      ) : null}
+
+      {hasDetails && detailsOpen ? (
+        <RecommendationDetails id={detailsId}>
+          {details?.summary ? <Typography component="p">{details.summary}</Typography> : null}
+
+          {details?.bullets.length ? (
+            <RecommendationDetailsGrid>
+              {details.bullets.slice(0, 3).map((bullet) => (
+                <div key={`${bullet.label}-${bullet.message}`}>
+                  <Typography component="h3">
+                    {bullet.label}
+                    {typeof bullet.score === 'number' ? ` - ${Math.round(bullet.score * 100)}%` : ''}
+                  </Typography>
+                  <Typography component="p">{bullet.message}</Typography>
+                  {bullet.evidence.length ? (
+                    <Typography component="p">{bullet.evidence.slice(0, 2).join(', ')}</Typography>
+                  ) : null}
+                </div>
+              ))}
+            </RecommendationDetailsGrid>
+          ) : null}
+
+          {hasSkillGap && details?.skillGap ? (
+            <RecommendationDetailsGrid>
+              {(
+                [
+                  ['Matched', details.skillGap.exact],
+                  ['Alias', details.skillGap.alias],
+                  ['Related', details.skillGap.related],
+                  ['Transferable', details.skillGap.transferable],
+                  ['Missing', details.skillGap.missing],
+                ] satisfies Array<[string, string[]]>
+              ).map(([label, values]) =>
+                Array.isArray(values) && values.length > 0 ? (
+                  <RecommendationDetailSkillGroup key={label}>
+                    <Typography component="h3">{label}</Typography>
+                    <div>
+                      {values.map((skill) => (
+                        <span key={`${label}-${skill}`}>{skill}</span>
+                      ))}
+                    </div>
+                  </RecommendationDetailSkillGroup>
+                ) : null,
+              )}
+            </RecommendationDetailsGrid>
+          ) : null}
+        </RecommendationDetails>
       ) : null}
     </JobCardRoot>
   );
