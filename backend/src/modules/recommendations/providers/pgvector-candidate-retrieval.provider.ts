@@ -12,7 +12,10 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
-import { passesCandidateJobFilters } from '@/modules/recommendations/utils/candidate-job-filters.js';
+import {
+  passesCandidateJobFilters,
+  resolveRecommendationFilterMode,
+} from '@/modules/recommendations/utils/candidate-job-filters.js';
 import { resolveQueryEmbedding } from '@/modules/recommendations/cache/recommendation-query-embedding.cache.js';
 import { buildRecommendationQueryText } from '@/modules/recommendations/utils/recommendation-query-text.js';
 import type { RetrievalBackend } from '@/modules/recommendations/types/recommendations.types.js';
@@ -87,21 +90,28 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
       );
     }
 
-    const remoteTypes = request.context.remotePreference
-      ? [request.context.remotePreference]
-      : undefined;
+    const filterMode = resolveRecommendationFilterMode(request.context);
+    const isStrict = filterMode === 'STRICT';
+    const remotePreference = request.context.remotePreference?.trim();
+    const remoteTypes =
+      isStrict && remotePreference && remotePreference.toUpperCase() !== 'ANY'
+        ? [remotePreference]
+        : undefined;
     const nearest = await this.embeddings.searchNearest({
       provider: provider.provider,
       model: provider.model,
       embedding: queryEmbedding,
-      // Over-fetch so location/employment/company post-filters can still fill the limit.
+      // Over-fetch so hydrated post-filters can still fill the limit.
       limit: Math.min(request.limit * 4, 200),
       filters: {
         excludeJobIds: request.excludeJobIds,
         remoteTypes,
-        minSalary: request.context.salaryExpectation.minimum,
-        maxSalary: request.context.salaryExpectation.maximum,
-        currency: request.context.salaryExpectation.currency,
+        minSalary: isStrict
+          ? (request.context.salaryMinimumNonNegotiable ??
+            request.context.salaryExpectation.minimum)
+          : undefined,
+        maxSalary: isStrict ? request.context.salaryExpectation.maximum : undefined,
+        currency: isStrict ? request.context.salaryExpectation.currency : undefined,
       },
     });
 

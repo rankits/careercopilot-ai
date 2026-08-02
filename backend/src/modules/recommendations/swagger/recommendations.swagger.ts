@@ -8,6 +8,7 @@ import { commonSecureResponses, paginatedSchema } from '@/shared/swagger/schemas
 import {
   RECOMMENDATION_CATEGORY_VALUES,
   RECOMMENDATION_FEEDBACK_ACTION_VALUES,
+  RECOMMENDATION_FILTER_MODE_VALUES,
   RECOMMENDATION_LIFECYCLE_STATE_VALUES,
   RECOMMENDATION_MATCH_TYPE_VALUES,
   RECOMMENDATION_RUN_STATUS_VALUES,
@@ -36,6 +37,13 @@ const filtersSchema = {
     currency: { type: 'string', minLength: 3, maxLength: 3, example: 'USD' },
     industries: stringListSchema,
     experienceLevels: stringListSchema,
+    filterMode: {
+      type: 'string',
+      enum: [...RECOMMENDATION_FILTER_MODE_VALUES],
+      default: 'STRICT',
+      description:
+        'STRICT enforces salary, location, remote, and employment filters. FLEXIBLE keeps negotiable near-misses and labels them as stretch opportunities.',
+    },
     includeStretchOpportunities: { type: 'boolean', example: true },
   },
 };

@@ -424,11 +424,13 @@ describe('applyRecommendationFilters', () => {
       workModes: ['HYBRID'],
       minimumSalary: 150000,
       employmentTypes: ['CONTRACT'],
+      filterMode: 'FLEXIBLE',
     });
     expect(filtered.locations).toEqual(['Berlin']);
     expect(filtered.remotePreference).toBe('HYBRID');
     expect(filtered.salaryExpectation.minimum).toBe(150000);
     expect(filtered.employmentTypes).toEqual(['CONTRACT']);
+    expect(filtered.filterMode).toBe('FLEXIBLE');
   });
 });
 
@@ -1040,6 +1042,65 @@ describe('RecommendationsService generation', () => {
       true,
     );
     expect(records.some((item) => item.job.id === 'job-high')).toBe(true);
+  });
+
+  it('labels flexible filter near-misses as stretch opportunities', async () => {
+    const retrievalService = {
+      retrieve: vi.fn().mockResolvedValue([
+        {
+          job: jobList('job-near-miss', {
+            salary: { minimum: 70000, maximum: 90000, currency: 'USD' },
+          }),
+          retrievalScore: 0.95,
+        },
+      ]),
+    } as unknown as RecommendationRetrievalService;
+
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Backend engineer with TypeScript and PostgreSQL',
+      filters: { filterMode: 'FLEXIBLE', minimumSalary: 100000, currency: 'USD' },
+    });
+
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          filterMode: 'FLEXIBLE',
+          salaryExpectation: expect.objectContaining({ minimum: 100000 }),
+        }),
+      }),
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      job: expect.objectContaining({ id: 'job-near-miss' }),
+      category: 'STRETCH_OPPORTUNITY',
+    });
+    expect(records[0]?.scoreResult.reasons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message:
+            'Flexible filter mode kept this stretch opportunity outside one or more preferences',
+          evidence: expect.arrayContaining(['filterViolation=SALARY_MINIMUM']),
+        }),
+      ]),
+    );
   });
 });
 

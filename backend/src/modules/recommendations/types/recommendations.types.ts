@@ -61,7 +61,8 @@ export interface SalaryExpectation {
  */
 export const RECOMMENDATION_CONTEXT_SCHEMA_VERSION = '1.1.0' as const;
 
-export type RecommendationFilterMode = 'STRICT' | 'FLEXIBLE';
+export const RECOMMENDATION_FILTER_MODE_VALUES = ['STRICT', 'FLEXIBLE'] as const;
+export type RecommendationFilterMode = (typeof RECOMMENDATION_FILTER_MODE_VALUES)[number];
 export type RecommendationFlexibilityMode = 'STRICT' | 'FLEXIBLE' | 'STRETCH';
 
 export type WorkAuthorizationStatus =
