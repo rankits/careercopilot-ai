@@ -1,10 +1,10 @@
 import type { RecommendationScoreCalculator } from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
 import {
   clampScore,
-  listOverlapRatio,
   textOverlapRatio,
   tokenize,
 } from '@/modules/recommendations/utils/recommendation-matching.js';
+import { canonicalSkillOverlap } from '@/modules/recommendations/skills/skill-canonicalization.service.js';
 
 const reason = (
   component: RecommendationScoreCalculator['component'],
@@ -33,7 +33,7 @@ const requiredSkillsCalculator: RecommendationScoreCalculator = {
         reasons: reason('requiredSkills', 'Job skills unavailable; used neutral score'),
       };
     }
-    const { ratio, matched, missing } = listOverlapRatio(context.requiredSkills, job.skills);
+    const { ratio, matched, missing } = canonicalSkillOverlap(context.requiredSkills, job.skills);
     return {
       score: clampScore(ratio),
       matchedSkills: matched,
@@ -68,7 +68,7 @@ const preferredSkillsCalculator: RecommendationScoreCalculator = {
         reasons: reason('preferredSkills', 'Job skills unavailable; used neutral score'),
       };
     }
-    const { ratio, matched } = listOverlapRatio(context.preferredSkills, job.skills);
+    const { ratio, matched } = canonicalSkillOverlap(context.preferredSkills, job.skills);
     return {
       score: clampScore(ratio),
       relatedSkills: matched,
@@ -211,7 +211,12 @@ const industryCalculator: RecommendationScoreCalculator = {
     }
     // JobListDto does not expose industry; use company name as a weak signal only.
     const company = job.company.name.toLowerCase();
-    const { ratio, matched } = listOverlapRatio(context.industries, [job.company.name]);
+    const ratio = context.industries.some(
+      (industry) => industry.trim().toLowerCase() === job.company.name.trim().toLowerCase(),
+    )
+      ? 1
+      : 0;
+    const matched = ratio > 0 ? [job.company.name] : [];
     const tokenHits = context.industries.some((industry) =>
       company.includes(industry.trim().toLowerCase()),
     );

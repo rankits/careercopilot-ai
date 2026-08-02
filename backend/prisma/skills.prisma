@@ -1,0 +1,23 @@
+model SkillCanonical {
+  id             String       @id @default(uuid())
+  name           String       @unique
+  normalizedName String       @unique @map("normalized_name")
+  aliases        SkillAlias[]
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@map("skill_canonicals")
+}
+
+model SkillAlias {
+  id              String         @id @default(uuid())
+  canonicalId     String         @map("canonical_id")
+  alias           String
+  normalizedAlias String         @unique @map("normalized_alias")
+  canonical       SkillCanonical @relation(fields: [canonicalId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([canonicalId])
+  @@map("skill_aliases")
+}

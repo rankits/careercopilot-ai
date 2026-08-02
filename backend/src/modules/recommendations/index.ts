@@ -123,6 +123,8 @@ export * from '@/modules/recommendations/services/recommendations.service.js';
 export * from '@/modules/recommendations/services/similar-jobs.service.js';
 export * from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 export * from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
+export * from '@/modules/recommendations/skills/skill-alias.catalog.js';
+export * from '@/modules/recommendations/skills/skill-canonicalization.service.js';
 export * from '@/modules/recommendations/swagger/index.js';
 export * from '@/modules/recommendations/utils/apply-recommendation-filters.js';
 export * from '@/modules/recommendations/utils/candidate-job-filters.js';
