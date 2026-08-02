@@ -8,7 +8,7 @@ import {
 } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
-import { JobCard, VirtualizedJobList } from '@/components/molecules';
+import { JobCard, VirtualizedJobList, type JobCardData } from '@/components/molecules';
 
 import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
 import {
@@ -202,10 +202,7 @@ export function ForYouPage() {
   const [optimisticSaved, setOptimisticSaved] = useState<Record<string, boolean>>({});
 
   const trackRecommendationFeedback = useCallback(
-    (
-      recommendationId: string | undefined,
-      action: Extract<RecommendationFeedbackAction, 'VIEWED' | 'OPENED'>,
-    ) => {
+    (recommendationId: string | undefined, action: RecommendationFeedbackAction) => {
       if (!recommendationId) return;
       const key = `${action}:${recommendationId}`;
       if (trackedFeedbackKeys.current.has(key)) return;
@@ -241,6 +238,36 @@ export function ForYouPage() {
     }
     return ids;
   }, [optimisticSaved, savedQuery.data]);
+
+  const handleRecommendedApply = useCallback(
+    (selected: JobCardData) => {
+      const opened = openExternalApply(selected.applyUrl);
+      if (opened) {
+        trackRecommendationFeedback(selected.recommendationId, 'APPLIED');
+      }
+    },
+    [trackRecommendationFeedback],
+  );
+
+  const handleRecommendedSave = useCallback(
+    (selected: JobCardData) => {
+      if (!selected.id) return;
+      const jobId = selected.id;
+      const wasSaved = savedIdSet.has(jobId);
+      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+      const saveRequest = wasSaved ? unsaveJob(jobId) : saveJob(jobId);
+      void saveRequest
+        .then(() => {
+          if (!wasSaved) {
+            trackRecommendationFeedback(selected.recommendationId, 'SAVED');
+          }
+        })
+        .catch(() => {
+          setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
+        });
+    },
+    [saveJob, savedIdSet, trackRecommendationFeedback, unsaveJob],
+  );
 
   const visibleCards = (data?.cards ?? []).filter(
     (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
@@ -616,9 +643,7 @@ export function ForYouPage() {
                   <JobCard
                     job={job}
                     isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={(selected) => {
-                      openExternalApply(selected.applyUrl);
-                    }}
+                    onApply={handleRecommendedApply}
                     onDismiss={
                       job.recommendationId
                         ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
@@ -636,15 +661,7 @@ export function ForYouPage() {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
                     }}
-                    onSave={(selected) => {
-                      if (!selected.id) return;
-                      const jobId = selected.id;
-                      const wasSaved = savedIdSet.has(jobId);
-                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
-                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
-                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
-                      });
-                    }}
+                    onSave={handleRecommendedSave}
                   />
                 )}
               />
@@ -721,9 +738,7 @@ export function ForYouPage() {
                   <JobCard
                     job={job}
                     isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={(selected) => {
-                      openExternalApply(selected.applyUrl);
-                    }}
+                    onApply={handleRecommendedApply}
                     onOpen={(selected) => {
                       if (!selected.id) return;
                       trackRecommendationFeedback(job.recommendationId, 'OPENED');
@@ -731,15 +746,7 @@ export function ForYouPage() {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
                     }}
-                    onSave={(selected) => {
-                      if (!selected.id) return;
-                      const jobId = selected.id;
-                      const wasSaved = savedIdSet.has(jobId);
-                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
-                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
-                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
-                      });
-                    }}
+                    onSave={handleRecommendedSave}
                   />
                 )}
               />
@@ -833,9 +840,7 @@ export function ForYouPage() {
                   <JobCard
                     job={job}
                     isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={(selected) => {
-                      openExternalApply(selected.applyUrl);
-                    }}
+                    onApply={handleRecommendedApply}
                     onDismiss={
                       job.recommendationId
                         ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
@@ -853,15 +858,7 @@ export function ForYouPage() {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
                     }}
-                    onSave={(selected) => {
-                      if (!selected.id) return;
-                      const jobId = selected.id;
-                      const wasSaved = savedIdSet.has(jobId);
-                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
-                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
-                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
-                      });
-                    }}
+                    onSave={handleRecommendedSave}
                   />
                 )}
               />
@@ -946,9 +943,7 @@ export function ForYouPage() {
                   <JobCard
                     job={job}
                     isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={(selected) => {
-                      openExternalApply(selected.applyUrl);
-                    }}
+                    onApply={handleRecommendedApply}
                     onDismiss={
                       job.recommendationId
                         ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
@@ -966,15 +961,7 @@ export function ForYouPage() {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
                     }}
-                    onSave={(selected) => {
-                      if (!selected.id) return;
-                      const jobId = selected.id;
-                      const wasSaved = savedIdSet.has(jobId);
-                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
-                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
-                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
-                      });
-                    }}
+                    onSave={handleRecommendedSave}
                   />
                 )}
               />
@@ -1143,9 +1130,7 @@ export function ForYouPage() {
                   <JobCard
                     job={job}
                     isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={(selected) => {
-                      openExternalApply(selected.applyUrl);
-                    }}
+                    onApply={handleRecommendedApply}
                     onDismiss={
                       job.recommendationId
                         ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
@@ -1163,15 +1148,7 @@ export function ForYouPage() {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
                     }}
-                    onSave={(selected) => {
-                      if (!selected.id) return;
-                      const jobId = selected.id;
-                      const wasSaved = savedIdSet.has(jobId);
-                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
-                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
-                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
-                      });
-                    }}
+                    onSave={handleRecommendedSave}
                   />
                 )}
               />
@@ -1403,9 +1380,7 @@ export function ForYouPage() {
                   <JobCard
                     job={job}
                     isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={(selected) => {
-                      openExternalApply(selected.applyUrl);
-                    }}
+                    onApply={handleRecommendedApply}
                     onDismiss={
                       job.recommendationId
                         ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
@@ -1423,15 +1398,7 @@ export function ForYouPage() {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
                     }}
-                    onSave={(selected) => {
-                      if (!selected.id) return;
-                      const jobId = selected.id;
-                      const wasSaved = savedIdSet.has(jobId);
-                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
-                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
-                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
-                      });
-                    }}
+                    onSave={handleRecommendedSave}
                   />
                 )}
               />

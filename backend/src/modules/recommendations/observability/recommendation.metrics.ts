@@ -36,6 +36,7 @@ let rerankFallbackCount = 0;
 let rerankTotalLatencyMs = 0;
 let careerGoalApiTotal = 0;
 let savedSearchApiTotal = 0;
+let feedbackAppliedLinkedTotal = 0;
 let careerCategoryDistribution: Record<RecommendationCategory, number> = {
   BEST_MATCH: 0,
   GOOD_MATCH: 0,
@@ -59,6 +60,7 @@ export const recommendationMetricsSnapshot = () => ({
       : 0,
   careerGoalApiTotal,
   savedSearchApiTotal,
+  feedbackAppliedLinkedTotal,
   careerCategoryDistribution: { ...careerCategoryDistribution },
   feedbackActionTotal: { ...feedbackActionTotal },
 });
@@ -81,6 +83,9 @@ export const recordCareerCategory = (category: RecommendationCategory): void => 
 
 export const recordFeedbackAction = (action: RecommendationFeedbackAction): void => {
   feedbackActionTotal[action] = (feedbackActionTotal[action] ?? 0) + 1;
+  if (action === 'APPLIED') {
+    feedbackAppliedLinkedTotal += 1;
+  }
 };
 
 export const recordRecommendationGenerate = (
@@ -143,6 +148,7 @@ export const resetRecommendationMetricsForTests = (): void => {
   rerankTotalLatencyMs = 0;
   careerGoalApiTotal = 0;
   savedSearchApiTotal = 0;
+  feedbackAppliedLinkedTotal = 0;
   careerCategoryDistribution = {
     BEST_MATCH: 0,
     GOOD_MATCH: 0,

@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 49 |
+| Implemented | 50 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,41 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FEEDBACK-002 - Auto-link save and apply actions to recommendation feedback
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/RECOMMENDATION_SAVE_APPLY_FEEDBACK_CONTRACT.md`
+- API changes: none; uses existing recommendation feedback endpoint with `SAVED` and `APPLIED`
+- Database changes: none; uses existing feedback upsert row
+- Tests added:
+  - APPLIED feedback increments `feedbackAppliedLinkedTotal` and excludes the applied job on the next retrieval request
+  - For You saves a recommendation-backed card and submits `SAVED`
+  - For You applies through a validated URL and submits `APPLIED`
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix frontend run test -- src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts`
+  - `npm --prefix frontend run test -- src/pages/ForYouPage/ForYouPage.test.tsx src/features/recommendations/services/recommendations.service.test.ts --testTimeout=30000`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `git diff --check`
+- Results:
+  - Focused backend generation test passed after adjusting a test assertion to call the unit-of-work feedback repository directly
+  - Focused frontend For You test passed
+  - Focused backend generation/API/core tests passed
+  - Focused frontend For You and recommendation service tests passed
+  - Backend and frontend typechecks passed
+  - Touched-file lint passed
+  - Whitespace check passed with existing CRLF conversion warnings
+- Known limitations: save/apply feedback is linked only for cards carrying a persisted `recommendationId`.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-FEEDBACK-001 - Track impressions views and detail opens for recommendations
 
