@@ -12,19 +12,22 @@ import { authReducer } from '@/features/auth/authSlice';
 
 import { ForYouPage } from './ForYouPage';
 
-const { listMock, generateMock, listSavedMock, readinessMock, feedbackMock } = vi.hoisted(() => ({
-  listMock: vi.fn(),
-  generateMock: vi.fn(),
-  listSavedMock: vi.fn(),
-  readinessMock: vi.fn(),
-  feedbackMock: vi.fn(),
-}));
+const { listMock, generateMock, listSavedMock, readinessMock, feedbackMock, similarMock } =
+  vi.hoisted(() => ({
+    listMock: vi.fn(),
+    generateMock: vi.fn(),
+    listSavedMock: vi.fn(),
+    readinessMock: vi.fn(),
+    feedbackMock: vi.fn(),
+    similarMock: vi.fn(),
+  }));
 
 vi.mock('@/features/recommendations/services/recommendations.service', () => ({
   recommendationsService: {
     list: listMock,
     generateFromProfile: generateMock,
     getReadiness: readinessMock,
+    getSimilarJobs: similarMock,
     submitFeedback: feedbackMock,
   },
 }));
@@ -53,6 +56,17 @@ vi.mock('@/features/applications/services/applications.service', () => ({
     unsaveJob: vi.fn(),
   },
 }));
+
+const scoreResult = (overallScore: number) => ({
+  overallScore,
+  components: {},
+  matchedSkills: [],
+  aliasSkills: [],
+  relatedSkills: [],
+  transferableSkills: [],
+  missingSkills: [],
+  reasons: [],
+});
 
 function renderPage(isProfileComplete = true, route = '/for-you') {
   const queryClient = new QueryClient({
@@ -87,6 +101,7 @@ function renderPage(isProfileComplete = true, route = '/for-you') {
 beforeEach(() => {
   listMock.mockReset();
   generateMock.mockReset();
+  similarMock.mockReset();
   listSavedMock.mockReset();
   listSavedMock.mockResolvedValue([]);
 });
@@ -96,7 +111,9 @@ describe('ForYouPage', () => {
     listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
     renderPage(true);
 
-    expect(await screen.findByRole('tablist', { name: /recommendation modes/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('tablist', { name: /recommendation modes/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /^profile$/i })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -110,15 +127,64 @@ describe('ForYouPage', () => {
 
   it('navigates to unwired mode placeholders without loading profile recommendations', async () => {
     const user = userEvent.setup();
-    renderPage(true, '/for-you?mode=similar');
+    renderPage(true, '/for-you?mode=resume');
 
-    expect(await screen.findByRole('tabpanel', { name: /similar/i })).toHaveTextContent(
+    expect(await screen.findByRole('tabpanel', { name: /resume/i })).toHaveTextContent(
       /being wired/i,
     );
     expect(listMock).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('tab', { name: /^profile$/i }));
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
+  });
+
+  it('renders similar jobs from the Similar tab without showing the source job', async () => {
+    similarMock.mockResolvedValue([
+      {
+        rank: 1,
+        job: {
+          id: 'source-job',
+          title: 'Source duplicate',
+          company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
+          location: { formatted: 'Remote', remoteType: 'REMOTE' },
+          employmentType: 'FULL_TIME',
+          salary: { minimum: null, maximum: null, currency: null },
+          skills: ['React'],
+          publishedAt: '2026-07-30T00:00:00.000Z',
+          applyUrl: 'https://example.com/source',
+        },
+        displayScore: 99,
+        scoreResult: scoreResult(0.99),
+        category: 'BEST_MATCH',
+        matchType: 'EXACT',
+      },
+      {
+        rank: 2,
+        job: {
+          id: 'similar-job',
+          title: 'Design Systems Engineer',
+          company: { slug: 'beta', name: 'Beta', logoUrl: null, verified: true },
+          location: { formatted: 'Hybrid', remoteType: 'HYBRID' },
+          employmentType: 'FULL_TIME',
+          salary: { minimum: 10, maximum: 20, currency: 'INR' },
+          skills: ['React'],
+          publishedAt: '2026-07-30T00:00:00.000Z',
+          applyUrl: 'https://example.com/apply',
+        },
+        displayScore: 91,
+        scoreResult: scoreResult(0.91),
+        category: 'STRONG_MATCH',
+        matchType: 'RELATED',
+      },
+    ]);
+
+    renderPage(true, '/for-you?mode=similar&jobId=source-job');
+
+    expect(await screen.findByText(/design systems engineer/i)).toBeInTheDocument();
+    expect(screen.getByText(/91% Match/i)).toBeInTheDocument();
+    expect(screen.queryByText(/source duplicate/i)).not.toBeInTheDocument();
+    expect(listMock).not.toHaveBeenCalled();
+    expect(similarMock).toHaveBeenCalledWith('source-job', { limit: 20 }, expect.anything());
   });
 
   it('shows profile CTA when incomplete and list empty', async () => {
@@ -164,7 +230,7 @@ describe('ForYouPage', () => {
             applyUrl: 'https://example.com/apply',
           },
           displayScore: 88,
-          scoreResult: { overallScore: 0.12, components: {}, matchedSkills: [], relatedSkills: [], missingSkills: [], reasons: [] },
+          scoreResult: scoreResult(0.12),
           category: 'BEST_MATCH',
           matchType: 'EXACT',
           createdAt: '2026-07-30T00:00:00.000Z',

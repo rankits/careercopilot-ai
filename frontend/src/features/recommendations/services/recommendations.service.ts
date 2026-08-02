@@ -5,6 +5,7 @@ import type {
   RecommendationListResult,
   RecommendationReadinessStatus,
   RecommendationRunDetailsResult,
+  SimilarJobDto,
 } from '@/features/recommendations/types/recommendation.types';
 import { httpClient } from '@/services/httpClient';
 
@@ -45,6 +46,13 @@ const unwrapReadiness = (response: unknown): RecommendationReadinessStatus => {
     throw new Error('Unexpected recommendation readiness response shape');
   }
   return response.data.data as RecommendationReadinessStatus;
+};
+
+const unwrapSimilarJobs = (response: unknown): SimilarJobDto[] => {
+  if (!isRecord(response) || !isRecord(response.data) || !Array.isArray(response.data.data)) {
+    throw new Error('Unexpected similar jobs response shape');
+  }
+  return response.data.data as SimilarJobDto[];
 };
 
 export const recommendationsService = {
@@ -107,6 +115,20 @@ export const recommendationsService = {
       signal: options.signal,
     });
     return unwrapRunDetails(response);
+  },
+
+  async getSimilarJobs(
+    jobId: string,
+    params: { limit?: number } = {},
+    options: { signal?: AbortSignal } = {},
+  ): Promise<SimilarJobDto[]> {
+    const response = await httpClient.get(`/job-recommendations/similar/${jobId}`, {
+      params: {
+        limit: params.limit ?? 10,
+      },
+      signal: options.signal,
+    });
+    return unwrapSimilarJobs(response);
   },
 
   async submitFeedback(

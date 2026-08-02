@@ -59,6 +59,15 @@ export interface RecommendationDto {
   createdAt: string;
 }
 
+export interface SimilarJobDto {
+  rank: number;
+  job: JobListDto;
+  displayScore?: number | null;
+  scoreResult: RecommendationScoreResult;
+  category: string;
+  matchType: string;
+}
+
 export interface RecommendationListResult {
   items: RecommendationDto[];
   page: number;
