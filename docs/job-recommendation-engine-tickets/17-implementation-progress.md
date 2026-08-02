@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 7 |
+| Implemented | 8 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,31 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-BE-001 - Ensure recommendation run ownership and userId consistency
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/services/recommendations.service.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendations.api.test.ts`
+  - `docs/job-recommendation-engine-tickets/RUN_OWNERSHIP_INVARIANT.md`
+- API changes: none; identity source remains `String(req.user.principalId)`
+- Database changes: none
+- Tests added:
+  - API regression proving spoofed header/query user ids do not replace JWT principalId
+  - Service regression rejecting authorized contexts whose userId differs from the caller before run creation
+  - Persistence regression proving run, recommendation, and feedback rows share the principal-scoped userId
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-idor.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused generation/API/IDOR tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: no historical-row migration needed or added
+- Next ticket: `JRE-API-002`
 
 ### 2026-08-02 - JRE-CONTEXT-001 - Harden source ownership checks for PROFILE RESUME JOB text
 

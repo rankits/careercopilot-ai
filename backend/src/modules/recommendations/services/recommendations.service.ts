@@ -73,6 +73,7 @@ export class RecommendationsService {
     const dependencies = this.requireOrchestration();
     const authorized = await dependencies.sourceAuthorization.authorizeForSource(userId, input);
     return this.generateAuthorized(authorized, {
+      expectedUserId: userId,
       backend: DEFAULT_RETRIEVAL_BACKEND,
       limit: DEFAULT_RECOMMENDATION_LIMIT,
       filters: input.filters,
@@ -92,6 +93,7 @@ export class RecommendationsService {
     const dependencies = this.requireOrchestration();
     const authorized = dependencies.sourceAuthorization.authorizeFromText(userId, input);
     return this.generateAuthorized(authorized, {
+      expectedUserId: userId,
       backend: DEFAULT_RETRIEVAL_BACKEND,
       limit: DEFAULT_RECOMMENDATION_LIMIT,
       filters: input.filters,
@@ -101,6 +103,7 @@ export class RecommendationsService {
   async generateAuthorized(
     input: BuildRecommendationContextInput,
     options: {
+      expectedUserId?: string;
       backend: RetrievalBackend;
       limit: number;
       filters?: RecommendationFiltersDto;
@@ -109,6 +112,7 @@ export class RecommendationsService {
   ): Promise<JobRecommendationRecord[]> {
     const startedAt = Date.now();
     const dependencies = this.requireOrchestration();
+    this.assertPrincipalUserId(input.userId, options.expectedUserId);
     const run = await dependencies.unitOfWork.execute(({ runs }) =>
       runs.create({
         userId: input.userId,
@@ -154,6 +158,7 @@ export class RecommendationsService {
         }
         const records = await dependencies.unitOfWork.execute(async ({ recommendations, runs }) => {
           const created = await recommendations.createMany(input.userId, run.id, eligible);
+          this.assertPersistedOwnership(input.userId, run.id, created);
           await runs.markCompleted(input.userId, run.id);
           return created;
         });
@@ -303,5 +308,28 @@ export class RecommendationsService {
       );
     }
     return this.orchestration;
+  }
+
+  private assertPrincipalUserId(authorizedUserId: string, expectedUserId?: string): void {
+    if (expectedUserId === undefined || authorizedUserId === expectedUserId) return;
+    throw new RecommendationError(
+      'Recommendation context user does not match authenticated principal',
+      403,
+      RECOMMENDATION_ERROR_CODES.ACCESS_DENIED,
+    );
+  }
+
+  private assertPersistedOwnership(
+    userId: string,
+    runId: string,
+    records: readonly JobRecommendationRecord[],
+  ): void {
+    const mismatch = records.some((record) => record.userId !== userId || record.runId !== runId);
+    if (!mismatch) return;
+    throw new RecommendationError(
+      'Recommendation persistence violated user ownership invariant',
+      500,
+      RECOMMENDATION_ERROR_CODES.GENERATION_FAILED,
+    );
   }
 }
