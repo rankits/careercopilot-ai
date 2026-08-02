@@ -12,6 +12,7 @@ import { RecommendationsService } from '@/modules/recommendations/services/recom
 import { RecommendationContextService } from '@/modules/recommendations/services/recommendation-context.service.js';
 import { RecommendationStrategyResolver } from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
 import {
+  CareerGoalSourceStrategy,
   JobSourceStrategy,
   ProfileSourceStrategy,
   ResumeSourceStrategy,
@@ -236,6 +237,81 @@ describe('RecommendationSourceAuthorizationService', () => {
     });
   });
 
+  it('authorizes CAREER_GOAL by owned target and merges profile direction', async () => {
+    const targetId = '33333333-3333-3333-3333-333333333333';
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+          personalDetails: { currentTitle: 'Senior Engineer', summary: 'Builds platforms' },
+          skills: ['TypeScript', 'PostgreSQL'],
+          experience: [],
+          education: [],
+          certifications: [],
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedCareerTargetSource: vi.fn().mockResolvedValue({
+          id: targetId,
+          userId: 'user-1',
+          goalText: 'Move into engineering management in SaaS',
+          structured: {
+            targetRole: 'Engineering Manager',
+            targetSkills: ['Leadership'],
+            targetIndustries: ['SaaS'],
+            timeframe: '12 months',
+          },
+        }),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', {
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+    });
+
+    expect(authorized).toMatchObject({
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+      authorizedSourcePayload: {
+        targetTitles: ['Engineering Manager'],
+        relatedTitles: ['Senior Engineer'],
+        requiredSkills: ['Leadership', 'TypeScript', 'PostgreSQL'],
+        industries: ['SaaS'],
+        flexibilityMode: 'FLEXIBLE',
+        goalIntent: {
+          currentRole: undefined,
+          targetRole: 'Engineering Manager',
+          targetIndustries: ['SaaS'],
+          timeframe: '12 months',
+        },
+      },
+    });
+  });
+
+  it('hides missing or unowned CAREER_GOAL sources', async () => {
+    const targetId = '33333333-3333-3333-3333-333333333333';
+    const findOwnedCareerTargetSource = vi.fn().mockResolvedValue(null);
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedCareerTargetSource,
+      },
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', {
+        sourceType: 'CAREER_GOAL',
+        sourceId: targetId,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'RECOMMENDATION_SOURCE_NOT_FOUND',
+    });
+    expect(findOwnedCareerTargetSource).toHaveBeenCalledWith('user-1', targetId);
+  });
+
   it('rejects empty candidate profiles', async () => {
     const service = new RecommendationSourceAuthorizationService(
       { findById: vi.fn() } as unknown as IJobSearchRepository,
@@ -332,6 +408,73 @@ describe('RecommendationsService generation', () => {
       records[1]?.scoreResult.overallScore ?? 0,
     );
     expect(records[0]?.runId).toBeTruthy();
+  });
+
+  it('runs CAREER_GOAL generation from an owned career target', async () => {
+    const targetId = '33333333-3333-3333-3333-333333333333';
+    const retrievalService = {
+      retrieve: vi.fn().mockResolvedValue([
+        {
+          job: jobList('job-manager', {
+            title: 'Engineering Manager',
+            skills: ['Leadership', 'TypeScript'],
+          }),
+          retrievalScore: 0.9,
+        },
+      ]),
+    } as unknown as RecommendationRetrievalService;
+
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-career-goal' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new CareerGoalSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+            personalDetails: { currentTitle: 'Senior Engineer' },
+            skills: ['TypeScript'],
+            experience: [],
+            education: [],
+            certifications: [],
+          }),
+          findOwnedResumeProfileSource: vi.fn(),
+          findOwnedCareerTargetSource: vi.fn().mockResolvedValue({
+            id: targetId,
+            userId: 'user-1',
+            goalText: 'Move into engineering management',
+            structured: {
+              targetRole: 'Engineering Manager',
+              targetSkills: ['Leadership'],
+            },
+          }),
+        },
+      ),
+    });
+
+    const records = await service.createForSource('user-1', {
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+    });
+
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          sourceType: 'CAREER_GOAL',
+          sourceId: targetId,
+          targetTitles: ['Engineering Manager'],
+          requiredSkills: ['Leadership', 'TypeScript'],
+          goalIntent: expect.objectContaining({ targetRole: 'Engineering Manager' }),
+        }),
+      }),
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ userId: 'user-1', rank: 1 });
   });
 
   it('does not create a run when RESUME ownership authorization fails', async () => {

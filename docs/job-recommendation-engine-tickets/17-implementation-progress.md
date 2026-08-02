@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 36 |
+| Implemented | 37 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,41 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-DATA-003 - Add CareerTarget model and CAREER_GOAL context mapping
+
+- Status: Implemented
+- Implemented files:
+  - `backend/prisma/career-targets.prisma`
+  - `backend/prisma/migrations/20260802161000_add_career_targets/migration.sql`
+  - `backend/src/modules/recommendations/mappers/career-target-source.mapper.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-career-target.repository.ts`
+  - `backend/src/modules/recommendations/contracts/recommendation-source-loader.ts`
+  - `backend/src/modules/recommendations/adapters/resume-recommendation-source.loader.ts`
+  - `backend/src/modules/recommendations/services/recommendation-source-authorization.service.ts`
+  - `backend/src/modules/recommendations/validations/recommendation.schema.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `docs/job-recommendation-engine-tickets/CAREER_TARGET_CONTEXT_CONTRACT.md`
+- API changes: `POST /job-recommendations` and `/refresh` accept `CAREER_GOAL` with required `sourceId`
+- Database changes: added `career_targets` table with user ownership indexes
+- Tests added:
+  - Validation accepts `CAREER_GOAL` only with `sourceId`
+  - Loader hides unowned/archived career targets
+  - Authorization merges owned career target and current profile context
+  - In-memory generation completes for `CAREER_GOAL` without 501
+- Commands executed:
+  - `npm --prefix backend run prisma:generate`
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/resume-recommendation-source.loader.test.ts recommendations/__tests__/recommendation-strategies.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Prisma client generated successfully
+  - Focused recommendation tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: create/update APIs for managing career targets remain for `JRE-API-004` / `JRE-FE-005`
+- Next ticket: `JRE-DATA-004`
 
 ### 2026-08-02 - JRE-UI-005 - Mobile and zoom usability pass
 

@@ -3,6 +3,10 @@ import type {
   ResumeProfileSourceLookup,
 } from '@/modules/recommendations/contracts/recommendation-source-loader.js';
 import type { CandidateProfileSourceInput } from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
+import {
+  prismaCareerTargetRepository,
+  type CareerTargetRepository,
+} from '@/modules/recommendations/repositories/prisma-career-target.repository.js';
 import { resumeRepository } from '@/modules/resumes/repositories/resume.repository.js';
 import type { ParsedResumeData } from '@/modules/resumes/types/resume.types.js';
 
@@ -98,6 +102,7 @@ const toSourceInput = (parsed: ParsedResumeData): CandidateProfileSourceInput =>
 
 export const createResumeRecommendationSourceLoader = (
   repository: typeof resumeRepository = resumeRepository,
+  careerTargets: CareerTargetRepository = prismaCareerTargetRepository,
 ): RecommendationSourceLoader => {
   const lookupOwnedResumeProfileSource = async (
     userId: string,
@@ -137,6 +142,17 @@ export const createResumeRecommendationSourceLoader = (
     async findOwnedResumeProfileSource(userId, resumeId) {
       const lookup = await lookupOwnedResumeProfileSource(userId, resumeId);
       return lookup.status === 'FOUND' ? lookup.payload : null;
+    },
+
+    async findOwnedCareerTargetSource(userId, careerTargetId) {
+      const target = await careerTargets.findById(careerTargetId);
+      if (!target || target.userId !== userId || target.archivedAt) return null;
+      return {
+        id: target.id,
+        userId: target.userId,
+        goalText: target.goalText,
+        structured: target.structured,
+      };
     },
   };
 };

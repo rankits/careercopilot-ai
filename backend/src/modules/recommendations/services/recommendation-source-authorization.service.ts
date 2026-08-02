@@ -4,6 +4,7 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import { buildCareerGoalRecommendationPayload } from '@/modules/recommendations/mappers/career-target-source.mapper.js';
 import { hasRecommendationSignal } from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
 import { buildProfilePrimaryRecommendationPayload } from '@/modules/recommendations/utils/candidate-recommendation-document.js';
 import type { BuildRecommendationContextInput } from '@/modules/recommendations/types/recommendations.types.js';
@@ -114,6 +115,57 @@ export class RecommendationSourceAuthorizationService {
         return {
           userId,
           sourceType: 'RESUME',
+          sourceId: input.sourceId,
+          authorizedSourcePayload: payload,
+        };
+      }
+      case 'CAREER_GOAL': {
+        if (!input.sourceId) {
+          throw new RecommendationError(
+            'sourceId is required for CAREER_GOAL recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        if (!this.profiles.findOwnedCareerTargetSource) {
+          throw new RecommendationError(
+            'Career goal recommendation sources are not configured',
+            501,
+            RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
+          );
+        }
+        const target = await this.profiles.findOwnedCareerTargetSource(userId, input.sourceId);
+        if (!target) {
+          throw new RecommendationError(
+            'Owned career target was not found',
+            404,
+            RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+          );
+        }
+        const profile = await this.profiles.findCandidateProfileByUserId(userId);
+        const resumeFallback = profile?.sourceResumeId
+          ? await this.profiles.findOwnedResumeProfileSource(userId, profile.sourceResumeId)
+          : null;
+        const profilePayload = profile
+          ? buildProfilePrimaryRecommendationPayload(profile, resumeFallback)
+          : buildProfilePrimaryRecommendationPayload({
+              personalDetails: {},
+              experience: [],
+              education: [],
+              skills: [],
+              certifications: [],
+            });
+        const payload = buildCareerGoalRecommendationPayload(target, profilePayload);
+        if (!hasRecommendationSignal(payload)) {
+          throw new RecommendationError(
+            'Career target does not contain titles, skills, or goal text for recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        return {
+          userId,
+          sourceType: 'CAREER_GOAL',
           sourceId: input.sourceId,
           authorizedSourcePayload: payload,
         };

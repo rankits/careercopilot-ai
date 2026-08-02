@@ -290,19 +290,19 @@ export const recommendationsSwagger = {
     {
       summary: 'Generate recommendations from an authorized source',
       description:
-        'Supports PROFILE, RESUME, and JOB. Uses PGVECTOR retrieval and hybrid scoring; results are persisted durably.',
+        'Supports PROFILE, RESUME, JOB, and CAREER_GOAL. Uses PGVECTOR retrieval and hybrid scoring; results are persisted durably.',
       body: {
         required: ['sourceType'],
         properties: {
           sourceType: {
             type: 'string',
-            enum: ['PROFILE', 'RESUME', 'JOB'],
+            enum: ['PROFILE', 'RESUME', 'JOB', 'CAREER_GOAL'],
             example: 'PROFILE',
           },
           sourceId: {
             type: 'string',
             format: 'uuid',
-            description: 'Required for RESUME and JOB. Forbidden for PROFILE.',
+            description: 'Required for RESUME, JOB, and CAREER_GOAL. Forbidden for PROFILE.',
           },
           filters: filtersSchema,
         },
@@ -388,14 +388,14 @@ export const recommendationsSwagger = {
         properties: {
           sourceType: {
             type: 'string',
-            enum: ['PROFILE', 'RESUME', 'JOB'],
+            enum: ['PROFILE', 'RESUME', 'JOB', 'CAREER_GOAL'],
             default: 'PROFILE',
             example: 'PROFILE',
           },
           sourceId: {
             type: 'string',
             format: 'uuid',
-            description: 'Required for RESUME and JOB. Forbidden for PROFILE.',
+            description: 'Required for RESUME, JOB, and CAREER_GOAL. Forbidden for PROFILE.',
           },
           filters: filtersSchema,
         },
