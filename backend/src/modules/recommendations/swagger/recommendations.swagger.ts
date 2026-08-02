@@ -113,6 +113,17 @@ const scoreResultSchema = {
   },
 };
 
+const skillGapSchema = {
+  type: 'object',
+  properties: {
+    exact: { type: 'array', items: { type: 'string' } },
+    alias: { type: 'array', items: { type: 'string' } },
+    related: { type: 'array', items: { type: 'string' } },
+    transferable: { type: 'array', items: { type: 'string' } },
+    missing: { type: 'array', items: { type: 'string' } },
+  },
+};
+
 const recommendationItemSchema = {
   type: 'object',
   properties: {
@@ -163,6 +174,7 @@ const recommendationItemSchema = {
         },
       },
     },
+    skillGap: skillGapSchema,
     scoreResult: scoreResultSchema,
     category: { type: 'string', enum: [...RECOMMENDATION_CATEGORY_VALUES] },
     matchType: { type: 'string', enum: [...RECOMMENDATION_MATCH_TYPE_VALUES] },

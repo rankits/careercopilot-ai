@@ -8,12 +8,16 @@ import type {
   RecommendationPage,
   RecommendationRunPage,
   RecommendationRunRecord,
+  RecommendationSkillGap,
   RecommendationSourceType,
   ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import { normalizeExtractedRecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
 import { mapRecommendationLifecycleState } from '@/modules/recommendations/services/recommendation-readiness.helpers.js';
-import { buildRecommendationExplanation } from '@/modules/recommendations/services/recommendation-explanation.service.js';
+import {
+  buildRecommendationExplanation,
+  buildRecommendationSkillGap,
+} from '@/modules/recommendations/services/recommendation-explanation.service.js';
 
 export interface RecommendationContextMapper {
   toContext(input: {
@@ -41,6 +45,7 @@ export interface RecommendationResponse {
   rank: number;
   displayScore?: number;
   explanation: RecommendationExplanation;
+  skillGap: RecommendationSkillGap;
   scoreResult: JobRecommendationRecord['scoreResult'];
   category: JobRecommendationRecord['category'];
   matchType: JobRecommendationRecord['matchType'];
@@ -103,6 +108,7 @@ export const toRecommendationResponse: RecommendationMapper['toResponse'] = (rec
   rank: record.rank,
   displayScore: toDisplayScore(record.scoreResult.overallScore),
   explanation: buildRecommendationExplanation(record),
+  skillGap: buildRecommendationSkillGap(record.scoreResult),
   scoreResult: record.scoreResult,
   category: record.category,
   matchType: record.matchType,

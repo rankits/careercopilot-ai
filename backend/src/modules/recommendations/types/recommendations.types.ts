@@ -307,6 +307,14 @@ export interface RecommendationExplanation {
   };
 }
 
+export interface RecommendationSkillGap {
+  exact: string[];
+  alias: string[];
+  related: string[];
+  transferable: string[];
+  missing: string[];
+}
+
 export interface RecommendationScoreResult {
   overallScore: number;
   components: RecommendationScoreComponents;

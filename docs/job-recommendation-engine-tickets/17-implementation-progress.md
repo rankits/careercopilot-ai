@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 13 |
+| Implemented | 14 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,35 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-EXPLAIN-002 - Expose structured skill-gap output on recommendations
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/types/recommendations.types.ts`
+  - `backend/src/modules/recommendations/services/recommendation-explanation.service.ts`
+  - `backend/src/modules/recommendations/mappers/recommendation.mapper.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-explanation.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation.mapper.test.ts`
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `docs/job-recommendation-engine-tickets/SKILL_GAP_CONTRACT.md`
+- API changes: additive `skillGap` object on recommendation DTOs
+- Database changes: none
+- Tests added:
+  - Structured skill gap de-duplicates exact/related skills out of missing
+  - Mapper emits exact/alias/related/transferable/missing buckets
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-explanation.service.test.ts recommendations/__tests__/recommendation.mapper.test.ts recommendations/__tests__/recommendations.api.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused skill-gap/mapper/API tests passed
+  - Backend and frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: alias and transferable buckets remain empty until skill graph tickets land
+- Next ticket: `JRE-SKILL-001`
 
 ### 2026-08-02 - JRE-EXPLAIN-001 - Build deterministic explanations from score components
 
