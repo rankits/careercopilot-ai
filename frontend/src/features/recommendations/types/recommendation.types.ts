@@ -33,6 +33,14 @@ export interface RecommendationExplanation {
   };
 }
 
+export interface RecommendationSkillGap {
+  exact: string[];
+  alias: string[];
+  related: string[];
+  transferable: string[];
+  missing: string[];
+}
+
 export interface RecommendationDto {
   id: string;
   runId: string;
@@ -40,6 +48,7 @@ export interface RecommendationDto {
   job: JobListDto;
   displayScore?: number | null;
   explanation?: RecommendationExplanation;
+  skillGap?: RecommendationSkillGap;
   scoreResult: RecommendationScoreResult;
   category: string;
   matchType: string;

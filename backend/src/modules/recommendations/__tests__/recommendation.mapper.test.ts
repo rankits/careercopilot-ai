@@ -54,6 +54,13 @@ describe('recommendation response score mapping', () => {
       summary: '87% match with 1 matched skill',
       scoreModel: { overallScore: 0.874, displayScore: 87 },
     });
+    expect(response.skillGap).toEqual({
+      exact: ['TypeScript'],
+      alias: [],
+      related: [],
+      transferable: [],
+      missing: [],
+    });
     expect(response.scoreResult.overallScore).toBe(0.874);
   });
 

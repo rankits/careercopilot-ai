@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { buildRecommendationExplanation } from '@/modules/recommendations/services/recommendation-explanation.service.js';
+import {
+  buildRecommendationExplanation,
+  buildRecommendationSkillGap,
+} from '@/modules/recommendations/services/recommendation-explanation.service.js';
 import type { JobRecommendationRecord } from '@/modules/recommendations/types/recommendations.types.js';
 
 const recommendation = (overrides: Partial<JobRecommendationRecord> = {}): JobRecommendationRecord => ({
@@ -105,5 +108,22 @@ describe('buildRecommendationExplanation', () => {
     expect(explanation.matchedSkills).toEqual(['TypeScript', 'PostgreSQL']);
     expect(explanation.relatedSkills).toEqual([]);
     expect(explanation.missingSkills).toEqual(['Redis']);
+  });
+
+  it('builds structured skill gaps without duplicating missing skills across known buckets', () => {
+    const skillGap = buildRecommendationSkillGap({
+      ...recommendation().scoreResult,
+      matchedSkills: ['TypeScript', 'typescript'],
+      relatedSkills: ['PostgreSQL'],
+      missingSkills: ['Redis', 'TypeScript', 'PostgreSQL'],
+    });
+
+    expect(skillGap).toEqual({
+      exact: ['TypeScript'],
+      alias: [],
+      related: ['PostgreSQL'],
+      transferable: [],
+      missing: ['Redis'],
+    });
   });
 });

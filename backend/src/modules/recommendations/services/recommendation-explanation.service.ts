@@ -9,6 +9,8 @@ import type {
   RecommendationExplanationBullet,
   RecommendationReason,
   RecommendationScoreComponentName,
+  RecommendationScoreResult,
+  RecommendationSkillGap,
 } from '@/modules/recommendations/types/recommendations.types.js';
 
 const COMPONENT_LABELS: Record<RecommendationScoreComponentName, string> = {
@@ -42,6 +44,36 @@ const parseEvidenceNumber = (
 const displayScore = (overallScore: number): number | undefined => {
   if (!Number.isFinite(overallScore) || overallScore < 0 || overallScore > 1) return undefined;
   return Math.round(overallScore * 100);
+};
+
+const uniqueSkills = (skills: readonly string[]): string[] => {
+  const seen = new Set<string>();
+  const result: string[] = [];
+  for (const skill of skills) {
+    const trimmed = skill.trim();
+    if (!trimmed) continue;
+    const key = trimmed.toLowerCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    result.push(trimmed);
+  }
+  return result;
+};
+
+export const buildRecommendationSkillGap = (
+  scoreResult: RecommendationScoreResult,
+): RecommendationSkillGap => {
+  const exact = uniqueSkills(scoreResult.matchedSkills);
+  const alias: string[] = [];
+  const related = uniqueSkills(scoreResult.relatedSkills);
+  const transferable: string[] = [];
+  const covered = new Set(
+    [...exact, ...alias, ...related, ...transferable].map((skill) => skill.toLowerCase()),
+  );
+  const missing = uniqueSkills(scoreResult.missingSkills).filter(
+    (skill) => !covered.has(skill.toLowerCase()),
+  );
+  return { exact, alias, related, transferable, missing };
 };
 
 export const buildRecommendationExplanation = (
