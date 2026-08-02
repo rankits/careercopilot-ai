@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   Link as RouterLink,
   useLocation,
@@ -34,6 +34,7 @@ import { applicationsService } from '@/features/applications/services/applicatio
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
 import type {
   RecommendationDto,
+  RecommendationFeedbackAction,
   RecommendationReadinessStatus,
 } from '@/features/recommendations/types/recommendation.types';
 import { formatRecommendationCategoryLabel } from '@/features/recommendations/utils/formatRecommendationMatchLabel';
@@ -154,6 +155,7 @@ export function ForYouPage() {
     ReturnType<typeof mapRecommendationDtoToCard>[]
   >([]);
   const modeTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const trackedFeedbackKeys = useRef<Set<string>>(new Set());
 
   const readiness = useRecommendationReadiness();
   const { data, isPending, isError, error, refetch, isFetching } = useRecommendations(
@@ -198,6 +200,22 @@ export function ForYouPage() {
   });
   const savedSearches = useSavedSearches({ enabled: activeMode === 'saved' });
   const [optimisticSaved, setOptimisticSaved] = useState<Record<string, boolean>>({});
+
+  const trackRecommendationFeedback = useCallback(
+    (
+      recommendationId: string | undefined,
+      action: Extract<RecommendationFeedbackAction, 'VIEWED' | 'OPENED'>,
+    ) => {
+      if (!recommendationId) return;
+      const key = `${action}:${recommendationId}`;
+      if (trackedFeedbackKeys.current.has(key)) return;
+      trackedFeedbackKeys.current.add(key);
+      void feedback.mutateAsync({ recommendationId, action }).catch(() => {
+        trackedFeedbackKeys.current.delete(key);
+      });
+    },
+    [feedback],
+  );
 
   useEffect(() => {
     const sourceResumeId = resumeProfile.data?.sourceResumeId;
@@ -312,6 +330,28 @@ export function ForYouPage() {
     (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
   );
   const careerGroups = groupCareerRecommendations(visibleCareerRecommendations);
+  const viewedRecommendationIds = useMemo(
+    () => [
+      ...visibleCards.map((card) => card.recommendationId),
+      ...resumeRecommendations.map((card) => card.recommendationId),
+      ...textRecommendations.map((card) => card.recommendationId),
+      ...visibleCareerRecommendations.map((item) => item.id),
+      ...visibleSavedSearchRecommendations.map((card) => card.recommendationId),
+    ].filter((id): id is string => Boolean(id)),
+    [
+      visibleCards,
+      resumeRecommendations,
+      textRecommendations,
+      visibleCareerRecommendations,
+      visibleSavedSearchRecommendations,
+    ],
+  );
+
+  useEffect(() => {
+    for (const recommendationId of viewedRecommendationIds) {
+      trackRecommendationFeedback(recommendationId, 'VIEWED');
+    }
+  }, [trackRecommendationFeedback, viewedRecommendationIds]);
 
   const submitFeedback = (recommendationId: string, action: 'DISMISSED' | 'NOT_RELEVANT') => {
     setDismissedIds((prev) => ({ ...prev, [recommendationId]: true }));
@@ -591,6 +631,7 @@ export function ForYouPage() {
                     }
                     onOpen={(selected) => {
                       if (!selected.id) return;
+                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
                       void navigate(jobDetailPath(selected.id), {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
@@ -685,6 +726,7 @@ export function ForYouPage() {
                     }}
                     onOpen={(selected) => {
                       if (!selected.id) return;
+                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
                       void navigate(jobDetailPath(selected.id), {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
@@ -806,6 +848,7 @@ export function ForYouPage() {
                     }
                     onOpen={(selected) => {
                       if (!selected.id) return;
+                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
                       void navigate(jobDetailPath(selected.id), {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
@@ -918,6 +961,7 @@ export function ForYouPage() {
                     }
                     onOpen={(selected) => {
                       if (!selected.id) return;
+                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
                       void navigate(jobDetailPath(selected.id), {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
@@ -1114,6 +1158,7 @@ export function ForYouPage() {
                     }
                     onOpen={(selected) => {
                       if (!selected.id) return;
+                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
                       void navigate(jobDetailPath(selected.id), {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });
@@ -1373,6 +1418,7 @@ export function ForYouPage() {
                     }
                     onOpen={(selected) => {
                       if (!selected.id) return;
+                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
                       void navigate(jobDetailPath(selected.id), {
                         state: { fromFeed: `${location.pathname}${location.search}` },
                       });

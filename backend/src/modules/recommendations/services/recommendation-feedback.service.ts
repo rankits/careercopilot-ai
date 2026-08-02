@@ -1,4 +1,5 @@
 import type { RecommendationFeedbackRepository } from '@/modules/recommendations/contracts/recommendation.repository.js';
+import { recordFeedbackAction } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import type {
   RecommendationFeedbackAction,
   RecommendationFeedbackRecord,
@@ -14,6 +15,7 @@ export class RecommendationFeedbackService {
     action: RecommendationFeedbackAction;
     note?: string;
   }): Promise<RecommendationFeedbackRecord> {
+    recordFeedbackAction(input.action);
     return this.repository.upsert(input);
   }
 
