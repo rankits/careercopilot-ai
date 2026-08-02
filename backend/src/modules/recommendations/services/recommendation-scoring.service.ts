@@ -37,7 +37,16 @@ const hybridReason = (
 });
 
 const flexibleFilterReason = (violations: readonly string[]): RecommendationReason => ({
-  component: violations.some((violation) => violation.startsWith('SALARY')) ? 'salary' : 'location',
+  component: violations.some(
+    (violation) =>
+      violation === 'REQUIRED_CERTIFICATION' ||
+      violation === 'WORK_AUTHORIZATION' ||
+      violation === 'VISA_SPONSORSHIP',
+  )
+    ? 'qualifications'
+    : violations.some((violation) => violation.startsWith('SALARY'))
+      ? 'salary'
+      : 'location',
   message: 'Flexible filter mode kept this stretch opportunity outside one or more preferences',
   evidence: violations.map((violation) => `filterViolation=${violation}`),
 });

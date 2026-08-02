@@ -20,6 +20,8 @@ Strict mode enforces deterministic eligibility before scoring:
 - salary minimum must be met when requested
 - salary maximum must not be exceeded when requested
 - salary currency must match when both sides disclose a currency
+- required job certifications must be present on the candidate context when the job discloses them
+- disclosed work-authorization and sponsorship constraints must be satisfied when both sides provide enough signal
 - excluded companies are always removed
 
 Undisclosed salary does not satisfy a strict minimum.
