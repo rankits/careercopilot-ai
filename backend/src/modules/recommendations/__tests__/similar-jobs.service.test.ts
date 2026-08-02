@@ -22,7 +22,7 @@ const sourceJob: JobDetailDto = {
   salary: { minimum: 120000, maximum: 150000, currency: 'USD' },
   skills: ['TypeScript', 'PostgreSQL'],
   publishedAt: null,
-  expiresAt: null,
+  applyUrl: null,
   descriptionHtml: '<p>APIs</p>',
   descriptionText: 'Build APIs with TypeScript',
   benefits: [],
@@ -40,7 +40,7 @@ const candidate = (id: string, title: string): JobListDto => ({
   salary: { minimum: 110000, maximum: 140000, currency: 'USD' },
   skills: ['TypeScript'],
   publishedAt: null,
-  expiresAt: null,
+  applyUrl: null,
 });
 
 describe('SimilarJobsService', () => {

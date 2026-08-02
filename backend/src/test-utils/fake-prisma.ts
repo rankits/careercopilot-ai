@@ -139,6 +139,35 @@ export interface FakeCandidateProfile {
   updatedAt: Date;
 }
 
+export interface FakeResume {
+  id: string;
+  userId: string | null;
+  fileName: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  fileUrl: string;
+  storageKey: string;
+  storageDriver: 'LOCAL' | 'S3';
+  status: 'UPLOADED' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+  failureReason: string | null;
+  uploadedAt: Date;
+  processedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FakeResumeExtraction {
+  id: string;
+  resumeId: string;
+  parseRunId: string | null;
+  extractedText: string | null;
+  extractedData: unknown;
+  parserVersion: string;
+  confidenceScore: number | null;
+  createdAt: Date;
+}
+
 const withRole = <T extends { roleId: number }>(record: T, roles: Map<number, FakeRole>) => ({
   ...record,
   role: { name: roles.get(record.roleId)?.name ?? 'USER' },
@@ -197,6 +226,8 @@ export class FakeDb {
   userMetas: FakeUserMeta[] = [];
   userSessions: FakeUserSession[] = [];
   candidateProfiles: FakeCandidateProfile[] = [];
+  resumes: FakeResume[] = [];
+  resumeExtractions: FakeResumeExtraction[] = [];
   admins: FakeAdmin[] = [];
   adminMetas: FakeAdminMeta[] = [];
   adminSessions: FakeAdminSession[] = [];
@@ -208,6 +239,8 @@ export class FakeDb {
     this.userMetas = [];
     this.userSessions = [];
     this.candidateProfiles = [];
+    this.resumes = [];
+    this.resumeExtractions = [];
     this.admins = [];
     this.adminMetas = [];
     this.adminSessions = [];
@@ -322,7 +355,9 @@ export class FakeDb {
           include?: { role?: boolean };
         }) => {
           const found = db.users.find(
-            (u) => (where.id !== undefined && u.id === where.id) || (where.email !== undefined && u.email === where.email),
+            (u) =>
+              (where.id !== undefined && u.id === where.id) ||
+              (where.email !== undefined && u.email === where.email),
           );
           if (!found) return null;
           if (select) return project(found, select);
@@ -371,22 +406,16 @@ export class FakeDb {
           select,
           include,
         }: {
-          where: { id?: number; publicId?: string };
+          where: { id?: number };
           data: Record<string, unknown> & {
             meta?: { create?: FakeUserMeta; update?: Partial<FakeUserMeta> };
           };
           select?: Record<string, boolean>;
           include?: { role?: boolean };
         }) => {
-          const index = db.users.findIndex((u) =>
-            where.id !== undefined
-              ? u.id === where.id
-              : where.publicId !== undefined
-                ? u.publicId === where.publicId
-                : false,
-          );
+          const index = db.users.findIndex((u) => where.id !== undefined && u.id === where.id);
           if (index === -1) {
-            throw new Error(`FakeDb: user ${where.id ?? where.publicId ?? 'unknown'} not found`);
+            throw new Error(`FakeDb: user ${where.id ?? 'unknown'} not found`);
           }
           const updated = applyIncrements(
             db.users[index] as unknown as Record<string, unknown>,
@@ -497,6 +526,71 @@ export class FakeDb {
           ) as unknown as FakeCandidateProfile;
           return { ...db.candidateProfiles[index] };
         },
+        upsert: async ({
+          where,
+          create,
+          update,
+        }: {
+          where: { userId: string };
+          create: Omit<FakeCandidateProfile, 'id' | 'createdAt' | 'updatedAt'>;
+          update: Partial<FakeCandidateProfile>;
+        }) => {
+          const now = new Date();
+          const index = db.candidateProfiles.findIndex((p) => p.userId === where.userId);
+          if (index === -1) {
+            const record: FakeCandidateProfile = {
+              id: randomUUID(),
+              createdAt: now,
+              updatedAt: now,
+              ...create,
+            };
+            db.candidateProfiles.push(record);
+            return { ...record };
+          }
+          db.candidateProfiles[index] = {
+            ...db.candidateProfiles[index],
+            ...update,
+            updatedAt: now,
+          };
+          return { ...db.candidateProfiles[index] };
+        },
+      },
+
+      resume: {
+        findUnique: async ({ where }: { where: { id: string } }) => {
+          const found = db.resumes.find((resume) => resume.id === where.id);
+          return found ? { ...found } : null;
+        },
+        create: async ({
+          data,
+        }: {
+          data: Omit<
+            FakeResume,
+            'status' | 'failureReason' | 'uploadedAt' | 'processedAt' | 'createdAt' | 'updatedAt'
+          >;
+        }) => {
+          const now = new Date();
+          const resume: FakeResume = {
+            status: 'UPLOADED',
+            failureReason: null,
+            uploadedAt: now,
+            processedAt: null,
+            createdAt: now,
+            updatedAt: now,
+            ...data,
+          };
+          db.resumes.push(resume);
+          return { ...resume };
+        },
+      },
+
+      resumeExtraction: {
+        findFirst: async ({ where }: { where: { resumeId: string } }) => {
+          const matches = db.resumeExtractions
+            .filter((extraction) => extraction.resumeId === where.resumeId)
+            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          return matches[0] ? { ...matches[0] } : null;
+        },
       },
 
       userSession: {
@@ -588,7 +682,9 @@ export class FakeDb {
           include?: { role?: boolean };
         }) => {
           const found = db.admins.find(
-            (a) => (where.id !== undefined && a.id === where.id) || (where.email !== undefined && a.email === where.email),
+            (a) =>
+              (where.id !== undefined && a.id === where.id) ||
+              (where.email !== undefined && a.email === where.email),
           );
           if (!found) return null;
           if (select) return project(found, select);
@@ -819,6 +915,7 @@ export class FakeDb {
       job: {
         findMany: async () => [],
         findUnique: async () => null,
+        findFirst: async () => null,
       },
 
       $transaction: async (arg: unknown) => {

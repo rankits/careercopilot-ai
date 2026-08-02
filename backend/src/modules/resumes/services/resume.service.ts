@@ -19,8 +19,6 @@ import { resumeProcessingService } from '@/modules/resumes/services/resume-proce
 import { resumeParsingOrchestrator } from '@/modules/resumes/services/resume-parsing.orchestrator.js';
 import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
 
-const PUBLIC_USER_ID = 'public';
-
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
@@ -65,8 +63,19 @@ const toCandidateProfileResponse = (profile: CandidateProfile): CandidateProfile
   updatedAt: profile.updatedAt,
 });
 
+/** Throws (as a 404, indistinguishable from a non-existent id) unless `resumeId`
+ * belongs to `principalId` - callers must never branch on "exists but not mine"
+ * vs. "doesn't exist" to avoid leaking resume existence via IDOR probing. */
+const assertOwnedResume = async (resumeId: string, principalId: string) => {
+  const resume = await resumeRepository.findResumeById(resumeId);
+  if (!resume || resume.userId !== principalId) {
+    throw new AppError('Resume not found', 404, 'RESUME_NOT_FOUND');
+  }
+  return resume;
+};
+
 export const resumeService = {
-  async uploadResume(input: { file?: Express.Multer.File; userId?: string }) {
+  async uploadResume(input: { file?: Express.Multer.File; userId: string }) {
     if (!input.file) {
       throw new AppError('Resume file is required', 400);
     }
@@ -80,7 +89,7 @@ export const resumeService = {
     }
 
     const resumeId = crypto.randomUUID();
-    const userId = input.userId?.trim() || PUBLIC_USER_ID;
+    const userId = input.userId;
     const fileName = `${resumeId}${extension}`;
     const storageKey = `users/${userId}/resumes/${fileName}`;
     const storage = createResumeStorage();
@@ -115,11 +124,8 @@ export const resumeService = {
     return resume;
   },
 
-  async getResumeStatus(resumeId: string) {
-    const resume = await resumeRepository.findResumeById(resumeId);
-    if (!resume) {
-      throw new AppError('Resume not found', 404);
-    }
+  async getResumeStatus(resumeId: string, principalId: string) {
+    const resume = await assertOwnedResume(resumeId, principalId);
 
     return {
       id: resume.id,
@@ -130,11 +136,8 @@ export const resumeService = {
     };
   },
 
-  async getParsedData(resumeId: string) {
-    const resume = await resumeRepository.findResumeById(resumeId);
-    if (!resume) {
-      throw new AppError('Resume not found', 404);
-    }
+  async getParsedData(resumeId: string, principalId: string) {
+    const resume = await assertOwnedResume(resumeId, principalId);
 
     const parseRun = await resumeRepository.findLatestParseRun(resumeId);
     if (!parseRun) {
@@ -152,11 +155,8 @@ export const resumeService = {
     };
   },
 
-  async getParseStatus(resumeId: string) {
-    const resume = await resumeRepository.findResumeById(resumeId);
-    if (!resume) {
-      throw new AppError('Resume not found', 404);
-    }
+  async getParseStatus(resumeId: string, principalId: string) {
+    const resume = await assertOwnedResume(resumeId, principalId);
 
     const parseRun = await resumeRepository.findLatestParseRun(resumeId);
     if (!parseRun) {
@@ -202,25 +202,21 @@ export const resumeService = {
     };
   },
 
-  async startParse(resumeId: string) {
-    const resume = await resumeRepository.findResumeById(resumeId);
-    if (!resume) {
-      throw new AppError('Resume not found', 404);
-    }
+  async startParse(resumeId: string, principalId: string) {
+    const resume = await assertOwnedResume(resumeId, principalId);
 
     const extraction = await resumeRepository.findLatestExtraction(resumeId);
     if (!extraction?.extractedText) {
       throw new AppError('Resume parsed data is not available yet', 404);
     }
 
-    const userId = resume.userId ?? PUBLIC_USER_ID;
     const fileName = resume.fileName;
     const mimeType = resume.mimeType;
 
     setImmediate(() => {
       void resumeParsingOrchestrator.parseExistingResume({
         resumeId,
-        userId,
+        userId: principalId,
         extractedText: extraction.extractedText ?? '',
         mimeType,
         fileName,
@@ -233,23 +229,18 @@ export const resumeService = {
     };
   },
 
-  async reparseResume(resumeId: string, reason?: string) {
-    const resume = await resumeRepository.findResumeById(resumeId);
-    if (!resume) {
-      throw new AppError('Resume not found', 404);
-    }
+  async reparseResume(resumeId: string, principalId: string, reason?: string) {
+    const resume = await assertOwnedResume(resumeId, principalId);
 
     const extraction = await resumeRepository.findLatestExtraction(resumeId);
     if (!extraction?.extractedText) {
       throw new AppError('Resume parsed data is not available yet', 404);
     }
 
-    const userId = resume.userId ?? PUBLIC_USER_ID;
-
     setImmediate(() => {
       void resumeParsingOrchestrator.parseExistingResume({
         resumeId,
-        userId,
+        userId: principalId,
         extractedText: extraction.extractedText ?? '',
         mimeType: resume.mimeType,
         fileName: resume.fileName,
@@ -293,6 +284,11 @@ export const resumeService = {
   },
 
   async confirmProfile(input: { userId: string; resumeId: string }) {
+    // Ownership must be re-asserted here, not just at the route layer: this
+    // is what stops caller A from confirming their own profile using
+    // caller B's resumeId (the path param alone only proves A owns `userId`).
+    await assertOwnedResume(input.resumeId, input.userId);
+
     const extraction = await resumeRepository.findLatestExtraction(input.resumeId);
     if (!extraction) {
       throw new AppError('Resume parsed data is not available yet', 404);
@@ -304,7 +300,7 @@ export const resumeService = {
       ...toParsedResumeData(extraction.extractedData),
     });
 
-    await authRepository.markProfileCreated(input.userId);
+    await authRepository.markProfileCreated(Number(input.userId));
 
     return profile;
   },

@@ -72,3 +72,10 @@ export const otpRateLimiter = buildLimiter({
   prefix: 'otp',
   keyGenerator: emailAwareKeyGenerator,
 });
+
+/** Tighter limiter for public job discovery (anti-scrape). */
+export const jobListingRateLimiter = buildLimiter({
+  windowMinutes: securityConfig.rateLimit.jobListing.windowMinutes,
+  max: securityConfig.rateLimit.jobListing.max,
+  prefix: 'job-listing',
+});

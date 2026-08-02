@@ -50,7 +50,15 @@ export const CompanyLogo = styled('div')({
   fontWeight: fontWeight.extraBold,
   height: spacing[12],
   justifyItems: 'center',
+  overflow: 'hidden',
   width: spacing[12],
+
+  '& img': {
+    display: 'block',
+    height: '100%',
+    objectFit: 'cover',
+    width: '100%',
+  },
 });
 
 export const JobDetails = styled('div')({

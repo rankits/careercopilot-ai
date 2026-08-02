@@ -133,3 +133,22 @@ export const UpdateTaskSchema = z.object({
 });
 
 export type UpdateTaskInput = z.infer<typeof UpdateTaskSchema>;
+
+export const ApplicationSortBySchema = z.enum([
+  'updatedAt:desc',
+  'updatedAt:asc',
+  'createdAt:desc',
+  'createdAt:asc',
+  'companyName:asc',
+]);
+
+export const ListApplicationsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  search: z.string().trim().max(200).optional(),
+  archived: z.enum(['true', 'false', 'all']).optional(),
+  status: z.union([z.string(), z.array(z.string())]).optional(),
+  sortBy: ApplicationSortBySchema.default('updatedAt:desc'),
+});
+
+export type ListApplicationsQuery = z.infer<typeof ListApplicationsQuerySchema>;

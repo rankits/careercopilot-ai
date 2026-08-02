@@ -1,8 +1,11 @@
+import { useState } from 'react';
+
 import { Button } from '@/components/atoms/Button';
 
 import {
   AccessTimeOutlinedIcon,
   BookmarkBorderOutlinedIcon,
+  BookmarkOutlinedIcon,
   BusinessCenterOutlinedIcon,
   LocationOnOutlinedIcon,
   SmartToyOutlinedIcon,
@@ -28,13 +31,19 @@ import {
 } from './styles';
 
 export interface JobCardData {
+  id?: string;
   accent: 'primary' | 'danger';
+  /** Validated http(s) apply URL when available. */
+  applyUrl?: string | null;
   company: string;
   experience: string;
   experienceBand: string;
   logo: string;
+  /** Optional company logo image; falls back to `logo` initial. */
+  logoUrl?: string;
   location: string;
-  match: number;
+  /** Real recommendation score only — omit while mock/unwired. */
+  match?: number;
   postedAt: string;
   isRecommended?: boolean;
   salary: string;
@@ -47,15 +56,49 @@ export interface JobCardData {
 
 export interface JobCardProps {
   job: JobCardData;
+  isSaved?: boolean;
   onApply?: (job: JobCardData) => void;
+  onOpen?: (job: JobCardData) => void;
   onSave?: (job: JobCardData) => void;
 }
 
-export function JobCard({ job, onApply, onSave }: JobCardProps) {
+export function JobCard({ job, isSaved = false, onApply, onOpen, onSave }: JobCardProps) {
+  const showMatch = typeof job.match === 'number';
+  const showActions = Boolean(onApply || onSave);
+  const canApply = Boolean(job.applyUrl);
+  const [logoFailed, setLogoFailed] = useState(false);
+  const showLogoImage = Boolean(job.logoUrl) && !logoFailed;
+
   return (
-    <JobCardRoot>
+    <JobCardRoot
+      onClick={onOpen ? () => onOpen(job) : undefined}
+      onKeyDown={
+        onOpen
+          ? (event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                onOpen(job);
+              }
+            }
+          : undefined
+      }
+      role={onOpen ? 'link' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      sx={onOpen ? { cursor: 'pointer' } : undefined}
+    >
       <Accent tone={job.accent} />
-      <CompanyLogo>{job.logo}</CompanyLogo>
+      <CompanyLogo aria-label={`${job.company} logo`}>
+        {showLogoImage ? (
+          <img
+            alt=""
+            loading="lazy"
+            onError={() => setLogoFailed(true)}
+            src={job.logoUrl}
+          />
+        ) : (
+          job.logo || '?'
+        )}
+      </CompanyLogo>
 
       <JobDetails>
         {job.isRecommended ? (
@@ -90,25 +133,55 @@ export function JobCard({ job, onApply, onSave }: JobCardProps) {
           </span>
         </JobMeta>
 
-        <SkillList>
-          {job.skills.map((skill) => (
-            <SkillPill key={skill}>{skill}</SkillPill>
-          ))}
-        </SkillList>
+        {job.skills.length > 0 ? (
+          <SkillList>
+            {job.skills.map((skill) => (
+              <SkillPill key={skill}>{skill}</SkillPill>
+            ))}
+          </SkillList>
+        ) : null}
       </JobDetails>
 
-      <JobActions>
-        <MatchPill>
-          {job.match}% Match
-          <MatchRing aria-hidden="true" />
-        </MatchPill>
-        <SaveButton aria-label={`Save ${job.title}`} onClick={() => onSave?.(job)}>
-          <BookmarkBorderOutlinedIcon fontSize="small" />
-        </SaveButton>
-        <Button onClick={() => onApply?.(job)} size="small" variant="outline">
-          Apply Now
-        </Button>
-      </JobActions>
+      {showMatch || showActions ? (
+        <JobActions>
+          {showMatch ? (
+            <MatchPill>
+              {job.match}% Match
+              <MatchRing aria-hidden="true" />
+            </MatchPill>
+          ) : null}
+          {onSave ? (
+            <SaveButton
+              aria-label={isSaved ? `Unsave ${job.title}` : `Save ${job.title}`}
+              aria-pressed={isSaved}
+              onClick={(event) => {
+                event.stopPropagation();
+                onSave(job);
+              }}
+            >
+              {isSaved ? (
+                <BookmarkOutlinedIcon fontSize="small" />
+              ) : (
+                <BookmarkBorderOutlinedIcon fontSize="small" />
+              )}
+            </SaveButton>
+          ) : null}
+          {onApply ? (
+            <Button
+              disabled={!canApply}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (!canApply) return;
+                onApply(job);
+              }}
+              size="small"
+              variant="outline"
+            >
+              Apply Now
+            </Button>
+          ) : null}
+        </JobActions>
+      ) : null}
     </JobCardRoot>
   );
 }

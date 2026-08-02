@@ -9,6 +9,14 @@ enum ProviderType {
   LEVER
   ARBEITNOW
   PUBLIC_FEED
+  REMOTIVE
+  JOBICY
+  HIMALAYAS
+  REMOTEOK
+  REMOTEJOBS_ORG
+  ASHBY
+  RECRUITEE
+  PERSONIO
 }
 
 model Company {
@@ -60,6 +68,12 @@ model Job {
 
   @@index([status, lastSeen])
   @@index([companySlug, title])
+  // Public listing: ACTIVE + newest / salary sorts and common filters (JOB-DB-001).
+  @@index([status, createdAt(sort: Desc)])
+  @@index([status, salaryMax(sort: Desc)])
+  @@index([status, salaryMin])
+  @@index([status, remoteType])
+  @@index([status, employmentType])
   @@map("jobs")
 }
 

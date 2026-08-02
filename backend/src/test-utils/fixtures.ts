@@ -1,9 +1,17 @@
 import { Status } from '@prisma/client';
 import { randomUUID } from 'crypto';
-import type { FakeAdmin, FakeCandidateProfile, FakeUser } from '@/test-utils/fake-prisma.js';
+import type {
+  FakeAdmin,
+  FakeCandidateProfile,
+  FakeResume,
+  FakeResumeExtraction,
+  FakeUser,
+} from '@/test-utils/fake-prisma.js';
 import { fakeDb } from '@/test-utils/prisma-mock.js';
+import jwt from 'jsonwebtoken';
 import { PasswordUtil } from '@/shared/security/password.util.js';
 import { signAccessToken } from '@/shared/security/jwt.util.js';
+import { jwtConfig } from '@/shared/config/jwt.conf.js';
 
 /** Meets the app's password policy: upper + lower + digit + symbol, 8+ chars. */
 export const VALID_PASSWORD = 'Str0ng!Passw0rd';
@@ -72,6 +80,47 @@ export const seedCandidateProfile = (
   return profile;
 };
 
+export const seedResume = (overrides: Partial<FakeResume> & { userId: string }): FakeResume => {
+  const now = new Date();
+  const resume: FakeResume = {
+    id: randomUUID(),
+    fileName: 'resume.pdf',
+    originalName: 'resume.pdf',
+    mimeType: 'application/pdf',
+    sizeBytes: 1024,
+    fileUrl: 'https://example.com/resume.pdf',
+    storageKey: 'users/test/resumes/resume.pdf',
+    storageDriver: 'LOCAL',
+    status: 'PROCESSED',
+    failureReason: null,
+    uploadedAt: now,
+    processedAt: now,
+    createdAt: now,
+    updatedAt: now,
+    ...overrides,
+  };
+  fakeDb.resumes.push(resume);
+  return resume;
+};
+
+export const seedResumeExtraction = (
+  overrides: Partial<FakeResumeExtraction> & { resumeId: string },
+): FakeResumeExtraction => {
+  const now = new Date();
+  const extraction: FakeResumeExtraction = {
+    id: randomUUID(),
+    parseRunId: null,
+    extractedText: 'Extracted resume text',
+    extractedData: { personalDetails: { fullName: 'Jane Doe' } },
+    parserVersion: 'v1',
+    confidenceScore: 0.9,
+    createdAt: now,
+    ...overrides,
+  };
+  fakeDb.resumeExtractions.push(extraction);
+  return extraction;
+};
+
 export const accessTokenForUser = (user: FakeUser): string =>
   signAccessToken({
     sub: user.id,
@@ -80,6 +129,27 @@ export const accessTokenForUser = (user: FakeUser): string =>
     role: fakeDb.roles.get(user.roleId)?.name ?? 'USER',
     tokenVersion: user.tokenVersion,
   });
+
+/** Signs an access token that already expired 1 second ago - lets tests
+ * exercise `authMiddleware`'s `TOKEN_EXPIRED` branch without waiting out a
+ * real TTL. */
+export const expiredAccessTokenForUser = (user: FakeUser): string =>
+  jwt.sign(
+    {
+      sub: user.id,
+      principalType: 'USER',
+      email: user.email,
+      role: fakeDb.roles.get(user.roleId)?.name ?? 'USER',
+      tokenVersion: user.tokenVersion,
+    },
+    jwtConfig.accessSecret,
+    {
+      issuer: jwtConfig.issuer,
+      audience: jwtConfig.audience,
+      algorithm: jwtConfig.algorithm,
+      expiresIn: '-1s',
+    },
+  );
 
 export const accessTokenForAdmin = (admin: FakeAdmin): string =>
   signAccessToken({

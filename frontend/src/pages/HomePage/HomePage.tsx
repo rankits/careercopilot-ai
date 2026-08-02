@@ -36,8 +36,8 @@ export function HomePage() {
   const showJobFeed = () => {
     void navigate(ROUTES.JOB_FEED);
   };
-  const renderJobAction = (job: (typeof recommendedJobs)[number]) => (
-    <DashboardJobRow job={job} key={`${job.company}-${job.title}`} onApply={showJobFeed} />
+  const renderJobRow = (job: (typeof recommendedJobs)[number]) => (
+    <DashboardJobRow job={job} key={`${job.company}-${job.title}`} />
   );
 
   return (
@@ -47,7 +47,7 @@ export function HomePage() {
 
         <BestMatchPanel>
           <DashboardTitle>Best Job Match</DashboardTitle>
-          <DashboardJobRow featured job={bestJobMatch} onApply={showJobFeed} />
+          <DashboardJobRow featured job={bestJobMatch} />
         </BestMatchPanel>
       </DashboardTopGrid>
 
@@ -82,7 +82,7 @@ export function HomePage() {
           ))}
         </DashboardFilterGrid>
 
-        <RecommendationList>{recommendedJobs.map(renderJobAction)}</RecommendationList>
+        <RecommendationList>{recommendedJobs.map(renderJobRow)}</RecommendationList>
       </DashboardPanel>
     </DashboardRoot>
   );
