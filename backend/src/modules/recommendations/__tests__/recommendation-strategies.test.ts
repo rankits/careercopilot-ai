@@ -133,6 +133,46 @@ describe('recommendation source strategies', () => {
     });
   });
 
+  it('extracts structured context for target text before retrieval', async () => {
+    const context = await new TargetTextSourceStrategy().buildContext({
+      userId: 'user-id',
+      sourceType: 'TARGET_TEXT',
+      authorizedSourcePayload:
+        'Looking for remote Node.js backend roles in fintech, full-time, at least USD 120,000.',
+    });
+
+    expect(context).toMatchObject({
+      sourceType: 'TARGET_TEXT',
+      targetTitles: ['Backend Engineer'],
+      requiredSkills: ['Node.js'],
+      industries: ['Fintech'],
+      remotePreference: 'REMOTE',
+      employmentTypes: ['FULL_TIME'],
+      salaryExpectation: { minimum: 120000, currency: 'USD' },
+      sourceText:
+        'Looking for remote Node.js backend roles in fintech, full-time, at least USD 120,000.',
+    });
+  });
+
+  it('falls back to heuristic target-text extraction when provider extraction fails', async () => {
+    const context = await new TargetTextSourceStrategy({
+      extractContextFromText: async () => {
+        throw new Error('extractor unavailable');
+      },
+    }).buildContext({
+      userId: 'user-id',
+      sourceType: 'TARGET_TEXT',
+      authorizedSourcePayload: 'Hybrid React frontend engineer contract',
+    });
+
+    expect(context).toMatchObject({
+      targetTitles: ['Frontend Engineer'],
+      requiredSkills: ['React'],
+      remotePreference: 'HYBRID',
+      employmentTypes: ['CONTRACT'],
+    });
+  });
+
   it('keeps full-engine context fields optional but available for career goals', async () => {
     const context = await new CareerGoalSourceStrategy().buildContext({
       userId: 'user-id',

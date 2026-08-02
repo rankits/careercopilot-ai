@@ -115,6 +115,7 @@ export * from '@/modules/recommendations/mappers/candidate-profile-source.mapper
 export * from '@/modules/recommendations/mappers/recommendation.mapper.js';
 export * from '@/modules/recommendations/matching/recommendation-access.js';
 export * from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
+export * from '@/modules/recommendations/providers/heuristic-target-text-extraction.provider.js';
 export * from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
 export * from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
 export * from '@/modules/recommendations/repositories/prisma-candidate-embedding.repository.js';

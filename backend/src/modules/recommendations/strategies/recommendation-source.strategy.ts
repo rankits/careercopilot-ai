@@ -9,6 +9,8 @@ import {
   RecommendationError,
   RECOMMENDATION_ERROR_CODES,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import type { RecommendationExtractionProvider } from '@/modules/recommendations/contracts/recommendation-provider.contracts.js';
+import { HeuristicTargetTextExtractionProvider } from '@/modules/recommendations/providers/heuristic-target-text-extraction.provider.js';
 
 export interface RecommendationSourceStrategy {
   supports(sourceType: RecommendationSourceType): boolean;
@@ -97,15 +99,30 @@ export class JobSourceStrategy extends TypedSourceStrategy {
 
 export class TargetTextSourceStrategy extends TypedSourceStrategy {
   protected readonly sourceType = 'TARGET_TEXT' as const;
+  private readonly fallbackProvider = new HeuristicTargetTextExtractionProvider();
+
+  constructor(
+    private readonly extractionProvider: RecommendationExtractionProvider = new HeuristicTargetTextExtractionProvider(),
+  ) {
+    super();
+  }
 
   async buildContext(input: BuildRecommendationContextInput): Promise<RecommendationContext> {
     if (input.sourceType !== this.sourceType) return this.rejectWrongSource();
+    const sourceText = input.authorizedSourcePayload.trim();
+    let extracted;
+    try {
+      extracted = await this.extractionProvider.extractContextFromText(sourceText);
+    } catch {
+      extracted = await this.fallbackProvider.extractContextFromText(sourceText);
+    }
     return {
       userId: input.userId,
       sourceType: this.sourceType,
       sourceId: input.sourceId,
       ...normalizeExtractedRecommendationContext({
-        sourceText: input.authorizedSourcePayload.trim(),
+        ...extracted,
+        sourceText: extracted.sourceText?.trim() || sourceText,
       }),
     };
   }
