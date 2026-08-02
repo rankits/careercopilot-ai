@@ -1,14 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { JobDetailDto, JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
 import { RecommendationContextService } from '@/modules/recommendations/services/recommendation-context.service.js';
 import { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
 import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
-import { SimilarJobsService } from '@/modules/recommendations/services/similar-jobs.service.js';
+import {
+  resetSimilarJobsMetricsForTests,
+  similarJobsMetricsSnapshot,
+  SimilarJobsService,
+} from '@/modules/recommendations/services/similar-jobs.service.js';
 import { RecommendationScoringEngine } from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
 import { HEURISTIC_SCORE_CALCULATORS } from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
 import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 import { JobSourceStrategy } from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 import { RecommendationStrategyResolver } from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
+import type { RecommendationCandidate } from '@/modules/recommendations/types/recommendations.types.js';
 import type { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 
 const sourceJobId = '11111111-1111-1111-1111-111111111111';
@@ -44,6 +49,8 @@ const candidate = (id: string, title: string): JobListDto => ({
 });
 
 describe('SimilarJobsService', () => {
+  afterEach(() => resetSimilarJobsMetricsForTests());
+
   it('authorizes the source job, excludes it, retrieves, and scores neighbors', async () => {
     const authorizeForSource = vi.fn().mockResolvedValue({
       userId: 'user-1',
@@ -107,7 +114,10 @@ describe('SimilarJobsService', () => {
         build: vi.fn().mockResolvedValue({ userId: 'user-1', sourceType: 'JOB' }),
       } as unknown as RecommendationContextService,
       {
-        retrieve: vi.fn().mockResolvedValue([]),
+        retrieve: vi.fn().mockResolvedValue([
+          { job: candidate('job-b', 'Backend Engineer'), retrievalScore: 0.8 },
+          { job: candidate('job-a', 'Backend Engineer'), retrievalScore: 0.8 },
+        ] satisfies RecommendationCandidate[]),
       } as unknown as RecommendationRetrievalService,
       {
         score: vi.fn().mockResolvedValue([
@@ -117,7 +127,9 @@ describe('SimilarJobsService', () => {
               overallScore: 0.8,
               components: {},
               matchedSkills: [],
+              aliasSkills: [],
               relatedSkills: [],
+              transferableSkills: [],
               missingSkills: [],
               reasons: [],
             },
@@ -130,7 +142,9 @@ describe('SimilarJobsService', () => {
               overallScore: 0.8,
               components: {},
               matchedSkills: [],
+              aliasSkills: [],
               relatedSkills: [],
+              transferableSkills: [],
               missingSkills: [],
               reasons: [],
             },
@@ -144,5 +158,78 @@ describe('SimilarJobsService', () => {
     const result = await service.findSimilar('user-1', sourceJobId, 5);
 
     expect(result.map((item) => item.job.id)).toEqual(['job-a', 'job-b']);
+  });
+
+  it('defensively removes the source job before scoring if retrieval returns it', async () => {
+    const score = vi.fn().mockResolvedValue([
+      {
+        job: candidate('similar-job', 'Backend Engineer'),
+        scoreResult: {
+          overallScore: 0.8,
+          components: {},
+          matchedSkills: [],
+          aliasSkills: [],
+          relatedSkills: [],
+          transferableSkills: [],
+          missingSkills: [],
+          reasons: [],
+        },
+        category: 'GOOD_MATCH',
+        matchType: 'EXACT',
+      },
+    ]);
+    const service = new SimilarJobsService(
+      {
+        authorizeForSource: vi.fn().mockResolvedValue({
+          userId: 'user-1',
+          sourceType: 'JOB',
+          sourceId: sourceJobId,
+          authorizedSourcePayload: sourceJob,
+        }),
+      } as unknown as RecommendationSourceAuthorizationService,
+      {
+        build: vi.fn().mockResolvedValue({ userId: 'user-1', sourceType: 'JOB' }),
+      } as unknown as RecommendationContextService,
+      {
+        retrieve: vi.fn().mockResolvedValue([
+          { job: candidate(sourceJobId, 'Backend Engineer'), retrievalScore: 1 },
+          { job: candidate('similar-job', 'Backend Engineer'), retrievalScore: 0.9 },
+        ] satisfies RecommendationCandidate[]),
+      } as unknown as RecommendationRetrievalService,
+      { score } as unknown as RecommendationScoringService,
+    );
+
+    await service.findSimilar('user-1', sourceJobId, 5);
+
+    expect(score).toHaveBeenCalledWith(expect.anything(), [
+      { job: expect.objectContaining({ id: 'similar-job' }), retrievalScore: 0.9 },
+    ]);
+  });
+
+  it('returns an empty list and records a metric when only the source job is retrieved', async () => {
+    const score = vi.fn();
+    const service = new SimilarJobsService(
+      {
+        authorizeForSource: vi.fn().mockResolvedValue({
+          userId: 'user-1',
+          sourceType: 'JOB',
+          sourceId: sourceJobId,
+          authorizedSourcePayload: sourceJob,
+        }),
+      } as unknown as RecommendationSourceAuthorizationService,
+      {
+        build: vi.fn().mockResolvedValue({ userId: 'user-1', sourceType: 'JOB' }),
+      } as unknown as RecommendationContextService,
+      {
+        retrieve: vi.fn().mockResolvedValue([
+          { job: candidate(sourceJobId, 'Backend Engineer'), retrievalScore: 1 },
+        ] satisfies RecommendationCandidate[]),
+      } as unknown as RecommendationRetrievalService,
+      { score } as unknown as RecommendationScoringService,
+    );
+
+    await expect(service.findSimilar('user-1', sourceJobId, 5)).resolves.toEqual([]);
+    expect(score).not.toHaveBeenCalled();
+    expect(similarJobsMetricsSnapshot()).toEqual({ similarJobsEmptyTotal: 1 });
   });
 });

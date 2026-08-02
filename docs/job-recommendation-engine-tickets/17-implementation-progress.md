@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 23 |
+| Implemented | 24 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,31 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-VEC-003 - Improve similar-job retrieval quality and self-exclusion
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/services/similar-jobs.service.ts`
+  - `backend/src/modules/recommendations/__tests__/similar-jobs.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendations.api.test.ts`
+  - `docs/job-recommendation-engine-tickets/SIMILAR_JOBS_BACKEND_CONTRACT.md`
+- API changes: none; existing similar route preserved
+- Database changes: none
+- Tests added:
+  - Defensive self-exclusion before scoring even if retrieval returns the source job
+  - Empty similar result skips scoring and increments metric
+  - Authenticated API route returns similar jobs without the source job and passes limit
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/similar-jobs.service.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused similar/API/retrieval tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: frontend similar jobs UI remains `JRE-FE-003`
+- Next ticket: `JRE-FE-003`
 
 ### 2026-08-02 - JRE-VEC-002 - Deduplicate canonical jobs in retrieval results
 

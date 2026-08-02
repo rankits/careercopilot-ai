@@ -9,6 +9,14 @@ import type { RecommendationSourceAuthorizationService } from '@/modules/recomme
 import type { ScoredJobRecommendation } from '@/modules/recommendations/types/recommendations.types.js';
 import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
 
+let similarJobsEmptyTotal = 0;
+
+export const similarJobsMetricsSnapshot = () => ({ similarJobsEmptyTotal });
+
+export const resetSimilarJobsMetricsForTests = (): void => {
+  similarJobsEmptyTotal = 0;
+};
+
 export class SimilarJobsService {
   constructor(
     private readonly sourceAuthorization: RecommendationSourceAuthorizationService,
@@ -33,7 +41,12 @@ export class SimilarJobsService {
       limit,
       excludeJobIds: [jobId],
     });
-    const scored = await this.scoringService.score(context, candidates);
+    const selfExcluded = candidates.filter((candidate) => candidate.job.id !== jobId);
+    if (selfExcluded.length === 0) {
+      similarJobsEmptyTotal += 1;
+      return [];
+    }
+    const scored = await this.scoringService.score(context, selfExcluded);
     return sortRecommendationsForRanking(scored);
   }
 }
