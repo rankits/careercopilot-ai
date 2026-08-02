@@ -18,6 +18,7 @@ export interface ResolveCandidateEmbeddingResult {
 
 let candidateEmbeddingCacheHit = 0;
 let candidateEmbeddingCacheMiss = 0;
+let contextEmbeddingReuseTotal = 0;
 
 export const createCandidateEmbeddingContentHash = (content: string): string =>
   createHash('sha256').update(content.trim()).digest('hex');
@@ -25,11 +26,13 @@ export const createCandidateEmbeddingContentHash = (content: string): string =>
 export const candidateEmbeddingMetricsSnapshot = () => ({
   candidateEmbeddingCacheHit,
   candidateEmbeddingCacheMiss,
+  contextEmbeddingReuseTotal,
 });
 
 export const resetCandidateEmbeddingMetricsForTests = (): void => {
   candidateEmbeddingCacheHit = 0;
   candidateEmbeddingCacheMiss = 0;
+  contextEmbeddingReuseTotal = 0;
 };
 
 export class CandidateEmbeddingService {
@@ -55,6 +58,27 @@ export class CandidateEmbeddingService {
     if (existing) {
       candidateEmbeddingCacheHit += 1;
       return { embedding: existing.embedding, cacheHit: true, contentHash };
+    }
+
+    const reusable = await this.repository.findReusable({
+      userId: input.userId,
+      provider: input.provider,
+      model: input.model,
+      contentHash,
+    });
+    if (reusable) {
+      candidateEmbeddingCacheHit += 1;
+      contextEmbeddingReuseTotal += 1;
+      await this.repository.upsert({
+        userId: input.userId,
+        sourceType: input.sourceType,
+        sourceId: input.sourceId,
+        provider: input.provider,
+        model: input.model,
+        contentHash,
+        embedding: reusable.embedding,
+      });
+      return { embedding: reusable.embedding, cacheHit: true, contentHash };
     }
 
     candidateEmbeddingCacheMiss += 1;

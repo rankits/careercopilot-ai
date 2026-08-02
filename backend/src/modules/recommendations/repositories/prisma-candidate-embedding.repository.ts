@@ -6,6 +6,7 @@ import type {
   CandidateEmbeddingIdentity,
   CandidateEmbeddingRecord,
   FindFreshCandidateEmbeddingInput,
+  FindReusableCandidateEmbeddingInput,
   UpsertCandidateEmbeddingInput,
 } from '@/modules/recommendations/types/candidate-embedding.types.js';
 import { prisma } from '@/shared/config/db.conf.js';
@@ -129,6 +130,39 @@ export class PrismaCandidateEmbeddingRepository implements CandidateEmbeddingRep
         AND "model" = ${identity.model}
         AND "content_hash" = ${contentHash}
         AND "dimensions" = ${JOB_EMBEDDING_DIMENSIONS}
+      LIMIT 1
+    `);
+    return rows[0] ? toRecord(rows[0]) : null;
+  }
+
+  async findReusable(
+    input: FindReusableCandidateEmbeddingInput,
+  ): Promise<CandidateEmbeddingRecord | null> {
+    const userId = validateText(input.userId, 'userId');
+    const provider = validateText(input.provider, 'provider');
+    const model = validateText(input.model, 'model');
+    const contentHash = validateContentHash(input.contentHash);
+    const rows = await this.sql.query<CandidateEmbeddingRow>(Prisma.sql`
+      SELECT
+        "id",
+        "user_id" AS "userId",
+        "source_type" AS "sourceType",
+        "source_id" AS "sourceId",
+        "source_key" AS "sourceKey",
+        "provider",
+        "model",
+        "dimensions",
+        "content_hash" AS "contentHash",
+        "embedding"::text AS "embedding",
+        "created_at" AS "createdAt",
+        "updated_at" AS "updatedAt"
+      FROM "candidate_embeddings"
+      WHERE "user_id" = ${userId}
+        AND "provider" = ${provider}
+        AND "model" = ${model}
+        AND "content_hash" = ${contentHash}
+        AND "dimensions" = ${JOB_EMBEDDING_DIMENSIONS}
+      ORDER BY "updated_at" DESC, "id" ASC
       LIMIT 1
     `);
     return rows[0] ? toRecord(rows[0]) : null;

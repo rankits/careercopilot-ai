@@ -72,6 +72,16 @@ class MemoryCandidateEmbeddingRepository implements CandidateEmbeddingRepository
       : null;
   }
 
+  async findReusable(input: Parameters<CandidateEmbeddingRepository['findReusable']>[0]) {
+    return this.record &&
+      this.record.userId === input.userId &&
+      this.record.provider === input.provider &&
+      this.record.model === input.model &&
+      this.record.contentHash === input.contentHash
+      ? this.record
+      : null;
+  }
+
   async upsert(input: UpsertCandidateEmbeddingInput) {
     this.record = {
       id: 'candidate-embedding-id',
@@ -311,6 +321,30 @@ describe('PgVectorCandidateRetrievalProvider', () => {
     expect(first.metadata?.candidateEmbeddingCacheHit).toBe(false);
     expect(second.metadata?.candidateEmbeddingCacheHit).toBe(true);
     expect(searchNearest).toHaveBeenCalledTimes(2);
+  });
+
+  it('reuses TARGET_TEXT candidate embeddings on repeated identical content', async () => {
+    const searchNearest = vi.fn().mockResolvedValue([{ jobId: 'job-1', similarity: 0.91 }]);
+    const findByIds = vi.fn().mockResolvedValue([job({ id: 'job-1' })]);
+    const embeddingProvider: EmbeddingProvider = {
+      provider: 'google',
+      model: 'text-embedding-004',
+      dimensions: 768,
+      generateEmbedding: vi.fn().mockResolvedValue(Array.from({ length: 768 }, () => 0.02)),
+      generateEmbeddings: vi.fn(),
+    };
+    const provider = new PgVectorCandidateRetrievalProvider(
+      { searchNearest } as unknown as JobEmbeddingRepository,
+      { findByIds } as unknown as IJobSearchRepository,
+      () => embeddingProvider,
+      new CandidateEmbeddingService(new MemoryCandidateEmbeddingRepository()),
+    );
+    const context = { ...baseContext(), sourceType: 'TARGET_TEXT' as const, sourceText: 'same text' };
+
+    await provider.retrieve({ userId: 'user-1', context, backend: 'PGVECTOR', limit: 10 });
+    await provider.retrieve({ userId: 'user-1', context, backend: 'PGVECTOR', limit: 10 });
+
+    expect(embeddingProvider.generateEmbedding).toHaveBeenCalledTimes(1);
   });
 });
 
