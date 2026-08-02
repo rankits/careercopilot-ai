@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 3 |
+| Implemented | 4 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,30 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FILTER-001 - Ensure closed expired inactive jobs excluded on retrieve and list
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/repositories/prisma-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `backend/src/modules/job-listing/repositories/__tests__/prisma-job-search.repository.test.ts`
+  - `docs/job-recommendation-engine-tickets/ELIGIBILITY_FILTER_CONTRACT.md`
+- API changes: default recommendation lists now count/page only eligible active recommendations
+- Database changes: none
+- Tests added:
+  - Retrieval drops vector hits that are not hydrated by the active-only job repository
+  - Job repository `findByIds` asserts ACTIVE-only hydration
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/pgvector-candidate-retrieval.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts modules/job-listing/repositories/__tests__/prisma-job-search.repository.test.ts`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `npm --prefix backend run typecheck`
+- Results:
+  - Focused retrieval/list tests passed
+  - Touched-file lint passed
+  - Backend typecheck still fails only in `src/workers/job-embedding.worker.ts`
+- Known limitations: lifecycle invalidation when jobs close remains out of scope for `JRE-LIFE-002`
+- Next ticket: `JRE-ARCH-002`
 
 ### 2026-08-02 - JRE-SCORE-001 - Expose displayScore 0-100 while keeping internal scores 0-1
 

@@ -33,6 +33,9 @@ import type {
 } from '@/modules/recommendations/types/recommendations.types.js';
 
 type Tx = Prisma.TransactionClient;
+type RecommendationRowWithComponents = JobRecommendation & {
+  scoreComponents: RecommendationScoreComponent[];
+};
 
 const toRunRecord = (run: RecommendationRun): RecommendationRunRecord => ({
   id: run.id,
@@ -69,7 +72,7 @@ const toReasons = (value: Prisma.JsonValue): RecommendationReason[] => {
 };
 
 const toScoreResult = (
-  recommendation: JobRecommendation & { scoreComponents: RecommendationScoreComponent[] },
+  recommendation: RecommendationRowWithComponents,
 ): RecommendationScoreResult => {
   const components = {
     requiredSkills: 0,
@@ -107,20 +110,10 @@ const placeholderJob = (jobId: string): JobListDto => ({
   applyUrl: null,
 });
 
-const eligibleRecommendationWhere = (userId: string) => ({
-  userId,
-  job: {
-    status: 'ACTIVE' as const,
-    embeddings: {
-      some: {},
-    },
-  },
-});
-
 const filterRowsWithEligibleJobs = async (
   tx: Tx,
-  rows: Array<JobRecommendation & { scoreComponents: RecommendationScoreComponent[] }>,
-): Promise<Array<JobRecommendation & { scoreComponents: RecommendationScoreComponent[] }>> => {
+  rows: RecommendationRowWithComponents[],
+): Promise<RecommendationRowWithComponents[]> => {
   if (rows.length === 0) return rows;
   const jobIds = [...new Set(rows.map((row) => row.jobId))];
   const eligible = await tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
@@ -132,6 +125,59 @@ const filterRowsWithEligibleJobs = async (
   `);
   const eligibleIds = new Set(eligible.map((row) => row.id));
   return rows.filter((row) => eligibleIds.has(row.jobId));
+};
+
+const eligibleRecommendationPredicate = (userId: string, runId?: string) => Prisma.sql`
+  jr."user_id" = ${userId}
+  ${runId ? Prisma.sql`AND jr."run_id" = ${runId}` : Prisma.empty}
+  AND j."status" = 'ACTIVE'::"JobStatus"
+  AND EXISTS (
+    SELECT 1
+    FROM "job_embeddings" je
+    WHERE je."job_id" = j."id"
+      AND je."job_version" = j."version"
+  )
+`;
+
+const toCount = (value: unknown): number => {
+  if (typeof value === 'bigint') return Number(value);
+  if (typeof value === 'number') return value;
+  if (typeof value === 'string') return Number(value);
+  return 0;
+};
+
+const listEligibleRecommendationIds = async (
+  tx: Tx,
+  input: {
+    userId: string;
+    runId?: string;
+    pagination: { page: number; limit: number };
+    orderBy: Prisma.Sql;
+  },
+): Promise<{ ids: string[]; total: number }> => {
+  const predicate = eligibleRecommendationPredicate(input.userId, input.runId);
+  const offset = (input.pagination.page - 1) * input.pagination.limit;
+  const [countRows, idRows] = await Promise.all([
+    tx.$queryRaw<Array<{ count: bigint | number | string }>>(Prisma.sql`
+      SELECT COUNT(*) AS "count"
+      FROM "job_recommendations" jr
+      INNER JOIN "jobs" j ON j."id" = jr."job_id"
+      WHERE ${predicate}
+    `),
+    tx.$queryRaw<Array<{ id: string }>>(Prisma.sql`
+      SELECT jr."id"
+      FROM "job_recommendations" jr
+      INNER JOIN "jobs" j ON j."id" = jr."job_id"
+      WHERE ${predicate}
+      ORDER BY ${input.orderBy}
+      OFFSET ${offset}
+      LIMIT ${input.pagination.limit}
+    `),
+  ]);
+  return {
+    ids: idRows.map((row) => row.id).filter((id): id is string => typeof id === 'string'),
+    total: toCount(countRows[0]?.count),
+  };
 };
 
 const createRunRepository = (tx: Tx): RecommendationRunRepository => ({
@@ -221,7 +267,7 @@ const createRecommendationRepository = (
   jobs: IJobSearchRepository,
 ): JobRecommendationRepository => {
   const hydrate = async (
-    rows: Array<JobRecommendation & { scoreComponents: RecommendationScoreComponent[] }>,
+    rows: RecommendationRowWithComponents[],
   ): Promise<JobRecommendationRecord[]> => {
     const eligibleRows = await filterRowsWithEligibleJobs(tx, rows);
     const jobDtos = await jobs.findByIds(eligibleRows.map((row) => row.jobId));
@@ -262,9 +308,7 @@ const createRecommendationRepository = (
           left.job.id.localeCompare(right.job.id),
       );
 
-      const created: Array<
-        JobRecommendation & { scoreComponents: RecommendationScoreComponent[] }
-      > = [];
+      const created: RecommendationRowWithComponents[] = [];
       for (const [index, item] of ranked.entries()) {
         const row = await tx.jobRecommendation.create({
           data: {
@@ -322,19 +366,25 @@ const createRecommendationRepository = (
     },
 
     async listByRun(userId, runId, pagination) {
-      const where = { userId, runId };
-      const [total, rows] = await Promise.all([
-        tx.jobRecommendation.count({ where }),
-        tx.jobRecommendation.findMany({
-          where,
-          include: { scoreComponents: true },
-          orderBy: { rank: 'asc' },
-          skip: (pagination.page - 1) * pagination.limit,
-          take: pagination.limit,
-        }),
-      ]);
+      const { ids, total } = await listEligibleRecommendationIds(tx, {
+        userId,
+        runId,
+        pagination,
+        orderBy: Prisma.sql`jr."rank" ASC, jr."id" ASC`,
+      });
+      const rows =
+        ids.length > 0
+          ? await tx.jobRecommendation.findMany({
+              where: { id: { in: ids }, userId, runId },
+              include: { scoreComponents: true },
+            })
+          : [];
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      const orderedRows = ids
+        .map((id) => byId.get(id))
+        .filter((row): row is RecommendationRowWithComponents => Boolean(row));
       return {
-        items: await hydrate(rows),
+        items: await hydrate(orderedRows),
         page: pagination.page,
         limit: pagination.limit,
         total,
@@ -342,19 +392,24 @@ const createRecommendationRepository = (
     },
 
     async listByUser(userId, pagination) {
-      const where = eligibleRecommendationWhere(userId);
-      const [total, rows] = await Promise.all([
-        tx.jobRecommendation.count({ where }),
-        tx.jobRecommendation.findMany({
-          where,
-          include: { scoreComponents: true },
-          orderBy: [{ createdAt: 'desc' }, { rank: 'asc' }, { id: 'asc' }],
-          skip: (pagination.page - 1) * pagination.limit,
-          take: pagination.limit,
-        }),
-      ]);
+      const { ids, total } = await listEligibleRecommendationIds(tx, {
+        userId,
+        pagination,
+        orderBy: Prisma.sql`jr."created_at" DESC, jr."rank" ASC, jr."id" ASC`,
+      });
+      const rows =
+        ids.length > 0
+          ? await tx.jobRecommendation.findMany({
+              where: { id: { in: ids }, userId },
+              include: { scoreComponents: true },
+            })
+          : [];
+      const byId = new Map(rows.map((row) => [row.id, row]));
+      const orderedRows = ids
+        .map((id) => byId.get(id))
+        .filter((row): row is RecommendationRowWithComponents => Boolean(row));
       return {
-        items: await hydrate(rows),
+        items: await hydrate(orderedRows),
         page: pagination.page,
         limit: pagination.limit,
         total,

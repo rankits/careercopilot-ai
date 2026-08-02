@@ -152,6 +152,36 @@ describe('PgVectorCandidateRetrievalProvider', () => {
     expect(result.retrievalScores).toEqual({ 'job-1': 0.91 });
   });
 
+  it('omits vector hits that are not hydrated by the active job repository', async () => {
+    const searchNearest = vi.fn().mockResolvedValue([
+      { jobId: 'active-job', similarity: 0.91 },
+      { jobId: 'expired-job', similarity: 0.9 },
+    ]);
+    const findByIds = vi.fn().mockResolvedValue([job({ id: 'active-job' })]);
+    const provider = new PgVectorCandidateRetrievalProvider(
+      { searchNearest } as unknown as JobEmbeddingRepository,
+      { findByIds } as unknown as IJobSearchRepository,
+      () => ({
+        provider: 'google',
+        model: 'text-embedding-004',
+        dimensions: 768,
+        generateEmbedding: vi.fn().mockResolvedValue([0.1, 0.2]),
+        generateEmbeddings: vi.fn(),
+      }),
+    );
+
+    const result = await provider.retrieve({
+      userId: 'user-1',
+      context: baseContext(),
+      backend: 'PGVECTOR',
+      limit: 10,
+    });
+
+    expect(findByIds).toHaveBeenCalledWith(['active-job', 'expired-job']);
+    expect(result.jobs.map((item) => item.id)).toEqual(['active-job']);
+    expect(result.retrievalScores).toEqual({ 'active-job': 0.91 });
+  });
+
   it('maps embedding failures to EMBEDDING_PROVIDER_UNAVAILABLE', async () => {
     const provider = new PgVectorCandidateRetrievalProvider(
       { searchNearest: vi.fn() } as unknown as JobEmbeddingRepository,
