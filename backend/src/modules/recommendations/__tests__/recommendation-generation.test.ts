@@ -341,6 +341,107 @@ describe('RecommendationsService generation', () => {
     ).resolves.toBeNull();
   });
 
+  it('rejects authorized contexts whose userId does not match the caller before creating a run', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const sourceAuthorization = {
+      authorizeForSource: vi.fn().mockResolvedValue({
+        userId: 'public-user-id',
+        sourceType: 'PROFILE',
+        authorizedSourcePayload: {
+          targetTitles: ['Backend Engineer'],
+          requiredSkills: ['TypeScript'],
+          sourceText: 'Backend Engineer TypeScript',
+        },
+      }),
+      authorizeFromText: vi.fn(),
+    } as unknown as RecommendationSourceAuthorizationService;
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization,
+    });
+
+    await expect(service.createForSource('42', { sourceType: 'PROFILE' })).rejects.toMatchObject({
+      statusCode: 403,
+      code: RECOMMENDATION_ERROR_CODES.ACCESS_DENIED,
+    });
+    expect(sourceAuthorization.authorizeForSource).toHaveBeenCalledWith('42', {
+      sourceType: 'PROFILE',
+    });
+    await expect(unitOfWork.execute(({ runs }) => runs.findLatestByUser('42'))).resolves.toBeNull();
+    await expect(
+      unitOfWork.execute(({ runs }) => runs.findLatestByUser('public-user-id')),
+    ).resolves.toBeNull();
+  });
+
+  it('persists run recommendations and feedback with the principalId userId invariant', async () => {
+    const principalUserId = '42';
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+          ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+    const feedbackService = new RecommendationFeedbackService({
+      upsert: (input) => unitOfWork.execute(({ feedback }) => feedback.upsert(input)),
+      findByRecommendation: (userId, recommendationId) =>
+        unitOfWork.execute(({ feedback }) =>
+          feedback.findByRecommendation(userId, recommendationId),
+        ),
+      listByJob: (userId, jobId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+      listExcludedJobIds: (userId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
+    });
+
+    const records = await service.createFromText(principalUserId, {
+      targetText: 'Backend engineer TypeScript',
+    });
+    const run = await unitOfWork.execute(({ runs }) => runs.findLatestByUser(principalUserId));
+    const feedback = await feedbackService.store({
+      userId: principalUserId,
+      recommendationId: records[0]!.id,
+      jobId: records[0]!.job.id,
+      action: 'SAVED',
+    });
+
+    expect(run).toMatchObject({ userId: principalUserId });
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      userId: principalUserId,
+      runId: run?.id,
+    });
+    expect(feedback).toMatchObject({
+      userId: principalUserId,
+      recommendationId: records[0]!.id,
+      jobId: records[0]!.job.id,
+    });
+  });
+
   it('lists, loads, and stores feedback for persisted recommendations', async () => {
     const unitOfWork = new InMemoryRecommendationUnitOfWork();
     const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {

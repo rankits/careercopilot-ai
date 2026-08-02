@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import request from 'supertest';
 import app, { fakeDb } from '@/test-utils/app.js';
 import { resetTestState } from '@/test-utils/reset.js';
@@ -13,6 +13,7 @@ import {
   RECOMMENDATIONS_PERMISSIONS,
   ROLE_PERMISSION_MAP,
 } from '@/shared/rbac/permission.catalog.js';
+import { recommendationsService } from '@/modules/recommendations/index.js';
 
 const API = '/api/v1/job-recommendations';
 const recommendationId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
@@ -20,6 +21,10 @@ const jobId = '11111111-1111-1111-1111-111111111111';
 
 beforeEach(async () => {
   await resetTestState();
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
 });
 
 describe('job recommendation HTTP gates', () => {
@@ -115,6 +120,26 @@ describe('job recommendation HTTP gates', () => {
       limit: 20,
       total: 0,
     });
+  });
+
+  it('passes String(req.user.principalId) to recommendation services', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-principal@example.com' });
+    const token = accessTokenForUser(user);
+    const listSpy = vi.spyOn(recommendationsService, 'listForUser').mockResolvedValue({
+      items: [],
+      page: 1,
+      limit: 20,
+      total: 0,
+    });
+
+    const response = await request(app)
+      .get(`${API}?userId=public-user-id&page=1&limit=20`)
+      .set(authHeader(token))
+      .set('x-user-id', 'public-user-id');
+
+    expect(response.status).toBe(200);
+    expect(listSpy).toHaveBeenCalledWith(String(user.id), { page: 1, limit: 20 });
+    expect(listSpy).not.toHaveBeenCalledWith('public-user-id', expect.anything());
   });
 
   it('returns 404 for a missing recommendation detail', async () => {
