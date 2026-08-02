@@ -205,6 +205,11 @@ describe('PgVectorCandidateRetrievalProvider', () => {
     expect(result.backend).toBe('PGVECTOR');
     expect(result.totalCandidates).toBe(3);
     expect(result.retrievalScores).toEqual({ 'job-1': 0.91 });
+    expect(result.metadata).toMatchObject({
+      retrievalCandidateCount: 3,
+      embeddingCacheHit: false,
+    });
+    expect(result.metadata?.retrievalLatencyMs).toEqual(expect.any(Number));
   });
 
   it('omits vector hits that are not hydrated by the active job repository', async () => {

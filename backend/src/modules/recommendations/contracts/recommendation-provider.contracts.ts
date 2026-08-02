@@ -24,6 +24,8 @@ export interface CandidateRetrievalResult {
   metadata?: {
     embeddingCacheHit?: boolean;
     candidateEmbeddingCacheHit?: boolean;
+    retrievalCandidateCount?: number;
+    retrievalLatencyMs?: number;
   };
 }
 

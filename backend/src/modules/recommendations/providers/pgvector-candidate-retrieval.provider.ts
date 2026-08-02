@@ -29,6 +29,7 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
   ) {}
 
   async retrieve(request: CandidateRetrievalRequest): Promise<CandidateRetrievalResult> {
+    const startedAt = Date.now();
     if (request.limit < 1) {
       throw new RecommendationError(
         'Candidate retrieval limit must be a positive integer',
@@ -122,6 +123,8 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
       metadata: {
         embeddingCacheHit,
         candidateEmbeddingCacheHit: this.candidateEmbeddings ? embeddingCacheHit : undefined,
+        retrievalCandidateCount: nearest.length,
+        retrievalLatencyMs: Date.now() - startedAt,
       },
     };
   }
