@@ -20,6 +20,7 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import { recordJobRecommendationHidden } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
 import type {
   JobRecommendationRecord,
@@ -160,7 +161,13 @@ const listEligibleRecommendationIds = async (
 ): Promise<{ ids: string[]; total: number }> => {
   const predicate = eligibleRecommendationPredicate(input.userId, input.runId);
   const offset = (input.pagination.page - 1) * input.pagination.limit;
-  const [countRows, idRows] = await Promise.all([
+  const [rawCountRows, countRows, idRows] = await Promise.all([
+    tx.$queryRaw<Array<{ count: bigint | number | string }>>(Prisma.sql`
+      SELECT COUNT(*) AS "count"
+      FROM "job_recommendations" jr
+      WHERE jr."user_id" = ${input.userId}
+      ${input.runId ? Prisma.sql`AND jr."run_id" = ${input.runId}` : Prisma.empty}
+    `),
     tx.$queryRaw<Array<{ count: bigint | number | string }>>(Prisma.sql`
       SELECT COUNT(*) AS "count"
       FROM "job_recommendations" jr
@@ -177,9 +184,12 @@ const listEligibleRecommendationIds = async (
       LIMIT ${input.pagination.limit}
     `),
   ]);
+  const rawTotal = toCount(rawCountRows[0]?.count);
+  const total = toCount(countRows[0]?.count);
+  recordJobRecommendationHidden(rawTotal - total);
   return {
     ids: idRows.map((row) => row.id).filter((id): id is string => typeof id === 'string'),
-    total: toCount(countRows[0]?.count),
+    total,
   };
 };
 

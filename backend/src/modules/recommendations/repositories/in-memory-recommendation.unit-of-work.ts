@@ -10,6 +10,8 @@ import {
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
 import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
+import { isRecommendationJobEligible } from '@/modules/recommendations/utils/recommendation-job-eligibility.js';
+import { recordJobRecommendationHidden } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import type {
   JobRecommendationRecord,
   RecommendationFeedbackRecord,
@@ -141,6 +143,10 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
     ): Promise<JobRecommendationRecord | null> => {
       const record = this.recommendations.get(recommendationId);
       if (!record || record.userId !== userId) return null;
+      if (!isRecommendationJobEligible(record.job)) {
+        recordJobRecommendationHidden();
+        return null;
+      }
       return { ...record };
     },
 
@@ -152,7 +158,9 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       const items = [...this.recommendations.values()]
         .filter((item) => item.userId === userId && item.runId === runId)
         .sort((left, right) => left.rank - right.rank);
-      return paginate(items, pagination);
+      const visible = items.filter((item) => isRecommendationJobEligible(item.job));
+      recordJobRecommendationHidden(items.length - visible.length);
+      return paginate(visible, pagination);
     },
 
     listByUser: async (
@@ -167,7 +175,9 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
             left.rank - right.rank ||
             left.id.localeCompare(right.id),
         );
-      return paginate(items, pagination);
+      const visible = items.filter((item) => isRecommendationJobEligible(item.job));
+      recordJobRecommendationHidden(items.length - visible.length);
+      return paginate(visible, pagination);
     },
 
     existsByRunAndJob: async (userId: string, runId: string, jobId: string): Promise<boolean> =>

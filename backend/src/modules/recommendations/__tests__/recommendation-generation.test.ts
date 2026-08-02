@@ -977,6 +977,38 @@ describe('RecommendationsService generation', () => {
     ]);
   });
 
+  it('hides historical recommendations when the underlying job is no longer active', async () => {
+    resetRecommendationMetricsForTests();
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const run = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+    );
+    await unitOfWork.execute(({ recommendations }) =>
+      recommendations.createMany('user-1', run.id, [
+        scoredRecommendation('job-active', 0.8),
+        {
+          ...scoredRecommendation('job-closed', 0.9),
+          job: {
+            ...jobList('job-closed', { title: 'Closed Backend Engineer' }),
+            status: 'EXPIRED',
+          } as JobListDto,
+        },
+      ]),
+    );
+
+    const byRun = await unitOfWork.execute(({ recommendations }) =>
+      recommendations.listByRun('user-1', run.id, { page: 1, limit: 20 }),
+    );
+    const byUser = await unitOfWork.execute(({ recommendations }) =>
+      recommendations.listByUser('user-1', { page: 1, limit: 20 }),
+    );
+
+    expect(byRun.items.map((item) => item.job.id)).toEqual(['job-active']);
+    expect(byRun.total).toBe(1);
+    expect(byUser.items.map((item) => item.job.id)).toEqual(['job-active']);
+    expect(recommendationMetricsSnapshot().jobRecommendationHiddenTotal).toBe(2);
+  });
+
   it('lists, loads, and stores feedback for persisted recommendations', async () => {
     resetRecommendationMetricsForTests();
     const unitOfWork = new InMemoryRecommendationUnitOfWork();
