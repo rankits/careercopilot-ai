@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 40 |
+| Implemented | 41 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,36 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FILTER-003 - Extend hard filters for work authorization and certifications
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/job-listing/types/job-listing.types.ts`
+  - `backend/src/modules/recommendations/utils/candidate-job-filters.ts`
+  - `backend/src/modules/recommendations/services/recommendation-scoring.service.ts`
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/__tests__/candidate-job-filters.test.ts`
+  - `docs/job-recommendation-engine-tickets/AUTH_CERT_FILTER_CONTRACT.md`
+  - `docs/job-recommendation-engine-tickets/FILTER_MODE_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Strict mode excludes candidates missing required job certifications
+  - Sparse job certification metadata does not exclude candidates
+  - Strict mode excludes candidates needing sponsorship when a job explicitly does not offer it
+  - Flexible mode retains authorization and certification near-misses
+  - Certification exclusions increment the filter metric snapshot
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/candidate-job-filters.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused filter/generation tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: current persisted job providers do not populate `recommendationEligibility`; predicates skip missing job metadata by design.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-FILTER-002 - Implement strict versus flexible filter mode
 

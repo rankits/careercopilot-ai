@@ -3,9 +3,17 @@ import type {
   RecommendationContext,
   RecommendationFilterMode,
 } from '@/modules/recommendations/types/recommendations.types.js';
+import { recordCertificationFilterExclusion } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import { tokenize } from '@/modules/recommendations/utils/recommendation-matching.js';
 
 const normalizeToken = (value: string): string => value.trim().toLowerCase();
+const normalizePhrase = (value: string): string =>
+  value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 const DEFAULT_FILTER_MODE: RecommendationFilterMode = 'STRICT';
 
 export const resolveRecommendationFilterMode = (
@@ -16,10 +24,13 @@ export type CandidateJobFilterViolation =
   | 'EMPLOYMENT_TYPE'
   | 'EXCLUDED_COMPANY'
   | 'LOCATION'
+  | 'REQUIRED_CERTIFICATION'
   | 'REMOTE_PREFERENCE'
   | 'SALARY_CURRENCY'
   | 'SALARY_MAXIMUM'
-  | 'SALARY_MINIMUM';
+  | 'SALARY_MINIMUM'
+  | 'VISA_SPONSORSHIP'
+  | 'WORK_AUTHORIZATION';
 
 export const matchesEmploymentType = (job: JobListDto, allowed: readonly string[]): boolean => {
   if (!allowed.length) return true;
@@ -96,6 +107,60 @@ export const matchesSalaryCeiling = (
   return true;
 };
 
+export const matchesCertificationRequirements = (
+  job: JobListDto,
+  candidateCertifications: readonly string[],
+): boolean => {
+  const required = job.recommendationEligibility?.requiredCertifications ?? [];
+  const requiredNormalized = required.map(normalizePhrase).filter(Boolean);
+  if (requiredNormalized.length === 0) return true;
+  const available = new Set(candidateCertifications.map(normalizePhrase).filter(Boolean));
+  return requiredNormalized.every((certification) => available.has(certification));
+};
+
+export const matchesWorkAuthorizationRequirements = (
+  job: JobListDto,
+  context: RecommendationContext,
+): boolean => {
+  const eligibility = job.recommendationEligibility;
+  if (!eligibility) return true;
+
+  const candidateCountries = [
+    ...(context.eligibleCountries ?? []),
+    ...(context.workAuthorizationRequirement?.eligibleCountries ?? []),
+  ]
+    .map(normalizePhrase)
+    .filter(Boolean);
+  const jobCountries = (eligibility.eligibleCountries ?? []).map(normalizePhrase).filter(Boolean);
+  if (
+    jobCountries.length > 0 &&
+    candidateCountries.length > 0 &&
+    !candidateCountries.some((country) => jobCountries.includes(country))
+  ) {
+    return false;
+  }
+
+  const candidateRequiresSponsorship =
+    context.requiresSponsorship ??
+    context.workAuthorizationRequirement?.requiresSponsorship ??
+    (context.workAuthorization === 'NEEDS_SPONSORSHIP' ? true : undefined);
+  if (candidateRequiresSponsorship === true && eligibility.sponsorshipOffered === false) {
+    return false;
+  }
+
+  if (eligibility.requiresWorkAuthorization === true && context.workAuthorization) {
+    if (context.workAuthorization === 'UNKNOWN') return false;
+    if (
+      context.workAuthorization === 'NEEDS_SPONSORSHIP' &&
+      eligibility.sponsorshipOffered === false
+    ) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
 export const getCandidateJobFilterViolations = (
   job: JobListDto,
   context: RecommendationContext,
@@ -134,6 +199,16 @@ export const getCandidateJobFilterViolations = (
   ) {
     violations.push('SALARY_MAXIMUM');
   }
+  if (!matchesCertificationRequirements(job, context.certifications)) {
+    violations.push('REQUIRED_CERTIFICATION');
+  }
+  if (!matchesWorkAuthorizationRequirements(job, context)) {
+    const candidateRequiresSponsorship =
+      context.requiresSponsorship ??
+      context.workAuthorizationRequirement?.requiresSponsorship ??
+      (context.workAuthorization === 'NEEDS_SPONSORSHIP' ? true : undefined);
+    violations.push(candidateRequiresSponsorship ? 'VISA_SPONSORSHIP' : 'WORK_AUTHORIZATION');
+  }
   return violations;
 };
 
@@ -153,6 +228,9 @@ export const passesCandidateJobFilters = (
   const violations = getCandidateJobFilterViolations(job, context);
   if (resolveRecommendationFilterMode(context) === 'FLEXIBLE') {
     return !violations.includes('EXCLUDED_COMPANY');
+  }
+  if (violations.includes('REQUIRED_CERTIFICATION')) {
+    recordCertificationFilterExclusion();
   }
   return violations.length === 0;
 };

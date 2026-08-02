@@ -16,13 +16,19 @@ let generateCount = 0;
 let emptyCount = 0;
 let failureCount = 0;
 let totalLatencyMs = 0;
+let filterCertExcludeTotal = 0;
 
 export const recommendationMetricsSnapshot = () => ({
   generateCount,
   emptyCount,
   failureCount,
   averageLatencyMs: generateCount > 0 ? totalLatencyMs / generateCount : 0,
+  filterCertExcludeTotal,
 });
+
+export const recordCertificationFilterExclusion = (): void => {
+  filterCertExcludeTotal += 1;
+};
 
 export const recordRecommendationGenerate = (
   logger: Logger,
@@ -54,4 +60,5 @@ export const resetRecommendationMetricsForTests = (): void => {
   emptyCount = 0;
   failureCount = 0;
   totalLatencyMs = 0;
+  filterCertExcludeTotal = 0;
 };

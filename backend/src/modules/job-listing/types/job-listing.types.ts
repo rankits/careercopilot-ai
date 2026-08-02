@@ -35,6 +35,17 @@ export interface PaginatedJobResult<T> {
   };
 }
 
+export interface JobRecommendationEligibility {
+  /** Certifications explicitly required by the job; omitted/empty means unknown or not required. */
+  requiredCertifications?: string[];
+  /** Countries whose residents/citizens are eligible when the posting discloses a restriction. */
+  eligibleCountries?: string[];
+  /** Whether the employer explicitly offers sponsorship for this role. */
+  sponsorshipOffered?: boolean | null;
+  /** Whether the role explicitly requires existing work authorization. */
+  requiresWorkAuthorization?: boolean | null;
+}
+
 /**
  * Frozen public listing contract for GET /api/v1/jobs and shared fields on detail.
  * Additive fields only; do not rename/remove without a versioned migration.
@@ -62,6 +73,8 @@ export interface JobListDto {
   publishedAt: string | null;
   /** Primary JobSource apply URL (priority desc); http(s) only, else null. */
   applyUrl: string | null;
+  /** Optional internal eligibility metadata for recommendation filtering when providers expose it. */
+  recommendationEligibility?: JobRecommendationEligibility;
 }
 
 export interface JobDetailDto extends JobListDto {
