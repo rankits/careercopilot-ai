@@ -12,6 +12,7 @@ import { PrismaClient } from '@prisma/client';
 import { seedPermissions } from '@/seed/seed/permissions.seed.js';
 import { seedRoles } from '@/seed/seed/roles.seed.js';
 import { seedDefaultAdmin } from '@/seed/seed/admin.seed.js';
+import { seedSkillAliases } from '@/seed/seed/skills.seed.js';
 
 const prisma = new PrismaClient();
 
@@ -25,6 +26,7 @@ async function main(): Promise<void> {
   }
 
   await seedDefaultAdmin(prisma, adminRoleId);
+  await seedSkillAliases(prisma);
 }
 
 main()

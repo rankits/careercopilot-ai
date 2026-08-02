@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 14 |
+| Implemented | 15 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,41 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-SKILL-001 - Introduce skill alias and canonicalization table
+
+- Status: Implemented
+- Implemented files:
+  - `backend/prisma/skills.prisma`
+  - `backend/prisma/migrations/20260802133000_add_skill_canonicalization/migration.sql`
+  - `backend/src/modules/recommendations/skills/skill-alias.catalog.ts`
+  - `backend/src/modules/recommendations/skills/skill-canonicalization.service.ts`
+  - `backend/src/modules/recommendations/scoring/calculators/heuristic-score.calculators.ts`
+  - `backend/src/modules/recommendations/__tests__/skill-canonicalization.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-scoring.service.test.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/seed.ts`
+  - `backend/src/seed/seed/skills.seed.ts`
+  - `docs/job-recommendation-engine-tickets/SKILL_CANONICALIZATION_CONTRACT.md`
+- API changes: none
+- Database changes: added `SkillCanonical` and `SkillAlias` tables with unique normalized lookup keys, alias indexes, cascade relation, and seed data
+- Tests added:
+  - Normalization and curated alias canonicalization for `Node.js` / `NodeJS` / `Node JS`
+  - PostgreSQL alias canonicalization from `Postgres`
+  - Canonical overlap ratio with matched and missing canonical labels
+  - Scoring regression proving alias skills count as exact required/preferred matches
+- Commands executed:
+  - `npm --prefix backend run prisma:generate`
+  - `npm --prefix backend run test -- recommendations/__tests__/skill-canonicalization.service.test.ts recommendations/__tests__/recommendation-scoring.service.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendation-explanation.service.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Prisma client generation passed
+  - Focused canonicalization/scoring/generation/explanation tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: related and transferable skill graph semantics remain out of scope until `JRE-SKILL-002` / `JRE-SKILL-003`
+- Next ticket: `JRE-SKILL-002`
 
 ### 2026-08-02 - JRE-EXPLAIN-002 - Expose structured skill-gap output on recommendations
 

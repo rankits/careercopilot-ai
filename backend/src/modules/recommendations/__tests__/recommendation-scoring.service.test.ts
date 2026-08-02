@@ -126,6 +126,19 @@ describe('RecommendationScoringService hybrid fusion', () => {
     )).toHaveLength(2);
   });
 
+  it('treats curated skill aliases as exact required-skill matches', async () => {
+    const [scored] = await service.score(
+      { ...context(), requiredSkills: ['Node.js'], preferredSkills: ['Postgres'] },
+      [{ job: { ...job(), skills: ['NodeJS', 'PostgreSQL'] }, retrievalScore: 0.5 }],
+    );
+
+    expect(scored.scoreResult.components.requiredSkills).toBe(1);
+    expect(scored.scoreResult.components.preferredSkills).toBe(1);
+    expect(scored.scoreResult.matchedSkills).toEqual(['Node.js']);
+    expect(scored.scoreResult.relatedSkills).toEqual(['PostgreSQL']);
+    expect(scored.scoreResult.missingSkills).toEqual([]);
+  });
+
   it('supports deterministic tie-break when sorted by the production comparator', async () => {
     const jobB = { ...job(), id: 'job-b' };
     const jobA = { ...job(), id: 'job-a', title: 'Platform Engineer', skills: ['Go'] };
