@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 32 |
+| Implemented | 33 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,31 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-UI-002 - Polish readiness loading empty failure and stale states
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/READINESS_LIFECYCLE_FRONTEND_CONTRACT.md`
+- API changes: none; FE now consumes existing `lifecycleState` and `refreshFromProfile`
+- Database changes: none
+- Tests added:
+  - Stale lifecycle banner renders with refresh CTA
+  - Processing lifecycle hides generation and exposes status refresh
+  - Failed provider lifecycle displays the code and retries through refresh
+- Commands executed:
+  - `npm --prefix frontend run test -- src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused For You tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: lifecycle copy uses the existing readiness payload; no separate backend failureCode is exposed on readiness
+- Next ticket: `JRE-UI-003`
 
 ### 2026-08-02 - JRE-UI-001 - Show displayScore breakdown explanations and skill gaps on cards
 

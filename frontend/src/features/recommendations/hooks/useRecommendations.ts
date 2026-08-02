@@ -120,6 +120,16 @@ export function useGenerateRecommendations() {
   });
 }
 
+export function useRefreshProfileRecommendations() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => recommendationsService.refreshFromProfile(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    },
+  });
+}
+
 export function useGenerateResumeRecommendations() {
   const queryClient = useQueryClient();
   return useMutation({
