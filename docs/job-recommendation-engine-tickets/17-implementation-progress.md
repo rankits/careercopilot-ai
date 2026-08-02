@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 8 |
+| Implemented | 9 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,47 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-API-002 - Add refresh and run-details API semantics
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/types/recommendations.types.ts`
+  - `backend/src/modules/recommendations/mappers/recommendation.mapper.ts`
+  - `backend/src/modules/recommendations/services/recommendations.service.ts`
+  - `backend/src/modules/recommendations/validations/recommendation.schema.ts`
+  - `backend/src/modules/recommendations/controllers/recommendations.controller.ts`
+  - `backend/src/modules/recommendations/routes/recommendations.route.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendations.api.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-core.test.ts`
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.test.ts`
+  - `frontend/src/features/recommendations/README.md`
+  - `docs/job-recommendation-engine-tickets/REFRESH_RUN_API_CONTRACT.md`
+- API changes: additive `POST /api/v1/job-recommendations/refresh`, additive `GET /api/v1/job-recommendations/runs/:runId`, additive `runId` and `latestOnly` query support on `GET /api/v1/job-recommendations`
+- Database changes: none
+- Tests added:
+  - Refresh endpoint defaults to PROFILE and returns run metadata plus items
+  - Run details are owner-scoped and return 404 for missing/non-owned runs
+  - List validation rejects combined `runId` and `latestOnly`
+  - Refresh flow clears STALE into READY after a successful completed run
+  - Frontend service unwraps run-detail responses
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-idor.test.ts recommendations/__tests__/recommendation.mapper.test.ts`
+  - `npm --prefix frontend run test -- src/features/recommendations/services/recommendations.service.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused backend recommendation tests passed
+  - Focused frontend recommendation service tests passed
+  - Backend and frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: refresh remains synchronous and rate-limited; no For You UI changes beyond service/types
+- Next ticket: `JRE-API-003`
 
 ### 2026-08-02 - JRE-BE-001 - Ensure recommendation run ownership and userId consistency
 

@@ -32,10 +32,16 @@ describe('recommendationsService', () => {
       },
     });
 
-    const result = await recommendationsService.list({ page: 2, limit: 10 });
+    const result = await recommendationsService.list({
+      page: 2,
+      limit: 10,
+      latestOnly: true,
+    });
     expect(getMock).toHaveBeenCalledWith(
       '/job-recommendations',
-      expect.objectContaining({ params: { page: 2, limit: 10 } }),
+      expect.objectContaining({
+        params: { page: 2, limit: 10, latestOnly: true },
+      }),
     );
     expect(result.total).toBe(21);
     expect(result.items).toHaveLength(1);
@@ -50,5 +56,70 @@ describe('recommendationsService', () => {
       expect.objectContaining({ timeout: 60_000 }),
     );
     expect(items).toHaveLength(1);
+  });
+
+  it('posts PROFILE refresh and unwraps run details', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        data: {
+          run: {
+            id: 'run-1',
+            sourceType: 'PROFILE',
+            sourceId: null,
+            status: 'COMPLETED',
+            lifecycleState: 'READY',
+            candidateCount: 1,
+            failureCode: null,
+            createdAt: '2026-08-02T00:00:00.000Z',
+            completedAt: '2026-08-02T00:00:01.000Z',
+          },
+          items: [{ id: 'r1', job: { id: 'j1' }, scoreResult: { overallScore: 0.82 } }],
+          page: 1,
+          limit: 20,
+          total: 1,
+        },
+      },
+    });
+
+    const result = await recommendationsService.refreshFromProfile();
+    expect(postMock).toHaveBeenCalledWith(
+      '/job-recommendations/refresh',
+      { sourceType: 'PROFILE' },
+      expect.objectContaining({ timeout: 60_000 }),
+    );
+    expect(result.run).toMatchObject({ id: 'run-1', lifecycleState: 'READY' });
+    expect(result.items).toHaveLength(1);
+  });
+
+  it('loads run details with pagination', async () => {
+    getMock.mockResolvedValue({
+      data: {
+        data: {
+          run: {
+            id: 'run-1',
+            sourceType: 'PROFILE',
+            sourceId: null,
+            status: 'COMPLETED',
+            lifecycleState: 'READY',
+            candidateCount: 1,
+            failureCode: null,
+            createdAt: '2026-08-02T00:00:00.000Z',
+            completedAt: '2026-08-02T00:00:01.000Z',
+          },
+          items: [],
+          page: 2,
+          limit: 5,
+          total: 8,
+        },
+      },
+    });
+
+    const result = await recommendationsService.getRunDetails('run-1', { page: 2, limit: 5 });
+    expect(getMock).toHaveBeenCalledWith(
+      '/job-recommendations/runs/run-1',
+      expect.objectContaining({ params: { page: 2, limit: 5 } }),
+    );
+    expect(result.total).toBe(8);
+    expect(result.run.id).toBe('run-1');
   });
 });

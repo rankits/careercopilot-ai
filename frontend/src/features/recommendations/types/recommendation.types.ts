@@ -28,6 +28,31 @@ export interface RecommendationListResult {
   total: number;
 }
 
+export interface RecommendationRunDto {
+  id: string;
+  sourceType: string;
+  sourceId: string | null;
+  status: 'PENDING' | 'RETRIEVING' | 'SCORING' | 'COMPLETED' | 'FAILED';
+  lifecycleState:
+    | 'NOT_STARTED'
+    | 'QUEUED'
+    | 'PROCESSING'
+    | 'READY'
+    | 'STALE'
+    | 'FAILED'
+    | 'FAILED_TIMEOUT'
+    | 'FAILED_PROVIDER'
+    | 'FAILED_EMPTY';
+  candidateCount: number;
+  failureCode: string | null;
+  createdAt: string;
+  completedAt: string | null;
+}
+
+export interface RecommendationRunDetailsResult extends RecommendationListResult {
+  run: RecommendationRunDto;
+}
+
 export interface RecommendationReadinessStatus {
   ready: boolean;
   lifecycleState?:
@@ -54,6 +79,8 @@ export interface RecommendationReadinessStatus {
 export interface ListRecommendationsParams {
   page?: number;
   limit?: number;
+  runId?: string;
+  latestOnly?: boolean;
 }
 
 export type RecommendationFeedbackAction =

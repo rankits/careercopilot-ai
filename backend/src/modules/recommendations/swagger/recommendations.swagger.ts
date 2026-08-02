@@ -10,7 +10,9 @@ import {
   RECOMMENDATION_FEEDBACK_ACTION_VALUES,
   RECOMMENDATION_LIFECYCLE_STATE_VALUES,
   RECOMMENDATION_MATCH_TYPE_VALUES,
+  RECOMMENDATION_RUN_STATUS_VALUES,
   RECOMMENDATION_SCORE_COMPONENT_VALUES,
+  RECOMMENDATION_SOURCE_TYPE_VALUES,
 } from '@/modules/recommendations/types/recommendations.types.js';
 
 const BASE_URL = '/api/v1/job-recommendations';
@@ -186,6 +188,32 @@ const readinessStatusSchema = {
   },
 };
 
+const recommendationRunSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    sourceType: { type: 'string', enum: [...RECOMMENDATION_SOURCE_TYPE_VALUES] },
+    sourceId: { type: 'string', format: 'uuid', nullable: true },
+    status: { type: 'string', enum: [...RECOMMENDATION_RUN_STATUS_VALUES] },
+    lifecycleState: { type: 'string', enum: [...RECOMMENDATION_LIFECYCLE_STATE_VALUES] },
+    candidateCount: { type: 'integer', minimum: 0 },
+    failureCode: { type: 'string', nullable: true },
+    createdAt: { type: 'string', format: 'date-time' },
+    completedAt: { type: 'string', format: 'date-time', nullable: true },
+  },
+};
+
+const recommendationRunPageSchema = {
+  type: 'object',
+  properties: {
+    run: recommendationRunSchema,
+    items: { type: 'array', items: recommendationItemSchema },
+    page: { type: 'integer', minimum: 1 },
+    limit: { type: 'integer', minimum: 1, maximum: 100 },
+    total: { type: 'integer', minimum: 0 },
+  },
+};
+
 const commonRecommendationErrors = {
   ...commonSecureResponses,
   403: {
@@ -299,6 +327,47 @@ export const recommendationsSwagger = {
     TAGS,
   ),
 
+  ...createApiPost(
+    `${BASE_URL}/refresh`,
+    {
+      summary: 'Refresh recommendations and return the created run',
+      description:
+        'Refresh is synchronous generation with freshness semantics. If body is empty, PROFILE is used. A successful refresh creates a new COMPLETED run, returns that run plus its first page of items, and makes lifecycle status READY unless a newer freshness blocker remains. The route is rate-limited as practical cooldown rather than idempotent.',
+      body: {
+        properties: {
+          sourceType: {
+            type: 'string',
+            enum: ['PROFILE', 'RESUME', 'JOB'],
+            default: 'PROFILE',
+            example: 'PROFILE',
+          },
+          sourceId: {
+            type: 'string',
+            format: 'uuid',
+            description: 'Required for RESUME and JOB. Forbidden for PROFILE.',
+          },
+          filters: filtersSchema,
+        },
+      },
+      responses: {
+        200: {
+          description: 'Recommendations refreshed',
+          schema: successSchema('Recommendations refreshed', recommendationRunPageSchema),
+        },
+        422: {
+          description: 'Invalid source payload or empty recommendation signal',
+          schema: errorSchema(
+            'Candidate profile does not contain titles, skills, or summary text for recommendations',
+            'RECOMMENDATION_CONTEXT_INVALID',
+          ),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
   ...createApiGet(
     `${BASE_URL}/similar/{jobId}`,
     {
@@ -347,7 +416,68 @@ export const recommendationsSwagger = {
     {
       summary: 'List persisted recommendations for the current user',
       description:
-        'Stable pagination order: createdAt DESC (newest first), then rank ASC, then id ASC.',
+        'Stable pagination order: createdAt DESC (newest first), then rank ASC, then id ASC. Use runId to list one owned run, or latestOnly=true to list the latest owned run.',
+      queryParams: [
+        {
+          name: 'page',
+          in: 'query',
+          required: false,
+          schema: { type: 'integer', minimum: 1, default: 1 },
+        },
+        {
+          name: 'limit',
+          in: 'query',
+          required: false,
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        },
+        {
+          name: 'runId',
+          in: 'query',
+          required: false,
+          description: 'Restrict recommendations to one owned run. Cannot be combined with latestOnly.',
+          schema: { type: 'string', format: 'uuid' },
+        },
+        {
+          name: 'latestOnly',
+          in: 'query',
+          required: false,
+          description: 'When true, list recommendations only from the latest owned run.',
+          schema: { type: 'boolean', default: false },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Recommendations retrieved',
+          schema: successSchema(
+            'Recommendations retrieved',
+            paginatedSchema(recommendationItemSchema),
+          ),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  ...createApiGet(
+    `${BASE_URL}/runs/{runId}`,
+    {
+      summary: 'Get an owned recommendation run and its recommendations',
+      description:
+        'Returns run metadata plus paginated recommendations for that run. Non-owned and missing run ids both return 404.',
+      params: [
+        {
+          name: 'runId',
+          in: 'path',
+          required: true,
+          schema: {
+            type: 'string',
+            format: 'uuid',
+            example: 'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+          },
+        },
+      ],
       queryParams: [
         {
           name: 'page',
@@ -364,13 +494,14 @@ export const recommendationsSwagger = {
       ],
       responses: {
         200: {
-          description: 'Recommendations retrieved',
-          schema: successSchema(
-            'Recommendations retrieved',
-            paginatedSchema(recommendationItemSchema),
-          ),
+          description: 'Recommendation run retrieved',
+          schema: successSchema('Recommendation run retrieved', recommendationRunPageSchema),
         },
         ...commonRecommendationErrors,
+        404: {
+          description: 'Run missing or not owned by caller',
+          schema: errorSchema('Recommendation run was not found', 'RECOMMENDATION_RUN_NOT_FOUND'),
+        },
       },
     },
     true,

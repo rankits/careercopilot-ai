@@ -362,6 +362,10 @@ export interface RecommendationPage {
   total: number;
 }
 
+export interface RecommendationRunPage extends RecommendationPage {
+  run: RecommendationRunRecord;
+}
+
 /** Foundation response for readiness/status API (JR-ARCH-001). */
 export interface RecommendationReadinessStatus {
   ready: boolean;

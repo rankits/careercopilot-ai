@@ -8,7 +8,9 @@ import {
   createSimilarJobsController,
   getRecommendationController,
   getRecommendationReadinessController,
+  getRecommendationRunController,
   listRecommendationsController,
+  refreshRecommendationsController,
   upsertRecommendationFeedbackController,
 } from '@/modules/recommendations/controllers/recommendations.controller.js';
 import {
@@ -18,6 +20,8 @@ import {
   recommendationFeedbackSchema,
   recommendationIdParamsSchema,
   recommendationReadinessSchema,
+  recommendationRunDetailsSchema,
+  refreshRecommendationSchema,
   similarJobParamsSchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
@@ -53,6 +57,16 @@ export const createRecommendationsRouter = (
     createRecommendationsFromTextController(service),
   );
 
+  router.post(
+    '/refresh',
+    authMiddleware,
+    requirePrincipalType('USER'),
+    requirePermission(RECOMMENDATIONS_PERMISSIONS.CREATE_OWN),
+    recommendationRateLimiter,
+    validateResource(refreshRecommendationSchema),
+    refreshRecommendationsController(service),
+  );
+
   router.get(
     '/status',
     authMiddleware,
@@ -78,6 +92,15 @@ export const createRecommendationsRouter = (
     requirePermission(RECOMMENDATIONS_PERMISSIONS.READ_OWN),
     validateResource(similarJobParamsSchema),
     createSimilarJobsController(similarJobsService),
+  );
+
+  router.get(
+    '/runs/:runId',
+    authMiddleware,
+    requirePrincipalType('USER'),
+    requirePermission(RECOMMENDATIONS_PERMISSIONS.READ_OWN),
+    validateResource(recommendationRunDetailsSchema),
+    getRecommendationRunController(service),
   );
 
   router.get(
