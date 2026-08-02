@@ -34,7 +34,6 @@ export class JobIngestionStartupHook {
       'Startup ingestion enabled, waiting for delay...',
     );
 
-    // Wait before attempting lock to allow system stabilization
     await new Promise((resolve) => setTimeout(resolve, env.JOB_INGESTION_ON_STARTUP_DELAY_MS));
 
     const lockTtl = env.JOB_INGESTION_ON_STARTUP_LOCK_TTL_SECONDS;
@@ -68,12 +67,6 @@ export class JobIngestionStartupHook {
         'Startup ingestion completed successfully',
       );
 
-      // Release on success so another replica can run later. On failure/crash,
-      // leave the lock until TTL expires to avoid thundering-herd retries.
-      await this.cacheService.releaseLock(this.LOCK_KEY).catch((err) => {
-        jobsLogger.error({ err }, 'Failed to release startup ingestion lock');
-      });
-
       return 'COMPLETED';
     } catch (error) {
       jobsLogger.error({ err: error, triggerSource: 'SERVER_STARTUP' }, 'Startup ingestion failed');
@@ -83,6 +76,11 @@ export class JobIngestionStartupHook {
       }
 
       return 'FAILED';
+    } finally {
+      // Always release after the attempt. TTL remains the crash-recovery fallback.
+      await this.cacheService.releaseLock(this.LOCK_KEY).catch((err) => {
+        jobsLogger.error({ err }, 'Failed to release startup ingestion lock');
+      });
     }
   }
 }
