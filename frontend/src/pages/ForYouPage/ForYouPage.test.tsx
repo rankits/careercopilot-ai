@@ -175,6 +175,23 @@ describe('ForYouPage', () => {
     expect(screen.getByRole('tabpanel', { name: /profile/i })).toBeInTheDocument();
   });
 
+  it('moves recommendation tabs with arrow keys', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
+    profileMock.mockResolvedValue(null);
+    renderPage(true);
+
+    const profileTab = await screen.findByRole('tab', { name: /^profile$/i });
+    profileTab.focus();
+    await user.keyboard('{ArrowRight}');
+
+    const resumeTab = screen.getByRole('tab', { name: /resume/i });
+    await waitFor(() => expect(resumeTab).toHaveAttribute('aria-selected', 'true'));
+    expect(resumeTab).toHaveFocus();
+    expect(profileTab).toHaveAttribute('tabindex', '-1');
+    expect(resumeTab).toHaveAttribute('tabindex', '0');
+  });
+
   it('navigates to unwired mode placeholders without loading profile recommendations', async () => {
     const user = userEvent.setup();
     renderPage(true, '/for-you?mode=saved');

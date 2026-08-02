@@ -22,7 +22,10 @@ describe('VirtualizedJobList', () => {
     );
 
     expect(screen.getByLabelText(/job feed results/i)).toBeInTheDocument();
+    expect(screen.getByRole('list', { name: /job feed results/i })).toBeInTheDocument();
     expect(screen.getByText('Role 0')).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem')[0]).toHaveAttribute('aria-setsize', '200');
+    expect(screen.getAllByRole('listitem')[0]).toHaveAttribute('aria-posinset', '1');
     // Windowed render: far rows are not all mounted at once.
     expect(screen.queryByText('Role 199')).not.toBeInTheDocument();
     const mounted = container.querySelectorAll('[data-index]').length;

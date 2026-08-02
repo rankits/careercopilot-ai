@@ -102,6 +102,24 @@ export const TitleRow = styled('div')({
   },
 });
 
+export const OpenJobButton = styled('button')({
+  background: 'transparent',
+  border: 0,
+  color: 'inherit',
+  cursor: 'pointer',
+  font: 'inherit',
+  fontWeight: 'inherit',
+  margin: 0,
+  padding: 0,
+  textAlign: 'left',
+
+  '&:focus-visible': {
+    borderRadius: borderRadius.sm,
+    outline: `0.1875rem solid ${colorTokens.actionPrimary}`,
+    outlineOffset: '0.1875rem',
+  },
+});
+
 export const VerifiedIcon = styled(CheckCircleIcon)({
   color: jobFeedTokens.verifiedIcon,
   flexShrink: 0,

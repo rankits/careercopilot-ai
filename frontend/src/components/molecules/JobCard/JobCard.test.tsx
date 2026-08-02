@@ -44,8 +44,20 @@ describe('JobCard', () => {
 
     expect(screen.getByText(/88% Match/i)).toBeInTheDocument();
     expect(screen.getByText(/ai recommended/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /apply now/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /apply to frontend engineer/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /save frontend engineer/i })).toBeInTheDocument();
+  });
+
+  it('opens from a dedicated keyboard reachable title control', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    render(<JobCard job={baseJob} onOpen={onOpen} />);
+
+    const openButton = screen.getByRole('button', { name: /open frontend engineer at acme/i });
+    openButton.focus();
+    await user.keyboard('{Enter}');
+
+    expect(onOpen).toHaveBeenCalledWith(baseJob);
   });
 
   it('shows Unsave label when isSaved', () => {
@@ -76,7 +88,7 @@ describe('JobCard', () => {
 
   it('disables Apply when applyUrl is missing', () => {
     render(<JobCard job={{ ...baseJob, applyUrl: null }} onApply={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /apply now/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /apply to frontend engineer unavailable/i })).toBeDisabled();
   });
 
   it('expands recommendation details with reasons and skill gaps', async () => {

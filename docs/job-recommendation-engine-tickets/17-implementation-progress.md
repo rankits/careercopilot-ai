@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 34 |
+| Implemented | 35 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,35 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-UI-004 - Accessibility pass for recommendation navigation and cards
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/components/molecules/JobCard/JobCard.tsx`
+  - `frontend/src/components/molecules/JobCard/styles.ts`
+  - `frontend/src/components/molecules/JobCard/JobCard.test.tsx`
+  - `frontend/src/components/molecules/VirtualizedJobList/VirtualizedJobList.tsx`
+  - `frontend/src/components/molecules/VirtualizedJobList/VirtualizedJobList.test.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/RECOMMENDATION_ACCESSIBILITY_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - For You tabs support arrow-key navigation with roving tab index
+  - Recommendation cards expose a keyboard-reachable title open control and job-specific action labels
+  - Virtualized recommendation lists expose list/listitem semantics with full-set positions
+- Commands executed:
+  - `npm --prefix frontend run test -- src/components/molecules/JobCard/JobCard.test.tsx src/components/molecules/VirtualizedJobList/VirtualizedJobList.test.tsx src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused JobCard, VirtualizedJobList, and For You tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: full axe/E2E accessibility sweep remains for `JRE-QA-003`
+- Next ticket: `JRE-UI-005`
 
 ### 2026-08-02 - JRE-UI-003 - Remove residual hardcoded recommendation-like mocks on home
 
