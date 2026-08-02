@@ -978,17 +978,18 @@ describe('RecommendationsService generation', () => {
   it('lists, loads, and stores feedback for persisted recommendations', async () => {
     resetRecommendationMetricsForTests();
     const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const retrievalService = {
+      retrieve: vi
+        .fn()
+        .mockResolvedValue([
+          { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+        ]),
+    } as unknown as RecommendationRetrievalService;
     const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
       contextService: new RecommendationContextService(
         new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
       ),
-      retrievalService: {
-        retrieve: vi
-          .fn()
-          .mockResolvedValue([
-            { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
-          ]),
-      } as unknown as RecommendationRetrievalService,
+      retrievalService,
       scoringService: new RecommendationScoringService(
         new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
       ),
@@ -1037,6 +1038,15 @@ describe('RecommendationsService generation', () => {
       jobId: created[0]!.job.id,
       action: 'OPENED',
     });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: created[0]!.id,
+      jobId: created[0]!.job.id,
+      action: 'APPLIED',
+    });
+    await service.createFromText('user-1', {
+      targetText: 'Backend engineer TypeScript',
+    });
 
     expect(page.total).toBe(1);
     expect(page.items[0]?.id).toBe(created[0]?.id);
@@ -1044,12 +1054,20 @@ describe('RecommendationsService generation', () => {
     expect(feedback.action).toBe('SAVED');
     await expect(
       feedbackService.findForRecommendation('user-1', created[0]!.id),
-    ).resolves.toMatchObject({ action: 'OPENED', note: null });
+    ).resolves.toMatchObject({ action: 'APPLIED', note: null });
+    await expect(
+      unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds('user-1')),
+    ).resolves.toEqual(['job-high']);
+    expect(retrievalService.retrieve).toHaveBeenLastCalledWith(
+      expect.objectContaining({ excludeJobIds: ['job-high'] }),
+    );
     expect(recommendationMetricsSnapshot().feedbackActionTotal).toMatchObject({
       SAVED: 1,
       VIEWED: 1,
       OPENED: 1,
+      APPLIED: 1,
     });
+    expect(recommendationMetricsSnapshot().feedbackAppliedLinkedTotal).toBe(1);
   });
 
   it('drops stretch/related categories when includeStretchOpportunities is false', async () => {

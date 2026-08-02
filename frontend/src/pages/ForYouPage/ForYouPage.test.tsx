@@ -25,6 +25,8 @@ const {
   deleteSavedSearchMock,
   generateSavedSearchMock,
   listSavedMock,
+  saveJobMock,
+  unsaveJobMock,
   profileMock,
   readinessMock,
   feedbackMock,
@@ -42,6 +44,8 @@ const {
     deleteSavedSearchMock: vi.fn(),
     generateSavedSearchMock: vi.fn(),
     listSavedMock: vi.fn(),
+    saveJobMock: vi.fn(),
+    unsaveJobMock: vi.fn(),
     profileMock: vi.fn(),
     readinessMock: vi.fn(),
     feedbackMock: vi.fn(),
@@ -79,8 +83,8 @@ vi.mock('@/features/recommendations/hooks/useRecommendations', async (importOrig
 vi.mock('@/features/applications/services/applications.service', () => ({
   applicationsService: {
     listSavedJobs: listSavedMock,
-    saveJob: vi.fn(),
-    unsaveJob: vi.fn(),
+    saveJob: saveJobMock,
+    unsaveJob: unsaveJobMock,
   },
 }));
 
@@ -150,6 +154,10 @@ beforeEach(() => {
   readinessMock.mockReset();
   listSavedMock.mockReset();
   listSavedMock.mockResolvedValue([]);
+  saveJobMock.mockReset();
+  saveJobMock.mockResolvedValue(undefined);
+  unsaveJobMock.mockReset();
+  unsaveJobMock.mockResolvedValue(undefined);
   listSavedSearchesMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
   refreshMock.mockResolvedValue({
     items: [],
@@ -703,8 +711,9 @@ describe('ForYouPage', () => {
     expect(screen.getByText(/ai recommended/i)).toBeInTheDocument();
   });
 
-  it('silently sends VIEWED and OPENED feedback for recommendation cards', async () => {
+  it('silently sends recommendation feedback for viewed, opened, saved, and applied cards', async () => {
     const user = userEvent.setup();
+    const openApply = vi.spyOn(window, 'open').mockReturnValue({ opener: null } as Window);
     listMock.mockResolvedValue({
       items: [
         {
@@ -746,6 +755,18 @@ describe('ForYouPage', () => {
     await waitFor(() =>
       expect(feedbackMock).toHaveBeenCalledWith('r-track', 'OPENED'),
     );
+    await user.click(screen.getByRole('button', { name: /save tracked frontend engineer/i }));
+    await waitFor(() => expect(saveJobMock).toHaveBeenCalledWith('job-track'));
+    await waitFor(() => expect(feedbackMock).toHaveBeenCalledWith('r-track', 'SAVED'));
+
+    await user.click(screen.getByRole('button', { name: /apply to tracked frontend engineer/i }));
+    expect(openApply).toHaveBeenCalledWith(
+      'https://example.com/apply',
+      '_blank',
+      'noopener,noreferrer',
+    );
+    await waitFor(() => expect(feedbackMock).toHaveBeenCalledWith('r-track', 'APPLIED'));
+    openApply.mockRestore();
   });
 
   it('generates only on explicit click', async () => {
