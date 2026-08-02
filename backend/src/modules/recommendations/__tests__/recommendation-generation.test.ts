@@ -16,6 +16,7 @@ import {
   JobSourceStrategy,
   ProfileSourceStrategy,
   ResumeSourceStrategy,
+  SavedSearchSourceStrategy,
   TargetTextSourceStrategy,
 } from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 import { InMemoryRecommendationUnitOfWork } from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
@@ -312,6 +313,89 @@ describe('RecommendationSourceAuthorizationService', () => {
     expect(findOwnedCareerTargetSource).toHaveBeenCalledWith('user-1', targetId);
   });
 
+  it('authorizes SAVED_SEARCH by owned snapshot and maps filters into context', async () => {
+    const savedSearchId = '44444444-4444-4444-4444-444444444444';
+    const updatedAt = new Date('2026-08-02T00:00:00.000Z');
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedSavedSearchSource: vi.fn().mockResolvedValue({
+          id: savedSearchId,
+          userId: 'user-1',
+          name: 'Remote backend search',
+          query: 'backend typescript',
+          filters: {
+            locations: ['Remote'],
+            workModes: ['REMOTE'],
+            employmentTypes: ['FULL_TIME'],
+            minimumSalary: 120000,
+            currency: 'usd',
+          },
+          context: {
+            targetTitles: ['Backend Engineer'],
+            requiredSkills: ['TypeScript'],
+            industries: ['SaaS'],
+          },
+          updatedAt,
+        }),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', {
+      sourceType: 'SAVED_SEARCH',
+      sourceId: savedSearchId,
+    });
+
+    expect(authorized).toMatchObject({
+      sourceType: 'SAVED_SEARCH',
+      sourceId: savedSearchId,
+      authorizedSourcePayload: {
+        targetTitles: ['Backend Engineer'],
+        requiredSkills: ['TypeScript'],
+        locations: ['Remote'],
+        remotePreference: 'REMOTE',
+        employmentTypes: ['FULL_TIME'],
+        salaryExpectation: { minimum: 120000, currency: 'USD' },
+        savedSearchSnapshot: {
+          searchId: savedSearchId,
+          criteriaVersion: updatedAt.toISOString(),
+          query: 'backend typescript',
+          filters: {
+            titles: ['Backend Engineer'],
+            locations: ['Remote'],
+            remotePreference: 'REMOTE',
+          },
+        },
+      },
+    });
+  });
+
+  it('hides missing or unowned SAVED_SEARCH sources', async () => {
+    const savedSearchId = '44444444-4444-4444-4444-444444444444';
+    const findOwnedSavedSearchSource = vi.fn().mockResolvedValue(null);
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedSavedSearchSource,
+      },
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', {
+        sourceType: 'SAVED_SEARCH',
+        sourceId: savedSearchId,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'RECOMMENDATION_SOURCE_NOT_FOUND',
+    });
+    expect(findOwnedSavedSearchSource).toHaveBeenCalledWith('user-1', savedSearchId);
+  });
+
   it('rejects empty candidate profiles', async () => {
     const service = new RecommendationSourceAuthorizationService(
       { findById: vi.fn() } as unknown as IJobSearchRepository,
@@ -470,6 +554,70 @@ describe('RecommendationsService generation', () => {
           targetTitles: ['Engineering Manager'],
           requiredSkills: ['Leadership', 'TypeScript'],
           goalIntent: expect.objectContaining({ targetRole: 'Engineering Manager' }),
+        }),
+      }),
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ userId: 'user-1', rank: 1 });
+  });
+
+  it('runs SAVED_SEARCH generation from an owned saved search', async () => {
+    const savedSearchId = '44444444-4444-4444-4444-444444444444';
+    const retrievalService = {
+      retrieve: vi.fn().mockResolvedValue([
+        {
+          job: jobList('job-backend', {
+            title: 'Backend Engineer',
+            skills: ['TypeScript'],
+            location: { formatted: 'Remote', remoteType: 'REMOTE' },
+          }),
+          retrievalScore: 0.9,
+        },
+      ]),
+    } as unknown as RecommendationRetrievalService;
+
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-saved-search' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new SavedSearchSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+          findOwnedSavedSearchSource: vi.fn().mockResolvedValue({
+            id: savedSearchId,
+            userId: 'user-1',
+            name: 'Remote backend',
+            query: 'backend typescript',
+            filters: { locations: ['Remote'], workModes: ['REMOTE'] },
+            context: { targetTitles: ['Backend Engineer'], requiredSkills: ['TypeScript'] },
+            updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+          }),
+        },
+      ),
+    });
+
+    const records = await service.createForSource('user-1', {
+      sourceType: 'SAVED_SEARCH',
+      sourceId: savedSearchId,
+    });
+
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          sourceType: 'SAVED_SEARCH',
+          sourceId: savedSearchId,
+          targetTitles: ['Backend Engineer'],
+          requiredSkills: ['TypeScript'],
+          locations: ['Remote'],
+          remotePreference: 'REMOTE',
+          savedSearchSnapshot: expect.objectContaining({ searchId: savedSearchId }),
         }),
       }),
     );

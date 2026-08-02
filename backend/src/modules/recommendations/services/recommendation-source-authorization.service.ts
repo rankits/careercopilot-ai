@@ -6,6 +6,7 @@ import {
 } from '@/modules/recommendations/errors/recommendation.error.js';
 import { buildCareerGoalRecommendationPayload } from '@/modules/recommendations/mappers/career-target-source.mapper.js';
 import { hasRecommendationSignal } from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
+import { buildSavedSearchRecommendationPayload } from '@/modules/recommendations/mappers/saved-search-source.mapper.js';
 import { buildProfilePrimaryRecommendationPayload } from '@/modules/recommendations/utils/candidate-recommendation-document.js';
 import type { BuildRecommendationContextInput } from '@/modules/recommendations/types/recommendations.types.js';
 import type {
@@ -166,6 +167,44 @@ export class RecommendationSourceAuthorizationService {
         return {
           userId,
           sourceType: 'CAREER_GOAL',
+          sourceId: input.sourceId,
+          authorizedSourcePayload: payload,
+        };
+      }
+      case 'SAVED_SEARCH': {
+        if (!input.sourceId) {
+          throw new RecommendationError(
+            'sourceId is required for SAVED_SEARCH recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        if (!this.profiles.findOwnedSavedSearchSource) {
+          throw new RecommendationError(
+            'Saved search recommendation sources are not configured',
+            501,
+            RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
+          );
+        }
+        const savedSearch = await this.profiles.findOwnedSavedSearchSource(userId, input.sourceId);
+        if (!savedSearch) {
+          throw new RecommendationError(
+            'Owned saved search was not found',
+            404,
+            RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+          );
+        }
+        const payload = buildSavedSearchRecommendationPayload(savedSearch);
+        if (!hasRecommendationSignal(payload)) {
+          throw new RecommendationError(
+            'Saved search does not contain titles, skills, or query text for recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        return {
+          userId,
+          sourceType: 'SAVED_SEARCH',
           sourceId: input.sourceId,
           authorizedSourcePayload: payload,
         };
