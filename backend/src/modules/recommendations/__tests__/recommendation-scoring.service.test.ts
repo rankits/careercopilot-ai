@@ -8,7 +8,10 @@ import {
   RETRIEVAL_SCORE_BLEND_WEIGHT,
 } from '@/modules/recommendations/constants/recommendation.constants.js';
 import type { JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
-import type { RecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
+import {
+  RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+  type RecommendationContext,
+} from '@/modules/recommendations/types/recommendations.types.js';
 
 const job = (): JobListDto => ({
   id: 'job-1',
@@ -25,6 +28,7 @@ const job = (): JobListDto => ({
 const context = (): RecommendationContext => ({
   userId: 'user-1',
   sourceType: 'PROFILE',
+  contextSchemaVersion: RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
   targetTitles: ['Backend Engineer'],
   relatedTitles: [],
   requiredSkills: ['TypeScript'],

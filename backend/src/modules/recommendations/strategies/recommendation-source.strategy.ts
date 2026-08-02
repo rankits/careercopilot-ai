@@ -4,6 +4,7 @@ import type {
   RecommendationContext,
   RecommendationSourceType,
 } from '@/modules/recommendations/types/recommendations.types.js';
+import { normalizeExtractedRecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
 import {
   RecommendationError,
   RECOMMENDATION_ERROR_CODES,
@@ -23,22 +24,7 @@ const profileContext = (
   userId,
   sourceType,
   sourceId,
-  targetTitles: payload.targetTitles ?? [],
-  relatedTitles: payload.relatedTitles ?? [],
-  requiredSkills: payload.requiredSkills ?? [],
-  preferredSkills: payload.preferredSkills ?? [],
-  yearsOfExperience: payload.yearsOfExperience,
-  seniority: payload.seniority,
-  industries: payload.industries ?? [],
-  locations: payload.locations ?? [],
-  remotePreference: payload.remotePreference,
-  employmentTypes: payload.employmentTypes ?? [],
-  salaryExpectation: payload.salaryExpectation ?? {},
-  education: payload.education ?? [],
-  certifications: payload.certifications ?? [],
-  excludedCompanies: payload.excludedCompanies ?? [],
-  excludedSkills: payload.excludedSkills ?? [],
-  sourceText: payload.sourceText,
+  ...normalizeExtractedRecommendationContext(payload),
 });
 
 abstract class TypedSourceStrategy implements RecommendationSourceStrategy {
@@ -91,24 +77,20 @@ export class JobSourceStrategy extends TypedSourceStrategy {
       userId: input.userId,
       sourceType: this.sourceType,
       sourceId: input.sourceId,
-      targetTitles: [job.title],
-      relatedTitles: [],
-      requiredSkills: job.skills,
-      preferredSkills: [],
-      industries: job.companyIndustry ? [job.companyIndustry] : [],
-      locations: [job.location.formatted],
-      remotePreference: job.location.remoteType ?? undefined,
-      employmentTypes: job.employmentType ? [job.employmentType] : [],
-      salaryExpectation: {
-        minimum: job.salary.minimum ?? undefined,
-        maximum: job.salary.maximum ?? undefined,
-        currency: job.salary.currency ?? undefined,
-      },
-      education: [],
-      certifications: [],
-      excludedCompanies: [],
-      excludedSkills: [],
-      sourceText: job.descriptionText,
+      ...normalizeExtractedRecommendationContext({
+        targetTitles: [job.title],
+        requiredSkills: job.skills,
+        industries: job.companyIndustry ? [job.companyIndustry] : [],
+        locations: [job.location.formatted],
+        remotePreference: job.location.remoteType ?? undefined,
+        employmentTypes: job.employmentType ? [job.employmentType] : [],
+        salaryExpectation: {
+          minimum: job.salary.minimum ?? undefined,
+          maximum: job.salary.maximum ?? undefined,
+          currency: job.salary.currency ?? undefined,
+        },
+        sourceText: job.descriptionText,
+      }),
     };
   }
 }
@@ -121,19 +103,10 @@ export class TargetTextSourceStrategy extends TypedSourceStrategy {
     return {
       userId: input.userId,
       sourceType: this.sourceType,
-      targetTitles: [],
-      relatedTitles: [],
-      requiredSkills: [],
-      preferredSkills: [],
-      industries: [],
-      locations: [],
-      employmentTypes: [],
-      salaryExpectation: {},
-      education: [],
-      certifications: [],
-      excludedCompanies: [],
-      excludedSkills: [],
-      sourceText: input.authorizedSourcePayload.trim(),
+      sourceId: input.sourceId,
+      ...normalizeExtractedRecommendationContext({
+        sourceText: input.authorizedSourcePayload.trim(),
+      }),
     };
   }
 }

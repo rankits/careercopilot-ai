@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import type { JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
-import type { RecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
+import {
+  RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+  type RecommendationContext,
+} from '@/modules/recommendations/types/recommendations.types.js';
 import { passesCandidateJobFilters } from '@/modules/recommendations/utils/candidate-job-filters.js';
 
 const job = (overrides: Partial<JobListDto> = {}): JobListDto => ({
@@ -37,6 +40,7 @@ const context = (overrides: Partial<RecommendationContext> = {}): Recommendation
   excludedCompanies: [],
   excludedSkills: [],
   ...overrides,
+  contextSchemaVersion: overrides.contextSchemaVersion ?? RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
 });
 
 describe('passesCandidateJobFilters', () => {
