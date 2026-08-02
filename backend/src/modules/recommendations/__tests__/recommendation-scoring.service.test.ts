@@ -172,6 +172,13 @@ describe('RecommendationScoringService hybrid fusion', () => {
     expect(scored.matchType).toBe('TRANSFERABLE');
     expect(
       scored.scoreResult.reasons.some((reason) =>
+        reason.message.includes(
+          'Transferable skill JavaScript can help with TypeScript, but it is lower confidence than an exact required-skill match',
+        ),
+      ),
+    ).toBe(true);
+    expect(
+      scored.scoreResult.reasons.some((reason) =>
         reason.evidence.includes('transferable: JavaScript covers TypeScript'),
       ),
     ).toBe(true);

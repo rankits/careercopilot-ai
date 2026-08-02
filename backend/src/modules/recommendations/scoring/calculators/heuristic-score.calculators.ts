@@ -5,6 +5,7 @@ import {
   tokenize,
 } from '@/modules/recommendations/utils/recommendation-matching.js';
 import { defaultSkillRelationshipService } from '@/modules/recommendations/skills/skill-relationship.service.js';
+import type { SkillRelationshipHit } from '@/modules/recommendations/skills/skill-relationship.service.js';
 
 const reason = (
   component: RecommendationScoreCalculator['component'],
@@ -13,6 +14,33 @@ const reason = (
 ) => [{ component, message, evidence }];
 
 const MISSING_SIGNAL_SCORE = 0.5;
+
+const formatRelationshipEvidence = (
+  hits: readonly SkillRelationshipHit[],
+  verb: 'covers' | 'supports',
+): string[] =>
+  hits.map(
+    (hit) => `${hit.type.toLowerCase()}: ${hit.availableSkill} ${verb} ${hit.requiredSkill}`,
+  );
+
+const formatSkillCoverageMessage = (
+  total: number,
+  covered: number,
+  hits: readonly SkillRelationshipHit[],
+  label: 'required' | 'preferred',
+): string => {
+  const transferableHits = hits.filter((hit) => hit.type === 'TRANSFERABLE');
+  if (transferableHits.length === 1 && hits.length === 1 && covered === 1) {
+    const [hit] = transferableHits;
+    return `Transferable skill ${hit!.availableSkill} can help with ${hit!.requiredSkill}, but it is lower confidence than an exact ${label}-skill match`;
+  }
+  if (transferableHits.length > 0) {
+    return `Covered ${covered} of ${total || covered} ${label} skills, including ${transferableHits.length} lower-confidence transferable skill signal${
+      transferableHits.length === 1 ? '' : 's'
+    }`;
+  }
+  return `Covered ${covered} of ${total || covered} ${label} skills with exact, alias, or related skills`;
+};
 
 const requiredSkillsCalculator: RecommendationScoreCalculator = {
   component: 'requiredSkills',
@@ -38,10 +66,7 @@ const requiredSkillsCalculator: RecommendationScoreCalculator = {
     const evidence = [
       ...exact,
       ...alias.map((skill) => `alias: ${skill}`),
-      ...hits.map(
-        (hit) =>
-          `${hit.type.toLowerCase()}: ${hit.availableSkill} covers ${hit.requiredSkill}`,
-      ),
+      ...formatRelationshipEvidence(hits, 'covers'),
     ];
     return {
       score: clampScore(ratio),
@@ -53,7 +78,12 @@ const requiredSkillsCalculator: RecommendationScoreCalculator = {
       reasons: reason(
         'requiredSkills',
         evidence.length > 0
-          ? `Covered ${evidence.length} of ${context.requiredSkills.length || evidence.length} required skills with exact, related, or transferable skills`
+          ? formatSkillCoverageMessage(
+              context.requiredSkills.length,
+              evidence.length,
+              hits,
+              'required',
+            )
           : context.requiredSkills.length === 0
             ? 'No required skills were specified'
             : 'No required skills matched the job',
@@ -87,10 +117,7 @@ const preferredSkillsCalculator: RecommendationScoreCalculator = {
     const evidence = [
       ...exact,
       ...alias.map((skill) => `alias: ${skill}`),
-      ...hits.map(
-        (hit) =>
-          `${hit.type.toLowerCase()}: ${hit.availableSkill} supports ${hit.requiredSkill}`,
-      ),
+      ...formatRelationshipEvidence(hits, 'supports'),
     ];
     return {
       score: clampScore(ratio),
@@ -100,7 +127,7 @@ const preferredSkillsCalculator: RecommendationScoreCalculator = {
       reasons: reason(
         'preferredSkills',
         evidence.length > 0
-          ? `Covered ${evidence.length} preferred skills with exact, related, or transferable skills`
+          ? formatSkillCoverageMessage(context.preferredSkills.length, evidence.length, hits, 'preferred')
           : 'No preferred-skill overlap',
         evidence,
       ),
