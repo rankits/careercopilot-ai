@@ -1,6 +1,7 @@
 import type { Logger } from 'pino';
 import type {
   RecommendationCategory,
+  RecommendationFeedbackAction,
   RecommendationFilterMode,
 } from '@/modules/recommendations/types/recommendations.types.js';
 
@@ -41,6 +42,7 @@ let careerCategoryDistribution: Record<RecommendationCategory, number> = {
   STRETCH_OPPORTUNITY: 0,
   RELATED_CAREER_PATH: 0,
 };
+let feedbackActionTotal: Partial<Record<RecommendationFeedbackAction, number>> = {};
 
 export const recommendationMetricsSnapshot = () => ({
   generateCount,
@@ -58,6 +60,7 @@ export const recommendationMetricsSnapshot = () => ({
   careerGoalApiTotal,
   savedSearchApiTotal,
   careerCategoryDistribution: { ...careerCategoryDistribution },
+  feedbackActionTotal: { ...feedbackActionTotal },
 });
 
 export const recordCertificationFilterExclusion = (): void => {
@@ -74,6 +77,10 @@ export const recordSavedSearchApiRequest = (): void => {
 
 export const recordCareerCategory = (category: RecommendationCategory): void => {
   careerCategoryDistribution[category] += 1;
+};
+
+export const recordFeedbackAction = (action: RecommendationFeedbackAction): void => {
+  feedbackActionTotal[action] = (feedbackActionTotal[action] ?? 0) + 1;
 };
 
 export const recordRecommendationGenerate = (
@@ -142,4 +149,5 @@ export const resetRecommendationMetricsForTests = (): void => {
     STRETCH_OPPORTUNITY: 0,
     RELATED_CAREER_PATH: 0,
   };
+  feedbackActionTotal = {};
 };

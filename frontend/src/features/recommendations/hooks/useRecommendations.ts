@@ -215,7 +215,8 @@ export function useRecommendationFeedback() {
       recommendationId: string;
       action: RecommendationFeedbackAction;
     }) => recommendationsService.submitFeedback(recommendationId, action),
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
+      if (variables.action === 'VIEWED' || variables.action === 'OPENED') return;
       await queryClient.invalidateQueries({ queryKey: ['recommendations', 'list'] });
     },
   });

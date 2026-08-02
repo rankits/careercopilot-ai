@@ -144,6 +144,8 @@ beforeEach(() => {
   deleteSavedSearchMock.mockReset();
   generateSavedSearchMock.mockReset();
   similarMock.mockReset();
+  feedbackMock.mockReset();
+  feedbackMock.mockResolvedValue(undefined);
   profileMock.mockReset();
   readinessMock.mockReset();
   listSavedMock.mockReset();
@@ -699,6 +701,51 @@ describe('ForYouPage', () => {
     renderPage(true);
     expect(await screen.findByText(/88% Match/i)).toBeInTheDocument();
     expect(screen.getByText(/ai recommended/i)).toBeInTheDocument();
+  });
+
+  it('silently sends VIEWED and OPENED feedback for recommendation cards', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue({
+      items: [
+        {
+          id: 'r-track',
+          runId: 'run-track',
+          rank: 1,
+          job: {
+            id: 'job-track',
+            title: 'Tracked Frontend Engineer',
+            company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
+            location: { formatted: 'Remote', remoteType: 'REMOTE' },
+            employmentType: 'FULL_TIME',
+            salary: { minimum: 10, maximum: 20, currency: 'INR' },
+            skills: ['React'],
+            publishedAt: '2026-07-30T00:00:00.000Z',
+            applyUrl: 'https://example.com/apply',
+          },
+          displayScore: 88,
+          scoreResult: scoreResult(0.88),
+          category: 'BEST_MATCH',
+          matchType: 'EXACT',
+          createdAt: '2026-07-30T00:00:00.000Z',
+        },
+      ],
+      page: 1,
+      limit: 20,
+      total: 1,
+    });
+
+    renderPage(true);
+
+    expect(await screen.findByText(/tracked frontend engineer/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(feedbackMock).toHaveBeenCalledWith('r-track', 'VIEWED'),
+    );
+    await user.click(
+      screen.getByRole('button', { name: /open tracked frontend engineer at acme/i }),
+    );
+    await waitFor(() =>
+      expect(feedbackMock).toHaveBeenCalledWith('r-track', 'OPENED'),
+    );
   });
 
   it('generates only on explicit click', async () => {

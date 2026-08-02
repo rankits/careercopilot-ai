@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 48 |
+| Implemented | 49 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,38 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FEEDBACK-001 - Track impressions views and detail opens for recommendations
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/services/recommendation-feedback.service.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/RECOMMENDATION_FEEDBACK_TELEMETRY_CONTRACT.md`
+- API changes: none; uses existing recommendation feedback endpoint with `VIEWED` and `OPENED`
+- Database changes: none; uses existing feedback upsert row
+- Tests added:
+  - Feedback service persists VIEWED/OPENED and increments `feedbackActionTotal`
+  - For You sends VIEWED on rendered recommendation cards and OPENED on card open
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts`
+  - `npm --prefix frontend run test -- src/pages/ForYouPage/ForYouPage.test.tsx src/features/recommendations/services/recommendations.service.test.ts --testTimeout=30000`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `git diff --check`
+- Results:
+  - Focused backend generation/API/core tests passed
+  - Focused frontend For You and recommendation service tests passed
+  - Backend and frontend typechecks passed
+  - Touched-file lint passed
+  - Whitespace check passed
+- Known limitations: no ML ranking reweighting from telemetry in this ticket.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-FE-006 - Build saved search recommendation UI
 

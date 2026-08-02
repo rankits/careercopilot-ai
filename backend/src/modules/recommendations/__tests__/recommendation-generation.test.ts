@@ -976,6 +976,7 @@ describe('RecommendationsService generation', () => {
   });
 
   it('lists, loads, and stores feedback for persisted recommendations', async () => {
+    resetRecommendationMetricsForTests();
     const unitOfWork = new InMemoryRecommendationUnitOfWork();
     const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
       contextService: new RecommendationContextService(
@@ -1024,6 +1025,18 @@ describe('RecommendationsService generation', () => {
       action: 'SAVED',
       note: 'Strong match',
     });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: created[0]!.id,
+      jobId: created[0]!.job.id,
+      action: 'VIEWED',
+    });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: created[0]!.id,
+      jobId: created[0]!.job.id,
+      action: 'OPENED',
+    });
 
     expect(page.total).toBe(1);
     expect(page.items[0]?.id).toBe(created[0]?.id);
@@ -1031,7 +1044,12 @@ describe('RecommendationsService generation', () => {
     expect(feedback.action).toBe('SAVED');
     await expect(
       feedbackService.findForRecommendation('user-1', created[0]!.id),
-    ).resolves.toMatchObject({ action: 'SAVED', note: 'Strong match' });
+    ).resolves.toMatchObject({ action: 'OPENED', note: null });
+    expect(recommendationMetricsSnapshot().feedbackActionTotal).toMatchObject({
+      SAVED: 1,
+      VIEWED: 1,
+      OPENED: 1,
+    });
   });
 
   it('drops stretch/related categories when includeStretchOpportunities is false', async () => {
