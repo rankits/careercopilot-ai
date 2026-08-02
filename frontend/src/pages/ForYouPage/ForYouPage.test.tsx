@@ -766,6 +766,28 @@ describe('ForYouPage', () => {
       'noopener,noreferrer',
     );
     await waitFor(() => expect(feedbackMock).toHaveBeenCalledWith('r-track', 'APPLIED'));
+
+    await user.click(
+      screen.getByRole('button', { name: /show more jobs like tracked frontend engineer/i }),
+    );
+    await waitFor(() =>
+      expect(feedbackMock).toHaveBeenCalledWith('r-track', 'MORE_LIKE_THIS'),
+    );
+    expect(await screen.findByText(/future matches will lean toward jobs like this/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: /more jobs like tracked frontend engineer selected/i }),
+    ).toBeDisabled();
+
+    await user.click(
+      screen.getByRole('button', { name: /show fewer jobs like tracked frontend engineer/i }),
+    );
+    await waitFor(() =>
+      expect(feedbackMock).toHaveBeenCalledWith('r-track', 'LESS_LIKE_THIS'),
+    );
+    expect(await screen.findByText(/future matches will avoid jobs like this/i)).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByText(/tracked frontend engineer/i)).not.toBeInTheDocument(),
+    );
     openApply.mockRestore();
   });
 

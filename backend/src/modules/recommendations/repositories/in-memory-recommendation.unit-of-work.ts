@@ -212,6 +212,12 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       [...this.feedback.values()]
         .filter((item) => item.userId === userId && item.jobId === jobId)
         .map((item) => ({ ...item })),
+    listByAction: async (userId, action, options) =>
+      [...this.feedback.values()]
+        .filter((item) => item.userId === userId && item.action === action)
+        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+        .slice(0, options?.limit)
+        .map((item) => ({ ...item })),
     listExcludedJobIds: async (userId) => {
       const ids = new Set<string>();
       for (const item of this.feedback.values()) {

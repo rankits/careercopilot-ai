@@ -97,6 +97,10 @@ export const recommendationFeedbackService = new RecommendationFeedbackService({
     ),
   listByJob: (userId, jobId) =>
     recommendationUnitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+  listByAction: (userId, action, options) =>
+    recommendationUnitOfWork.execute(({ feedback }) =>
+      feedback.listByAction(userId, action, options),
+    ),
   listExcludedJobIds: (userId) =>
     recommendationUnitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
 });

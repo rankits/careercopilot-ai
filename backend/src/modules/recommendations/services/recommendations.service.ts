@@ -28,6 +28,7 @@ import {
 import { withRecommendationTimeout } from '@/modules/recommendations/utils/recommendation-timeout.js';
 import { applyRecommendationFilters } from '@/modules/recommendations/utils/apply-recommendation-filters.js';
 import { resolveRecommendationFilterMode } from '@/modules/recommendations/utils/candidate-job-filters.js';
+import { applyMoreLikeThisAffinityBoost } from '@/modules/recommendations/utils/recommendation-feedback-affinity.js';
 import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
 import type {
   BuildRecommendationContextInput,
@@ -45,6 +46,8 @@ import type {
   CreateRecommendationInput,
   RecommendationFiltersDto,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
+
+const MORE_LIKE_THIS_AFFINITY_ANCHOR_LIMIT = 20;
 
 export interface RecommendationOrchestrationDependencies {
   contextService: RecommendationContextService;
@@ -177,8 +180,27 @@ export class RecommendationsService {
         await dependencies.unitOfWork.execute(({ runs }) =>
           runs.updateStatus(input.userId, run.id, 'RETRIEVING'),
         );
-        const excludedJobIds = await dependencies.unitOfWork.execute(({ feedback }) =>
-          feedback.listExcludedJobIds(input.userId),
+        const { excludedJobIds, affinityAnchorJobs } = await dependencies.unitOfWork.execute(
+          async ({ feedback, recommendations }) => {
+            const [feedbackExcludedJobIds, moreLikeThisFeedback] = await Promise.all([
+              feedback.listExcludedJobIds(input.userId),
+              feedback.listByAction(input.userId, 'MORE_LIKE_THIS', {
+                limit: MORE_LIKE_THIS_AFFINITY_ANCHOR_LIMIT,
+              }),
+            ]);
+            const anchors = await Promise.all(
+              moreLikeThisFeedback.map((item) =>
+                recommendations.findById(input.userId, item.recommendationId),
+              ),
+            );
+
+            return {
+              excludedJobIds: feedbackExcludedJobIds,
+              affinityAnchorJobs: anchors
+                .filter((item): item is JobRecommendationRecord => Boolean(item))
+                .map((item) => item.job),
+            };
+          },
         );
         const excludeJobIds = [...new Set([...(options.excludeJobIds ?? []), ...excludedJobIds])];
         const candidates = await dependencies.retrievalService.retrieve({
@@ -192,12 +214,13 @@ export class RecommendationsService {
           await runs.updateStatus(input.userId, run.id, 'SCORING');
         });
         const scored = await dependencies.scoringService.score(context, candidates);
+        const affinityBoosted = applyMoreLikeThisAffinityBoost(scored, affinityAnchorJobs);
         const eligible =
           options.filters?.includeStretchOpportunities === false
-            ? scored.filter(
+            ? affinityBoosted.filter(
                 (item) => item.category === 'BEST_MATCH' || item.category === 'GOOD_MATCH',
               )
-            : scored;
+            : affinityBoosted;
         if (eligible.length === 0) {
           throw new RecommendationError(
             'No eligible jobs were found for this recommendation context',

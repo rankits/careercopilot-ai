@@ -496,6 +496,15 @@ const createFeedbackRepository = (tx: Tx): RecommendationFeedbackRepository => (
     return rows.map(toFeedbackRecord);
   },
 
+  async listByAction(userId, action, options) {
+    const rows = await tx.recommendationFeedback.findMany({
+      where: { userId, action },
+      orderBy: { createdAt: 'desc' },
+      take: options?.limit,
+    });
+    return rows.map(toFeedbackRecord);
+  },
+
   async listExcludedJobIds(userId) {
     const rows = await tx.recommendationFeedback.findMany({
       where: {

@@ -144,6 +144,8 @@ export function ForYouPage() {
   const [savedSearchGeneratedOnce, setSavedSearchGeneratedOnce] = useState(false);
   const [savedSearchNotice, setSavedSearchNotice] = useState<string | null>(null);
   const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
+  const [moreLikeThisIds, setMoreLikeThisIds] = useState<Record<string, boolean>>({});
+  const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [resumeRecommendations, setResumeRecommendations] = useState<
     ReturnType<typeof mapRecommendationDtoToCard>[]
   >([]);
@@ -350,8 +352,23 @@ export function ForYouPage() {
   const trimmedSavedSearchQuery = savedSearchQueryText.trim();
   const savedSearchesList = savedSearches.data?.items ?? [];
   const selectedSavedSearch = savedSearchesList.find((item) => item.id === selectedSavedSearchId);
-  const visibleCareerRecommendations = careerRecommendations.filter(
-    (item) => !dismissedIds[item.id],
+  const visibleResumeRecommendations = useMemo(
+    () =>
+      resumeRecommendations.filter(
+        (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
+      ),
+    [dismissedIds, resumeRecommendations],
+  );
+  const visibleTextRecommendations = useMemo(
+    () =>
+      textRecommendations.filter(
+        (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
+      ),
+    [dismissedIds, textRecommendations],
+  );
+  const visibleCareerRecommendations = useMemo(
+    () => careerRecommendations.filter((item) => !dismissedIds[item.id]),
+    [careerRecommendations, dismissedIds],
   );
   const visibleSavedSearchRecommendations = savedSearchRecommendations.filter(
     (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
@@ -360,15 +377,15 @@ export function ForYouPage() {
   const viewedRecommendationIds = useMemo(
     () => [
       ...visibleCards.map((card) => card.recommendationId),
-      ...resumeRecommendations.map((card) => card.recommendationId),
-      ...textRecommendations.map((card) => card.recommendationId),
+      ...visibleResumeRecommendations.map((card) => card.recommendationId),
+      ...visibleTextRecommendations.map((card) => card.recommendationId),
       ...visibleCareerRecommendations.map((item) => item.id),
       ...visibleSavedSearchRecommendations.map((card) => card.recommendationId),
     ].filter((id): id is string => Boolean(id)),
     [
       visibleCards,
-      resumeRecommendations,
-      textRecommendations,
+      visibleResumeRecommendations,
+      visibleTextRecommendations,
       visibleCareerRecommendations,
       visibleSavedSearchRecommendations,
     ],
@@ -380,11 +397,35 @@ export function ForYouPage() {
     }
   }, [trackRecommendationFeedback, viewedRecommendationIds]);
 
-  const submitFeedback = (recommendationId: string, action: 'DISMISSED' | 'NOT_RELEVANT') => {
-    setDismissedIds((prev) => ({ ...prev, [recommendationId]: true }));
+  const submitFeedback = (
+    recommendationId: string,
+    action: Extract<
+      RecommendationFeedbackAction,
+      'DISMISSED' | 'NOT_RELEVANT' | 'MORE_LIKE_THIS' | 'LESS_LIKE_THIS'
+    >,
+  ) => {
+    const hidesCard = action !== 'MORE_LIKE_THIS';
+    if (hidesCard) {
+      setDismissedIds((prev) => ({ ...prev, [recommendationId]: true }));
+    } else {
+      setMoreLikeThisIds((prev) => ({ ...prev, [recommendationId]: true }));
+    }
     void feedback
       .mutateAsync({ recommendationId, action })
-      .catch(() => setDismissedIds((prev) => ({ ...prev, [recommendationId]: false })));
+      .then(() => {
+        setFeedbackNotice(
+          action === 'MORE_LIKE_THIS'
+            ? 'Future matches will lean toward jobs like this.'
+            : 'Future matches will avoid jobs like this.',
+        );
+      })
+      .catch(() => {
+        if (hidesCard) {
+          setDismissedIds((prev) => ({ ...prev, [recommendationId]: false }));
+        } else {
+          setMoreLikeThisIds((prev) => ({ ...prev, [recommendationId]: false }));
+        }
+      });
   };
 
   const selectMode = (mode: RecommendationMode) => {
@@ -533,6 +574,12 @@ export function ForYouPage() {
         })}
       </Box>
 
+      {feedbackNotice ? (
+        <Alert onClose={() => setFeedbackNotice(null)} role="status" severity="success">
+          {feedbackNotice}
+        </Alert>
+      ) : null}
+
       {activeMode === 'resume' ? (
         <Box
           aria-labelledby={getTabId('resume')}
@@ -623,22 +670,22 @@ export function ForYouPage() {
           {resumeGeneratedOnce &&
           !generateResume.isPending &&
           !generateResume.isError &&
-          resumeRecommendations.length === 0 ? (
+          visibleResumeRecommendations.length === 0 ? (
             <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
               No matching jobs were found for this resume.
             </Typography>
           ) : null}
 
-          {resumeRecommendations.length > 0 ? (
+          {visibleResumeRecommendations.length > 0 ? (
             <>
               <Typography sx={{ color: 'text.secondary' }}>
-                {resumeRecommendations.length} resume recommendation
-                {resumeRecommendations.length === 1 ? '' : 's'}
+                {visibleResumeRecommendations.length} resume recommendation
+                {visibleResumeRecommendations.length === 1 ? '' : 's'}
               </Typography>
               <VirtualizedJobList
                 ariaLabel="Resume recommendations"
                 getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
-                items={resumeRecommendations}
+                items={visibleResumeRecommendations}
                 renderItem={(job) => (
                   <JobCard
                     job={job}
@@ -654,6 +701,19 @@ export function ForYouPage() {
                         ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
                         : undefined
                     }
+                    onMoreLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
+                        : undefined
+                    }
+                    onLessLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
+                        : undefined
+                    }
+                    isMoreLikeThis={Boolean(
+                      job.recommendationId && moreLikeThisIds[job.recommendationId],
+                    )}
                     onOpen={(selected) => {
                       if (!selected.id) return;
                       trackRecommendationFeedback(job.recommendationId, 'OPENED');
@@ -851,6 +911,19 @@ export function ForYouPage() {
                         ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
                         : undefined
                     }
+                    onMoreLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
+                        : undefined
+                    }
+                    onLessLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
+                        : undefined
+                    }
+                    isMoreLikeThis={Boolean(
+                      job.recommendationId && moreLikeThisIds[job.recommendationId],
+                    )}
                     onOpen={(selected) => {
                       if (!selected.id) return;
                       trackRecommendationFeedback(job.recommendationId, 'OPENED');
@@ -914,7 +987,7 @@ export function ForYouPage() {
             </Button>
           </Box>
 
-          {!textGeneratedOnce && !generateText.isPending && textRecommendations.length === 0 ? (
+          {!textGeneratedOnce && !generateText.isPending && visibleTextRecommendations.length === 0 ? (
             <Typography role="status" sx={{ color: 'text.secondary', py: 2 }}>
               Paste a target role or career note to generate text-based matches.
             </Typography>
@@ -923,22 +996,22 @@ export function ForYouPage() {
           {textGeneratedOnce &&
           !generateText.isPending &&
           !generateText.isError &&
-          textRecommendations.length === 0 ? (
+          visibleTextRecommendations.length === 0 ? (
             <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
               No matching jobs were found for this text.
             </Typography>
           ) : null}
 
-          {textRecommendations.length > 0 ? (
+          {visibleTextRecommendations.length > 0 ? (
             <>
               <Typography sx={{ color: 'text.secondary' }}>
-                {textRecommendations.length} text recommendation
-                {textRecommendations.length === 1 ? '' : 's'}
+                {visibleTextRecommendations.length} text recommendation
+                {visibleTextRecommendations.length === 1 ? '' : 's'}
               </Typography>
               <VirtualizedJobList
                 ariaLabel="Text recommendations"
                 getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
-                items={textRecommendations}
+                items={visibleTextRecommendations}
                 renderItem={(job) => (
                   <JobCard
                     job={job}
@@ -954,6 +1027,19 @@ export function ForYouPage() {
                         ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
                         : undefined
                     }
+                    onMoreLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
+                        : undefined
+                    }
+                    onLessLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
+                        : undefined
+                    }
+                    isMoreLikeThis={Boolean(
+                      job.recommendationId && moreLikeThisIds[job.recommendationId],
+                    )}
                     onOpen={(selected) => {
                       if (!selected.id) return;
                       trackRecommendationFeedback(job.recommendationId, 'OPENED');
@@ -1141,6 +1227,19 @@ export function ForYouPage() {
                         ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
                         : undefined
                     }
+                    onMoreLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
+                        : undefined
+                    }
+                    onLessLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
+                        : undefined
+                    }
+                    isMoreLikeThis={Boolean(
+                      job.recommendationId && moreLikeThisIds[job.recommendationId],
+                    )}
                     onOpen={(selected) => {
                       if (!selected.id) return;
                       trackRecommendationFeedback(job.recommendationId, 'OPENED');
@@ -1391,6 +1490,19 @@ export function ForYouPage() {
                         ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
                         : undefined
                     }
+                    onMoreLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
+                        : undefined
+                    }
+                    onLessLikeThis={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
+                        : undefined
+                    }
+                    isMoreLikeThis={Boolean(
+                      job.recommendationId && moreLikeThisIds[job.recommendationId],
+                    )}
                     onOpen={(selected) => {
                       if (!selected.id) return;
                       trackRecommendationFeedback(job.recommendationId, 'OPENED');

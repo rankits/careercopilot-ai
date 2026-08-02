@@ -86,7 +86,10 @@ export interface JobCardProps {
   onOpen?: (job: JobCardData) => void;
   onSave?: (job: JobCardData) => void;
   onDismiss?: (job: JobCardData) => void;
+  onMoreLikeThis?: (job: JobCardData) => void;
+  onLessLikeThis?: (job: JobCardData) => void;
   onNotRelevant?: (job: JobCardData) => void;
+  isMoreLikeThis?: boolean;
 }
 
 const toDomId = (value: string) => value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-|-$/g, '');
@@ -98,10 +101,15 @@ export function JobCard({
   onOpen,
   onSave,
   onDismiss,
+  onMoreLikeThis,
+  onLessLikeThis,
   onNotRelevant,
+  isMoreLikeThis = false,
 }: JobCardProps) {
   const showMatch = typeof job.match === 'number';
-  const showWiredActions = Boolean(onApply || onSave || onDismiss || onNotRelevant);
+  const showWiredActions = Boolean(
+    onApply || onSave || onDismiss || onMoreLikeThis || onLessLikeThis || onNotRelevant,
+  );
   const canApply = Boolean(job.applyUrl);
   const [logoFailed, setLogoFailed] = useState(false);
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -231,6 +239,38 @@ export function JobCard({
               variant="text"
             >
               Not relevant
+            </Button>
+          ) : null}
+          {onMoreLikeThis ? (
+            <Button
+              aria-label={
+                isMoreLikeThis
+                  ? `More jobs like ${job.title} selected`
+                  : `Show more jobs like ${job.title}`
+              }
+              aria-pressed={isMoreLikeThis}
+              disabled={isMoreLikeThis}
+              onClick={(event) => {
+                event.stopPropagation();
+                onMoreLikeThis(job);
+              }}
+              size="small"
+              variant="text"
+            >
+              More like this
+            </Button>
+          ) : null}
+          {onLessLikeThis ? (
+            <Button
+              aria-label={`Show fewer jobs like ${job.title}`}
+              onClick={(event) => {
+                event.stopPropagation();
+                onLessLikeThis(job);
+              }}
+              size="small"
+              variant="text"
+            >
+              Less like this
             </Button>
           ) : null}
           {onSave ? (

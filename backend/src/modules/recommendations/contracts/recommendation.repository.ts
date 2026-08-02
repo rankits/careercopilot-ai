@@ -64,6 +64,11 @@ export interface RecommendationFeedbackRepository {
     recommendationId: string,
   ): Promise<RecommendationFeedbackRecord | null>;
   listByJob(userId: string, jobId: string): Promise<RecommendationFeedbackRecord[]>;
+  listByAction(
+    userId: string,
+    action: RecommendationFeedbackAction,
+    options?: { limit?: number },
+  ): Promise<RecommendationFeedbackRecord[]>;
   listExcludedJobIds(userId: string): Promise<string[]>;
 }
 
