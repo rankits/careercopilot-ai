@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 33 |
+| Implemented | 34 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,29 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-UI-003 - Remove residual hardcoded recommendation-like mocks on home
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/pages/HomePage/HomePage.tsx`
+  - `frontend/src/pages/HomePage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/HOME_NO_FAKE_RECOMMENDATION_METRICS_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Home no longer renders the hardcoded resume score card
+  - Home guards against fabricated 90%+ recommendation-like score text without live aggregates
+- Commands executed:
+  - `npm --prefix frontend run test -- src/pages/HomePage.test.tsx --testTimeout=30000`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused Home tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: dashboard metrics remain static non-recommendation counters until a later live dashboard analytics feature exists
+- Next ticket: `JRE-UI-004`
 
 ### 2026-08-02 - JRE-UI-002 - Polish readiness loading empty failure and stale states
 
