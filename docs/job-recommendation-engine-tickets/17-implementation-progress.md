@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 38 |
+| Implemented | 39 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,28 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-DATA-005 - Add searchable job profile content hash and change detection
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/job-embeddings/services/__tests__/job-embedding-indexer.service.test.ts`
+  - `docs/job-recommendation-engine-tickets/JOB_SEARCHABLE_PROFILE_HASH_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Worker skips when `jobVersion`, searchable-profile `contentHash`, and dimensions match
+  - Worker reindexes and upserts a new hash when the current job version has stale searchable content
+- Commands executed:
+  - `npm --prefix backend run test -- jobs/repositories/__tests__/job.repository.test.ts job-embeddings/utils/__tests__/job-embedding-content.test.ts job-embeddings/services/__tests__/job-embedding-indexer.service.test.ts job-embeddings/services/__tests__/job-embedding-backfill.service.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint src/modules/job-embeddings/services/__tests__/job-embedding-indexer.service.test.ts --max-warnings=0`
+- Results:
+  - Focused repository, content hash, indexer, and backfill tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: no separate normalized profile table was added because existing canonical `Job.version`, `job_embeddings.contentHash`, and worker/backfill checks cover material change detection.
+- Next ticket: `JRE-FILTER-002`
 
 ### 2026-08-02 - JRE-DATA-004 - Add SavedSearch model and SAVED_SEARCH context mapping
 

@@ -11,6 +11,7 @@ import type { JobEmbeddingRepository } from '@/modules/job-embeddings/contracts/
 import type { JobEmbeddingSourceRepository } from '@/modules/job-embeddings/contracts/job-embedding-source.repository.js';
 import { JOB_EMBEDDING_DIMENSIONS } from '@/modules/job-embeddings/constants/job-embedding.constants.js';
 import { JobEmbeddingIndexerService } from '@/modules/job-embeddings/services/job-embedding-indexer.service.js';
+import { createJobEmbeddingContentHash } from '@/modules/job-embeddings/utils/job-embedding-content.js';
 import type {
   JobEmbeddingRecord,
   JobEmbeddingSource,
@@ -181,5 +182,72 @@ describe('JobEmbeddingIndexerService', () => {
     await expect(service.process('event-id', event())).resolves.toBe('JOB_REMOVED');
     expect(embeddings.deletes).toEqual(['job-id']);
     expect(provider.calls).toHaveLength(0);
+  });
+
+  it('skips current embeddings with matching searchable profile hash', async () => {
+    const provider = new FakeProvider();
+    const embeddings = new FakeEmbeddingRepository();
+    const sources = new FakeSourceRepository();
+    const consumed = new FakeConsumedEvents();
+    if (!sources.source) throw new Error('source fixture missing');
+    embeddings.current = {
+      id: 'embedding-id',
+      jobId: 'job-id',
+      provider: 'groq',
+      model: 'configured-model',
+      dimensions: JOB_EMBEDDING_DIMENSIONS,
+      contentHash: createJobEmbeddingContentHash(sources.source),
+      jobVersion: 2,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const service = new JobEmbeddingIndexerService(
+      provider,
+      embeddings,
+      sources,
+      consumed,
+      'worker-a',
+    );
+
+    await expect(service.process('current-event', event())).resolves.toBe('ALREADY_CURRENT');
+    expect(provider.calls).toHaveLength(0);
+    expect(embeddings.upserts).toHaveLength(0);
+  });
+
+  it('reindexes when the searchable profile hash changes for the current job version', async () => {
+    const provider = new FakeProvider();
+    const embeddings = new FakeEmbeddingRepository();
+    const sources = new FakeSourceRepository();
+    const consumed = new FakeConsumedEvents();
+    if (!sources.source) throw new Error('source fixture missing');
+    embeddings.current = {
+      id: 'embedding-id',
+      jobId: 'job-id',
+      provider: 'groq',
+      model: 'configured-model',
+      dimensions: JOB_EMBEDDING_DIMENSIONS,
+      contentHash: createJobEmbeddingContentHash({
+        ...sources.source,
+        descriptionText: 'Old job description.',
+      }),
+      jobVersion: 2,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    const service = new JobEmbeddingIndexerService(
+      provider,
+      embeddings,
+      sources,
+      consumed,
+      'worker-a',
+    );
+
+    await expect(service.process('changed-event', event())).resolves.toBe('INDEXED');
+    expect(provider.calls).toHaveLength(1);
+    expect(embeddings.upserts[0]).toMatchObject({
+      jobId: 'job-id',
+      jobVersion: 2,
+      contentHash: createJobEmbeddingContentHash(sources.source),
+    });
   });
 });
