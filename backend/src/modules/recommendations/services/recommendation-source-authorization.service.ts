@@ -59,9 +59,9 @@ export class RecommendationSourceAuthorizationService {
             RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
           );
         }
-        const resumeFallback =
-          profile.sourceResumeId &&
-          (await this.profiles.findOwnedResumeProfileSource(userId, profile.sourceResumeId));
+        const resumeFallback = profile.sourceResumeId
+          ? await this.profiles.findOwnedResumeProfileSource(userId, profile.sourceResumeId)
+          : null;
         const payload = buildProfilePrimaryRecommendationPayload(profile, resumeFallback);
         if (!hasRecommendationSignal(payload)) {
           throw new RecommendationError(
@@ -107,13 +107,6 @@ export class RecommendationSourceAuthorizationService {
           authorizedSourcePayload: payload,
         };
       }
-      case 'CAREER_GOAL':
-      case 'SAVED_SEARCH':
-        throw new RecommendationError(
-          `${input.sourceType} authorization is not available until its domain models exist`,
-          501,
-          RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
-        );
       default: {
         const exhaustive: never = input.sourceType;
         throw new RecommendationError(

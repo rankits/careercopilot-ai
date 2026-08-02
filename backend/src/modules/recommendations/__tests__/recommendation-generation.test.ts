@@ -316,6 +316,8 @@ describe('RecommendationsService generation', () => {
         ),
       listByJob: (userId, jobId) =>
         unitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+      listExcludedJobIds: (userId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
     });
 
     const created = await service.createFromText('user-1', {

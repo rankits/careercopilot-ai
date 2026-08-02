@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 1 |
+| Implemented | 2 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,35 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-SEC-001 - Verify and harden recommendation authz and IDOR regression suite
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/__tests__/recommendations.api.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-idor.test.ts`
+  - `backend/src/modules/recommendations/__tests__/similar-jobs.service.test.ts`
+  - `backend/src/modules/recommendations/services/recommendation-source-authorization.service.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-recommendation.unit-of-work.ts`
+  - `docs/job-recommendation-engine-tickets/AUTHZ_IDOR_MATRIX.md`
+- API changes: none; auth/RBAC behavior preserved and regression-covered
+- Database changes: none
+- Tests added:
+  - Anonymous matrix for create, from-text, list, detail, feedback, similar, and status
+  - RBAC denial coverage for create/read/update permissions
+  - Repository IDOR coverage for list, run lookup, detail lookup, feedback writes, feedback reads, and exclusion lookup
+  - Similar-job user-context assertion
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-idor.test.ts recommendations/__tests__/similar-jobs.service.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `npm --prefix backend run typecheck`
+- Results:
+  - Focused security tests passed
+  - Touched-file lint passed
+  - Backend typecheck still fails only in `src/workers/job-embedding.worker.ts`
+- Known limitations: prompt-injection hardening and account deletion cleanup remain out of scope
+- Next ticket: `JRE-SCORE-001`
 
 ### 2026-08-02 - JRE-ARCH-001 - Freeze unified recommendation context contract
 

@@ -1,10 +1,10 @@
 import type {
   JobRecommendation,
-  Prisma,
   RecommendationFeedback,
   RecommendationRun,
   RecommendationScoreComponent,
 } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import { prisma } from '@/shared/config/db.conf.js';
 import type { IJobSearchRepository } from '@/modules/job-listing/contracts/IJobSearchRepository.js';
 import type { JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
