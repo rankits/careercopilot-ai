@@ -23,8 +23,10 @@ beforeEach(async () => {
 });
 
 describe('job recommendation HTTP gates', () => {
-  it('rejects anonymous list/detail/feedback/similar/status requests', async () => {
-    const [list, detail, feedback, similar, status] = await Promise.all([
+  it('rejects anonymous requests on every personalized recommendation route', async () => {
+    const [create, fromText, list, detail, feedback, similar, status] = await Promise.all([
+      request(app).post(API).send({ sourceType: 'PROFILE' }),
+      request(app).post(`${API}/from-text`).send({ targetText: 'Backend engineer' }),
       request(app).get(API),
       request(app).get(`${API}/${recommendationId}`),
       request(app).post(`${API}/${recommendationId}/feedback`).send({ action: 'SAVED' }),
@@ -32,6 +34,8 @@ describe('job recommendation HTTP gates', () => {
       request(app).get(`${API}/status`),
     ]);
 
+    expect(create.status).toBe(401);
+    expect(fromText.status).toBe(401);
     expect(list.status).toBe(401);
     expect(detail.status).toBe(401);
     expect(feedback.status).toBe(401);
@@ -57,6 +61,42 @@ describe('job recommendation HTTP gates', () => {
     );
 
     const response = await request(app).get(API).set(authHeader(token));
+
+    expect(response.status).toBe(403);
+  });
+
+  it('rejects a USER missing recommendations.create.own on generate routes', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-no-create@example.com' });
+    const token = accessTokenForUser(user);
+    fakeDb.setRolePermissions(
+      'USER',
+      ROLE_PERMISSION_MAP.USER.filter((key) => key !== RECOMMENDATIONS_PERMISSIONS.CREATE_OWN),
+    );
+
+    const [profileGenerate, textGenerate] = await Promise.all([
+      request(app).post(API).set(authHeader(token)).send({ sourceType: 'PROFILE' }),
+      request(app)
+        .post(`${API}/from-text`)
+        .set(authHeader(token))
+        .send({ targetText: 'Backend engineer' }),
+    ]);
+
+    expect(profileGenerate.status).toBe(403);
+    expect(textGenerate.status).toBe(403);
+  });
+
+  it('rejects a USER missing recommendations.update.own on feedback routes', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-no-update@example.com' });
+    const token = accessTokenForUser(user);
+    fakeDb.setRolePermissions(
+      'USER',
+      ROLE_PERMISSION_MAP.USER.filter((key) => key !== RECOMMENDATIONS_PERMISSIONS.UPDATE_OWN),
+    );
+
+    const response = await request(app)
+      .post(`${API}/${recommendationId}/feedback`)
+      .set(authHeader(token))
+      .send({ action: 'SAVED' });
 
     expect(response.status).toBe(403);
   });

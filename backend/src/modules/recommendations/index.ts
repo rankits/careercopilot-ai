@@ -81,6 +81,8 @@ export const recommendationFeedbackService = new RecommendationFeedbackService({
     ),
   listByJob: (userId, jobId) =>
     recommendationUnitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+  listExcludedJobIds: (userId) =>
+    recommendationUnitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
 });
 export const similarJobsService = new SimilarJobsService(
   recommendationSourceAuthorizationService,

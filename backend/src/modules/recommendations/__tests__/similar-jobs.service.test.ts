@@ -81,6 +81,7 @@ describe('SimilarJobsService', () => {
         limit: 5,
         excludeJobIds: [sourceJobId],
         context: expect.objectContaining({
+          userId: 'user-1',
           sourceType: 'JOB',
           targetTitles: ['Backend Engineer'],
         }),

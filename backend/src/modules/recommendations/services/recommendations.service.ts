@@ -172,7 +172,7 @@ export class RecommendationsService {
     } catch (error) {
       const failureCode =
         error instanceof RecommendationError
-          ? error.code
+          ? (error.code ?? RECOMMENDATION_ERROR_CODES.GENERATION_FAILED)
           : error instanceof Error && error.message === 'RECOMMENDATION_GENERATION_TIMEOUT'
             ? 'RECOMMENDATION_GENERATION_TIMEOUT'
             : RECOMMENDATION_ERROR_CODES.GENERATION_FAILED;
