@@ -18,6 +18,7 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import { recommendationsSwagger } from '@/modules/recommendations/swagger/recommendations.swagger.js';
 
 const API = '/api/v1/job-recommendations';
 const recommendationId = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
@@ -246,10 +247,43 @@ describe('job recommendation HTTP gates', () => {
 
     expect(response.status).toBe(200);
     expect(response.body.data).toMatchObject({
+      ready: expect.any(Boolean),
       lifecycleState: 'NOT_STARTED',
       canGenerateFromProfile: expect.any(Boolean),
       blockers: expect.any(Array),
-      retrieval: expect.objectContaining({ configured: true }),
+      stale: expect.any(Boolean),
+      lastGeneratedAt: null,
+      retrieval: expect.objectContaining({
+        backend: 'PGVECTOR',
+        configured: true,
+        embeddingCoverageRatio: expect.any(Number),
+      }),
+    });
+  });
+
+  it('documents readiness lifecycle status in swagger', () => {
+    const operation = recommendationsSwagger[`${API}/status`]?.get as
+      | {
+          security?: unknown;
+          responses?: Record<string, { content?: { 'application/json'?: { schema?: unknown } } }>;
+        }
+      | undefined;
+
+    expect(operation?.security).toEqual([{ BearerAuth: [] }]);
+    const schema = operation?.responses?.[200]?.content?.['application/json']?.schema as
+      | { properties?: { data?: { required?: string[]; properties?: Record<string, unknown> } } }
+      | undefined;
+    expect(schema?.properties?.data?.required).toEqual(
+      expect.arrayContaining([
+        'ready',
+        'lifecycleState',
+        'canGenerateFromProfile',
+        'blockers',
+        'retrieval',
+      ]),
+    );
+    expect(schema?.properties?.data?.properties?.lifecycleState).toMatchObject({
+      enum: expect.arrayContaining(['READY', 'STALE', 'FAILED_PROVIDER']),
     });
   });
 

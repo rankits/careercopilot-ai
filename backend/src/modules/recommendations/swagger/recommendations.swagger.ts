@@ -220,9 +220,17 @@ const recommendationArraySchema = {
 
 const readinessStatusSchema = {
   type: 'object',
+  required: [
+    'ready',
+    'lifecycleState',
+    'canGenerateFromProfile',
+    'blockers',
+    'retrieval',
+  ],
   properties: {
     ready: {
       type: 'boolean',
+      example: true,
       description: 'Backward-compatible readiness boolean for existing clients.',
     },
     lifecycleState: {
@@ -232,16 +240,40 @@ const readinessStatusSchema = {
       description:
         'Lifecycle state derived from the latest recommendation run and freshness checks.',
     },
-    canGenerateFromProfile: { type: 'boolean' },
-    blockers: { type: 'array', items: { type: 'string' } },
-    stale: { type: 'boolean' },
-    lastGeneratedAt: { type: 'string', format: 'date-time', nullable: true },
+    canGenerateFromProfile: { type: 'boolean', example: true },
+    blockers: {
+      type: 'array',
+      items: {
+        type: 'string',
+        enum: [
+          'PROFILE_INCOMPLETE',
+          'PROFILE_NOT_FOUND',
+          'PROFILE_UNAVAILABLE',
+          'RECOMMENDATIONS_STALE',
+          'EMBEDDING_COVERAGE_LOW',
+        ],
+      },
+      example: [],
+      description: 'Reasons generation is blocked or why existing results need refresh.',
+    },
+    stale: {
+      type: 'boolean',
+      example: false,
+      description: 'True when an existing recommendation set is older than profile/job signals.',
+    },
+    lastGeneratedAt: {
+      type: 'string',
+      format: 'date-time',
+      nullable: true,
+      example: '2026-08-02T00:00:00.000Z',
+    },
     retrieval: {
       type: 'object',
+      required: ['backend', 'configured'],
       properties: {
         backend: { type: 'string', example: 'PGVECTOR' },
-        configured: { type: 'boolean' },
-        embeddingCoverageRatio: { type: 'number', minimum: 0, maximum: 1 },
+        configured: { type: 'boolean', example: true },
+        embeddingCoverageRatio: { type: 'number', minimum: 0, maximum: 1, example: 0.96 },
       },
     },
   },

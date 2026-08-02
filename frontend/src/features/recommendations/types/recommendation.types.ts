@@ -75,21 +75,37 @@ export interface RecommendationListResult {
   total: number;
 }
 
+export type RecommendationLifecycleState =
+  | 'NOT_STARTED'
+  | 'QUEUED'
+  | 'PROCESSING'
+  | 'READY'
+  | 'STALE'
+  | 'FAILED'
+  | 'FAILED_TIMEOUT'
+  | 'FAILED_PROVIDER'
+  | 'FAILED_EMPTY';
+
+export type RecommendationReadinessBlocker =
+  | 'PROFILE_INCOMPLETE'
+  | 'PROFILE_NOT_FOUND'
+  | 'PROFILE_UNAVAILABLE'
+  | 'RECOMMENDATIONS_STALE'
+  | 'EMBEDDING_COVERAGE_LOW';
+
+export type RecommendationRetrievalBackend =
+  | 'DATABASE'
+  | 'PGVECTOR'
+  | 'ELASTICSEARCH'
+  | 'OPENSEARCH'
+  | 'EXTERNAL_VECTOR';
+
 export interface RecommendationRunDto {
   id: string;
   sourceType: string;
   sourceId: string | null;
   status: 'PENDING' | 'RETRIEVING' | 'SCORING' | 'COMPLETED' | 'FAILED';
-  lifecycleState:
-    | 'NOT_STARTED'
-    | 'QUEUED'
-    | 'PROCESSING'
-    | 'READY'
-    | 'STALE'
-    | 'FAILED'
-    | 'FAILED_TIMEOUT'
-    | 'FAILED_PROVIDER'
-    | 'FAILED_EMPTY';
+  lifecycleState: RecommendationLifecycleState;
   candidateCount: number;
   failureCode: string | null;
   createdAt: string;
@@ -102,22 +118,13 @@ export interface RecommendationRunDetailsResult extends RecommendationListResult
 
 export interface RecommendationReadinessStatus {
   ready: boolean;
-  lifecycleState?:
-    | 'NOT_STARTED'
-    | 'QUEUED'
-    | 'PROCESSING'
-    | 'READY'
-    | 'STALE'
-    | 'FAILED'
-    | 'FAILED_TIMEOUT'
-    | 'FAILED_PROVIDER'
-    | 'FAILED_EMPTY';
+  lifecycleState: RecommendationLifecycleState;
   canGenerateFromProfile: boolean;
-  blockers: string[];
+  blockers: RecommendationReadinessBlocker[];
   stale?: boolean;
   lastGeneratedAt?: string | null;
   retrieval: {
-    backend: string;
+    backend: RecommendationRetrievalBackend;
     configured: boolean;
     embeddingCoverageRatio?: number;
   };
