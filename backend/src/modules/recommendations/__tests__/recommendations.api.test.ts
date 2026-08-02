@@ -13,7 +13,7 @@ import {
   RECOMMENDATIONS_PERMISSIONS,
   ROLE_PERMISSION_MAP,
 } from '@/shared/rbac/permission.catalog.js';
-import { recommendationsService } from '@/modules/recommendations/index.js';
+import { recommendationsService, similarJobsService } from '@/modules/recommendations/index.js';
 import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
@@ -251,5 +251,56 @@ describe('job recommendation HTTP gates', () => {
       blockers: expect.any(Array),
       retrieval: expect.objectContaining({ configured: true }),
     });
+  });
+
+  it('returns similar jobs through the authenticated route without the source job', async () => {
+    const user = await seedVerifiedUser({ email: 'recs-similar@example.com' });
+    const token = accessTokenForUser(user);
+    const similarSpy = vi.spyOn(similarJobsService, 'findSimilar').mockResolvedValue([
+      {
+        job: {
+          id: '22222222-2222-2222-2222-222222222222',
+          title: 'Platform Engineer',
+          company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
+          location: { formatted: 'Remote', remoteType: 'REMOTE' },
+          employmentType: 'FULL_TIME',
+          salary: { minimum: null, maximum: null, currency: null },
+          skills: ['TypeScript'],
+          publishedAt: null,
+          applyUrl: null,
+        },
+        scoreResult: {
+          overallScore: 0.8,
+          components: {
+            requiredSkills: 0.8,
+            title: 0.8,
+            experience: 0.8,
+            responsibilities: 0.8,
+            preferredSkills: 0.8,
+            location: 0.8,
+            industry: 0.8,
+            salary: 0.8,
+            qualifications: 0.8,
+          },
+          matchedSkills: [],
+          aliasSkills: [],
+          relatedSkills: [],
+          transferableSkills: [],
+          missingSkills: [],
+          reasons: [],
+        },
+        category: 'GOOD_MATCH',
+        matchType: 'RELATED',
+      },
+    ]);
+
+    const response = await request(app)
+      .get(`${API}/similar/${jobId}?limit=5`)
+      .set(authHeader(token));
+
+    expect(response.status).toBe(200);
+    expect(similarSpy).toHaveBeenCalledWith(String(user.id), jobId, 5);
+    expect(response.body.data).toHaveLength(1);
+    expect(response.body.data[0].job.id).not.toBe(jobId);
   });
 });
