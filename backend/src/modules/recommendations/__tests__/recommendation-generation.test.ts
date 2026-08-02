@@ -14,6 +14,7 @@ import { RecommendationStrategyResolver } from '@/modules/recommendations/strate
 import {
   JobSourceStrategy,
   ProfileSourceStrategy,
+  ResumeSourceStrategy,
   TargetTextSourceStrategy,
 } from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 import { InMemoryRecommendationUnitOfWork } from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
@@ -187,6 +188,29 @@ describe('RecommendationSourceAuthorizationService', () => {
     });
   });
 
+  it('rejects missing or unowned RESUME sources', async () => {
+    const resumeId = '22222222-2222-2222-2222-222222222222';
+    const findOwnedResumeProfileSource = vi.fn().mockResolvedValue(null);
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource,
+      },
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', {
+        sourceType: 'RESUME',
+        sourceId: resumeId,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'RECOMMENDATION_SOURCE_NOT_FOUND',
+    });
+    expect(findOwnedResumeProfileSource).toHaveBeenCalledWith('user-1', resumeId);
+  });
+
   it('rejects empty candidate profiles', async () => {
     const service = new RecommendationSourceAuthorizationService(
       { findById: vi.fn() } as unknown as IJobSearchRepository,
@@ -281,6 +305,40 @@ describe('RecommendationsService generation', () => {
       records[1]?.scoreResult.overallScore ?? 0,
     );
     expect(records[0]?.runId).toBeTruthy();
+  });
+
+  it('does not create a run when RESUME ownership authorization fails', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ResumeSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn().mockResolvedValue(null),
+        },
+      ),
+    });
+
+    await expect(
+      service.createForSource('user-1', {
+        sourceType: 'RESUME',
+        sourceId: '22222222-2222-2222-2222-222222222222',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'RECOMMENDATION_SOURCE_NOT_FOUND',
+    });
+    await expect(
+      unitOfWork.execute(({ runs }) => runs.findLatestByUser('user-1')),
+    ).resolves.toBeNull();
   });
 
   it('lists, loads, and stores feedback for persisted recommendations', async () => {

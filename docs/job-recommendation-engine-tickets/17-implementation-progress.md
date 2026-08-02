@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 6 |
+| Implemented | 7 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,28 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-CONTEXT-001 - Harden source ownership checks for PROFILE RESUME JOB text
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `docs/job-recommendation-engine-tickets/SOURCE_OWNERSHIP_MATRIX.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - RESUME authorization rejects missing/unowned completed-parse source
+  - Service boundary proves failed RESUME ownership authorization creates no recommendation run
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-idor.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused authorization/security tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: CAREER_GOAL/SAVED_SEARCH ownership loaders remain out of scope until their models exist
+- Next ticket: `JRE-BE-001`
 
 ### 2026-08-02 - JRE-EMB-001 - Verify compatible embedding model and dimension contract
 
