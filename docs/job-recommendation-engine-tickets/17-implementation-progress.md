@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 51 |
+| Implemented | 52 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,38 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-LIFE-001 - Complete candidate-side invalidation on profile and resume changes
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/services/recommendation-lifecycle.service.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-lifecycle.service.test.ts`
+  - `backend/src/modules/resumes/controllers/resume.controller.ts`
+  - `backend/src/modules/resumes/services/resume.service.ts`
+  - `backend/src/modules/resumes/services/__tests__/resume.service.test.ts`
+  - `backend/src/test-utils/fake-prisma.ts`
+  - `docs/job-recommendation-engine-tickets/CANDIDATE_INVALIDATION_LIFECYCLE_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Lifecycle invalidation clears query embeddings, invalidates candidate embeddings, and increments `recommendationInvalidationTotal`
+  - Resume service invalidates recommendation state after profile update, profile confirm, and resume reparse queueing
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-lifecycle.service.test.ts resumes/services/__tests__/resume.service.test.ts recommendations/__tests__/recommendation-generation.test.ts resumes/__tests__/candidate-profile.api.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-lifecycle.service.test.ts resumes/services/__tests__/resume.service.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts resumes/__tests__/candidate-profile.api.test.ts resumes/__tests__/resume-access-control.api.test.ts recommendations/__tests__/candidate-embedding.service.test.ts`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `git diff --check`
+- Results:
+  - Focused lifecycle/resume/profile/readiness tests passed
+  - Backend typecheck passed after widening the injectable query-invalidation return type
+  - Expanded backend recommendation/resume/candidate-embedding tests passed
+  - Touched-file lint passed
+  - Whitespace check passed with existing CRLF conversion warnings
+- Known limitations: automatic regeneration remains out of scope.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-FEEDBACK-003 - Implement MORE_LIKE_THIS affinity and LESS_LIKE_THIS exclusion UX
 

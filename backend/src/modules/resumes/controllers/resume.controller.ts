@@ -4,7 +4,6 @@ import { resumeConfig } from '@/modules/resumes/config/resume.config.js';
 import { resumeService } from '@/modules/resumes/services/resume.service.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import { successResponse } from '@/shared/utils/response.js';
-import { invalidateUserRecommendationState } from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
 
 const requirePrincipalId = (req: Request): string => {
   if (!req.user) throw new AppError('Authentication required', 401);
@@ -161,7 +160,6 @@ export const updateMyCandidateProfileController = async (
   try {
     const userId = requirePrincipalId(req);
     const profile = await resumeService.updateCandidateProfile(userId, req.body);
-    await invalidateUserRecommendationState(userId);
     return res.status(200).json(successResponse('Candidate profile updated', profile));
   } catch (error) {
     return next(error);
