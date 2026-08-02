@@ -1,4 +1,5 @@
 import { render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
 import { JobCard, type JobCardData } from './JobCard';
@@ -76,5 +77,50 @@ describe('JobCard', () => {
   it('disables Apply when applyUrl is missing', () => {
     render(<JobCard job={{ ...baseJob, applyUrl: null }} onApply={vi.fn()} />);
     expect(screen.getByRole('button', { name: /apply now/i })).toBeDisabled();
+  });
+
+  it('expands recommendation details with reasons and skill gaps', async () => {
+    const user = userEvent.setup();
+    render(
+      <JobCard
+        job={{
+          ...baseJob,
+          recommendationId: 'rec-1',
+          isRecommended: true,
+          match: 91,
+          recommendationDetails: {
+            summary: '91% match with strong skill evidence',
+            bullets: [
+              {
+                label: 'Required skills',
+                score: 0.9,
+                message: 'Strong required-skill overlap',
+                evidence: ['React'],
+              },
+            ],
+            skillGap: {
+              exact: ['React'],
+              alias: [],
+              related: ['TypeScript'],
+              transferable: [],
+              missing: ['GraphQL'],
+            },
+          },
+        }}
+      />,
+    );
+
+    const detailsButton = screen.getByRole('button', { name: /details/i });
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
+
+    await user.click(detailsButton);
+
+    expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
+    expect(screen.getByText(/91% match with strong skill evidence/i)).toBeInTheDocument();
+    expect(screen.getByText(/required skills - 90%/i)).toBeInTheDocument();
+    expect(screen.getByText(/related/i)).toBeInTheDocument();
+    expect(screen.getByText(/typescript/i)).toBeInTheDocument();
+    expect(screen.getByText(/missing/i)).toBeInTheDocument();
+    expect(screen.getByText(/graphql/i)).toBeInTheDocument();
   });
 });

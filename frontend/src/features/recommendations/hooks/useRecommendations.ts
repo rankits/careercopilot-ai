@@ -53,9 +53,25 @@ export const mapRecommendationDtoToCard = (rec: RecommendationDto, index = 0) =>
     displayScore: rec.displayScore,
     overallScore: rec.scoreResult?.overallScore,
   });
+  const bullets =
+    rec.explanation?.bullets.map((bullet) => ({
+      label: bullet.label,
+      score: bullet.score,
+      message: bullet.message,
+      evidence: bullet.evidence,
+    })) ?? [];
+  const recommendationDetails =
+    rec.explanation || rec.skillGap
+      ? {
+          summary: rec.explanation?.summary,
+          bullets,
+          skillGap: rec.skillGap,
+        }
+      : undefined;
   return {
     ...card,
     recommendationId: rec.id,
+    recommendationDetails,
     match: match ?? undefined,
     matchSubtitle: formatRecommendationCardSubtitle(rec.category, rec.matchType),
     isRecommended: true,
