@@ -114,6 +114,8 @@ export class JobsService implements IJobContract {
         persistedMetadataOnly: persistence.summary.metadataOnly,
         persistedUnchanged: persistence.summary.unchanged,
         persistedFailed: persistence.summary.failed,
+        storageAgeSkipped: persistence.summary.storageAgeSkipped,
+        embeddingAgeSkipped: persistence.summary.embeddingAgeSkipped,
       },
       'Bulk ingestion summary generated',
     );
@@ -127,6 +129,8 @@ export class JobsService implements IJobContract {
       persistedMetadataOnly: persistence.summary.metadataOnly,
       persistedUnchanged: persistence.summary.unchanged,
       persistedFailed: persistence.summary.failed,
+      storageAgeSkipped: persistence.summary.storageAgeSkipped,
+      embeddingAgeSkipped: persistence.summary.embeddingAgeSkipped,
       providerBreakdown: result.providerStats,
     };
   }
