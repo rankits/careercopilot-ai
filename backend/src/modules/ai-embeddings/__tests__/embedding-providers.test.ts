@@ -64,6 +64,27 @@ describe('embedding providers', () => {
     expect(provider.model).toBe('env-selected-model');
   });
 
+  it('rejects configured dimensions that do not match the job embedding index', () => {
+    const config: EmbeddingConfig = {
+      provider: 'groq',
+      model: 'env-selected-model',
+      dimensions: JOB_EMBEDDING_DIMENSIONS + 1,
+      timeoutMs: 10_000,
+      batchSize: 16,
+      documentPrefix: 'doc: ',
+      queryPrefix: 'query: ',
+      google: { apiKey: undefined, baseUrl: 'https://google.example' },
+      groq: { apiKey: 'groq-key', baseUrl: 'https://groq.example' },
+    };
+
+    expect(() =>
+      createEmbeddingProvider(
+        config,
+        new RecordingHttpClient({ data: [{ index: 0, embedding: vector() }] }),
+      ),
+    ).toThrowError(expect.objectContaining({ code: 'EMBEDDING_PROVIDER_CONFIG_INVALID' }));
+  });
+
   it('requests configurable Gemini embeddings with retrieval purpose and dimensions', async () => {
     const http = new RecordingHttpClient({ embeddings: [{ values: vector() }] });
     const provider = new GoogleEmbeddingProvider(

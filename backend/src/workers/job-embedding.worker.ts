@@ -1,4 +1,5 @@
 import { createEmbeddingProvider } from '@/modules/ai-embeddings/index.js';
+import { logJobEmbeddingIndexOutcome } from '@/modules/job-embeddings/observability/job-embedding-coverage.js';
 import { PrismaJobEmbeddingRepository } from '@/modules/job-embeddings/repositories/prisma-job-embedding.repository.js';
 import { JobEmbeddingIndexerService } from '@/modules/job-embeddings/services/job-embedding-indexer.service.js';
 import { parseJobSemanticContentChangedEvent } from '@/modules/job-embeddings/validators/job-embedding-event.validator.js';
@@ -19,7 +20,9 @@ export const startJobEmbeddingWorker = async (): Promise<void> => {
     undefined,
     undefined,
     undefined,
-    ({ jobId, eventId, outcome }) => logJobEmbeddingIndexOutcome(logger, { jobId, eventId, outcome }),
+    undefined,
+    ({ jobId, eventId, outcome }) =>
+      logJobEmbeddingIndexOutcome(logger, { jobId, eventId, outcome }),
   );
   await messageBus.subscribe(
     MessageQueues.JOB_EMBEDDING_REQUESTS,
