@@ -208,6 +208,7 @@ describe('PgVectorCandidateRetrievalProvider', () => {
     expect(result.metadata).toMatchObject({
       retrievalCandidateCount: 3,
       embeddingCacheHit: false,
+      retrievalDedupRemoved: 0,
     });
     expect(result.metadata?.retrievalLatencyMs).toEqual(expect.any(Number));
   });
@@ -350,6 +351,41 @@ describe('PgVectorCandidateRetrievalProvider', () => {
     await provider.retrieve({ userId: 'user-1', context, backend: 'PGVECTOR', limit: 10 });
 
     expect(embeddingProvider.generateEmbedding).toHaveBeenCalledTimes(1);
+  });
+
+  it('collapses duplicate retrieved jobs and keeps the best vector-scored instance', async () => {
+    const searchNearest = vi.fn().mockResolvedValue([
+      { jobId: 'job-low', similarity: 0.7 },
+      { jobId: 'job-high', similarity: 0.95 },
+      { jobId: 'job-distinct', similarity: 0.8 },
+    ]);
+    const findByIds = vi.fn().mockResolvedValue([
+      job({ id: 'job-low' }),
+      job({ id: 'job-high' }),
+      job({ id: 'job-distinct', title: 'Frontend Engineer', skills: ['React'] }),
+    ]);
+    const provider = new PgVectorCandidateRetrievalProvider(
+      { searchNearest } as unknown as JobEmbeddingRepository,
+      { findByIds } as unknown as IJobSearchRepository,
+      () => ({
+        provider: 'google',
+        model: 'text-embedding-004',
+        dimensions: 768,
+        generateEmbedding: vi.fn().mockResolvedValue([0.1, 0.2]),
+        generateEmbeddings: vi.fn(),
+      }),
+    );
+
+    const result = await provider.retrieve({
+      userId: 'user-1',
+      context: baseContext(),
+      backend: 'PGVECTOR',
+      limit: 10,
+    });
+
+    expect(result.jobs.map((item) => item.id)).toEqual(['job-high', 'job-distinct']);
+    expect(result.retrievalScores).toEqual({ 'job-high': 0.95, 'job-distinct': 0.8 });
+    expect(result.metadata?.retrievalDedupRemoved).toBe(1);
   });
 });
 

@@ -17,6 +17,7 @@ import { resolveQueryEmbedding } from '@/modules/recommendations/cache/recommend
 import { buildRecommendationQueryText } from '@/modules/recommendations/utils/recommendation-query-text.js';
 import type { RetrievalBackend } from '@/modules/recommendations/types/recommendations.types.js';
 import type { CandidateEmbeddingService } from '@/modules/recommendations/services/candidate-embedding.service.js';
+import { deduplicateRetrievedJobs } from '@/modules/recommendations/utils/deduplicate-retrieved-jobs.js';
 
 export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalProvider {
   readonly supportedBackends: readonly RetrievalBackend[] = ['PGVECTOR'];
@@ -107,16 +108,18 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
     const jobs = await this.jobs.findByIds(nearest.map((result) => result.jobId));
     const scoreByJobId = new Map(nearest.map((result) => [result.jobId, result.similarity]));
 
-    const filtered = jobs
-      .filter((job) => passesCandidateJobFilters(job, request.context))
-      .slice(0, request.limit);
-
+    const filtered = jobs.filter((job) => passesCandidateJobFilters(job, request.context));
+    const deduplicated = deduplicateRetrievedJobs(
+      filtered,
+      Object.fromEntries(filtered.map((job) => [job.id, scoreByJobId.get(job.id) ?? 0])),
+    );
+    const limited = deduplicated.jobs.slice(0, request.limit);
     const retrievalScores = Object.fromEntries(
-      filtered.map((job) => [job.id, scoreByJobId.get(job.id) ?? 0]),
+      limited.map((job) => [job.id, deduplicated.retrievalScores[job.id] ?? 0]),
     );
 
     return {
-      jobs: filtered,
+      jobs: limited,
       backend: 'PGVECTOR',
       totalCandidates: nearest.length,
       retrievalScores,
@@ -124,6 +127,7 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
         embeddingCacheHit,
         candidateEmbeddingCacheHit: this.candidateEmbeddings ? embeddingCacheHit : undefined,
         retrievalCandidateCount: nearest.length,
+        retrievalDedupRemoved: deduplicated.removed,
         retrievalLatencyMs: Date.now() - startedAt,
       },
     };
