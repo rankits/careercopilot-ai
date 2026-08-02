@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 30 |
+| Implemented | 31 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,33 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FE-004 - Wire text-to-job recommendation UI
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/features/recommendations/services/recommendations.service.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.test.ts`
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/TEXT_RECOMMENDATIONS_FRONTEND_CONTRACT.md`
+- API changes: none; FE now consumes existing `POST /job-recommendations/from-text`
+- Database changes: none
+- Tests added:
+  - Service posts target text to `/from-text`
+  - Text/Career tab generates and renders `displayScore`
+  - Text/Career tab blocks over-20,000-character input
+- Commands executed:
+  - `npm --prefix frontend run test -- src/features/recommendations/services/recommendations.service.test.ts src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused recommendation service and For You tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: no extracted-context summary is shown because the current API response does not include one
+- Next ticket: `JRE-UI-001`
 
 ### 2026-08-02 - JRE-CONTEXT-002 - Implement TARGET_TEXT structured extraction into context
 

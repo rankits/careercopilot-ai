@@ -14,6 +14,7 @@ import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/use
 import {
   useGenerateRecommendations,
   useGenerateResumeRecommendations,
+  useGenerateTextRecommendations,
   mapRecommendationDtoToCard,
   useRecommendationFeedback,
   useRecommendationReadiness,
@@ -29,6 +30,7 @@ import { resumeService } from '@/features/resume/services/resume.service';
 import { Alert, Box, CircularProgress, MenuItem, TextField, Typography } from '@/lib/material';
 
 type RecommendationMode = 'profile' | 'resume' | 'similar' | 'text-career' | 'saved';
+const TARGET_TEXT_MAX_LENGTH = 20_000;
 
 const recommendationModes: Array<{
   id: RecommendationMode;
@@ -39,7 +41,7 @@ const recommendationModes: Array<{
   { id: 'profile', label: 'Profile', panelLabel: 'Profile recommendations', available: true },
   { id: 'resume', label: 'Resume', panelLabel: 'Resume recommendations', available: true },
   { id: 'similar', label: 'Similar', panelLabel: 'Similar jobs', available: true },
-  { id: 'text-career', label: 'Text / Career', panelLabel: 'Text and career matches', available: false },
+  { id: 'text-career', label: 'Text / Career', panelLabel: 'Text and career matches', available: true },
   { id: 'saved', label: 'Saved', panelLabel: 'Saved search recommendations', available: false },
 ];
 
@@ -68,9 +70,14 @@ export function ForYouPage() {
   const [page, setPage] = useState(1);
   const [generatedOnce, setGeneratedOnce] = useState(false);
   const [resumeGeneratedOnce, setResumeGeneratedOnce] = useState(false);
+  const [textGeneratedOnce, setTextGeneratedOnce] = useState(false);
   const [selectedResumeId, setSelectedResumeId] = useState('');
+  const [targetText, setTargetText] = useState('');
   const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
   const [resumeRecommendations, setResumeRecommendations] = useState<
+    ReturnType<typeof mapRecommendationDtoToCard>[]
+  >([]);
+  const [textRecommendations, setTextRecommendations] = useState<
     ReturnType<typeof mapRecommendationDtoToCard>[]
   >([]);
 
@@ -87,6 +94,7 @@ export function ForYouPage() {
   );
   const generate = useGenerateRecommendations();
   const generateResume = useGenerateResumeRecommendations();
+  const generateText = useGenerateTextRecommendations();
   const feedback = useRecommendationFeedback();
   const { saveJob, unsaveJob } = useSaveJob();
   const resumeProfile = useQuery({
@@ -100,6 +108,7 @@ export function ForYouPage() {
     enabled:
       activeMode === 'profile' ||
       activeMode === 'resume' ||
+      activeMode === 'text-career' ||
       (activeMode === 'similar' && Boolean(similarSourceJobId)),
   });
   const similarJobs = useSimilarJobs(similarSourceJobId, {
@@ -155,10 +164,18 @@ export function ForYouPage() {
       : generateResume.isError
         ? 'Unable to generate resume recommendations.'
         : null;
+  const generateTextError =
+    generateText.error instanceof Error
+      ? generateText.error.message
+      : generateText.isError
+        ? 'Unable to generate text recommendations.'
+        : null;
   const similarCards = similarJobs.data?.cards ?? [];
   const selectedResumeOption = resumeProfile.data?.sourceResumeId
     ? [{ id: resumeProfile.data.sourceResumeId, label: 'Confirmed resume' }]
     : [];
+  const trimmedTargetText = targetText.trim();
+  const targetTextTooLong = trimmedTargetText.length > TARGET_TEXT_MAX_LENGTH;
 
   const submitFeedback = (recommendationId: string, action: 'DISMISSED' | 'NOT_RELEVANT') => {
     setDismissedIds((prev) => ({ ...prev, [recommendationId]: true }));
@@ -514,7 +531,122 @@ export function ForYouPage() {
         </Box>
       ) : null}
 
-      {activeMode !== 'profile' && activeMode !== 'resume' && activeMode !== 'similar' ? (
+      {activeMode === 'text-career' ? (
+        <Box
+          aria-labelledby={getTabId('text-career')}
+          id={getPanelId('text-career')}
+          role="tabpanel"
+          sx={{ display: 'grid', gap: 3 }}
+        >
+          <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+            <TextField
+              error={targetTextTooLong}
+              fullWidth
+              helperText={
+                targetTextTooLong
+                  ? `Use ${TARGET_TEXT_MAX_LENGTH.toLocaleString()} characters or fewer.`
+                  : `${trimmedTargetText.length.toLocaleString()} / ${TARGET_TEXT_MAX_LENGTH.toLocaleString()}`
+              }
+              label="Target role text"
+              multiline
+              minRows={5}
+              onChange={(event) => setTargetText(event.target.value)}
+              placeholder="Paste a target role, career goal, or job-search brief."
+              value={targetText}
+            />
+
+            {generateTextError ? (
+              <Typography role="alert" sx={{ color: 'error.main' }}>
+                {generateTextError}
+              </Typography>
+            ) : null}
+
+            <Button
+              disabled={!trimmedTargetText || targetTextTooLong || generateText.isPending}
+              isLoading={generateText.isPending}
+              onClick={() => {
+                if (!trimmedTargetText || targetTextTooLong) return;
+                setTextGeneratedOnce(true);
+                void generateText
+                  .mutateAsync(trimmedTargetText)
+                  .then((items) => setTextRecommendations(items.map(mapRecommendationDtoToCard)))
+                  .catch(() => undefined);
+              }}
+              size="small"
+            >
+              Generate from text
+            </Button>
+          </Box>
+
+          {!textGeneratedOnce && !generateText.isPending && textRecommendations.length === 0 ? (
+            <Typography role="status" sx={{ color: 'text.secondary', py: 2 }}>
+              Paste a target role or career note to generate text-based matches.
+            </Typography>
+          ) : null}
+
+          {textGeneratedOnce &&
+          !generateText.isPending &&
+          !generateText.isError &&
+          textRecommendations.length === 0 ? (
+            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
+              No matching jobs were found for this text.
+            </Typography>
+          ) : null}
+
+          {textRecommendations.length > 0 ? (
+            <>
+              <Typography sx={{ color: 'text.secondary' }}>
+                {textRecommendations.length} text recommendation
+                {textRecommendations.length === 1 ? '' : 's'}
+              </Typography>
+              <VirtualizedJobList
+                ariaLabel="Text recommendations"
+                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
+                items={textRecommendations}
+                renderItem={(job) => (
+                  <JobCard
+                    job={job}
+                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                    onApply={(selected) => {
+                      openExternalApply(selected.applyUrl);
+                    }}
+                    onDismiss={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
+                        : undefined
+                    }
+                    onNotRelevant={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
+                        : undefined
+                    }
+                    onOpen={(selected) => {
+                      if (!selected.id) return;
+                      void navigate(jobDetailPath(selected.id), {
+                        state: { fromFeed: `${location.pathname}${location.search}` },
+                      });
+                    }}
+                    onSave={(selected) => {
+                      if (!selected.id) return;
+                      const jobId = selected.id;
+                      const wasSaved = savedIdSet.has(jobId);
+                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
+                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
+                      });
+                    }}
+                  />
+                )}
+              />
+            </>
+          ) : null}
+        </Box>
+      ) : null}
+
+      {activeMode !== 'profile' &&
+      activeMode !== 'resume' &&
+      activeMode !== 'similar' &&
+      activeMode !== 'text-career' ? (
         <Box
           aria-labelledby={getTabId(activeMode)}
           id={getPanelId(activeMode)}

@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { MemoryRouter } from 'react-router-dom';
@@ -16,6 +16,7 @@ const {
   listMock,
   generateMock,
   generateResumeMock,
+  generateTextMock,
   listSavedMock,
   profileMock,
   readinessMock,
@@ -25,6 +26,7 @@ const {
     listMock: vi.fn(),
     generateMock: vi.fn(),
     generateResumeMock: vi.fn(),
+    generateTextMock: vi.fn(),
     listSavedMock: vi.fn(),
     profileMock: vi.fn(),
     readinessMock: vi.fn(),
@@ -37,6 +39,7 @@ vi.mock('@/features/recommendations/services/recommendations.service', () => ({
     list: listMock,
     generateFromProfile: generateMock,
     generateFromResume: generateResumeMock,
+    generateFromText: generateTextMock,
     getReadiness: readinessMock,
     getSimilarJobs: similarMock,
     submitFeedback: feedbackMock,
@@ -119,6 +122,7 @@ beforeEach(() => {
   listMock.mockReset();
   generateMock.mockReset();
   generateResumeMock.mockReset();
+  generateTextMock.mockReset();
   similarMock.mockReset();
   profileMock.mockReset();
   listSavedMock.mockReset();
@@ -146,15 +150,65 @@ describe('ForYouPage', () => {
 
   it('navigates to unwired mode placeholders without loading profile recommendations', async () => {
     const user = userEvent.setup();
-    renderPage(true, '/for-you?mode=text-career');
+    renderPage(true, '/for-you?mode=saved');
 
-    expect(await screen.findByRole('tabpanel', { name: /text/i })).toHaveTextContent(
+    expect(await screen.findByRole('tabpanel', { name: /saved/i })).toHaveTextContent(
       /being wired/i,
     );
     expect(listMock).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('tab', { name: /^profile$/i }));
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
+  });
+
+  it('generates text recommendations from pasted target text', async () => {
+    const user = userEvent.setup();
+    generateTextMock.mockResolvedValue([
+      {
+        id: 'rec-text-1',
+        runId: 'run-text-1',
+        rank: 1,
+        job: {
+          id: 'text-job',
+          title: 'Text Matched Backend Engineer',
+          company: { slug: 'delta', name: 'Delta', logoUrl: null, verified: true },
+          location: { formatted: 'Remote', remoteType: 'REMOTE' },
+          employmentType: 'FULL_TIME',
+          salary: { minimum: 10, maximum: 20, currency: 'INR' },
+          skills: ['Node.js'],
+          publishedAt: '2026-07-30T00:00:00.000Z',
+          applyUrl: 'https://example.com/apply',
+        },
+        displayScore: 86,
+        scoreResult: scoreResult(0.86),
+        category: 'BEST_MATCH',
+        matchType: 'EXACT',
+        createdAt: '2026-07-30T00:00:00.000Z',
+      },
+    ]);
+
+    renderPage(true, '/for-you?mode=text-career');
+
+    const textarea = await screen.findByLabelText(/target role text/i);
+    await user.type(textarea, 'Remote Node.js backend role');
+    await user.click(screen.getByRole('button', { name: /generate from text/i }));
+
+    expect(await screen.findByText(/text matched backend engineer/i)).toBeInTheDocument();
+    expect(screen.getByText(/86% Match/i)).toBeInTheDocument();
+    expect(generateTextMock).toHaveBeenCalledWith('Remote Node.js backend role');
+    expect(listMock).not.toHaveBeenCalled();
+  });
+
+  it('blocks text generation when target text exceeds the API limit', async () => {
+    renderPage(true, '/for-you?mode=text-career');
+
+    fireEvent.change(await screen.findByLabelText(/target role text/i), {
+      target: { value: 'x'.repeat(20_001) },
+    });
+
+    expect(screen.getByText(/20,000 characters or fewer/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /generate from text/i })).toBeDisabled();
+    expect(generateTextMock).not.toHaveBeenCalled();
   });
 
   it('generates resume recommendations from a completed resume source', async () => {

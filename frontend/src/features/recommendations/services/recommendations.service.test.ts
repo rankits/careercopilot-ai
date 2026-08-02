@@ -69,6 +69,17 @@ describe('recommendationsService', () => {
     expect(items).toHaveLength(1);
   });
 
+  it('posts target text generate to the from-text route', async () => {
+    postMock.mockResolvedValue({ data: { data: [{ id: 'r1' }] } });
+    const items = await recommendationsService.generateFromText('remote Node.js backend');
+    expect(postMock).toHaveBeenCalledWith(
+      '/job-recommendations/from-text',
+      { targetText: 'remote Node.js backend' },
+      expect.objectContaining({ timeout: 60_000 }),
+    );
+    expect(items).toHaveLength(1);
+  });
+
   it('posts PROFILE refresh and unwraps run details', async () => {
     postMock.mockResolvedValue({
       data: {
