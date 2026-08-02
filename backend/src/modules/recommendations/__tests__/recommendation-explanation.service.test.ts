@@ -36,6 +36,7 @@ const recommendation = (overrides: Partial<JobRecommendationRecord> = {}): JobRe
       qualifications: 0.5,
     },
     matchedSkills: ['TypeScript', 'PostgreSQL'],
+    aliasSkills: [],
     relatedSkills: [],
     transferableSkills: [],
     missingSkills: ['Redis'],
@@ -107,6 +108,7 @@ describe('buildRecommendationExplanation', () => {
     const explanation = buildRecommendationExplanation(recommendation());
 
     expect(explanation.matchedSkills).toEqual(['TypeScript', 'PostgreSQL']);
+    expect(explanation.aliasSkills).toEqual([]);
     expect(explanation.relatedSkills).toEqual([]);
     expect(explanation.transferableSkills).toEqual([]);
     expect(explanation.missingSkills).toEqual(['Redis']);
@@ -116,14 +118,15 @@ describe('buildRecommendationExplanation', () => {
     const skillGap = buildRecommendationSkillGap({
       ...recommendation().scoreResult,
       matchedSkills: ['TypeScript', 'typescript'],
+      aliasSkills: ['Node.js'],
       relatedSkills: ['PostgreSQL'],
       transferableSkills: ['JavaScript'],
-      missingSkills: ['Redis', 'TypeScript', 'PostgreSQL', 'JavaScript'],
+      missingSkills: ['Redis', 'TypeScript', 'Node.js', 'PostgreSQL', 'JavaScript'],
     });
 
     expect(skillGap).toEqual({
       exact: ['TypeScript'],
-      alias: [],
+      alias: ['Node.js'],
       related: ['PostgreSQL'],
       transferable: ['JavaScript'],
       missing: ['Redis'],

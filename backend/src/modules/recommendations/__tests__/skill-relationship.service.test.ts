@@ -7,6 +7,7 @@ describe('SkillRelationshipService', () => {
 
     expect(overlap.ratio).toBe(0.65);
     expect(overlap.exact).toEqual([]);
+    expect(overlap.alias).toEqual([]);
     expect(overlap.related).toEqual(['Next.js']);
     expect(overlap.transferable).toEqual([]);
     expect(overlap.missing).toEqual([]);
@@ -20,16 +21,18 @@ describe('SkillRelationshipService', () => {
 
     expect(overlap.ratio).toBe(0.35);
     expect(overlap.exact).toEqual([]);
+    expect(overlap.alias).toEqual([]);
     expect(overlap.related).toEqual([]);
     expect(overlap.transferable).toEqual(['JavaScript']);
     expect(overlap.missing).toEqual([]);
   });
 
   it('prefers exact matches over graph relationships', () => {
-    const overlap = defaultSkillRelationshipService.overlap(['React'], ['ReactJS', 'Next.js']);
+    const overlap = defaultSkillRelationshipService.overlap(['React'], ['React', 'Next.js']);
 
     expect(overlap.ratio).toBe(1);
     expect(overlap.exact).toEqual(['React']);
+    expect(overlap.alias).toEqual([]);
     expect(overlap.related).toEqual([]);
     expect(overlap.missing).toEqual([]);
   });
