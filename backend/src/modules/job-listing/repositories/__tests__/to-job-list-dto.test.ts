@@ -23,6 +23,7 @@ describe('toJobListDto applyUrl', () => {
     lastSeen: new Date('2026-01-01T00:00:00.000Z'),
     lastChecked: new Date('2026-01-01T00:00:00.000Z'),
     postedAt: new Date('2026-01-02T00:00:00.000Z'),
+    effectivePostedAt: new Date('2026-01-02T00:00:00.000Z'),
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     canonicalHash: 'hash',
     company: {

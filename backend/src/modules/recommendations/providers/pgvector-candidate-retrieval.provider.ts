@@ -16,6 +16,7 @@ import {
   passesCandidateJobFilters,
   resolveRecommendationFilterMode,
 } from '@/modules/recommendations/utils/candidate-job-filters.js';
+import { jobAgePolicy } from '@/modules/jobs/policies/job-age-policy.js';
 import { resolveQueryEmbedding } from '@/modules/recommendations/cache/recommendation-query-embedding.cache.js';
 import { buildRecommendationQueryText } from '@/modules/recommendations/utils/recommendation-query-text.js';
 import type { RetrievalBackend } from '@/modules/recommendations/types/recommendations.types.js';
@@ -112,6 +113,7 @@ export class PgVectorCandidateRetrievalProvider implements CandidateRetrievalPro
           : undefined,
         maxSalary: isStrict ? request.context.salaryExpectation.maximum : undefined,
         currency: isStrict ? request.context.salaryExpectation.currency : undefined,
+        embeddingCutoff: jobAgePolicy.getEmbeddingCutoffDate() ?? undefined,
       },
     });
 
