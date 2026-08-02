@@ -117,7 +117,7 @@ const makeJob = (overrides: Partial<NormalizedJob> = {}): NormalizedJob => ({
     period: JobSalaryPeriod.YEARLY,
   },
   tags: ['TypeScript', 'Node.js'],
-  postedAt: '2026-07-31T00:00:00.000Z',
+  postedAt: new Date().toISOString(),
   canonicalHash: 'hash-1',
   ...overrides,
 });
@@ -247,15 +247,15 @@ describe('PrismaJobRepository semantic persistence', () => {
   it('skips storage-ineligible jobs and skips embedding events for embedding-ineligible jobs', async () => {
     const envSnapshot = {
       JOB_STORAGE_AGE_FILTER_ENABLED: env.JOB_STORAGE_AGE_FILTER_ENABLED,
-      JOB_STORAGE_MAX_AGE_MONTHS: env.JOB_STORAGE_MAX_AGE_MONTHS,
+      JOB_STORAGE_MAX_AGE_DAYS: env.JOB_STORAGE_MAX_AGE_DAYS,
       JOB_EMBEDDING_AGE_FILTER_ENABLED: env.JOB_EMBEDDING_AGE_FILTER_ENABLED,
-      JOB_EMBEDDING_MAX_AGE_MONTHS: env.JOB_EMBEDDING_MAX_AGE_MONTHS,
+      JOB_EMBEDDING_MAX_AGE_DAYS: env.JOB_EMBEDDING_MAX_AGE_DAYS,
     };
     Object.assign(env, {
       JOB_STORAGE_AGE_FILTER_ENABLED: true,
-      JOB_STORAGE_MAX_AGE_MONTHS: 3,
+      JOB_STORAGE_MAX_AGE_DAYS: 90,
       JOB_EMBEDDING_AGE_FILTER_ENABLED: true,
-      JOB_EMBEDDING_MAX_AGE_MONTHS: 2,
+      JOB_EMBEDDING_MAX_AGE_DAYS: 5,
     });
 
     try {
@@ -273,18 +273,18 @@ describe('PrismaJobRepository semantic persistence', () => {
       expect(storageSkipped.summary.storageAgeSkipped).toBe(1);
       expect(runner.transaction.outboxEvents).toHaveLength(0);
 
-      // Within storage (3mo) but outside embedding (2mo) relative to today (2026-08-03)
+      // Within storage (90d) but outside embedding (5d)
       const embeddingSkipped = await repository.upsertMany([
         makeJob({
           providerJobId: 'mid-age-job',
-          postedAt: '2026-05-15T00:00:00.000Z',
+          postedAt: '2026-07-01T00:00:00.000Z',
           canonicalHash: 'hash-mid',
         }),
       ]);
       expect(embeddingSkipped.outcomes[0]?.outcome).toBe('EMBEDDING_AGE_SKIPPED');
       expect(embeddingSkipped.summary.embeddingAgeSkipped).toBe(1);
       expect(runner.transaction.lastWrite?.effectivePostedAt).toEqual(
-        new Date('2026-05-15T00:00:00.000Z'),
+        new Date('2026-07-01T00:00:00.000Z'),
       );
       expect(runner.transaction.outboxEvents).toHaveLength(0);
     } finally {
