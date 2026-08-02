@@ -23,6 +23,7 @@ export interface CandidateRetrievalResult {
   retrievalScores?: Readonly<Record<string, number>>;
   metadata?: {
     embeddingCacheHit?: boolean;
+    candidateEmbeddingCacheHit?: boolean;
   };
 }
 

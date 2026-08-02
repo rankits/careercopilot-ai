@@ -3,14 +3,20 @@ import type { EmbeddingProvider } from '@/modules/ai-embeddings/contracts/embedd
 import type { IJobSearchRepository } from '@/modules/job-listing/contracts/IJobSearchRepository.js';
 import type { JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
 import type { JobEmbeddingRepository } from '@/modules/job-embeddings/contracts/job-embedding.repository.js';
+import type { CandidateEmbeddingRepository } from '@/modules/recommendations/contracts/candidate-embedding.repository.js';
 import { CandidateRetrievalRegistry } from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
 import { PgVectorCandidateRetrievalProvider } from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
+import { CandidateEmbeddingService } from '@/modules/recommendations/services/candidate-embedding.service.js';
 import { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 import {
   RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
   type RecommendationContext,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import { buildRecommendationQueryText } from '@/modules/recommendations/utils/recommendation-query-text.js';
+import type {
+  CandidateEmbeddingRecord,
+  UpsertCandidateEmbeddingInput,
+} from '@/modules/recommendations/types/candidate-embedding.types.js';
 
 const baseContext = (): RecommendationContext => ({
   userId: 'user-1',
@@ -50,6 +56,45 @@ const job = (overrides: Partial<JobListDto> & { id: string }): JobListDto => ({
   publishedAt: overrides.publishedAt ?? null,
   applyUrl: null,
 });
+
+class MemoryCandidateEmbeddingRepository implements CandidateEmbeddingRepository {
+  private record: CandidateEmbeddingRecord | null = null;
+
+  async findFresh(input: Parameters<CandidateEmbeddingRepository['findFresh']>[0]) {
+    return this.record &&
+      this.record.userId === input.userId &&
+      this.record.sourceType === input.sourceType &&
+      this.record.sourceId === (input.sourceId ?? null) &&
+      this.record.provider === input.provider &&
+      this.record.model === input.model &&
+      this.record.contentHash === input.contentHash
+      ? this.record
+      : null;
+  }
+
+  async upsert(input: UpsertCandidateEmbeddingInput) {
+    this.record = {
+      id: 'candidate-embedding-id',
+      userId: input.userId,
+      sourceType: input.sourceType,
+      sourceId: input.sourceId ?? null,
+      sourceKey: input.sourceId ?? input.sourceType,
+      provider: input.provider,
+      model: input.model,
+      dimensions: input.embedding.length,
+      contentHash: input.contentHash,
+      embedding: [...input.embedding],
+      createdAt: new Date('2026-08-02T00:00:00.000Z'),
+      updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+    };
+    return this.record;
+  }
+
+  async deleteForUserSource() {
+    this.record = null;
+    return 1;
+  }
+}
 
 describe('buildRecommendationQueryText', () => {
   it('formats populated context fields into a retrieval document', () => {
@@ -234,6 +279,38 @@ describe('PgVectorCandidateRetrievalProvider', () => {
       statusCode: 503,
       code: 'EMBEDDING_PROVIDER_UNAVAILABLE',
     });
+  });
+
+  it('reuses durable candidate embeddings for unchanged source content', async () => {
+    const searchNearest = vi.fn().mockResolvedValue([{ jobId: 'job-1', similarity: 0.91 }]);
+    const findByIds = vi.fn().mockResolvedValue([job({ id: 'job-1' })]);
+    const embeddingProvider: EmbeddingProvider = {
+      provider: 'google',
+      model: 'text-embedding-004',
+      dimensions: 768,
+      generateEmbedding: vi.fn().mockResolvedValue(Array.from({ length: 768 }, () => 0.01)),
+      generateEmbeddings: vi.fn(),
+    };
+    const provider = new PgVectorCandidateRetrievalProvider(
+      { searchNearest } as unknown as JobEmbeddingRepository,
+      { findByIds } as unknown as IJobSearchRepository,
+      () => embeddingProvider,
+      new CandidateEmbeddingService(new MemoryCandidateEmbeddingRepository()),
+    );
+    const request = {
+      userId: 'user-1',
+      context: baseContext(),
+      backend: 'PGVECTOR' as const,
+      limit: 10,
+    };
+
+    const first = await provider.retrieve(request);
+    const second = await provider.retrieve(request);
+
+    expect(embeddingProvider.generateEmbedding).toHaveBeenCalledTimes(1);
+    expect(first.metadata?.candidateEmbeddingCacheHit).toBe(false);
+    expect(second.metadata?.candidateEmbeddingCacheHit).toBe(true);
+    expect(searchNearest).toHaveBeenCalledTimes(2);
   });
 });
 
