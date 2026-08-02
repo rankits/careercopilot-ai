@@ -103,9 +103,9 @@ export const authRepository = {
     });
   },
 
-  async markProfileCreated(publicId: string): Promise<void> {
+  async markProfileCreated(userId: number): Promise<void> {
     await prisma.user.update({
-      where: { publicId },
+      where: { id: userId },
       data: { isProfileCreated: true },
     });
   },

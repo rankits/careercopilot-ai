@@ -157,4 +157,21 @@ export const applicationsService = {
   async deleteTask(applicationId: string, taskId: string): Promise<void> {
     await httpClient.delete(`/applications/${applicationId}/tasks/${taskId}`);
   },
+
+  async saveJob(jobId: string): Promise<ApplicationDto> {
+    const { data } = await httpClient.post<BackendSuccessResponse<ApplicationDto>>(
+      '/applications/saved-jobs',
+      { jobId },
+    );
+    return unwrapData(data, 'Missing saved application data in API response');
+  },
+
+  async unsaveJob(jobId: string): Promise<void> {
+    await httpClient.delete(`/applications/saved-jobs/${jobId}`);
+  },
+
+  async listSavedJobs(): Promise<ApplicationDto[]> {
+    const result = await applicationsService.list({ status: 'SAVED', limit: 100 });
+    return result.items;
+  },
 };

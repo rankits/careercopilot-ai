@@ -143,18 +143,18 @@ export const register = async (
 
   const user = existing
     ? await authRepository.updatePendingUser(existing.id, {
-      ...credentials,
-      firstName: input.firstName,
-      lastName: input.lastName,
-      phone: input.phone,
-    })
+        ...credentials,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.phone,
+      })
     : await authRepository.createPendingUser({
-      email: input.email,
-      ...credentials,
-      firstName: input.firstName,
-      lastName: input.lastName,
-      phone: input.phone,
-    });
+        email: input.email,
+        ...credentials,
+        firstName: input.firstName,
+        lastName: input.lastName,
+        phone: input.phone,
+      });
 
   const verifiedUser = await authRepository.markEmailVerified(user.id);
   await AuditService.write({ userId: user.id, action: AuditAction.Register, context });

@@ -7,10 +7,21 @@ import {
   JobListDto,
   JobDetailDto,
 } from '@/modules/job-listing/types/job-listing.types.js';
+import { buildJobSearchWhere } from '@/modules/job-listing/utils/build-job-search-where.js';
+import { formatJobLocation } from '@/modules/job-listing/utils/format-job-location.js';
+import { pickPrimaryApplyUrl } from '@/modules/job-listing/utils/safe-apply-url.js';
 
-type JobWithCompany = Prisma.JobGetPayload<{ include: { company: true } }>;
+const jobListInclude = {
+  company: true,
+  sources: {
+    orderBy: { priority: 'desc' as const },
+    select: { applyUrl: true },
+  },
+};
 
-const toJobListDto = (job: JobWithCompany): JobListDto => ({
+type JobWithCompanyAndSources = Prisma.JobGetPayload<{ include: typeof jobListInclude }>;
+
+export const toJobListDto = (job: JobWithCompanyAndSources): JobListDto => ({
   id: job.id,
   title: job.title,
   company: {
@@ -20,7 +31,7 @@ const toJobListDto = (job: JobWithCompany): JobListDto => ({
     verified: job.company.verified,
   },
   location: {
-    formatted: 'Unknown',
+    formatted: formatJobLocation(job.remoteType, job.providerMetadata),
     remoteType: job.remoteType,
   },
   employmentType: job.employmentType,
@@ -31,7 +42,7 @@ const toJobListDto = (job: JobWithCompany): JobListDto => ({
   },
   skills: (job.skills as string[]) || [],
   publishedAt: job.postedAt ? job.postedAt.toISOString() : null,
-  expiresAt: null,
+  applyUrl: pickPrimaryApplyUrl(job.sources),
 });
 
 export class PrismaJobSearchRepository implements IJobSearchRepository {
@@ -41,35 +52,16 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
     const limit = Math.max(1, Math.min(100, pagination.limit));
     const skip = (page - 1) * limit;
 
-    const where: Prisma.JobWhereInput = {
-      status: 'ACTIVE',
-      ...(filters.query && {
-        OR: [
-          { title: { contains: filters.query, mode: 'insensitive' } },
-          { descriptionText: { contains: filters.query, mode: 'insensitive' } },
-          { company: { name: { contains: filters.query, mode: 'insensitive' } } },
-        ],
-      }),
-      ...(filters.companySlug && { companySlug: filters.companySlug }),
-      ...(filters.remoteTypes?.length && {
-        remoteType: { in: filters.remoteTypes },
-      }),
-      ...(filters.employmentTypes?.length && {
-        employmentType: { in: filters.employmentTypes },
-      }),
-      ...(filters.minSalary !== undefined && {
-        salaryMax: { gte: filters.minSalary },
-      }),
-      ...(filters.maxSalary !== undefined && {
-        salaryMin: { lte: filters.maxSalary },
-      }),
-    };
+    const where = buildJobSearchWhere(filters);
 
     let orderBy: Prisma.JobOrderByWithRelationInput = { createdAt: 'desc' };
     if (sortBy === 'salaryHighToLow') {
       orderBy = { salaryMax: 'desc' };
     } else if (sortBy === 'salaryLowToHigh') {
       orderBy = { salaryMin: 'asc' };
+    } else {
+      // newest (default) — relevance removed in JOB-API-002
+      orderBy = { createdAt: 'desc' };
     }
 
     const [totalItems, jobs] = await Promise.all([
@@ -79,7 +71,7 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
         orderBy,
         skip,
         take: limit,
-        include: { company: true },
+        include: jobListInclude,
       }),
     ]);
 
@@ -99,9 +91,10 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
   }
 
   async findById(id: string): Promise<JobDetailDto | null> {
-    const job = await prisma.job.findUnique({
-      where: { id },
-      include: { company: true },
+    // Public detail is ACTIVE-only; inactive/expired/removed jobs must not leak.
+    const job = await prisma.job.findFirst({
+      where: { id, status: 'ACTIVE' },
+      include: jobListInclude,
     });
 
     if (!job) return null;
@@ -127,7 +120,7 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
         id: { in: uniqueIds },
         status: 'ACTIVE',
       },
-      include: { company: true },
+      include: jobListInclude,
     });
     const byId = new Map(jobs.map((job) => [job.id, toJobListDto(job)]));
     return ids.map((id) => byId.get(id)).filter((job): job is JobListDto => job !== undefined);

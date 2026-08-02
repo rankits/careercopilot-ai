@@ -256,11 +256,31 @@ class PrismaJobTransactionRunner implements JobTransactionRunner {
 class UnsupportedProviderError extends Error {}
 class InvalidJobInputError extends Error {}
 
+const PROVIDER_NAME_TO_TYPE: Record<string, ProviderType> = {
+  greenhouse: 'GREENHOUSE',
+  lever: 'LEVER',
+  arbeitnow: 'ARBEITNOW',
+  public_feed: 'ARBEITNOW',
+  remotive: 'REMOTIVE',
+  jobicy: 'JOBICY',
+  himalayas: 'HIMALAYAS',
+  remoteok: 'REMOTEOK',
+  remotejobs_org: 'REMOTEJOBS_ORG',
+  'remotejobs.org': 'REMOTEJOBS_ORG',
+  ashby: 'ASHBY',
+  recruitee: 'RECRUITEE',
+  personio: 'PERSONIO',
+};
+
 const mapProvider = (providerName: string): ProviderType => {
   const normalized = providerName.trim().toLowerCase();
-  if (normalized === 'greenhouse') return ProviderType.GREENHOUSE;
-  if (normalized === 'arbeitnow') return ProviderType.ARBEITNOW;
-  throw new UnsupportedProviderError(`Unsupported job provider: ${providerName}`);
+  const provider = PROVIDER_NAME_TO_TYPE[normalized];
+  // Use string literals (not ProviderType.X) so a stale generated client
+  // missing new enum keys cannot silently pass `undefined` into Prisma.
+  if (!provider) {
+    throw new UnsupportedProviderError(`Unsupported job provider: ${providerName}`);
+  }
+  return provider;
 };
 
 const priorityForTier = (tier: ProviderTier): number => {
@@ -355,6 +375,9 @@ export class PrismaJobRepository implements IJobRepository {
       latestProvider: job.providerName,
       latestProviderTier: job.providerTier,
       semanticCompanyName: job.companyName,
+      ...(job.location.raw ? { locationRaw: job.location.raw } : {}),
+      ...(job.location.city ? { locationCity: job.location.city } : {}),
+      ...(job.location.country ? { locationCountry: job.location.country } : {}),
     };
     const skills: Prisma.InputJsonArray = [...job.tags];
     const tags: Prisma.InputJsonArray = [...job.tags];

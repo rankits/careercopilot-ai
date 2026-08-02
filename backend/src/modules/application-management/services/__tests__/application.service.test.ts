@@ -124,7 +124,9 @@ describe('ApplicationManagementService', () => {
     });
 
     const callArgs = vi.mocked(mockRepo.create).mock.calls[0][0];
-    expect(callArgs.appliedAt?.toISOString()).toBe('2025-05-08T00:00:00.000Z');
+    expect(new Date(callArgs.appliedAt as string | Date).toISOString()).toBe(
+      '2025-05-08T00:00:00.000Z',
+    );
     expect(callArgs.currentStatus).toBe(ApplicationStatus.SAVED);
   });
 
@@ -173,5 +175,41 @@ describe('ApplicationManagementService', () => {
 
     const updateCall = vi.mocked(mockRepo.update).mock.calls[0][2];
     expect(updateCall.closedAt).toBeInstanceOf(Date);
+  });
+
+  it('savePlatformJob returns existing application without creating a duplicate', async () => {
+    const saved = { ...mockAppDto, jobId: '11111111-1111-4111-8111-111111111111' };
+    vi.mocked(mockRepo.findByJobId).mockResolvedValue(saved);
+
+    const result = await service.savePlatformJob('user-1', saved.jobId!);
+
+    expect(result).toEqual({ application: saved, created: false });
+    expect(mockRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('unsavePlatformJob deletes SAVED applications and no-ops when missing', async () => {
+    await service.unsavePlatformJob('user-1', '11111111-1111-4111-8111-111111111111');
+    expect(mockRepo.delete).not.toHaveBeenCalled();
+
+    vi.mocked(mockRepo.findByJobId).mockResolvedValue({
+      ...mockAppDto,
+      id: 'app-1',
+      jobId: '11111111-1111-4111-8111-111111111111',
+      currentStatus: ApplicationStatus.SAVED,
+    });
+    await service.unsavePlatformJob('user-1', '11111111-1111-4111-8111-111111111111');
+    expect(mockRepo.delete).toHaveBeenCalledWith('user-1', 'app-1');
+  });
+
+  it('unsavePlatformJob rejects non-SAVED applications', async () => {
+    vi.mocked(mockRepo.findByJobId).mockResolvedValue({
+      ...mockAppDto,
+      jobId: '11111111-1111-4111-8111-111111111111',
+      currentStatus: ApplicationStatus.APPLIED,
+    });
+
+    await expect(
+      service.unsavePlatformJob('user-1', '11111111-1111-4111-8111-111111111111'),
+    ).rejects.toMatchObject({ statusCode: 409, code: 'APPLICATION_NOT_SAVED' });
   });
 });

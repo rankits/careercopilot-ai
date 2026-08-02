@@ -59,7 +59,7 @@ export const OtpService = {
       );
     }
 
-    const code = isProduction ? generateCode(securityConfig.otp.length) : "000000";
+    const code = isProduction ? generateCode(securityConfig.otp.length) : '000000';
     const expiresAt = new Date(Date.now() + securityConfig.otp.ttlSeconds * 1000);
 
     await prisma.otp.upsert({

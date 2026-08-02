@@ -5,6 +5,7 @@ export * from './DashboardMetricCard';
 export * from './DashboardJobRow';
 export * from './FilterDropdown';
 export * from './JobCard';
+export * from './JobFeedStatus';
 export * from './JobFilterBar';
 export * from './ResumeScoreCard';
 export * from './VirtualizedJobList';
