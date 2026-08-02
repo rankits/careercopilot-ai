@@ -15,6 +15,7 @@ import { ForYouPage } from './ForYouPage';
 const {
   listMock,
   generateMock,
+  refreshMock,
   generateResumeMock,
   generateTextMock,
   listSavedMock,
@@ -25,6 +26,7 @@ const {
 } = vi.hoisted(() => ({
     listMock: vi.fn(),
     generateMock: vi.fn(),
+    refreshMock: vi.fn(),
     generateResumeMock: vi.fn(),
     generateTextMock: vi.fn(),
     listSavedMock: vi.fn(),
@@ -38,6 +40,7 @@ vi.mock('@/features/recommendations/services/recommendations.service', () => ({
   recommendationsService: {
     list: listMock,
     generateFromProfile: generateMock,
+    refreshFromProfile: refreshMock,
     generateFromResume: generateResumeMock,
     generateFromText: generateTextMock,
     getReadiness: readinessMock,
@@ -50,16 +53,8 @@ vi.mock('@/features/recommendations/hooks/useRecommendations', async (importOrig
   const actual = await importOriginal<typeof RecommendationHooks>();
   return {
     ...actual,
-    useRecommendationReadiness: () => ({
-      data: {
-        canGenerateFromProfile: true,
-        blockers: [],
-        stale: false,
-        ready: true,
-        retrieval: { configured: true, backend: 'PGVECTOR' },
-      },
-      isError: false,
-    }),
+    useRecommendationReadiness: () =>
+      readinessMock() as ReturnType<typeof actual.useRecommendationReadiness>,
   };
 });
 
@@ -121,12 +116,44 @@ function renderPage(isProfileComplete = true, route = '/for-you') {
 beforeEach(() => {
   listMock.mockReset();
   generateMock.mockReset();
+  refreshMock.mockReset();
   generateResumeMock.mockReset();
   generateTextMock.mockReset();
   similarMock.mockReset();
   profileMock.mockReset();
+  readinessMock.mockReset();
   listSavedMock.mockReset();
   listSavedMock.mockResolvedValue([]);
+  refreshMock.mockResolvedValue({
+    items: [],
+    page: 1,
+    limit: 20,
+    total: 0,
+    run: {
+      id: 'run-refresh',
+      sourceType: 'PROFILE',
+      sourceId: null,
+      status: 'COMPLETED',
+      lifecycleState: 'READY',
+      candidateCount: 0,
+      failureCode: null,
+      createdAt: '2026-07-30T00:00:00.000Z',
+      completedAt: '2026-07-30T00:00:00.000Z',
+    },
+  });
+  readinessMock.mockReturnValue({
+    data: {
+      canGenerateFromProfile: true,
+      blockers: [],
+      stale: false,
+      ready: true,
+      lifecycleState: 'READY',
+      retrieval: { configured: true, backend: 'PGVECTOR' },
+    },
+    isError: false,
+    isFetching: false,
+    refetch: vi.fn(),
+  });
 });
 
 describe('ForYouPage', () => {
@@ -333,6 +360,19 @@ describe('ForYouPage', () => {
 
   it('shows generate CTA when profile complete and list empty without calling generate on load', async () => {
     listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
+    readinessMock.mockReturnValue({
+      data: {
+        canGenerateFromProfile: true,
+        blockers: [],
+        stale: false,
+        ready: false,
+        lifecycleState: 'NOT_STARTED',
+        retrieval: { configured: true, backend: 'PGVECTOR' },
+      },
+      isError: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    });
     renderPage(true);
 
     expect(await screen.findByRole('button', { name: /generate recommendations/i })).toBeInTheDocument();
@@ -340,6 +380,108 @@ describe('ForYouPage', () => {
       { page: 1, limit: 20, latestOnly: true },
       expect.anything(),
     );
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+
+  it('shows stale lifecycle banner with refresh CTA', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue({
+      items: [
+        {
+          id: 'r-stale',
+          runId: 'run-stale',
+          rank: 1,
+          job: {
+            id: 'job-stale',
+            title: 'Stale Match Engineer',
+            company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
+            location: { formatted: 'Remote', remoteType: 'REMOTE' },
+            employmentType: 'FULL_TIME',
+            salary: { minimum: 10, maximum: 20, currency: 'INR' },
+            skills: ['React'],
+            publishedAt: '2026-07-30T00:00:00.000Z',
+            applyUrl: 'https://example.com/apply',
+          },
+          displayScore: 88,
+          scoreResult: scoreResult(0.88),
+          category: 'BEST_MATCH',
+          matchType: 'EXACT',
+          createdAt: '2026-07-30T00:00:00.000Z',
+        },
+      ],
+      page: 1,
+      limit: 20,
+      total: 1,
+    });
+    readinessMock.mockReturnValue({
+      data: {
+        canGenerateFromProfile: true,
+        blockers: ['RECOMMENDATIONS_STALE'],
+        stale: true,
+        ready: true,
+        lifecycleState: 'STALE',
+        retrieval: { configured: true, backend: 'PGVECTOR' },
+      },
+      isError: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    });
+
+    renderPage(true);
+
+    expect(await screen.findByText(/profile changed since these matches were generated/i)).toBeInTheDocument();
+    await user.click(screen.getAllByRole('button', { name: /refresh matches/i })[0]);
+    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
+    expect(generateMock).not.toHaveBeenCalled();
+  });
+
+  it('shows processing lifecycle with status refresh', async () => {
+    const refetchReadiness = vi.fn();
+    listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
+    readinessMock.mockReturnValue({
+      data: {
+        canGenerateFromProfile: true,
+        blockers: [],
+        stale: false,
+        ready: false,
+        lifecycleState: 'PROCESSING',
+        retrieval: { configured: true, backend: 'PGVECTOR' },
+      },
+      isError: false,
+      isFetching: false,
+      refetch: refetchReadiness,
+    });
+
+    renderPage(true);
+
+    expect(await screen.findByText(/recommendation run is processing/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /generate recommendations/i })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /refresh status/i }));
+    expect(refetchReadiness).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows failed lifecycle code with retry CTA', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
+    readinessMock.mockReturnValue({
+      data: {
+        canGenerateFromProfile: true,
+        blockers: [],
+        stale: false,
+        ready: false,
+        lifecycleState: 'FAILED_PROVIDER',
+        retrieval: { configured: true, backend: 'PGVECTOR' },
+      },
+      isError: false,
+      isFetching: false,
+      refetch: vi.fn(),
+    });
+
+    renderPage(true);
+
+    expect(await screen.findByText(/Code: FAILED_PROVIDER/i)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /retry recommendations/i }));
+    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
     expect(generateMock).not.toHaveBeenCalled();
   });
 

@@ -16,6 +16,7 @@ import {
   useGenerateResumeRecommendations,
   useGenerateTextRecommendations,
   mapRecommendationDtoToCard,
+  useRefreshProfileRecommendations,
   useRecommendationFeedback,
   useRecommendationReadiness,
   useRecommendations,
@@ -26,10 +27,12 @@ import { useAppSelector } from '@/hooks/redux';
 import { jobDetailPath, ROUTES } from '@/constants/routes';
 import { applicationsService } from '@/features/applications/services/applications.service';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
+import type { RecommendationReadinessStatus } from '@/features/recommendations/types/recommendation.types';
 import { resumeService } from '@/features/resume/services/resume.service';
 import { Alert, Box, CircularProgress, MenuItem, TextField, Typography } from '@/lib/material';
 
 type RecommendationMode = 'profile' | 'resume' | 'similar' | 'text-career' | 'saved';
+type RecommendationLifecycleState = NonNullable<RecommendationReadinessStatus['lifecycleState']>;
 const TARGET_TEXT_MAX_LENGTH = 20_000;
 
 const recommendationModes: Array<{
@@ -57,6 +60,28 @@ const getModeFromSearchParams = (searchParams: URLSearchParams): RecommendationM
 
 const getTabId = (mode: RecommendationMode) => `for-you-${mode}-tab`;
 const getPanelId = (mode: RecommendationMode) => `for-you-${mode}-panel`;
+
+const failedLifecycleStates = new Set<RecommendationLifecycleState>([
+  'FAILED',
+  'FAILED_TIMEOUT',
+  'FAILED_PROVIDER',
+  'FAILED_EMPTY',
+]);
+
+const getFailureCopy = (state: RecommendationLifecycleState | undefined) => {
+  switch (state) {
+    case 'FAILED_TIMEOUT':
+      return 'Recommendation generation timed out. Retry when you are ready.';
+    case 'FAILED_PROVIDER':
+      return 'The recommendation provider was unavailable. Retry to start a fresh run.';
+    case 'FAILED_EMPTY':
+      return 'No eligible jobs were found for the last run. Retry after updating your profile or job filters.';
+    case 'FAILED':
+      return 'The last recommendation run failed. Retry to start a fresh run.';
+    default:
+      return 'Unable to prepare recommendations. Retry to start a fresh run.';
+  }
+};
 
 export function ForYouPage() {
   const navigate = useNavigate();
@@ -93,6 +118,7 @@ export function ForYouPage() {
     },
   );
   const generate = useGenerateRecommendations();
+  const refreshProfile = useRefreshProfileRecommendations();
   const generateResume = useGenerateResumeRecommendations();
   const generateText = useGenerateTextRecommendations();
   const feedback = useRecommendationFeedback();
@@ -151,12 +177,22 @@ export function ForYouPage() {
   const isStale = Boolean(readiness.data?.stale);
   const isEmbeddingPending = readiness.data?.blockers.includes('EMBEDDING_COVERAGE_LOW');
   const canGenerate = readiness.data?.canGenerateFromProfile ?? isProfileComplete;
+  const lifecycleState = readiness.data?.lifecycleState;
+  const isProcessingLifecycle = lifecycleState === 'QUEUED' || lifecycleState === 'PROCESSING';
+  const isFailedLifecycle = lifecycleState ? failedLifecycleStates.has(lifecycleState) : false;
+  const profileActionPending = generate.isPending || refreshProfile.isPending;
 
   const generateError =
     generate.error instanceof Error
       ? generate.error.message
       : generate.isError
         ? 'Unable to generate recommendations.'
+        : null;
+  const refreshError =
+    refreshProfile.error instanceof Error
+      ? refreshProfile.error.message
+      : refreshProfile.isError
+        ? 'Unable to refresh recommendations.'
         : null;
   const generateResumeError =
     generateResume.error instanceof Error
@@ -673,7 +709,60 @@ export function ForYouPage() {
 
       {activeMode === 'profile' && isStale ? (
         <Alert role="status" severity="info">
-          Your profile changed since these matches were generated. Refresh to update recommendations.
+          <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+            <Typography component="span">
+              Your profile changed since these matches were generated. Refresh to update
+              recommendations.
+            </Typography>
+            <Button
+              disabled={profileActionPending}
+              isLoading={refreshProfile.isPending}
+              onClick={() => {
+                void refreshProfile.mutateAsync().catch(() => undefined);
+              }}
+              size="small"
+              variant="outline"
+            >
+              Refresh matches
+            </Button>
+          </Box>
+        </Alert>
+      ) : null}
+
+      {activeMode === 'profile' && isProcessingLifecycle ? (
+        <Alert role="status" severity="info">
+          <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
+            <CircularProgress aria-label="Recommendations processing" size={20} />
+            <Typography component="span">
+              {lifecycleState === 'QUEUED'
+                ? 'Your recommendation run is queued.'
+                : 'Your recommendation run is processing.'}
+            </Typography>
+            <Button disabled={readiness.isFetching} onClick={() => void readiness.refetch()} size="small">
+              Refresh status
+            </Button>
+          </Box>
+        </Alert>
+      ) : null}
+
+      {activeMode === 'profile' && isFailedLifecycle ? (
+        <Alert role="alert" severity="error">
+          <Box sx={{ display: 'grid', gap: 1, justifyItems: 'start' }}>
+            <Typography component="span">
+              {getFailureCopy(lifecycleState)}
+              {lifecycleState ? ` Code: ${lifecycleState}.` : ''}
+            </Typography>
+            <Button
+              disabled={!canGenerate || profileActionPending}
+              isLoading={refreshProfile.isPending}
+              onClick={() => {
+                void refreshProfile.mutateAsync().catch(() => undefined);
+              }}
+              size="small"
+            >
+              Retry recommendations
+            </Button>
+          </Box>
         </Alert>
       ) : null}
 
@@ -745,7 +834,12 @@ export function ForYouPage() {
             </Box>
           ) : null}
 
-          {isEmpty && canGenerate && !showProfileIncomplete && !showProfileMissing ? (
+          {isEmpty &&
+          canGenerate &&
+          !showProfileIncomplete &&
+          !showProfileMissing &&
+          !isProcessingLifecycle &&
+          !isFailedLifecycle ? (
             <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
               <Typography role="status">
                 {generatedOnce
@@ -758,7 +852,7 @@ export function ForYouPage() {
                 </Typography>
               ) : null}
               <Button
-                disabled={generate.isPending}
+                disabled={profileActionPending}
                 isLoading={generate.isPending}
                 onClick={() => {
                   setGeneratedOnce(true);
@@ -781,11 +875,11 @@ export function ForYouPage() {
                   {data?.total ?? 0} recommendation{(data?.total ?? 0) === 1 ? '' : 's'}
                 </Typography>
                 <Button
-                  disabled={generate.isPending}
-                  isLoading={generate.isPending}
+                  disabled={profileActionPending || isProcessingLifecycle}
+                  isLoading={refreshProfile.isPending}
                   onClick={() => {
                     setGeneratedOnce(true);
-                    void generate.mutateAsync().catch(() => undefined);
+                    void refreshProfile.mutateAsync().catch(() => undefined);
                   }}
                   size="small"
                   variant="outline"
@@ -793,9 +887,9 @@ export function ForYouPage() {
                   Refresh matches
                 </Button>
               </Box>
-              {generateError ? (
+              {generateError || refreshError ? (
                 <Typography role="alert" sx={{ color: 'error.main' }}>
-                  {generateError}
+                  {generateError ?? refreshError}
                 </Typography>
               ) : null}
               <VirtualizedJobList
