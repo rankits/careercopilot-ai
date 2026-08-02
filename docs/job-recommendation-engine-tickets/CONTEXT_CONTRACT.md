@@ -29,6 +29,7 @@ filtering, scoring, ranking, and explanation stages consume one
 Array fields default to `[]`, object fields such as `salaryExpectation` default to
 an empty object, and source-specific fields default to `undefined`. PROFILE
 generation must remain valid when no full-engine fields are present.
+`filterMode` defaults to `STRICT` when omitted.
 
 `contextSchemaVersion` is stamped onto built contexts at normalization time.
 Downstream consumers should treat missing source-specific fields as absent

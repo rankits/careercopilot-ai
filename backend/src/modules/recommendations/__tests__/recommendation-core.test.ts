@@ -218,9 +218,20 @@ describe('recommendation module invariants', () => {
     expect(
       targetTextBodySchema.safeParse({
         targetText: 'Engineer',
-        filters: { minimumSalary: 5, maximumSalary: 10, workModes: ['REMOTE'] },
+        filters: {
+          minimumSalary: 5,
+          maximumSalary: 10,
+          workModes: ['REMOTE'],
+          filterMode: 'FLEXIBLE',
+        },
       }).success,
     ).toBe(true);
+    expect(
+      targetTextBodySchema.safeParse({
+        targetText: 'Engineer',
+        filters: { filterMode: 'RELAXED' },
+      }).success,
+    ).toBe(false);
   });
 
   it('enforces sourceType and sourceId rules', () => {

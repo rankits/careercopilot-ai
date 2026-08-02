@@ -213,6 +213,57 @@ describe('PgVectorCandidateRetrievalProvider', () => {
     expect(result.metadata?.retrievalLatencyMs).toEqual(expect.any(Number));
   });
 
+  it('omits negotiable vector constraints and keeps near-misses in flexible mode', async () => {
+    const searchNearest = vi.fn().mockResolvedValue([
+      { jobId: 'job-stretch', similarity: 0.89 },
+      { jobId: 'job-blocked', similarity: 0.88 },
+    ]);
+    const findByIds = vi.fn().mockResolvedValue([
+      job({
+        id: 'job-stretch',
+        location: { formatted: 'Paris, France', remoteType: 'ONSITE' },
+        salary: { minimum: 70000, maximum: 90000, currency: 'USD' },
+      }),
+      job({
+        id: 'job-blocked',
+        company: { slug: 'acme-corp', name: 'Acme Corp', logoUrl: null, verified: false },
+      }),
+    ]);
+    const provider = new PgVectorCandidateRetrievalProvider(
+      { searchNearest } as unknown as JobEmbeddingRepository,
+      { findByIds } as unknown as IJobSearchRepository,
+      () => ({
+        provider: 'google',
+        model: 'text-embedding-004',
+        dimensions: 768,
+        generateEmbedding: vi.fn().mockResolvedValue([0.1, 0.2]),
+        generateEmbeddings: vi.fn(),
+      }),
+    );
+
+    const result = await provider.retrieve({
+      userId: 'user-1',
+      context: { ...baseContext(), filterMode: 'FLEXIBLE' },
+      backend: 'PGVECTOR',
+      limit: 10,
+      excludeJobIds: ['job-x'],
+    });
+
+    expect(searchNearest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        filters: {
+          excludeJobIds: ['job-x'],
+          remoteTypes: undefined,
+          minSalary: undefined,
+          maxSalary: undefined,
+          currency: undefined,
+        },
+      }),
+    );
+    expect(result.jobs.map((item) => item.id)).toEqual(['job-stretch']);
+    expect(result.retrievalScores).toEqual({ 'job-stretch': 0.89 });
+  });
+
   it('omits vector hits that are not hydrated by the active job repository', async () => {
     const searchNearest = vi.fn().mockResolvedValue([
       { jobId: 'active-job', similarity: 0.91 },

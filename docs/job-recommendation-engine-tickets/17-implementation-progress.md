@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 39 |
+| Implemented | 40 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,44 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FILTER-002 - Implement strict versus flexible filter mode
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/types/recommendations.types.ts`
+  - `backend/src/modules/recommendations/validations/recommendation.schema.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/utils/apply-recommendation-filters.ts`
+  - `backend/src/modules/recommendations/utils/candidate-job-filters.ts`
+  - `backend/src/modules/recommendations/providers/pgvector-candidate-retrieval.provider.ts`
+  - `backend/src/modules/recommendations/services/recommendation-scoring.service.ts`
+  - `backend/src/modules/recommendations/services/recommendations.service.ts`
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/__tests__/candidate-job-filters.test.ts`
+  - `backend/src/modules/recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-core.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `docs/job-recommendation-engine-tickets/CONTEXT_CONTRACT.md`
+  - `docs/job-recommendation-engine-tickets/FILTER_MODE_CONTRACT.md`
+- API changes: `filters.filterMode` accepts `STRICT` or `FLEXIBLE`; omitted mode defaults to `STRICT`
+- Database changes: none
+- Tests added:
+  - Strict mode excludes jobs below the requested salary floor
+  - Flexible mode retains negotiable location/remote/salary near-misses while preserving company exclusions
+  - Flexible PGVECTOR retrieval omits negotiable metadata constraints
+  - Flexible generation propagates mode and caps preference violators at `STRETCH_OPPORTUNITY`
+  - Schema rejects invalid filter modes
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/candidate-job-filters.test.ts recommendations/__tests__/pgvector-candidate-retrieval.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused recommendation tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: frontend mode toggle remains out of scope for this backend ticket.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-DATA-005 - Add searchable job profile content hash and change detection
 

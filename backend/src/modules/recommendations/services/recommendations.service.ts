@@ -22,10 +22,12 @@ import {
 import { recordRecommendationGenerate } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import { withRecommendationTimeout } from '@/modules/recommendations/utils/recommendation-timeout.js';
 import { applyRecommendationFilters } from '@/modules/recommendations/utils/apply-recommendation-filters.js';
+import { resolveRecommendationFilterMode } from '@/modules/recommendations/utils/candidate-job-filters.js';
 import type {
   BuildRecommendationContextInput,
   JobRecommendationRecord,
   RecommendationPage,
+  RecommendationFilterMode,
   RecommendationReadinessStatus,
   RecommendationRunPage,
   RetrievalBackend,
@@ -144,6 +146,7 @@ export class RecommendationsService {
     },
   ): Promise<JobRecommendationRecord[]> {
     const startedAt = Date.now();
+    let filterMode: RecommendationFilterMode | undefined = options.filters?.filterMode;
     const dependencies = this.requireOrchestration();
     this.assertPrincipalUserId(input.userId, options.expectedUserId);
     const run = await dependencies.unitOfWork.execute(({ runs }) =>
@@ -158,6 +161,7 @@ export class RecommendationsService {
       return await withRecommendationTimeout(async () => {
         const built = await dependencies.contextService.build(input);
         const context = applyRecommendationFilters(built, options.filters);
+        filterMode = resolveRecommendationFilterMode(context);
         await dependencies.unitOfWork.execute(({ runs }) =>
           runs.updateStatus(input.userId, run.id, 'RETRIEVING'),
         );
@@ -201,6 +205,7 @@ export class RecommendationsService {
           candidateCount: eligible.length,
           durationMs: Date.now() - startedAt,
           success: true,
+          filterMode,
           empty: false,
         });
         this.logger.info(
@@ -225,6 +230,7 @@ export class RecommendationsService {
         candidateCount: 0,
         durationMs: Date.now() - startedAt,
         success: false,
+        filterMode,
         failureCode,
         empty: failureCode === RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
       });

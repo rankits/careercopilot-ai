@@ -1,5 +1,8 @@
 import { z } from 'zod';
-import { RECOMMENDATION_FEEDBACK_ACTION_VALUES } from '@/modules/recommendations/types/recommendations.types.js';
+import {
+  RECOMMENDATION_FEEDBACK_ACTION_VALUES,
+  RECOMMENDATION_FILTER_MODE_VALUES,
+} from '@/modules/recommendations/types/recommendations.types.js';
 
 const emptyParams = z.object({}).optional();
 const emptyQuery = z.object({}).optional();
@@ -28,6 +31,7 @@ export const recommendationFiltersSchema = z
     currency: z.string().trim().length(3).toUpperCase().optional(),
     industries: stringList.optional(),
     experienceLevels: stringList.optional(),
+    filterMode: z.enum(RECOMMENDATION_FILTER_MODE_VALUES).optional(),
     includeStretchOpportunities: z.boolean().optional(),
   })
   .strict()

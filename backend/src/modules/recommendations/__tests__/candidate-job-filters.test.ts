@@ -73,4 +73,37 @@ describe('passesCandidateJobFilters', () => {
       ),
     ).toBe(false);
   });
+
+  it('defaults to strict mode and excludes jobs below the salary floor', () => {
+    expect(
+      passesCandidateJobFilters(
+        job({ salary: { minimum: 70000, maximum: 90000, currency: 'EUR' } }),
+        context({ salaryExpectation: { minimum: 100000, currency: 'EUR' } }),
+      ),
+    ).toBe(false);
+  });
+
+  it('keeps negotiable near-misses in flexible mode but still blocks excluded companies', () => {
+    expect(
+      passesCandidateJobFilters(
+        job({
+          location: { formatted: 'Paris, France', remoteType: 'ONSITE' },
+          salary: { minimum: 70000, maximum: 90000, currency: 'EUR' },
+        }),
+        context({
+          filterMode: 'FLEXIBLE',
+          locations: ['Berlin'],
+          remotePreference: 'REMOTE',
+          salaryExpectation: { minimum: 100000, currency: 'EUR' },
+        }),
+      ),
+    ).toBe(true);
+
+    expect(
+      passesCandidateJobFilters(
+        job({ company: { slug: 'blocked', name: 'Blocked', logoUrl: null, verified: true } }),
+        context({ filterMode: 'FLEXIBLE', excludedCompanies: ['blocked'] }),
+      ),
+    ).toBe(false);
+  });
 });

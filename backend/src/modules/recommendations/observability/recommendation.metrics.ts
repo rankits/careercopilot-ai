@@ -1,4 +1,5 @@
 import type { Logger } from 'pino';
+import type { RecommendationFilterMode } from '@/modules/recommendations/types/recommendations.types.js';
 
 export interface RecommendationGenerateMetricEvent {
   userId: string;
@@ -6,6 +7,7 @@ export interface RecommendationGenerateMetricEvent {
   candidateCount: number;
   durationMs: number;
   success: boolean;
+  filterMode?: RecommendationFilterMode;
   failureCode?: string;
   empty: boolean;
 }
@@ -39,6 +41,7 @@ export const recordRecommendationGenerate = (
       candidateCount: event.candidateCount,
       durationMs: event.durationMs,
       success: event.success,
+      filterMode: event.filterMode,
       failureCode: event.failureCode,
       empty: event.empty,
     },
