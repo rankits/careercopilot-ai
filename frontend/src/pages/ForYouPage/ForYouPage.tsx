@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
 import {
   Link as RouterLink,
   useLocation,
@@ -105,6 +105,7 @@ export function ForYouPage() {
   const [textRecommendations, setTextRecommendations] = useState<
     ReturnType<typeof mapRecommendationDtoToCard>[]
   >([]);
+  const modeTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
 
   const readiness = useRecommendationReadiness();
   const { data, isPending, isError, error, refetch, isFetching } = useRecommendations(
@@ -237,6 +238,40 @@ export function ForYouPage() {
     setSearchParams(nextParams);
   };
 
+  const focusModeTab = (index: number) => {
+    const nextIndex = (index + recommendationModes.length) % recommendationModes.length;
+    const mode = recommendationModes[nextIndex];
+    if (!mode) return;
+
+    selectMode(mode.id);
+    window.setTimeout(() => modeTabRefs.current[nextIndex]?.focus(), 0);
+  };
+
+  const handleModeTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, index: number) => {
+    switch (event.key) {
+      case 'ArrowLeft':
+      case 'ArrowUp':
+        event.preventDefault();
+        focusModeTab(index - 1);
+        break;
+      case 'ArrowRight':
+      case 'ArrowDown':
+        event.preventDefault();
+        focusModeTab(index + 1);
+        break;
+      case 'Home':
+        event.preventDefault();
+        focusModeTab(0);
+        break;
+      case 'End':
+        event.preventDefault();
+        focusModeTab(recommendationModes.length - 1);
+        break;
+      default:
+        break;
+    }
+  };
+
   return (
     <Box component="section" sx={{ display: 'grid', gap: 3, py: 2 }}>
       <Box sx={{ display: 'grid', gap: 1 }}>
@@ -263,7 +298,7 @@ export function ForYouPage() {
           scrollbarWidth: 'thin',
         }}
       >
-        {recommendationModes.map((mode) => {
+        {recommendationModes.map((mode, index) => {
           const isActive = mode.id === activeMode;
 
           return (
@@ -273,7 +308,11 @@ export function ForYouPage() {
               component="button"
               id={getTabId(mode.id)}
               key={mode.id}
+              onKeyDown={(event) => handleModeTabKeyDown(event, index)}
               onClick={() => selectMode(mode.id)}
+              ref={(element: HTMLButtonElement | null) => {
+                modeTabRefs.current[index] = element;
+              }}
               role="tab"
               sx={{
                 alignItems: 'center',
@@ -302,6 +341,7 @@ export function ForYouPage() {
                   borderColor: 'primary.main',
                 },
               }}
+              tabIndex={isActive ? 0 : -1}
               type="button"
             >
               <span>{mode.label}</span>

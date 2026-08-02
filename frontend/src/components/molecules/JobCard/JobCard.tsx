@@ -23,6 +23,7 @@ import {
   JobMeta,
   MatchPill,
   MatchRing,
+  OpenJobButton,
   RecommendationDetails,
   RecommendationDetailsGrid,
   RecommendationDetailSkillGroup,
@@ -88,6 +89,8 @@ export interface JobCardProps {
   onNotRelevant?: (job: JobCardData) => void;
 }
 
+const toDomId = (value: string) => value.replace(/[^a-zA-Z0-9_-]+/g, '-').replace(/^-|-$/g, '');
+
 export function JobCard({
   job,
   isSaved = false,
@@ -104,9 +107,7 @@ export function JobCard({
   const [detailsOpen, setDetailsOpen] = useState(false);
   const showLogoImage = Boolean(job.logoUrl) && !logoFailed;
   const details = job.recommendationDetails;
-  const detailsId = job.recommendationId
-    ? `${job.recommendationId}-recommendation-details`
-    : undefined;
+  const detailsId = `${toDomId(job.recommendationId ?? job.id ?? `${job.company}-${job.title}`)}-recommendation-details`;
   const hasSkillGap = details?.skillGap
     ? Object.values(details.skillGap).some((values) => values.length > 0)
     : false;
@@ -118,18 +119,6 @@ export function JobCard({
   return (
     <JobCardRoot
       onClick={onOpen ? () => onOpen(job) : undefined}
-      onKeyDown={
-        onOpen
-          ? (event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                onOpen(job);
-              }
-            }
-          : undefined
-      }
-      role={onOpen ? 'link' : undefined}
-      tabIndex={onOpen ? 0 : undefined}
       sx={onOpen ? { cursor: 'pointer' } : undefined}
     >
       <Accent tone={job.accent} />
@@ -156,7 +145,22 @@ export function JobCard({
 
         <TitleRow>
           <div>
-            <Typography component="h2">{job.title}</Typography>
+            <Typography component="h2">
+              {onOpen ? (
+                <OpenJobButton
+                  aria-label={`Open ${job.title} at ${job.company}`}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onOpen(job);
+                  }}
+                  type="button"
+                >
+                  {job.title}
+                </OpenJobButton>
+              ) : (
+                job.title
+              )}
+            </Typography>
             <Typography component="p">
               {job.company} <span>-</span> {job.location}
             </Typography>
@@ -196,7 +200,9 @@ export function JobCard({
       {showMatch || showActions ? (
         <JobActions>
           {showMatch ? (
-            <MatchPill aria-label={`${job.match} percent match`}>
+            <MatchPill
+              aria-label={`${job.match} percent match${job.matchSubtitle ? `, ${job.matchSubtitle}` : ''}`}
+            >
               {job.match}% Match
               <MatchRing aria-hidden="true" />
             </MatchPill>
@@ -245,6 +251,7 @@ export function JobCard({
           ) : null}
           {onApply ? (
             <Button
+              aria-label={canApply ? `Apply to ${job.title}` : `Apply to ${job.title} unavailable`}
               disabled={!canApply}
               onClick={(event) => {
                 event.stopPropagation();
@@ -261,6 +268,7 @@ export function JobCard({
             <Button
               aria-controls={detailsId}
               aria-expanded={detailsOpen}
+              aria-label={`${detailsOpen ? 'Hide' : 'Show'} details for ${job.title}`}
               onClick={(event) => {
                 event.stopPropagation();
                 setDetailsOpen((open) => !open);
@@ -281,7 +289,7 @@ export function JobCard({
       ) : null}
 
       {hasDetails && detailsOpen ? (
-        <RecommendationDetails id={detailsId}>
+        <RecommendationDetails aria-label={`${job.title} recommendation details`} id={detailsId} role="region">
           {details?.summary ? <Typography component="p">{details.summary}</Typography> : null}
 
           {details?.bullets.length ? (
