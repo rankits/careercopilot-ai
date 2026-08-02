@@ -14,9 +14,51 @@ import {
   similarJobParamsSchema,
   targetTextBodySchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
-import { RECOMMENDATION_FEEDBACK_ACTION_VALUES } from '@/modules/recommendations/types/recommendations.types.js';
+import {
+  RECOMMENDATION_FEEDBACK_ACTION_VALUES,
+  type ScoredJobRecommendation,
+} from '@/modules/recommendations/types/recommendations.types.js';
+import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
 
 const uuid = '4ea7733c-51ca-4df2-9201-72f08786d215';
+
+const scored = (
+  id: string,
+  overallScore: number,
+  matchType: ScoredJobRecommendation['matchType'],
+): ScoredJobRecommendation => ({
+  job: {
+    id,
+    title: 'Engineer',
+    company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
+    location: { formatted: 'Remote', remoteType: 'REMOTE' },
+    employmentType: 'FULL_TIME',
+    salary: { minimum: null, maximum: null, currency: null },
+    skills: [],
+    publishedAt: null,
+    applyUrl: null,
+  },
+  scoreResult: {
+    overallScore,
+    components: {
+      requiredSkills: overallScore,
+      title: overallScore,
+      experience: overallScore,
+      responsibilities: overallScore,
+      preferredSkills: overallScore,
+      location: overallScore,
+      industry: overallScore,
+      salary: overallScore,
+      qualifications: overallScore,
+    },
+    matchedSkills: [],
+    relatedSkills: [],
+    missingSkills: [],
+    reasons: [],
+  },
+  category: 'GOOD_MATCH',
+  matchType,
+});
 
 describe('recommendation module invariants', () => {
   it('keeps all nine default weights totaling one', () => {
@@ -56,6 +98,17 @@ describe('recommendation module invariants', () => {
     expect(() => assertRecommendationOwnership('user-1', { userId: 'user-2' })).toThrowError(
       expect.objectContaining({ statusCode: 403 }),
     );
+  });
+
+  it('sorts recommendations by score, match quality, then job id', () => {
+    const ranked = sortRecommendationsForRanking([
+      scored('job-c', 0.8, 'RELATED'),
+      scored('job-b', 0.8, 'EXACT'),
+      scored('job-a', 0.9, 'MISSING'),
+      scored('job-d', 0.8, 'EXACT'),
+    ]);
+
+    expect(ranked.map((item) => item.job.id)).toEqual(['job-a', 'job-b', 'job-d', 'job-c']);
   });
 
   it('validates trimmed target text and shared filters', () => {

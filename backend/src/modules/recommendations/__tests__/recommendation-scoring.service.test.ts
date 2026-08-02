@@ -12,6 +12,7 @@ import {
   RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
   type RecommendationContext,
 } from '@/modules/recommendations/types/recommendations.types.js';
+import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
 
 const job = (): JobListDto => ({
   id: 'job-1',
@@ -77,18 +78,14 @@ describe('RecommendationScoringService hybrid fusion', () => {
     expect(hybrid?.evidence.some((entry) => entry.startsWith('retrievalWeight='))).toBe(true);
   });
 
-  it('supports deterministic tie-break when sorted by score then job id', async () => {
+  it('supports deterministic tie-break when sorted by the production comparator', async () => {
     const jobB = { ...job(), id: 'job-b' };
     const jobA = { ...job(), id: 'job-a', title: 'Platform Engineer', skills: ['Go'] };
     const results = await service.score(context(), [
       { job: jobA, retrievalScore: 0.5 },
       { job: jobB, retrievalScore: 0.9 },
     ]);
-    const sorted = [...results].sort(
-      (left, right) =>
-        right.scoreResult.overallScore - left.scoreResult.overallScore ||
-        left.job.id.localeCompare(right.job.id),
-    );
+    const sorted = sortRecommendationsForRanking(results);
     expect(sorted[0]!.job.id).toBe('job-b');
     expect(sorted.map((item) => item.job.id)).toEqual(['job-b', 'job-a']);
   });

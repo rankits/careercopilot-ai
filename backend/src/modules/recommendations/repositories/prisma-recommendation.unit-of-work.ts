@@ -20,6 +20,7 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
 import type {
   JobRecommendationRecord,
   RecommendationFeedbackRecord,
@@ -310,11 +311,7 @@ const createRecommendationRepository = (
         );
       }
 
-      const ranked = [...recommendations].sort(
-        (left, right) =>
-          right.scoreResult.overallScore - left.scoreResult.overallScore ||
-          left.job.id.localeCompare(right.job.id),
-      );
+      const ranked = sortRecommendationsForRanking(recommendations);
 
       const created: RecommendationRowWithComponents[] = [];
       for (const [index, item] of ranked.entries()) {
