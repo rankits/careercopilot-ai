@@ -50,6 +50,10 @@ describe('recommendation response score mapping', () => {
     const response = toRecommendationResponse(recommendation(0.874));
 
     expect(response.displayScore).toBe(87);
+    expect(response.explanation).toMatchObject({
+      summary: '87% match with 1 matched skill',
+      scoreModel: { overallScore: 0.874, displayScore: 87 },
+    });
     expect(response.scoreResult.overallScore).toBe(0.874);
   });
 
