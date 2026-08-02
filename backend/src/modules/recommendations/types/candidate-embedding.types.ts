@@ -26,3 +26,10 @@ export interface UpsertCandidateEmbeddingInput extends CandidateEmbeddingIdentit
 export interface FindFreshCandidateEmbeddingInput extends CandidateEmbeddingIdentity {
   contentHash: string;
 }
+
+export interface FindReusableCandidateEmbeddingInput {
+  userId: string;
+  provider: string;
+  model: string;
+  contentHash: string;
+}

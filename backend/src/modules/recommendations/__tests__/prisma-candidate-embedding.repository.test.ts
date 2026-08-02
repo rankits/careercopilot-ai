@@ -83,6 +83,25 @@ describe('PrismaCandidateEmbeddingRepository', () => {
     expect(sql.queryStatements[0].values).toContain(JOB_EMBEDDING_DIMENSIONS);
   });
 
+  it('finds reusable rows by user provider model and content hash across sources', async () => {
+    const sql = new RecordingSqlExecutor();
+    sql.queryResults.push([row]);
+    const repository = new PrismaCandidateEmbeddingRepository(sql);
+
+    await expect(
+      repository.findReusable({
+        userId: 'user-1',
+        provider: 'google',
+        model: 'text-embedding-004',
+        contentHash: 'a'.repeat(64),
+      }),
+    ).resolves.toMatchObject({ id: 'candidate-embedding-id' });
+
+    const queryText = sql.queryStatements[0].strings.join('');
+    expect(queryText).toContain('ORDER BY "updated_at" DESC');
+    expect(queryText).not.toContain('"source_type" = ');
+  });
+
   it('rejects wrong-dimension vectors before querying', async () => {
     const sql = new RecordingSqlExecutor();
     const repository = new PrismaCandidateEmbeddingRepository(sql);

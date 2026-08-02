@@ -26,6 +26,19 @@ class MemoryCandidateEmbeddingRepository implements CandidateEmbeddingRepository
     return null;
   }
 
+  async findReusable(input: Parameters<CandidateEmbeddingRepository['findReusable']>[0]) {
+    if (
+      this.record &&
+      this.record.userId === input.userId &&
+      this.record.provider === input.provider &&
+      this.record.model === input.model &&
+      this.record.contentHash === input.contentHash
+    ) {
+      return this.record;
+    }
+    return null;
+  }
+
   async upsert(input: UpsertCandidateEmbeddingInput) {
     this.upserts.push(input);
     this.record = {
@@ -79,6 +92,7 @@ describe('CandidateEmbeddingService', () => {
     expect(candidateEmbeddingMetricsSnapshot()).toEqual({
       candidateEmbeddingCacheHit: 1,
       candidateEmbeddingCacheMiss: 1,
+      contextEmbeddingReuseTotal: 0,
     });
   });
 
@@ -113,5 +127,39 @@ describe('CandidateEmbeddingService', () => {
       createCandidateEmbeddingContentHash('old resume text'),
       createCandidateEmbeddingContentHash('new resume text'),
     ]);
+  });
+
+  it('reuses an equivalent context embedding across source rows for the same user', async () => {
+    const repository = new MemoryCandidateEmbeddingRepository();
+    const service = new CandidateEmbeddingService(repository);
+    const generate = vi.fn().mockResolvedValue(vector());
+
+    await service.resolve({
+      userId: 'user-1',
+      sourceType: 'PROFILE',
+      provider: 'google',
+      model: 'text-embedding-004',
+      dimensions: JOB_EMBEDDING_DIMENSIONS,
+      content: 'same normalized context',
+      generate,
+    });
+    const targetText = await service.resolve({
+      userId: 'user-1',
+      sourceType: 'TARGET_TEXT',
+      provider: 'google',
+      model: 'text-embedding-004',
+      dimensions: JOB_EMBEDDING_DIMENSIONS,
+      content: 'same normalized context',
+      generate,
+    });
+
+    expect(targetText.cacheHit).toBe(true);
+    expect(generate).toHaveBeenCalledTimes(1);
+    expect(repository.upserts.map((input) => input.sourceType)).toEqual(['PROFILE', 'TARGET_TEXT']);
+    expect(candidateEmbeddingMetricsSnapshot()).toMatchObject({
+      candidateEmbeddingCacheHit: 1,
+      candidateEmbeddingCacheMiss: 1,
+      contextEmbeddingReuseTotal: 1,
+    });
   });
 });

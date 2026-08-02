@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 20 |
+| Implemented | 21 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,35 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-EMB-003 - Unify context embedding reuse across recommendation sources
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/types/candidate-embedding.types.ts`
+  - `backend/src/modules/recommendations/contracts/candidate-embedding.repository.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-candidate-embedding.repository.ts`
+  - `backend/src/modules/recommendations/services/candidate-embedding.service.ts`
+  - `backend/src/modules/recommendations/__tests__/candidate-embedding.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/prisma-candidate-embedding.repository.test.ts`
+  - `backend/src/modules/recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `docs/job-recommendation-engine-tickets/CONTEXT_EMBEDDING_REUSE_CONTRACT.md`
+- API changes: none
+- Database changes: none; reuses `candidate_embeddings`
+- Tests added:
+  - Candidate embedding service reuses equivalent context content across different source rows for the same user
+  - Repository reusable lookup ignores source while remaining user/provider/model/hash/dimension scoped
+  - TARGET_TEXT retrieval calls the embedding provider once for repeated identical content
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/candidate-embedding.service.test.ts recommendations/__tests__/prisma-candidate-embedding.repository.test.ts recommendations/__tests__/pgvector-candidate-retrieval.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused candidate embedding/retrieval tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+- Known limitations: content hash is based on retrieval query text; source-specific context fingerprints remain future work
+- Next ticket: `JRE-VEC-001`
 
 ### 2026-08-02 - JRE-EMB-002 - Persist CandidateEmbedding table with lifecycle upsert
 
