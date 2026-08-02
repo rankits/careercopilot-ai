@@ -8,6 +8,7 @@ export interface JobSearchFilters {
   minSalary?: number;
   maxSalary?: number;
   postedWithinDays?: number;
+  postedSince?: Date;
 }
 
 export interface JobSearchPagination {

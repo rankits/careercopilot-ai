@@ -78,6 +78,9 @@ export function buildJobSearchWhere(filters: JobSearchFilters): Prisma.JobWhereI
     ...(filters.maxSalary !== undefined && {
       salaryMin: { lte: filters.maxSalary },
     }),
+    ...(filters.postedSince !== undefined && {
+      effectivePostedAt: { gte: filters.postedSince },
+    }),
     ...(locationClauses.length && { OR: locationClauses }),
   };
 }
