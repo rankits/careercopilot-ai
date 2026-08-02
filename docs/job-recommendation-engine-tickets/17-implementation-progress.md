@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 9 |
+| Implemented | 10 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,34 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-API-003 - Scope recommendation list to latest run by default for For You
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `docs/job-recommendation-engine-tickets/LATEST_RUN_FEED_CONTRACT.md`
+- API changes: none; For You now opts into existing `latestOnly=true`
+- Database changes: none
+- Tests added:
+  - For You requests latest-run scoped recommendations
+  - Service latestOnly regression hides duplicate historical-run jobs and returns only latest run items
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts`
+  - `npm --prefix frontend run test -- src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `npm --prefix frontend run test -- src/features/recommendations/services/recommendations.service.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused backend latest-run/API tests passed
+  - Focused frontend For You and recommendation service tests passed
+  - Backend and frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: mixed-history list remains available for future history browser use
+- Next ticket: `JRE-RANK-001`
 
 ### 2026-08-02 - JRE-API-002 - Add refresh and run-details API semantics
 
