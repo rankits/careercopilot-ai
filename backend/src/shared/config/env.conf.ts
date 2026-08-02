@@ -101,11 +101,11 @@ const envSchema = z
     RECOMMENDATION_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
     RECOMMENDATION_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
 
-    // Job Age & Retention Policies
+    // Job Age & Retention Policies (day-based; embedding window may be tighter than storage)
     JOB_STORAGE_AGE_FILTER_ENABLED: booleanFromString(true),
-    JOB_STORAGE_MAX_AGE_MONTHS: z.coerce.number().int().positive().default(3),
+    JOB_STORAGE_MAX_AGE_DAYS: z.coerce.number().int().positive().default(90),
     JOB_EMBEDDING_AGE_FILTER_ENABLED: booleanFromString(true),
-    JOB_EMBEDDING_MAX_AGE_MONTHS: z.coerce.number().int().positive().default(2),
+    JOB_EMBEDDING_MAX_AGE_DAYS: z.coerce.number().int().positive().default(5),
     JOB_UNKNOWN_DATE_POLICY: z.enum(['REJECT', 'ALLOW_STORAGE_ONLY', 'ALLOW']).default('ALLOW_STORAGE_ONLY'),
     JOB_STORAGE_EXPIRED_ACTION: z.enum(['EXPIRE', 'DELETE']).default('EXPIRE'),
     JOB_REMOVE_OUTDATED_EMBEDDINGS: booleanFromString(true),
@@ -136,13 +136,13 @@ const envSchema = z
     if (
       value.JOB_EMBEDDING_AGE_FILTER_ENABLED &&
       value.JOB_STORAGE_AGE_FILTER_ENABLED &&
-      value.JOB_EMBEDDING_MAX_AGE_MONTHS > value.JOB_STORAGE_MAX_AGE_MONTHS
+      value.JOB_EMBEDDING_MAX_AGE_DAYS > value.JOB_STORAGE_MAX_AGE_DAYS
     ) {
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
-        path: ['JOB_EMBEDDING_MAX_AGE_MONTHS'],
+        path: ['JOB_EMBEDDING_MAX_AGE_DAYS'],
         message:
-          'JOB_EMBEDDING_MAX_AGE_MONTHS must be <= JOB_STORAGE_MAX_AGE_MONTHS when both filters are enabled',
+          'JOB_EMBEDDING_MAX_AGE_DAYS must be <= JOB_STORAGE_MAX_AGE_DAYS when both filters are enabled',
       });
     }
 

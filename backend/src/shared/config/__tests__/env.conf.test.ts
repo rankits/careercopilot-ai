@@ -13,25 +13,33 @@ describe('envSchema job age policy validation', () => {
     const parsed = envSchema.safeParse({
       ...baseEnv,
       JOB_STORAGE_AGE_FILTER_ENABLED: 'true',
-      JOB_STORAGE_MAX_AGE_MONTHS: '2',
+      JOB_STORAGE_MAX_AGE_DAYS: '5',
       JOB_EMBEDDING_AGE_FILTER_ENABLED: 'true',
-      JOB_EMBEDDING_MAX_AGE_MONTHS: '3',
+      JOB_EMBEDDING_MAX_AGE_DAYS: '90',
     });
     expect(parsed.success).toBe(false);
     if (parsed.success) return;
-    expect(parsed.error.issues.some((issue) => issue.path.includes('JOB_EMBEDDING_MAX_AGE_MONTHS'))).toBe(
-      true,
-    );
+    expect(
+      parsed.error.issues.some((issue) => issue.path.includes('JOB_EMBEDDING_MAX_AGE_DAYS')),
+    ).toBe(true);
   });
 
   it('allows embedding max age greater than storage when a filter is disabled', () => {
     const parsed = envSchema.safeParse({
       ...baseEnv,
       JOB_STORAGE_AGE_FILTER_ENABLED: 'false',
-      JOB_STORAGE_MAX_AGE_MONTHS: '2',
+      JOB_STORAGE_MAX_AGE_DAYS: '5',
       JOB_EMBEDDING_AGE_FILTER_ENABLED: 'true',
-      JOB_EMBEDDING_MAX_AGE_MONTHS: '3',
+      JOB_EMBEDDING_MAX_AGE_DAYS: '90',
     });
     expect(parsed.success).toBe(true);
+  });
+
+  it('defaults to 90 storage days and 5 embedding days', () => {
+    const parsed = envSchema.safeParse(baseEnv);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.JOB_STORAGE_MAX_AGE_DAYS).toBe(90);
+    expect(parsed.data.JOB_EMBEDDING_MAX_AGE_DAYS).toBe(5);
   });
 });

@@ -22,6 +22,7 @@ export const embeddingConfig = {
   requestDimensions: optionalPositiveInteger(process.env.AI_EMBEDDING_REQUEST_DIMENSIONS),
   timeoutMs: positiveInteger(process.env.AI_EMBEDDING_TIMEOUT_MS, 30_000),
   batchSize: positiveInteger(process.env.AI_EMBEDDING_BATCH_SIZE, 32),
+  batchMaxCharacters: positiveInteger(process.env.AI_EMBEDDING_BATCH_MAX_CHARACTERS, 200_000),
   maxRetries: positiveInteger(process.env.AI_EMBEDDING_MAX_RETRIES, 3),
   documentPrefix: process.env.AI_EMBEDDING_DOCUMENT_PREFIX ?? '',
   queryPrefix: process.env.AI_EMBEDDING_QUERY_PREFIX ?? '',
