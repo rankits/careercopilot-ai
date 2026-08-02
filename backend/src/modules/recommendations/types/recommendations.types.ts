@@ -311,6 +311,20 @@ export const RECOMMENDATION_RUN_STATUS_VALUES = [
 ] as const;
 export type RecommendationRunStatus = (typeof RECOMMENDATION_RUN_STATUS_VALUES)[number];
 
+export const RECOMMENDATION_LIFECYCLE_STATE_VALUES = [
+  'NOT_STARTED',
+  'QUEUED',
+  'PROCESSING',
+  'READY',
+  'STALE',
+  'FAILED',
+  'FAILED_TIMEOUT',
+  'FAILED_PROVIDER',
+  'FAILED_EMPTY',
+] as const;
+export type RecommendationLifecycleState =
+  (typeof RECOMMENDATION_LIFECYCLE_STATE_VALUES)[number];
+
 export interface RecommendationRunRecord {
   id: string;
   userId: string;
@@ -351,6 +365,7 @@ export interface RecommendationPage {
 /** Foundation response for readiness/status API (JR-ARCH-001). */
 export interface RecommendationReadinessStatus {
   ready: boolean;
+  lifecycleState: RecommendationLifecycleState;
   canGenerateFromProfile: boolean;
   blockers: string[];
   stale?: boolean;

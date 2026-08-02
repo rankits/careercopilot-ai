@@ -15,7 +15,9 @@ import type { RecommendationSourceAuthorizationService } from '@/modules/recomme
 import {
   countEmbeddingCoverage,
   findLatestRecommendationGeneratedAt,
+  findLatestRecommendationRun,
   isRecommendationSetStale,
+  mapRecommendationLifecycleState,
 } from '@/modules/recommendations/services/recommendation-readiness.helpers.js';
 import { recordRecommendationGenerate } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import { withRecommendationTimeout } from '@/modules/recommendations/utils/recommendation-timeout.js';
@@ -252,7 +254,14 @@ export class RecommendationsService {
     } catch {
       coverage = { activeJobs: 0, embeddedJobs: 0, coverageRatio: 1 };
     }
-    const lastGeneratedAt = await findLatestRecommendationGeneratedAt(dependencies.unitOfWork, userId);
+    const [latestRun, latestRecommendationCreatedAt] = await Promise.all([
+      findLatestRecommendationRun(dependencies.unitOfWork, userId),
+      findLatestRecommendationGeneratedAt(dependencies.unitOfWork, userId),
+    ]);
+    const lastGeneratedAt =
+      latestRun?.status === 'COMPLETED'
+        ? (latestRun.completedAt ?? latestRecommendationCreatedAt)
+        : latestRecommendationCreatedAt;
     const stale = await isRecommendationSetStale(
       {
         unitOfWork: dependencies.unitOfWork,
@@ -268,9 +277,11 @@ export class RecommendationsService {
     if (coverage.coverageRatio < 0.25 && coverage.activeJobs > 0) {
       blockers.push('EMBEDDING_COVERAGE_LOW');
     }
+    const lifecycleState = mapRecommendationLifecycleState({ latestRun, stale });
 
     return {
       ready: canGenerateFromProfile && blockers.every((b) => b === 'RECOMMENDATIONS_STALE'),
+      lifecycleState,
       canGenerateFromProfile,
       blockers,
       stale,

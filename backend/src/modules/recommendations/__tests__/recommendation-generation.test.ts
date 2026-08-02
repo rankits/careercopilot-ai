@@ -420,9 +420,49 @@ describe('RecommendationsService readiness', () => {
 
     await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({
       ready: true,
+      lifecycleState: 'NOT_STARTED',
       canGenerateFromProfile: true,
       blockers: [],
       retrieval: { backend: 'PGVECTOR', configured: true },
+    });
+  });
+
+  it('reports STALE when a completed run is older than the profile', async () => {
+    const findCandidateProfileByUserId = vi.fn().mockResolvedValue({
+      titles: ['Backend Engineer'],
+      skills: ['TypeScript'],
+      summary: 'Backend engineer',
+    });
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const run = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+    );
+    await unitOfWork.execute(({ runs }) => runs.markCompleted('user-1', run.id));
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId,
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+      profileUpdatedAfter: vi.fn().mockResolvedValue(true),
+    });
+
+    await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({
+      ready: true,
+      lifecycleState: 'STALE',
+      stale: true,
+      blockers: ['RECOMMENDATIONS_STALE'],
+      lastGeneratedAt: expect.any(String),
     });
   });
 });

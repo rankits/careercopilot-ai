@@ -30,6 +30,16 @@ export interface RecommendationListResult {
 
 export interface RecommendationReadinessStatus {
   ready: boolean;
+  lifecycleState?:
+    | 'NOT_STARTED'
+    | 'QUEUED'
+    | 'PROCESSING'
+    | 'READY'
+    | 'STALE'
+    | 'FAILED'
+    | 'FAILED_TIMEOUT'
+    | 'FAILED_PROVIDER'
+    | 'FAILED_EMPTY';
   canGenerateFromProfile: boolean;
   blockers: string[];
   stale?: boolean;

@@ -260,6 +260,14 @@ const createRunRepository = (tx: Tx): RecommendationRunRepository => ({
     const run = await tx.recommendationRun.findFirst({ where: { id: runId, userId } });
     return run ? toRunRecord(run) : null;
   },
+
+  async findLatestByUser(userId) {
+    const run = await tx.recommendationRun.findFirst({
+      where: { userId },
+      orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
+    });
+    return run ? toRunRecord(run) : null;
+  },
 });
 
 const createRecommendationRepository = (
