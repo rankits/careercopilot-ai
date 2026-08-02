@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { RECOMMENDATION_ERROR_CODES } from '@/modules/recommendations/errors/recommendation.error.js';
-import { mapRecommendationLifecycleState } from '@/modules/recommendations/services/recommendation-readiness.helpers.js';
+import {
+  isRecommendationSetStale,
+  mapRecommendationLifecycleState,
+} from '@/modules/recommendations/services/recommendation-readiness.helpers.js';
 import type { RecommendationRunRecord } from '@/modules/recommendations/types/recommendations.types.js';
 
 const run = (
@@ -69,3 +72,34 @@ describe('mapRecommendationLifecycleState', () => {
     );
   });
 });
+
+describe('isRecommendationSetStale', () => {
+  it('returns true when lastGeneratedAt exceeds TTL even if profile was not updated', async () => {
+    const now = new Date('2026-08-05T12:00:00.000Z');
+    const oldGenerate = new Date('2026-08-01T00:00:00.000Z'); // 4.5 days old
+    const stale = await isRecommendationSetStale(
+      { unitOfWork: {} as never, jobEmbeddings: {} as never },
+      'user-1',
+      oldGenerate,
+      now,
+    );
+    expect(stale).toBe(true);
+  });
+
+  it('returns false when lastGeneratedAt is within TTL and profile was not updated', async () => {
+    const now = new Date('2026-08-02T12:00:00.000Z');
+    const recentGenerate = new Date('2026-08-02T00:00:00.000Z'); // 12 hours old
+    const stale = await isRecommendationSetStale(
+      {
+        unitOfWork: {} as never,
+        jobEmbeddings: {} as never,
+        profileUpdatedAfter: async () => false,
+      },
+      'user-1',
+      recentGenerate,
+      now,
+    );
+    expect(stale).toBe(false);
+  });
+});
+
