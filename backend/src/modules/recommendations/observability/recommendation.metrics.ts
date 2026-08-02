@@ -39,6 +39,7 @@ let savedSearchApiTotal = 0;
 let feedbackAppliedLinkedTotal = 0;
 let feedbackMoreLessTotal = 0;
 let recommendationInvalidationTotal = 0;
+let jobRecommendationHiddenTotal = 0;
 let careerCategoryDistribution: Record<RecommendationCategory, number> = {
   BEST_MATCH: 0,
   GOOD_MATCH: 0,
@@ -65,6 +66,7 @@ export const recommendationMetricsSnapshot = () => ({
   feedbackAppliedLinkedTotal,
   feedbackMoreLessTotal,
   recommendationInvalidationTotal,
+  jobRecommendationHiddenTotal,
   careerCategoryDistribution: { ...careerCategoryDistribution },
   feedbackActionTotal: { ...feedbackActionTotal },
 });
@@ -83,6 +85,12 @@ export const recordSavedSearchApiRequest = (): void => {
 
 export const recordRecommendationInvalidation = (): void => {
   recommendationInvalidationTotal += 1;
+};
+
+export const recordJobRecommendationHidden = (count = 1): void => {
+  if (count > 0) {
+    jobRecommendationHiddenTotal += count;
+  }
 };
 
 export const recordCareerCategory = (category: RecommendationCategory): void => {
@@ -162,6 +170,7 @@ export const resetRecommendationMetricsForTests = (): void => {
   feedbackAppliedLinkedTotal = 0;
   feedbackMoreLessTotal = 0;
   recommendationInvalidationTotal = 0;
+  jobRecommendationHiddenTotal = 0;
   careerCategoryDistribution = {
     BEST_MATCH: 0,
     GOOD_MATCH: 0,

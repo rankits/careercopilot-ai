@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 52 |
+| Implemented | 53 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,36 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-LIFE-002 - Invalidate or hide recommendations when jobs close expire or delete
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/utils/recommendation-job-eligibility.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `docs/job-recommendation-engine-tickets/JOB_CLOSURE_RECOMMENDATION_LIFECYCLE_CONTRACT.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Historical inactive recommendations are hidden from list-by-run and list-by-user results
+  - Hidden recommendation count increments `jobRecommendationHiddenTotal`
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts job-embeddings/services/__tests__/job-embedding-indexer.service.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-idor.test.ts job-embeddings/services/__tests__/job-embedding-indexer.service.test.ts job-embeddings/repositories/__tests__/prisma-job-embedding.repository.test.ts job-listing/__tests__/prisma-job-search.repository.test.ts job-listing/utils/__tests__/build-job-search-where.test.ts`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `git diff --check`
+- Results:
+  - Focused generation/API/indexer tests passed
+  - Backend typecheck passed
+  - Broader recommendation/job-embedding/job-listing lifecycle tests passed
+  - Touched-file lint passed
+  - Whitespace check passed with existing CRLF conversion warnings
+- Known limitations: no user notifications for hidden historical recommendations.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-LIFE-001 - Complete candidate-side invalidation on profile and resume changes
 
