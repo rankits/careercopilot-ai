@@ -51,12 +51,20 @@ export const findLatestRecommendationRun = async (
 ): Promise<RecommendationRunRecord | null> =>
   unitOfWork.execute(({ runs }) => runs.findLatestByUser(userId));
 
+export const DEFAULT_RECOMMENDATION_FRESHNESS_TTL_MS =
+  Number(process.env['RECOMMENDATION_FRESHNESS_TTL_MS']) || 72 * 60 * 60 * 1000; // 72 hours
+
 export const isRecommendationSetStale = async (
   deps: RecommendationReadinessDependencies,
   userId: string,
   lastGeneratedAt: Date | null,
+  now: Date = new Date(),
+  ttlMs: number = DEFAULT_RECOMMENDATION_FRESHNESS_TTL_MS,
 ): Promise<boolean> => {
   if (!lastGeneratedAt) return false;
+  if (now.getTime() - lastGeneratedAt.getTime() > ttlMs) {
+    return true;
+  }
   if (deps.profileUpdatedAfter) {
     return deps.profileUpdatedAfter(userId, lastGeneratedAt);
   }
