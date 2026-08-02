@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 44 |
+| Implemented | 45 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,44 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-API-005 - Expose SavedSearch CRUD and generate API
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/controllers/recommendations.controller.ts`
+  - `backend/src/modules/recommendations/routes/recommendations.route.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-saved-search.repository.ts`
+  - `backend/src/modules/recommendations/services/saved-search.service.ts`
+  - `backend/src/modules/recommendations/validations/recommendation.schema.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/__tests__/saved-search.service.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendations.api.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-core.test.ts`
+  - `docs/job-recommendation-engine-tickets/SAVED_SEARCH_API_CONTRACT.md`
+- API changes: additive saved-search CRUD plus `POST /saved-searches/:savedSearchId/generate`
+- Database changes: none; reuses existing `saved_searches` model from `JRE-DATA-004`
+- Tests added:
+  - SavedSearch service owner-scoped repository contract and 404 behavior
+  - Authenticated CRUD route forwarding and response serialization
+  - Saved-search generate route forwards `SAVED_SEARCH` source id and filters
+  - Missing/unowned saved search returns non-enumerable 404
+  - Swagger includes CRUD and generate routes
+  - Schema validates create, list, update, and generate payloads
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/saved-search.service.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/resume-recommendation-source.loader.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `git diff --check`
+- Results:
+  - Focused saved-search service/API/schema/source-loader/generation tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+  - Whitespace check passed
+- Known limitations: notification schedules and frontend management UI remain out of scope.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-API-004 - Expose CAREER_GOAL generate API with ownership
 

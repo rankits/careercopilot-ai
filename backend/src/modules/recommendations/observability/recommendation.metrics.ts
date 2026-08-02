@@ -31,6 +31,7 @@ let rerankFailureCount = 0;
 let rerankFallbackCount = 0;
 let rerankTotalLatencyMs = 0;
 let careerGoalApiTotal = 0;
+let savedSearchApiTotal = 0;
 
 export const recommendationMetricsSnapshot = () => ({
   generateCount,
@@ -46,6 +47,7 @@ export const recommendationMetricsSnapshot = () => ({
       ? rerankTotalLatencyMs / (rerankSuccessCount + rerankFailureCount)
       : 0,
   careerGoalApiTotal,
+  savedSearchApiTotal,
 });
 
 export const recordCertificationFilterExclusion = (): void => {
@@ -54,6 +56,10 @@ export const recordCertificationFilterExclusion = (): void => {
 
 export const recordCareerGoalApiRequest = (): void => {
   careerGoalApiTotal += 1;
+};
+
+export const recordSavedSearchApiRequest = (): void => {
+  savedSearchApiTotal += 1;
 };
 
 export const recordRecommendationGenerate = (
@@ -115,4 +121,5 @@ export const resetRecommendationMetricsForTests = (): void => {
   rerankFallbackCount = 0;
   rerankTotalLatencyMs = 0;
   careerGoalApiTotal = 0;
+  savedSearchApiTotal = 0;
 };

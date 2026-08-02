@@ -100,6 +100,24 @@ const paginationBaseQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
 
+const jsonObject = z.record(z.string(), z.unknown());
+
+const savedSearchBodySchema = z
+  .object({
+    name: z.string().trim().min(1).max(160),
+    query: z.string().trim().max(20_000).nullable().optional(),
+    filters: jsonObject.default({}),
+    context: jsonObject.optional(),
+  })
+  .strict();
+
+const savedSearchUpdateBodySchema = savedSearchBodySchema.partial().refine(
+  (value) => Object.keys(value).length > 0,
+  { message: 'At least one saved search field is required' },
+);
+
+const savedSearchParamsSchema = z.object({ savedSearchId: uuid });
+
 const paginationQuerySchema = paginationBaseQuerySchema.extend({
   runId: uuid.optional(),
   latestOnly: optionalBooleanQuery.default(false),
@@ -117,6 +135,42 @@ export const recommendationRunDetailsSchema = z.object({
   body: z.object({}).optional(),
   query: paginationBaseQuerySchema,
   params: z.object({ runId: uuid }),
+});
+
+export const listSavedSearchesSchema = z.object({
+  body: z.object({}).optional(),
+  query: paginationBaseQuerySchema,
+  params: emptyParams,
+});
+
+export const createSavedSearchSchema = z.object({
+  body: savedSearchBodySchema,
+  query: emptyQuery,
+  params: emptyParams,
+});
+
+export const savedSearchDetailsSchema = z.object({
+  body: z.object({}).optional(),
+  query: emptyQuery,
+  params: savedSearchParamsSchema,
+});
+
+export const updateSavedSearchSchema = z.object({
+  body: savedSearchUpdateBodySchema,
+  query: emptyQuery,
+  params: savedSearchParamsSchema,
+});
+
+export const deleteSavedSearchSchema = z.object({
+  body: z.object({}).optional(),
+  query: emptyQuery,
+  params: savedSearchParamsSchema,
+});
+
+export const generateSavedSearchSchema = z.object({
+  body: z.object({ filters: recommendationFiltersSchema.optional() }).strict().optional(),
+  query: emptyQuery,
+  params: savedSearchParamsSchema,
 });
 
 export const recommendationReadinessSchema = z.object({
@@ -152,3 +206,5 @@ export type RecommendationFiltersDto = z.infer<typeof recommendationFiltersSchem
 export type ListRecommendationsQuery = z.infer<typeof paginationQuerySchema>;
 export type RecommendationFeedbackInput = z.infer<typeof recommendationFeedbackSchema>['body'];
 export type SimilarJobParams = z.infer<typeof similarJobParamsSchema>['params'];
+export type CreateSavedSearchDto = z.infer<typeof savedSearchBodySchema>;
+export type UpdateSavedSearchDto = z.infer<typeof savedSearchUpdateBodySchema>;

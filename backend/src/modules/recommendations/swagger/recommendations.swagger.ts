@@ -1,5 +1,7 @@
 import {
+  createApiDelete,
   createApiGet,
+  createApiPatch,
   createApiPost,
   errorSchema,
   successSchema,
@@ -15,6 +17,7 @@ import {
   RECOMMENDATION_SCORE_COMPONENT_VALUES,
   RECOMMENDATION_SOURCE_TYPE_VALUES,
 } from '@/modules/recommendations/types/recommendations.types.js';
+import type { PathParameter } from '@/shared/types/swagger.types.js';
 
 const BASE_URL = '/api/v1/job-recommendations';
 const TAGS = ['Job Recommendations'];
@@ -305,6 +308,74 @@ const recommendationRunPageSchema = {
   },
 };
 
+const savedSearchSchema = {
+  type: 'object',
+  properties: {
+    id: { type: 'string', format: 'uuid' },
+    name: { type: 'string', example: 'Remote TypeScript platform roles' },
+    query: {
+      type: 'string',
+      nullable: true,
+      example: 'Senior backend engineer TypeScript PostgreSQL',
+    },
+    filters: {
+      type: 'object',
+      additionalProperties: true,
+      example: { locations: ['Remote'], workModes: ['REMOTE'], minimumSalary: 120000 },
+    },
+    context: {
+      type: 'object',
+      additionalProperties: true,
+      nullable: true,
+      example: { titles: ['Platform Engineer'], industries: ['SaaS'] },
+    },
+    createdAt: { type: 'string', format: 'date-time' },
+    updatedAt: { type: 'string', format: 'date-time' },
+  },
+};
+
+const savedSearchPageSchema = {
+  type: 'object',
+  properties: {
+    items: { type: 'array', items: savedSearchSchema },
+    page: { type: 'integer', minimum: 1 },
+    limit: { type: 'integer', minimum: 1, maximum: 100 },
+    total: { type: 'integer', minimum: 0 },
+  },
+};
+
+const savedSearchWriteBody = {
+  required: ['name'],
+  properties: {
+    name: { type: 'string', minLength: 1, maxLength: 160 },
+    query: { type: 'string', nullable: true, maxLength: 20000 },
+    filters: {
+      type: 'object',
+      additionalProperties: true,
+      example: { locations: ['Remote'], workModes: ['REMOTE'] },
+    },
+    context: {
+      type: 'object',
+      additionalProperties: true,
+      example: { titles: ['Backend Engineer'] },
+    },
+  },
+};
+
+const savedSearchIdParam = [
+  {
+    name: 'savedSearchId',
+    in: 'path',
+    required: true,
+    description: 'Owned saved search UUID',
+    schema: {
+      type: 'string',
+      format: 'uuid',
+      example: '44444444-4444-4444-4444-444444444444',
+    },
+  },
+] satisfies PathParameter[];
+
 const commonRecommendationErrors = {
   ...commonSecureResponses,
   403: {
@@ -468,6 +539,151 @@ export const recommendationsSwagger = mergeSwaggerDocs(
           ),
         },
         ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiGet(
+    `${BASE_URL}/saved-searches`,
+    {
+      summary: 'List saved searches for the current user',
+      description:
+        'Returns only non-deleted saved searches owned by the authenticated USER principal.',
+      queryParams: [
+        {
+          name: 'page',
+          in: 'query',
+          required: false,
+          schema: { type: 'integer', minimum: 1, default: 1 },
+        },
+        {
+          name: 'limit',
+          in: 'query',
+          required: false,
+          schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Saved searches retrieved',
+          schema: successSchema('Saved searches retrieved', savedSearchPageSchema),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiPost(
+    `${BASE_URL}/saved-searches`,
+    {
+      summary: 'Create a saved search for the current user',
+      description:
+        'Persists query text, filters, and optional normalized context for future recommendation generation.',
+      body: savedSearchWriteBody,
+      responses: {
+        201: {
+          description: 'Saved search created',
+          schema: successSchema('Saved search created', savedSearchSchema),
+        },
+        ...commonRecommendationErrors,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiGet(
+    `${BASE_URL}/saved-searches/{savedSearchId}`,
+    {
+      summary: 'Get an owned saved search',
+      params: savedSearchIdParam,
+      responses: {
+        200: {
+          description: 'Saved search retrieved',
+          schema: successSchema('Saved search retrieved', savedSearchSchema),
+        },
+        ...commonRecommendationErrors,
+        404: {
+          description: 'Saved search missing or not owned by caller',
+          schema: errorSchema('Saved search was not found', 'RECOMMENDATION_SOURCE_NOT_FOUND'),
+        },
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiPatch(
+    `${BASE_URL}/saved-searches/{savedSearchId}`,
+    {
+      summary: 'Update an owned saved search',
+      params: savedSearchIdParam,
+      body: {
+        properties: savedSearchWriteBody.properties,
+      },
+      responses: {
+        200: {
+          description: 'Saved search updated',
+          schema: successSchema('Saved search updated', savedSearchSchema),
+        },
+        ...commonRecommendationErrors,
+        404: {
+          description: 'Saved search missing or not owned by caller',
+          schema: errorSchema('Saved search was not found', 'RECOMMENDATION_SOURCE_NOT_FOUND'),
+        },
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiDelete(
+    `${BASE_URL}/saved-searches/{savedSearchId}`,
+    {
+      summary: 'Delete an owned saved search',
+      params: savedSearchIdParam,
+      responses: {
+        200: {
+          description: 'Saved search deleted',
+          schema: successSchema('Saved search deleted'),
+        },
+        ...commonRecommendationErrors,
+        404: {
+          description: 'Saved search missing or not owned by caller',
+          schema: errorSchema('Saved search was not found', 'RECOMMENDATION_SOURCE_NOT_FOUND'),
+        },
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  createApiPost(
+    `${BASE_URL}/saved-searches/{savedSearchId}/generate`,
+    {
+      summary: 'Generate recommendations from an owned saved search',
+      description:
+        'Shortcut for generating with sourceType=SAVED_SEARCH while enforcing ownership on the saved search source.',
+      params: savedSearchIdParam,
+      body: {
+        properties: {
+          filters: filtersSchema,
+        },
+      },
+      responses: {
+        200: {
+          description: 'Recommendations generated',
+          schema: successSchema('Recommendations generated', recommendationArraySchema),
+        },
+        ...commonRecommendationErrors,
+        404: {
+          description: 'Saved search missing or not owned by caller',
+          schema: errorSchema('Saved search was not found', 'RECOMMENDATION_SOURCE_NOT_FOUND'),
+        },
       },
     },
     true,

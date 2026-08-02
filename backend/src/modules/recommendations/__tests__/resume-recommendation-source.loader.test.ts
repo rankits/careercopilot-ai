@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createResumeRecommendationSourceLoader } from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
+import type { SavedSearchRepository } from '@/modules/recommendations/repositories/prisma-saved-search.repository.js';
 import { resumeRepository } from '@/modules/resumes/repositories/resume.repository.js';
 
 const repository = (overrides: Partial<typeof resumeRepository>) =>
@@ -9,6 +10,18 @@ const repository = (overrides: Partial<typeof resumeRepository>) =>
     findLatestParseRun: vi.fn(),
     ...overrides,
   }) as unknown as typeof resumeRepository;
+
+const savedSearchRepository = (
+  overrides: Partial<SavedSearchRepository>,
+): SavedSearchRepository => ({
+  findById: vi.fn(),
+  findOwned: vi.fn(),
+  listByUser: vi.fn(),
+  create: vi.fn(),
+  updateOwned: vi.fn(),
+  softDeleteOwned: vi.fn(),
+  ...overrides,
+});
 
 describe('createResumeRecommendationSourceLoader', () => {
   it('maps canonical resume parse data into recommendation source input', async () => {
@@ -147,7 +160,7 @@ describe('createResumeRecommendationSourceLoader', () => {
   });
 
   it('loads only owned active saved searches', async () => {
-    const savedSearches = {
+    const savedSearches = savedSearchRepository({
       findById: vi.fn().mockResolvedValue({
         id: 'search-1',
         userId: 'user-1',
@@ -159,7 +172,7 @@ describe('createResumeRecommendationSourceLoader', () => {
         updatedAt: new Date('2026-08-02T00:00:00.000Z'),
         deletedAt: null,
       }),
-    };
+    });
     const loader = createResumeRecommendationSourceLoader(
       repository({}),
       { findById: vi.fn() },
@@ -177,7 +190,7 @@ describe('createResumeRecommendationSourceLoader', () => {
   });
 
   it('hides unowned and deleted saved searches', async () => {
-    const savedSearches = {
+    const savedSearches = savedSearchRepository({
       findById: vi
         .fn()
         .mockResolvedValueOnce({
@@ -202,7 +215,7 @@ describe('createResumeRecommendationSourceLoader', () => {
           updatedAt: new Date('2026-08-02T00:00:00.000Z'),
           deletedAt: new Date(),
         }),
-    };
+    });
     const loader = createResumeRecommendationSourceLoader(
       repository({}),
       { findById: vi.fn() },

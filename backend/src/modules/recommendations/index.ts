@@ -25,10 +25,12 @@ import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/de
 import { PrismaRecommendationUnitOfWork } from '@/modules/recommendations/repositories/prisma-recommendation.unit-of-work.js';
 import { CandidateEmbeddingService } from '@/modules/recommendations/services/candidate-embedding.service.js';
 import { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
+import { SavedSearchService } from '@/modules/recommendations/services/saved-search.service.js';
 import { createResumeRecommendationSourceLoader } from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
 import { profileUpdatedAfter } from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
 import { jobEmbeddingRepository } from '@/modules/job-embeddings/index.js';
 import { prismaJobSearchRepository } from '@/modules/job-listing/index.js';
+import { prismaSavedSearchRepository } from '@/modules/recommendations/repositories/prisma-saved-search.repository.js';
 import { createChildLogger } from '@/shared/logger/logger.js';
 
 export const recommendationsLogger = createChildLogger({ scope: 'job-recommendations' });
@@ -102,10 +104,12 @@ export const similarJobsService = new SimilarJobsService(
   recommendationRetrievalService,
   recommendationScoringService,
 );
+export const savedSearchService = new SavedSearchService(prismaSavedSearchRepository);
 export const recommendationsRoutes = createRecommendationsRouter(
   recommendationsService,
   similarJobsService,
   recommendationFeedbackService,
+  savedSearchService,
 );
 
 export * from '@/modules/recommendations/types/recommendations.types.js';
@@ -143,6 +147,7 @@ export * from '@/modules/recommendations/services/recommendation-retrieval.servi
 export * from '@/modules/recommendations/services/recommendation-scoring.service.js';
 export * from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
 export * from '@/modules/recommendations/services/recommendations.service.js';
+export * from '@/modules/recommendations/services/saved-search.service.js';
 export * from '@/modules/recommendations/services/similar-jobs.service.js';
 export * from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 export * from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
