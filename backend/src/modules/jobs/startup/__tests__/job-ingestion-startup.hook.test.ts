@@ -86,7 +86,7 @@ describe('JobIngestionStartupHook', () => {
     }
   });
 
-  it('keeps the lock on failure when fail-application is false', async () => {
+  it('releases the lock on failure when fail-application is false', async () => {
     Object.assign(env, {
       JOB_INGESTION_ON_STARTUP_ENABLED: true,
       JOB_INGESTION_ON_STARTUP_DELAY_MS: 0,
@@ -98,13 +98,13 @@ describe('JobIngestionStartupHook', () => {
     } as unknown as JobsService;
     const cacheService = {
       tryAcquireLock: vi.fn().mockResolvedValue(true),
-      releaseLock: vi.fn(),
+      releaseLock: vi.fn().mockResolvedValue(undefined),
     } as unknown as ICacheService;
 
     try {
       const hook = new JobIngestionStartupHook(jobsService, cacheService);
       await expect(hook.run()).resolves.toBe('FAILED');
-      expect(cacheService.releaseLock).not.toHaveBeenCalled();
+      expect(cacheService.releaseLock).toHaveBeenCalled();
     } finally {
       restoreEnv();
     }
