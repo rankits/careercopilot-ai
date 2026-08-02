@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Link as RouterLink,
   useLocation,
@@ -13,6 +13,8 @@ import { JobCard, VirtualizedJobList } from '@/components/molecules';
 import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
 import {
   useGenerateRecommendations,
+  useGenerateResumeRecommendations,
+  mapRecommendationDtoToCard,
   useRecommendationFeedback,
   useRecommendationReadiness,
   useRecommendations,
@@ -23,7 +25,8 @@ import { useAppSelector } from '@/hooks/redux';
 import { jobDetailPath, ROUTES } from '@/constants/routes';
 import { applicationsService } from '@/features/applications/services/applications.service';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
-import { Alert, Box, CircularProgress, Typography } from '@/lib/material';
+import { resumeService } from '@/features/resume/services/resume.service';
+import { Alert, Box, CircularProgress, MenuItem, TextField, Typography } from '@/lib/material';
 
 type RecommendationMode = 'profile' | 'resume' | 'similar' | 'text-career' | 'saved';
 
@@ -34,7 +37,7 @@ const recommendationModes: Array<{
   available: boolean;
 }> = [
   { id: 'profile', label: 'Profile', panelLabel: 'Profile recommendations', available: true },
-  { id: 'resume', label: 'Resume', panelLabel: 'Resume recommendations', available: false },
+  { id: 'resume', label: 'Resume', panelLabel: 'Resume recommendations', available: true },
   { id: 'similar', label: 'Similar', panelLabel: 'Similar jobs', available: true },
   { id: 'text-career', label: 'Text / Career', panelLabel: 'Text and career matches', available: false },
   { id: 'saved', label: 'Saved', panelLabel: 'Saved search recommendations', available: false },
@@ -64,7 +67,12 @@ export function ForYouPage() {
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
   const [page, setPage] = useState(1);
   const [generatedOnce, setGeneratedOnce] = useState(false);
+  const [resumeGeneratedOnce, setResumeGeneratedOnce] = useState(false);
+  const [selectedResumeId, setSelectedResumeId] = useState('');
   const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
+  const [resumeRecommendations, setResumeRecommendations] = useState<
+    ReturnType<typeof mapRecommendationDtoToCard>[]
+  >([]);
 
   const readiness = useRecommendationReadiness();
   const { data, isPending, isError, error, refetch, isFetching } = useRecommendations(
@@ -78,18 +86,34 @@ export function ForYouPage() {
     },
   );
   const generate = useGenerateRecommendations();
+  const generateResume = useGenerateResumeRecommendations();
   const feedback = useRecommendationFeedback();
   const { saveJob, unsaveJob } = useSaveJob();
+  const resumeProfile = useQuery({
+    queryKey: ['resume', 'profile', 'me'],
+    queryFn: () => resumeService.getMyProfile(),
+    enabled: activeMode === 'resume',
+  });
   const savedQuery = useQuery({
     queryKey: savedJobsQueryKey,
     queryFn: () => applicationsService.listSavedJobs(),
-    enabled: activeMode === 'profile' || (activeMode === 'similar' && Boolean(similarSourceJobId)),
+    enabled:
+      activeMode === 'profile' ||
+      activeMode === 'resume' ||
+      (activeMode === 'similar' && Boolean(similarSourceJobId)),
   });
   const similarJobs = useSimilarJobs(similarSourceJobId, {
     enabled: activeMode === 'similar' && Boolean(similarSourceJobId),
     limit: 20,
   });
   const [optimisticSaved, setOptimisticSaved] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    const sourceResumeId = resumeProfile.data?.sourceResumeId;
+    if (sourceResumeId && !selectedResumeId) {
+      setSelectedResumeId(sourceResumeId);
+    }
+  }, [resumeProfile.data?.sourceResumeId, selectedResumeId]);
 
   const savedIdSet = useMemo(() => {
     const ids = new Set(
@@ -125,7 +149,16 @@ export function ForYouPage() {
       : generate.isError
         ? 'Unable to generate recommendations.'
         : null;
+  const generateResumeError =
+    generateResume.error instanceof Error
+      ? generateResume.error.message
+      : generateResume.isError
+        ? 'Unable to generate resume recommendations.'
+        : null;
   const similarCards = similarJobs.data?.cards ?? [];
+  const selectedResumeOption = resumeProfile.data?.sourceResumeId
+    ? [{ id: resumeProfile.data.sourceResumeId, label: 'Confirmed resume' }]
+    : [];
 
   const submitFeedback = (recommendationId: string, action: 'DISMISSED' | 'NOT_RELEVANT') => {
     setDismissedIds((prev) => ({ ...prev, [recommendationId]: true }));
@@ -241,6 +274,152 @@ export function ForYouPage() {
         })}
       </Box>
 
+      {activeMode === 'resume' ? (
+        <Box
+          aria-labelledby={getTabId('resume')}
+          id={getPanelId('resume')}
+          role="tabpanel"
+          sx={{ display: 'grid', gap: 3 }}
+        >
+          {resumeProfile.isPending ? (
+            <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
+              <CircularProgress aria-label="Loading resume source" />
+            </Box>
+          ) : null}
+
+          {resumeProfile.isError ? (
+            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+              <Box role="alert">
+                <Typography>
+                  {resumeProfile.error instanceof Error
+                    ? resumeProfile.error.message
+                    : 'Unable to load your resume profile.'}
+                </Typography>
+              </Box>
+              <Button
+                disabled={resumeProfile.isFetching}
+                onClick={() => void resumeProfile.refetch()}
+                size="small"
+              >
+                Retry
+              </Button>
+            </Box>
+          ) : null}
+
+          {!resumeProfile.isPending && !resumeProfile.isError && selectedResumeOption.length === 0 ? (
+            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
+              <Typography component="h2" sx={{ fontSize: '1rem', fontWeight: 800, m: 0 }}>
+                Resume recommendations
+              </Typography>
+              <Typography role="status" sx={{ color: 'text.secondary' }}>
+                Upload and confirm a parsed resume before generating resume-based matches.
+              </Typography>
+              <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
+                Add resume
+              </Button>
+            </Box>
+          ) : null}
+
+          {!resumeProfile.isPending && !resumeProfile.isError && selectedResumeOption.length > 0 ? (
+            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+              <TextField
+                label="Completed resume"
+                onChange={(event) => setSelectedResumeId(event.target.value)}
+                select
+                size="small"
+                sx={{ maxWidth: 360, width: '100%' }}
+                value={selectedResumeId}
+              >
+                {selectedResumeOption.map((resume) => (
+                  <MenuItem key={resume.id} value={resume.id}>
+                    {resume.label}
+                  </MenuItem>
+                ))}
+              </TextField>
+
+              {generateResumeError ? (
+                <Typography role="alert" sx={{ color: 'error.main' }}>
+                  {generateResumeError}
+                </Typography>
+              ) : null}
+
+              <Button
+                disabled={!selectedResumeId || generateResume.isPending}
+                isLoading={generateResume.isPending}
+                onClick={() => {
+                  if (!selectedResumeId) return;
+                  setResumeGeneratedOnce(true);
+                  void generateResume
+                    .mutateAsync(selectedResumeId)
+                    .then((items) => setResumeRecommendations(items.map(mapRecommendationDtoToCard)))
+                    .catch(() => undefined);
+                }}
+                size="small"
+              >
+                Generate from resume
+              </Button>
+            </Box>
+          ) : null}
+
+          {resumeGeneratedOnce &&
+          !generateResume.isPending &&
+          !generateResume.isError &&
+          resumeRecommendations.length === 0 ? (
+            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
+              No matching jobs were found for this resume.
+            </Typography>
+          ) : null}
+
+          {resumeRecommendations.length > 0 ? (
+            <>
+              <Typography sx={{ color: 'text.secondary' }}>
+                {resumeRecommendations.length} resume recommendation
+                {resumeRecommendations.length === 1 ? '' : 's'}
+              </Typography>
+              <VirtualizedJobList
+                ariaLabel="Resume recommendations"
+                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
+                items={resumeRecommendations}
+                renderItem={(job) => (
+                  <JobCard
+                    job={job}
+                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                    onApply={(selected) => {
+                      openExternalApply(selected.applyUrl);
+                    }}
+                    onDismiss={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
+                        : undefined
+                    }
+                    onNotRelevant={
+                      job.recommendationId
+                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
+                        : undefined
+                    }
+                    onOpen={(selected) => {
+                      if (!selected.id) return;
+                      void navigate(jobDetailPath(selected.id), {
+                        state: { fromFeed: `${location.pathname}${location.search}` },
+                      });
+                    }}
+                    onSave={(selected) => {
+                      if (!selected.id) return;
+                      const jobId = selected.id;
+                      const wasSaved = savedIdSet.has(jobId);
+                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
+                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
+                      });
+                    }}
+                  />
+                )}
+              />
+            </>
+          ) : null}
+        </Box>
+      ) : null}
+
       {activeMode === 'similar' ? (
         <Box
           aria-labelledby={getTabId('similar')}
@@ -335,7 +514,7 @@ export function ForYouPage() {
         </Box>
       ) : null}
 
-      {activeMode !== 'profile' && activeMode !== 'similar' ? (
+      {activeMode !== 'profile' && activeMode !== 'resume' && activeMode !== 'similar' ? (
         <Box
           aria-labelledby={getTabId(activeMode)}
           id={getPanelId(activeMode)}

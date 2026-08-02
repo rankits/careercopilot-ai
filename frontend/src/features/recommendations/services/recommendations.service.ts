@@ -91,6 +91,21 @@ export const recommendationsService = {
     return response.data.data as RecommendationDto[];
   },
 
+  async generateFromResume(
+    resumeId: string,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<RecommendationDto[]> {
+    const response = await httpClient.post(
+      '/job-recommendations',
+      { sourceType: 'RESUME', sourceId: resumeId },
+      { signal: options.signal, timeout: 60_000 },
+    );
+    if (!isRecord(response) || !isRecord(response.data) || !Array.isArray(response.data.data)) {
+      throw new Error('Unexpected generate-resume-recommendations response shape');
+    }
+    return response.data.data as RecommendationDto[];
+  },
+
   async refreshFromProfile(
     options: { signal?: AbortSignal } = {},
   ): Promise<RecommendationRunDetailsResult> {

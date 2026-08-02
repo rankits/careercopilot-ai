@@ -12,11 +12,21 @@ import { authReducer } from '@/features/auth/authSlice';
 
 import { ForYouPage } from './ForYouPage';
 
-const { listMock, generateMock, listSavedMock, readinessMock, feedbackMock, similarMock } =
-  vi.hoisted(() => ({
+const {
+  listMock,
+  generateMock,
+  generateResumeMock,
+  listSavedMock,
+  profileMock,
+  readinessMock,
+  feedbackMock,
+  similarMock,
+} = vi.hoisted(() => ({
     listMock: vi.fn(),
     generateMock: vi.fn(),
+    generateResumeMock: vi.fn(),
     listSavedMock: vi.fn(),
+    profileMock: vi.fn(),
     readinessMock: vi.fn(),
     feedbackMock: vi.fn(),
     similarMock: vi.fn(),
@@ -26,6 +36,7 @@ vi.mock('@/features/recommendations/services/recommendations.service', () => ({
   recommendationsService: {
     list: listMock,
     generateFromProfile: generateMock,
+    generateFromResume: generateResumeMock,
     getReadiness: readinessMock,
     getSimilarJobs: similarMock,
     submitFeedback: feedbackMock,
@@ -54,6 +65,12 @@ vi.mock('@/features/applications/services/applications.service', () => ({
     listSavedJobs: listSavedMock,
     saveJob: vi.fn(),
     unsaveJob: vi.fn(),
+  },
+}));
+
+vi.mock('@/features/resume/services/resume.service', () => ({
+  resumeService: {
+    getMyProfile: profileMock,
   },
 }));
 
@@ -101,7 +118,9 @@ function renderPage(isProfileComplete = true, route = '/for-you') {
 beforeEach(() => {
   listMock.mockReset();
   generateMock.mockReset();
+  generateResumeMock.mockReset();
   similarMock.mockReset();
+  profileMock.mockReset();
   listSavedMock.mockReset();
   listSavedMock.mockResolvedValue([]);
 });
@@ -127,15 +146,74 @@ describe('ForYouPage', () => {
 
   it('navigates to unwired mode placeholders without loading profile recommendations', async () => {
     const user = userEvent.setup();
-    renderPage(true, '/for-you?mode=resume');
+    renderPage(true, '/for-you?mode=text-career');
 
-    expect(await screen.findByRole('tabpanel', { name: /resume/i })).toHaveTextContent(
+    expect(await screen.findByRole('tabpanel', { name: /text/i })).toHaveTextContent(
       /being wired/i,
     );
     expect(listMock).not.toHaveBeenCalled();
 
     await user.click(screen.getByRole('tab', { name: /^profile$/i }));
     await waitFor(() => expect(listMock).toHaveBeenCalledTimes(1));
+  });
+
+  it('generates resume recommendations from a completed resume source', async () => {
+    const user = userEvent.setup();
+    profileMock.mockResolvedValue({
+      isComplete: true,
+      sourceResumeId: 'resume-1',
+      userId: 'user-1',
+      personalDetails: {},
+      skills: [],
+      experience: [],
+      education: [],
+      certifications: [],
+    });
+    generateResumeMock.mockResolvedValue([
+      {
+        id: 'rec-resume-1',
+        runId: 'run-resume-1',
+        rank: 1,
+        job: {
+          id: 'resume-job',
+          title: 'Resume Matched Engineer',
+          company: { slug: 'gamma', name: 'Gamma', logoUrl: null, verified: true },
+          location: { formatted: 'Remote', remoteType: 'REMOTE' },
+          employmentType: 'FULL_TIME',
+          salary: { minimum: 10, maximum: 20, currency: 'INR' },
+          skills: ['TypeScript'],
+          publishedAt: '2026-07-30T00:00:00.000Z',
+          applyUrl: 'https://example.com/apply',
+        },
+        displayScore: 82,
+        scoreResult: scoreResult(0.82),
+        category: 'BEST_MATCH',
+        matchType: 'EXACT',
+        createdAt: '2026-07-30T00:00:00.000Z',
+      },
+    ]);
+
+    renderPage(true, '/for-you?mode=resume');
+
+    expect(await screen.findByText(/confirmed resume/i)).toBeInTheDocument();
+    const generateButton = screen.getByRole('button', { name: /generate from resume/i });
+    await waitFor(() => expect(generateButton).toBeEnabled());
+    await user.click(generateButton);
+
+    expect(await screen.findByText(/resume matched engineer/i)).toBeInTheDocument();
+    expect(screen.getByText(/82% Match/i)).toBeInTheDocument();
+    expect(generateResumeMock).toHaveBeenCalledWith('resume-1');
+    expect(listMock).not.toHaveBeenCalled();
+  });
+
+  it('shows a resume CTA when no completed resume source is available', async () => {
+    profileMock.mockResolvedValue(null);
+
+    renderPage(true, '/for-you?mode=resume');
+
+    expect(await screen.findByRole('status')).toHaveTextContent(/upload and confirm/i);
+    expect(screen.getByRole('link', { name: /add resume/i })).toHaveAttribute('href', '/profile');
+    expect(generateResumeMock).not.toHaveBeenCalled();
   });
 
   it('renders similar jobs from the Similar tab without showing the source job', async () => {

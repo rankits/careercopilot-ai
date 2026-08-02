@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 28 |
+| Implemented | 29 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,33 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FE-002 - Wire Resume recommendation mode UI
+
+- Status: Implemented
+- Implemented files:
+  - `frontend/src/features/recommendations/services/recommendations.service.ts`
+  - `frontend/src/features/recommendations/services/recommendations.service.test.ts`
+  - `frontend/src/features/recommendations/hooks/useRecommendations.ts`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/RESUME_RECOMMENDATIONS_FRONTEND_CONTRACT.md`
+- API changes: none; FE now consumes existing `POST /job-recommendations` with `sourceType: RESUME`
+- Database changes: none
+- Tests added:
+  - Service posts RESUME generate with `sourceId`
+  - Resume tab generates from completed owned resume source and renders `displayScore`
+  - Resume tab shows upload/confirm CTA when no completed resume source exists
+- Commands executed:
+  - `npm --prefix frontend run test -- src/features/recommendations/services/recommendations.service.test.ts src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Focused recommendation service and For You tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: Resume tab uses the profile `sourceResumeId`; a full owned-resume list endpoint is not available yet
+- Next ticket: `JRE-FE-004`
 
 ### 2026-08-02 - JRE-DATA-002 - Complete resume-to-context mapping for RESUME source
 

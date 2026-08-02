@@ -5,6 +5,7 @@ import { mapJobListDtoToCard } from '@/features/jobs/utils/mapJobToCard';
 import { recommendationsService } from '@/features/recommendations/services/recommendations.service';
 import type {
   ListRecommendationsParams,
+  RecommendationDto,
   RecommendationFeedbackAction,
 } from '@/features/recommendations/types/recommendation.types';
 import { formatRecommendationCardSubtitle } from '@/features/recommendations/utils/formatRecommendationMatchLabel';
@@ -40,24 +41,26 @@ export function useRecommendations(
         totalPages,
         hasNextPage: result.page < totalPages,
         hasPreviousPage: result.page > 1,
-        cards: result.items.map((rec, index) => {
-          const card = mapJobListDtoToCard(rec.job, index);
-          const match = formatRecommendationScorePercent({
-            displayScore: rec.displayScore,
-            overallScore: rec.scoreResult?.overallScore,
-          });
-          return {
-            ...card,
-            recommendationId: rec.id,
-            match: match ?? undefined,
-            matchSubtitle: formatRecommendationCardSubtitle(rec.category, rec.matchType),
-            isRecommended: true,
-          };
-        }),
+        cards: result.items.map(mapRecommendationDtoToCard),
       };
     },
   });
 }
+
+export const mapRecommendationDtoToCard = (rec: RecommendationDto, index = 0) => {
+  const card = mapJobListDtoToCard(rec.job, index);
+  const match = formatRecommendationScorePercent({
+    displayScore: rec.displayScore,
+    overallScore: rec.scoreResult?.overallScore,
+  });
+  return {
+    ...card,
+    recommendationId: rec.id,
+    match: match ?? undefined,
+    matchSubtitle: formatRecommendationCardSubtitle(rec.category, rec.matchType),
+    isRecommended: true,
+  };
+};
 
 export function useSimilarJobs(
   jobId: string | undefined,
@@ -95,6 +98,16 @@ export function useGenerateRecommendations() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => recommendationsService.generateFromProfile(),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ['recommendations'] });
+    },
+  });
+}
+
+export function useGenerateResumeRecommendations() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (resumeId: string) => recommendationsService.generateFromResume(resumeId),
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: ['recommendations'] });
     },
