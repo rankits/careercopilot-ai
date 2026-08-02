@@ -93,4 +93,56 @@ describe('createResumeRecommendationSourceLoader', () => {
       status: 'NOT_FOUND',
     });
   });
+
+  it('loads only owned active career targets', async () => {
+    const careerTargets = {
+      findById: vi.fn().mockResolvedValue({
+        id: 'target-1',
+        userId: 'user-1',
+        goalText: 'Move into engineering management',
+        structured: { targetRole: 'Engineering Manager' },
+        createdAt: new Date('2026-08-02T00:00:00.000Z'),
+        updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+        archivedAt: null,
+      }),
+    };
+    const loader = createResumeRecommendationSourceLoader(repository({}), careerTargets);
+
+    await expect(loader.findOwnedCareerTargetSource!('user-1', 'target-1')).resolves.toMatchObject({
+      id: 'target-1',
+      userId: 'user-1',
+      goalText: 'Move into engineering management',
+      structured: { targetRole: 'Engineering Manager' },
+    });
+    expect(careerTargets.findById).toHaveBeenCalledWith('target-1');
+  });
+
+  it('hides unowned and archived career targets', async () => {
+    const careerTargets = {
+      findById: vi
+        .fn()
+        .mockResolvedValueOnce({
+          id: 'target-1',
+          userId: 'other-user',
+          goalText: 'Move into management',
+          structured: {},
+          createdAt: new Date('2026-08-02T00:00:00.000Z'),
+          updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+          archivedAt: null,
+        })
+        .mockResolvedValueOnce({
+          id: 'target-2',
+          userId: 'user-1',
+          goalText: 'Move into management',
+          structured: {},
+          createdAt: new Date('2026-08-02T00:00:00.000Z'),
+          updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+          archivedAt: new Date(),
+        }),
+    };
+    const loader = createResumeRecommendationSourceLoader(repository({}), careerTargets);
+
+    await expect(loader.findOwnedCareerTargetSource!('user-1', 'target-1')).resolves.toBeNull();
+    await expect(loader.findOwnedCareerTargetSource!('user-1', 'target-2')).resolves.toBeNull();
+  });
 });

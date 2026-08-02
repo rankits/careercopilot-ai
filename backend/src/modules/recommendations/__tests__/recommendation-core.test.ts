@@ -244,6 +244,11 @@ describe('recommendation module invariants', () => {
       createRecommendationSchema.safeParse({
         body: { sourceType: 'CAREER_GOAL', sourceId: uuid },
       }).success,
+    ).toBe(true);
+    expect(
+      createRecommendationSchema.safeParse({
+        body: { sourceType: 'CAREER_GOAL' },
+      }).success,
     ).toBe(false);
     expect(
       createRecommendationSchema.safeParse({
