@@ -84,15 +84,26 @@ export class RecommendationSourceAuthorizationService {
             RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
           );
         }
-        const parsed = await this.profiles.findOwnedResumeProfileSource(userId, input.sourceId);
-        if (!parsed) {
+        const lookup = this.profiles.lookupOwnedResumeProfileSource
+          ? await this.profiles.lookupOwnedResumeProfileSource(userId, input.sourceId)
+          : await this.profiles.findOwnedResumeProfileSource(userId, input.sourceId).then((payload) =>
+              payload ? { status: 'FOUND' as const, payload } : { status: 'NOT_FOUND' as const },
+            );
+        if (lookup.status === 'NOT_FOUND') {
           throw new RecommendationError(
             'Owned resume with completed parse data was not found',
             404,
             RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
           );
         }
-        const payload = buildProfilePrimaryRecommendationPayload(parsed, null);
+        if (lookup.status === 'INCOMPLETE') {
+          throw new RecommendationError(
+            'Resume parse data is not complete enough for recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        const payload = buildProfilePrimaryRecommendationPayload(lookup.payload, null);
         if (!hasRecommendationSignal(payload)) {
           throw new RecommendationError(
             'Resume parse data does not contain titles, skills, or summary text for recommendations',

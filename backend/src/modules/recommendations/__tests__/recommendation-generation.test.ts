@@ -211,6 +211,31 @@ describe('RecommendationSourceAuthorizationService', () => {
     expect(findOwnedResumeProfileSource).toHaveBeenCalledWith('user-1', resumeId);
   });
 
+  it('rejects owned incomplete RESUME parse data with a context error', async () => {
+    const resumeId = '22222222-2222-2222-2222-222222222222';
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        lookupOwnedResumeProfileSource: vi.fn().mockResolvedValue({
+          status: 'INCOMPLETE',
+          reason: 'PARSE_NOT_READY',
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+      },
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', {
+        sourceType: 'RESUME',
+        sourceId: resumeId,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      code: 'RECOMMENDATION_CONTEXT_INVALID',
+    });
+  });
+
   it('rejects empty candidate profiles', async () => {
     const service = new RecommendationSourceAuthorizationService(
       { findById: vi.fn() } as unknown as IJobSearchRepository,
