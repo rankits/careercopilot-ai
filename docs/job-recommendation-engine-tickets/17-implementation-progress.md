@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 50 |
+| Implemented | 51 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,48 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-FEEDBACK-003 - Implement MORE_LIKE_THIS affinity and LESS_LIKE_THIS exclusion UX
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/contracts/recommendation.repository.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/services/recommendations.service.ts`
+  - `backend/src/modules/recommendations/utils/recommendation-feedback-affinity.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `frontend/src/components/molecules/JobCard/JobCard.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.tsx`
+  - `frontend/src/pages/ForYouPage/ForYouPage.test.tsx`
+  - `docs/job-recommendation-engine-tickets/MORE_LESS_FEEDBACK_AFFINITY_CONTRACT.md`
+- API changes: none; uses existing recommendation feedback endpoint with `MORE_LIKE_THIS` and `LESS_LIKE_THIS`
+- Database changes: none; reads existing feedback and recommendation records
+- Tests added:
+  - LESS_LIKE_THIS feedback is passed to retrieval exclusions on the next generate
+  - MORE_LIKE_THIS anchors apply a deterministic capped affinity boost before stable ranking
+  - For You exposes More/Less controls, marks MORE selected, and hides LESS cards
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts`
+  - `npm --prefix frontend run test -- src/pages/ForYouPage/ForYouPage.test.tsx --testTimeout=30000`
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-feedback-exclusion.test.ts`
+  - `npm --prefix frontend run test -- src/pages/ForYouPage/ForYouPage.test.tsx src/features/recommendations/services/recommendations.service.test.ts --testTimeout=30000`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+  - `git diff --check`
+- Results:
+  - Focused backend generation test passed
+  - Focused frontend For You test passed
+  - Focused backend generation/API/core/feedback-exclusion tests passed
+  - Focused frontend For You and recommendation service tests passed
+  - Backend and frontend typechecks passed
+  - Touched-file lint passed
+  - Whitespace check passed with existing CRLF conversion warnings
+- Known limitations: affinity is a deterministic heuristic, not ML personalization.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-FEEDBACK-002 - Auto-link save and apply actions to recommendation feedback
 

@@ -768,6 +768,8 @@ describe('RecommendationsService generation', () => {
         ),
       listByJob: (userId, jobId) =>
         unitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+      listByAction: (userId, action, options) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByAction(userId, action, options)),
       listExcludedJobIds: (userId) =>
         unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
     });
@@ -1010,6 +1012,8 @@ describe('RecommendationsService generation', () => {
         ),
       listByJob: (userId, jobId) =>
         unitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+      listByAction: (userId, action, options) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByAction(userId, action, options)),
       listExcludedJobIds: (userId) =>
         unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
     });
@@ -1068,6 +1072,134 @@ describe('RecommendationsService generation', () => {
       APPLIED: 1,
     });
     expect(recommendationMetricsSnapshot().feedbackAppliedLinkedTotal).toBe(1);
+  });
+
+  it('excludes LESS_LIKE_THIS jobs and boosts MORE_LIKE_THIS affinity before ranking', async () => {
+    resetRecommendationMetricsForTests();
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const previousRun = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'TARGET_TEXT' }),
+    );
+    const previousRecommendations = await unitOfWork.execute(({ recommendations }) =>
+      recommendations.createMany('user-1', previousRun.id, [
+        {
+          ...scoredRecommendation('job-excluded', 0.8),
+          job: jobList('job-excluded', {
+            title: 'Legacy Backend Engineer',
+            skills: ['Python', 'Django'],
+          }),
+        },
+        {
+          ...scoredRecommendation('job-anchor', 0.8),
+          job: jobList('job-anchor', {
+            title: 'React Platform Engineer',
+            skills: ['React', 'TypeScript'],
+          }),
+        },
+      ]),
+    );
+    const feedbackService = new RecommendationFeedbackService({
+      upsert: (input) => unitOfWork.execute(({ feedback }) => feedback.upsert(input)),
+      findByRecommendation: (userId, recommendationId) =>
+        unitOfWork.execute(({ feedback }) =>
+          feedback.findByRecommendation(userId, recommendationId),
+        ),
+      listByJob: (userId, jobId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+      listByAction: (userId, action, options) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByAction(userId, action, options)),
+      listExcludedJobIds: (userId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
+    });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: previousRecommendations.find((item) => item.job.id === 'job-excluded')!
+        .id,
+      jobId: 'job-excluded',
+      action: 'LESS_LIKE_THIS',
+    });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: previousRecommendations.find((item) => item.job.id === 'job-anchor')!.id,
+      jobId: 'job-anchor',
+      action: 'MORE_LIKE_THIS',
+    });
+
+    const candidates = [
+      {
+        job: jobList('job-excluded', {
+          title: 'Legacy Backend Engineer',
+          skills: ['Python', 'Django'],
+        }),
+        retrievalScore: 0.9,
+      },
+      {
+        job: jobList('job-generic', {
+          title: 'Backend Engineer',
+          skills: ['Python', 'Django'],
+        }),
+        retrievalScore: 0.9,
+      },
+      {
+        job: jobList('job-similar', {
+          title: 'React Platform Engineer',
+          skills: ['React', 'TypeScript', 'GraphQL'],
+        }),
+        retrievalScore: 0.9,
+      },
+    ];
+    const retrievalService = {
+      retrieve: vi.fn(async (request: { excludeJobIds?: string[] }) =>
+        candidates.filter((candidate) => !request.excludeJobIds?.includes(candidate.job.id)),
+      ),
+    } as unknown as RecommendationRetrievalService;
+    const fakeScoringService = {
+      score: vi.fn(async (_context: RecommendationContext, candidateItems: typeof candidates) =>
+        candidateItems.map(({ job }) => {
+          const overallScore = job.id === 'job-similar' ? 0.7 : 0.72;
+          return {
+            ...scoredRecommendation(job.id, overallScore),
+            job,
+          };
+        }),
+      ),
+    } as unknown as RecommendationScoringService;
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: fakeScoringService,
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Frontend platform engineer with React and TypeScript',
+    });
+
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({ excludeJobIds: ['job-excluded'] }),
+    );
+    expect(records.map((item) => item.job.id)).toEqual(['job-similar', 'job-generic']);
+    expect(records[0]?.scoreResult.reasons).toContainEqual(
+      expect.objectContaining({
+        message: 'More-like-this feedback lightly boosted this recommendation',
+      }),
+    );
+    expect(recommendationMetricsSnapshot()).toMatchObject({
+      feedbackMoreLessTotal: 2,
+      feedbackActionTotal: {
+        LESS_LIKE_THIS: 1,
+        MORE_LIKE_THIS: 1,
+      },
+    });
   });
 
   it('drops stretch/related categories when includeStretchOpportunities is false', async () => {

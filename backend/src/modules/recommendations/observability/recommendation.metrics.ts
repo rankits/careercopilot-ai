@@ -37,6 +37,7 @@ let rerankTotalLatencyMs = 0;
 let careerGoalApiTotal = 0;
 let savedSearchApiTotal = 0;
 let feedbackAppliedLinkedTotal = 0;
+let feedbackMoreLessTotal = 0;
 let careerCategoryDistribution: Record<RecommendationCategory, number> = {
   BEST_MATCH: 0,
   GOOD_MATCH: 0,
@@ -61,6 +62,7 @@ export const recommendationMetricsSnapshot = () => ({
   careerGoalApiTotal,
   savedSearchApiTotal,
   feedbackAppliedLinkedTotal,
+  feedbackMoreLessTotal,
   careerCategoryDistribution: { ...careerCategoryDistribution },
   feedbackActionTotal: { ...feedbackActionTotal },
 });
@@ -85,6 +87,9 @@ export const recordFeedbackAction = (action: RecommendationFeedbackAction): void
   feedbackActionTotal[action] = (feedbackActionTotal[action] ?? 0) + 1;
   if (action === 'APPLIED') {
     feedbackAppliedLinkedTotal += 1;
+  }
+  if (action === 'MORE_LIKE_THIS' || action === 'LESS_LIKE_THIS') {
+    feedbackMoreLessTotal += 1;
   }
 };
 
@@ -149,6 +154,7 @@ export const resetRecommendationMetricsForTests = (): void => {
   careerGoalApiTotal = 0;
   savedSearchApiTotal = 0;
   feedbackAppliedLinkedTotal = 0;
+  feedbackMoreLessTotal = 0;
   careerCategoryDistribution = {
     BEST_MATCH: 0,
     GOOD_MATCH: 0,
