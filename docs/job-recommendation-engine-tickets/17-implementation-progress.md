@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 53 |
+| Implemented | 54 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,38 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-PERF-001 - Meet generate path latency and embedding reuse budgets
+
+- Status: Implemented
+- Implemented files:
+  - `backend/src/modules/recommendations/observability/recommendation.metrics.ts`
+  - `backend/src/modules/recommendations/services/recommendations.service.ts`
+  - `backend/src/modules/recommendations/providers/pgvector-candidate-retrieval.provider.ts`
+  - `backend/src/modules/recommendations/utils/recommendation-retrieval-budget.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts`
+  - `backend/src/modules/recommendations/__tests__/recommendation-retrieval-budget.test.ts`
+  - `docs/job-recommendation-engine-tickets/RECOMMENDATION_PERFORMANCE_BUDGETS.md`
+  - `docs/job-recommendation-engine-analysis/15-performance-reliability-and-observability.md`
+- API changes: none
+- Database changes: none
+- Tests added:
+  - Retrieval over-fetch multiplier and maximum search limit are resolved through a named performance budget helper
+  - Generate path records stage latency averages and per-stage histogram samples
+- Commands executed:
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendation-retrieval-budget.test.ts recommendations/__tests__/pgvector-candidate-retrieval.test.ts recommendations/__tests__/candidate-embedding.service.test.ts recommendations/cache/__tests__/recommendation-query-embedding.cache.test.ts`
+  - `npm --prefix backend run typecheck`
+  - `npm exec -- eslint backend/src/modules/recommendations/observability/recommendation.metrics.ts backend/src/modules/recommendations/services/recommendations.service.ts backend/src/modules/recommendations/providers/pgvector-candidate-retrieval.provider.ts backend/src/modules/recommendations/utils/recommendation-retrieval-budget.ts backend/src/modules/recommendations/__tests__/recommendation-generation.test.ts backend/src/modules/recommendations/__tests__/recommendation-retrieval-budget.test.ts --max-warnings=0`
+  - `git diff --check`
+  - `npm --prefix backend run test -- recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendations.api.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-scoring.service.test.ts recommendations/__tests__/pgvector-candidate-retrieval.test.ts recommendations/__tests__/candidate-embedding.service.test.ts recommendations/cache/__tests__/recommendation-query-embedding.cache.test.ts`
+- Results:
+  - Focused performance/retrieval/cache tests passed
+  - Backend typecheck passed
+  - Touched-file lint passed
+  - Whitespace check passed with existing CRLF conversion warnings
+  - Broader recommendation/retrieval/cache regression tests passed
+- Known limitations: staging p95 load-test execution is documented as the required rollout gate; no staging environment was available locally.
+- Next ticket: recompute from metadata
 
 ### 2026-08-02 - JRE-LIFE-002 - Invalidate or hide recommendations when jobs close expire or delete
 

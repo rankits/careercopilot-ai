@@ -5,6 +5,23 @@ import type {
   RecommendationFilterMode,
 } from '@/modules/recommendations/types/recommendations.types.js';
 
+export type RecommendationGenerateStage =
+  | 'context'
+  | 'feedback'
+  | 'retrieval'
+  | 'scoring'
+  | 'ranking'
+  | 'persistence';
+
+export type RecommendationGenerateStageLatencyBucket =
+  | 'le_100'
+  | 'le_250'
+  | 'le_500'
+  | 'le_1000'
+  | 'le_2500'
+  | 'le_5000'
+  | 'gt_5000';
+
 export interface RecommendationGenerateMetricEvent {
   userId: string;
   runId?: string;
@@ -14,6 +31,7 @@ export interface RecommendationGenerateMetricEvent {
   filterMode?: RecommendationFilterMode;
   failureCode?: string;
   empty: boolean;
+  stageDurationsMs?: Partial<Record<RecommendationGenerateStage, number>>;
 }
 
 export interface RecommendationRerankMetricEvent {
@@ -29,6 +47,28 @@ let generateCount = 0;
 let emptyCount = 0;
 let failureCount = 0;
 let totalLatencyMs = 0;
+const createStageTotals = (): Record<RecommendationGenerateStage, number> => ({
+  context: 0,
+  feedback: 0,
+  retrieval: 0,
+  scoring: 0,
+  ranking: 0,
+  persistence: 0,
+});
+const createStageLatencyHistogram = (): Record<
+  RecommendationGenerateStage,
+  Record<RecommendationGenerateStageLatencyBucket, number>
+> => ({
+  context: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  feedback: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  retrieval: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  scoring: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  ranking: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  persistence: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+});
+let generateStageLatencyMs = createStageTotals();
+let generateStageSampleCount = createStageTotals();
+let generateStageLatencyHistogram = createStageLatencyHistogram();
 let filterCertExcludeTotal = 0;
 let rerankSuccessCount = 0;
 let rerankFailureCount = 0;
@@ -53,6 +93,22 @@ export const recommendationMetricsSnapshot = () => ({
   emptyCount,
   failureCount,
   averageLatencyMs: generateCount > 0 ? totalLatencyMs / generateCount : 0,
+  stageAverageLatencyMs: Object.fromEntries(
+    Object.entries(generateStageLatencyMs).map(([stage, total]) => [
+      stage,
+      generateStageSampleCount[stage as RecommendationGenerateStage] > 0
+        ? total / generateStageSampleCount[stage as RecommendationGenerateStage]
+        : 0,
+    ]),
+  ) as Record<RecommendationGenerateStage, number>,
+  stageLatencyHistogram: {
+    context: { ...generateStageLatencyHistogram.context },
+    feedback: { ...generateStageLatencyHistogram.feedback },
+    retrieval: { ...generateStageLatencyHistogram.retrieval },
+    scoring: { ...generateStageLatencyHistogram.scoring },
+    ranking: { ...generateStageLatencyHistogram.ranking },
+    persistence: { ...generateStageLatencyHistogram.persistence },
+  },
   filterCertExcludeTotal,
   rerankSuccessCount,
   rerankFailureCount,
@@ -107,12 +163,30 @@ export const recordFeedbackAction = (action: RecommendationFeedbackAction): void
   }
 };
 
+const stageLatencyBucketFor = (durationMs: number): RecommendationGenerateStageLatencyBucket => {
+  if (durationMs <= 100) return 'le_100';
+  if (durationMs <= 250) return 'le_250';
+  if (durationMs <= 500) return 'le_500';
+  if (durationMs <= 1000) return 'le_1000';
+  if (durationMs <= 2500) return 'le_2500';
+  if (durationMs <= 5000) return 'le_5000';
+  return 'gt_5000';
+};
+
 export const recordRecommendationGenerate = (
   logger: Logger,
   event: RecommendationGenerateMetricEvent,
 ): void => {
   generateCount += 1;
   totalLatencyMs += event.durationMs;
+  for (const [stage, duration] of Object.entries(event.stageDurationsMs ?? {})) {
+    if (stage in generateStageLatencyMs && typeof duration === 'number' && duration >= 0) {
+      const typedStage = stage as RecommendationGenerateStage;
+      generateStageLatencyMs[typedStage] += duration;
+      generateStageSampleCount[typedStage] += 1;
+      generateStageLatencyHistogram[typedStage][stageLatencyBucketFor(duration)] += 1;
+    }
+  }
   if (event.empty) emptyCount += 1;
   if (!event.success) failureCount += 1;
 
@@ -127,6 +201,7 @@ export const recordRecommendationGenerate = (
       filterMode: event.filterMode,
       failureCode: event.failureCode,
       empty: event.empty,
+      stageDurationsMs: event.stageDurationsMs,
     },
     'Recommendation generation metric',
   );
@@ -160,6 +235,9 @@ export const resetRecommendationMetricsForTests = (): void => {
   emptyCount = 0;
   failureCount = 0;
   totalLatencyMs = 0;
+  generateStageLatencyMs = createStageTotals();
+  generateStageSampleCount = createStageTotals();
+  generateStageLatencyHistogram = createStageLatencyHistogram();
   filterCertExcludeTotal = 0;
   rerankSuccessCount = 0;
   rerankFailureCount = 0;
