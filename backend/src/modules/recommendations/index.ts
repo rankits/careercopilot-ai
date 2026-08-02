@@ -15,6 +15,8 @@ import { RecommendationScoringService } from '@/modules/recommendations/services
 import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
 import { SimilarJobsService } from '@/modules/recommendations/services/similar-jobs.service.js';
 import { CandidateRetrievalRegistry } from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
+import { recommendationRerankConfig } from '@/modules/recommendations/config/recommendation-rerank.config.js';
+import { OpenAICompatibleRecommendationReranker } from '@/modules/recommendations/providers/openai-compatible-recommendation-reranker.js';
 import { PgVectorCandidateRetrievalProvider } from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
 import { PrismaCandidateEmbeddingRepository } from '@/modules/recommendations/repositories/prisma-candidate-embedding.repository.js';
 import { RecommendationScoringEngine } from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
@@ -62,6 +64,9 @@ export const recommendationScoringEngine = new RecommendationScoringEngine(
 export const recommendationScoringService = new RecommendationScoringService(
   recommendationScoringEngine,
 );
+export const recommendationReranker = recommendationRerankConfig.enabled
+  ? new OpenAICompatibleRecommendationReranker(recommendationRerankConfig)
+  : undefined;
 export const recommendationSourceLoader = createResumeRecommendationSourceLoader();
 export const recommendationSourceAuthorizationService =
   new RecommendationSourceAuthorizationService(
@@ -77,6 +82,7 @@ export const recommendationsService = new RecommendationsService(recommendations
   scoringService: recommendationScoringService,
   unitOfWork: recommendationUnitOfWork,
   sourceAuthorization: recommendationSourceAuthorizationService,
+  reranker: recommendationReranker,
   profileUpdatedAfter,
 });
 export const recommendationFeedbackService = new RecommendationFeedbackService({
@@ -105,6 +111,7 @@ export const recommendationsRoutes = createRecommendationsRouter(
 export * from '@/modules/recommendations/types/recommendations.types.js';
 export * from '@/modules/recommendations/types/candidate-embedding.types.js';
 export * from '@/modules/recommendations/constants/recommendation.constants.js';
+export * from '@/modules/recommendations/config/recommendation-rerank.config.js';
 export * from '@/modules/recommendations/contracts/candidate-embedding.repository.js';
 export * from '@/modules/recommendations/contracts/recommendation-provider.contracts.js';
 export * from '@/modules/recommendations/contracts/recommendation.repository.js';
@@ -118,6 +125,7 @@ export * from '@/modules/recommendations/mappers/saved-search-source.mapper.js';
 export * from '@/modules/recommendations/matching/recommendation-access.js';
 export * from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
 export * from '@/modules/recommendations/providers/heuristic-target-text-extraction.provider.js';
+export * from '@/modules/recommendations/providers/openai-compatible-recommendation-reranker.js';
 export * from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
 export * from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
 export * from '@/modules/recommendations/repositories/prisma-career-target.repository.js';

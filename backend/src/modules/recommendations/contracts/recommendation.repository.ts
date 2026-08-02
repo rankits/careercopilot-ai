@@ -36,6 +36,7 @@ export interface JobRecommendationRepository {
     userId: string,
     runId: string,
     recommendations: readonly ScoredJobRecommendation[],
+    options?: { preserveOrder?: boolean },
   ): Promise<JobRecommendationRecord[]>;
   findById(userId: string, recommendationId: string): Promise<JobRecommendationRecord | null>;
   listByRun(

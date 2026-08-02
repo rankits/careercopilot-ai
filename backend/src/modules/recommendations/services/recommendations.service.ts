@@ -1,5 +1,6 @@
 import type { Logger } from 'pino';
 import type { RecommendationUnitOfWork } from '@/modules/recommendations/contracts/recommendation.repository.js';
+import type { RecommendationReranker } from '@/modules/recommendations/contracts/recommendation-provider.contracts.js';
 import {
   DEFAULT_RECOMMENDATION_LIMIT,
   DEFAULT_RETRIEVAL_BACKEND,
@@ -19,10 +20,14 @@ import {
   isRecommendationSetStale,
   mapRecommendationLifecycleState,
 } from '@/modules/recommendations/services/recommendation-readiness.helpers.js';
-import { recordRecommendationGenerate } from '@/modules/recommendations/observability/recommendation.metrics.js';
+import {
+  recordRecommendationGenerate,
+  recordRecommendationRerank,
+} from '@/modules/recommendations/observability/recommendation.metrics.js';
 import { withRecommendationTimeout } from '@/modules/recommendations/utils/recommendation-timeout.js';
 import { applyRecommendationFilters } from '@/modules/recommendations/utils/apply-recommendation-filters.js';
 import { resolveRecommendationFilterMode } from '@/modules/recommendations/utils/candidate-job-filters.js';
+import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
 import type {
   BuildRecommendationContextInput,
   JobRecommendationRecord,
@@ -31,6 +36,8 @@ import type {
   RecommendationReadinessStatus,
   RecommendationRunPage,
   RetrievalBackend,
+  RecommendationContext,
+  ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import type {
   CreateRecommendationFromTextInput,
@@ -44,6 +51,7 @@ export interface RecommendationOrchestrationDependencies {
   scoringService: RecommendationScoringService;
   unitOfWork: RecommendationUnitOfWork;
   sourceAuthorization: RecommendationSourceAuthorizationService;
+  reranker?: RecommendationReranker;
   profileUpdatedAfter?: (userId: string, timestamp: Date) => Promise<boolean>;
 }
 
@@ -193,8 +201,17 @@ export class RecommendationsService {
             RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
           );
         }
+        const deterministic = sortRecommendationsForRanking(eligible);
+        const ranked = await this.rerankWithFallback(
+          dependencies.reranker,
+          context,
+          deterministic,
+          run.id,
+        );
         const records = await dependencies.unitOfWork.execute(async ({ recommendations, runs }) => {
-          const created = await recommendations.createMany(input.userId, run.id, eligible);
+          const created = await recommendations.createMany(input.userId, run.id, ranked, {
+            preserveOrder: true,
+          });
           this.assertPersistedOwnership(input.userId, run.id, created);
           await runs.markCompleted(input.userId, run.id);
           return created;
@@ -405,5 +422,63 @@ export class RecommendationsService {
       500,
       RECOMMENDATION_ERROR_CODES.GENERATION_FAILED,
     );
+  }
+
+  private async rerankWithFallback(
+    reranker: RecommendationReranker | undefined,
+    context: RecommendationContext,
+    deterministic: readonly ScoredJobRecommendation[],
+    runId: string,
+  ): Promise<ScoredJobRecommendation[]> {
+    if (!reranker || deterministic.length < 2) return [...deterministic];
+    const startedAt = Date.now();
+    try {
+      const reranked = await reranker.rerank(context, deterministic);
+      const sanitized = this.preserveKnownRerankOrder(deterministic, reranked);
+      recordRecommendationRerank(this.logger, {
+        userId: context.userId,
+        runId,
+        candidateCount: deterministic.length,
+        durationMs: Date.now() - startedAt,
+        success: true,
+        fallback: false,
+      });
+      return sanitized;
+    } catch (error) {
+      this.logger.warn(
+        {
+          userId: context.userId,
+          runId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        'Recommendation rerank failed; preserving deterministic order',
+      );
+      recordRecommendationRerank(this.logger, {
+        userId: context.userId,
+        runId,
+        candidateCount: deterministic.length,
+        durationMs: Date.now() - startedAt,
+        success: false,
+        fallback: true,
+      });
+      return [...deterministic];
+    }
+  }
+
+  private preserveKnownRerankOrder(
+    deterministic: readonly ScoredJobRecommendation[],
+    reranked: readonly ScoredJobRecommendation[],
+  ): ScoredJobRecommendation[] {
+    const byId = new Map(deterministic.map((item) => [item.job.id, item]));
+    const seen = new Set<string>();
+    const ordered: ScoredJobRecommendation[] = [];
+    for (const item of reranked) {
+      if (seen.has(item.job.id)) continue;
+      const original = byId.get(item.job.id);
+      if (!original) continue;
+      seen.add(item.job.id);
+      ordered.push(original);
+    }
+    return [...ordered, ...deterministic.filter((item) => !seen.has(item.job.id))];
   }
 }

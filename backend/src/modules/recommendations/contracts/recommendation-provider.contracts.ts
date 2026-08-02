@@ -4,6 +4,7 @@ import type {
   RecommendationCandidate,
   RecommendationContext,
   RetrievalBackend,
+  ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
 export type { EmbeddingProvider } from '@/modules/ai-embeddings/contracts/embedding-provider.js';
 
@@ -42,6 +43,6 @@ export interface RecommendationExtractionProvider {
 export interface RecommendationReranker {
   rerank(
     context: RecommendationContext,
-    candidates: RecommendationCandidate[],
-  ): Promise<RecommendationCandidate[]>;
+    recommendations: readonly ScoredJobRecommendation[],
+  ): Promise<ScoredJobRecommendation[]>;
 }
