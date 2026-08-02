@@ -1,42 +1,48 @@
-# Recommendation score scale (JOB-REC-001)
+# Recommendation Score Scale (JRE-SCORE-001)
 
 ## Contract
 
-All recommendation scores exposed by `/api/v1/job-recommendations` are **unit-interval floats in `[0, 1]`**.
+Recommendation APIs expose two score scales:
 
 | Field | Scale | Notes |
 |---|---|---|
-| `scoreResult.overallScore` | 0–1 | Primary UI match value; hybrid of retrieval + heuristic (see below) |
-| Component scores in `scoreResult.components[]` | 0–1 each | Same unit interval |
-| Categories | Derived from overall | ≥0.85 BEST_MATCH, ≥0.65 GOOD_MATCH, ≥0.45 STRETCH, else RELATED |
+| `displayScore` | 0-100 integer | User-facing match percent; derived from `scoreResult.overallScore` with `Math.round(overallScore * 100)` |
+| `scoreResult.overallScore` | 0-1 float | Internal hybrid score; kept for ranking/debugging/backward compatibility |
+| Component scores in `scoreResult.components[]` | 0-1 each | Internal unit-interval component scores |
+| Categories | Derived from `overallScore` | `>=0.85` BEST_MATCH, `>=0.65` GOOD_MATCH, `>=0.45` STRETCH, else RELATED |
 
-Scores are clamped on write (`clampScore`). They are **not** 0–100 integers.
+`displayScore` is additive and is not persisted. Database values and scoring
+logic remain unit-interval floats in `[0, 1]`.
 
-## Hybrid overall score (JR-PROD-001)
+## Hybrid Overall Score
 
 When vector retrieval supplies a `retrievalScore` in `[0, 1]`:
 
-```
-heuristicScore = Σ (componentScore × componentWeight)   // nine components, weights sum to 1
-overallScore   = 0.4 × retrievalScore + 0.6 × heuristicScore
+```text
+heuristicScore = sum(componentScore * componentWeight)
+overallScore = 0.4 * retrievalScore + 0.6 * heuristicScore
+displayScore = Math.round(overallScore * 100)
 ```
 
-If `retrievalScore` is absent, `overallScore` equals `heuristicScore` only.
+If `retrievalScore` is absent, `overallScore` equals the heuristic-only score.
 
-## FE formatting
+## Frontend Formatting
+
+Frontend clients should prefer `displayScore` when present and should only
+multiply `scoreResult.overallScore` as a backward-compatible fallback:
 
 ```ts
-// Display percent for UI only — never persist 0–100.
-const matchPercent = Math.round(overallScore * 100); // e.g. 0.87 → 87
+const matchPercent = displayScore ?? Math.round(overallScore * 100);
 ```
 
-Invalid / missing scores: omit the badge (do not invent a percentage).
+Invalid or missing scores should omit the match badge rather than inventing a
+percentage.
 
 ## Examples
 
-| overallScore | UI label |
-|---|---|
-| `0` | `0%` |
-| `0.5` | `50%` |
-| `0.874` | `87%` |
-| `1` | `100%` |
+| overallScore | displayScore | UI label |
+|---:|---:|---|
+| `0` | `0` | `0%` |
+| `0.5` | `50` | `50%` |
+| `0.874` | `87` | `87%` |
+| `0.995` | `100` | `100%` |
