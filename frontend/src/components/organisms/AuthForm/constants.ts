@@ -104,23 +104,39 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
       .string()
       .oneOf([yup.ref('password')], 'Passwords must match')
       .required('Confirm password is required'),
-    email: yup.string().email('Enter a valid email address').required('Email is required'),
-    firstName: yup.string().trim().required('First name is required'),
-    lastName: yup.string().trim().required('Last name is required'),
+
+    firstName: yup
+      .string()
+      .trim()
+      .max(80, 'First name cannot exceed 80 characters')
+      .required('First name is required'),
+
+    lastName: yup
+      .string()
+      .trim()
+      .max(80, 'Last name cannot exceed 80 characters')
+      .required('Last name is required'),
+
+    email: yup
+      .string()
+      .trim()
+      .email('Enter a valid email address')
+      .max(300, 'Email cannot exceed 300 characters')
+      .required('Email is required'),
+
+    phone: yup
+      .string()
+      .required('Phone number is required')
+      .matches(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
+
     password: yup
       .string()
       .required('Password is required')
       .min(8, 'Password must be at least 8 characters')
+      .max(128, 'Password cannot exceed 128 characters')
       .matches(/[A-Z]/, 'Password must include an uppercase letter')
       .matches(/[a-z]/, 'Password must include a lowercase letter')
       .matches(/\d/, 'Password must include a number')
       .matches(/[^A-Za-z0-9]/, 'Password must include a symbol'),
-    phone: yup
-      .string()
-      .required('Phone number is required')
-      .matches(/^\+?(?=(?:\D*\d){10,15}\D*$)[\d\s()-]+$/, {
-        excludeEmptyString: true,
-        message: 'Enter a valid phone number',
-      }),
   }),
 } as const;
