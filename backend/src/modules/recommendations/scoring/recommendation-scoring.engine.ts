@@ -27,6 +27,7 @@ export interface RecommendationScoreCalculator {
     reasons: RecommendationReason[];
     matchedSkills?: string[];
     relatedSkills?: string[];
+    transferableSkills?: string[];
     missingSkills?: string[];
   }>;
 }
@@ -103,6 +104,7 @@ export class RecommendationScoringEngine {
       components,
       matchedSkills: calculated.flatMap(({ result }) => result.matchedSkills ?? []),
       relatedSkills: calculated.flatMap(({ result }) => result.relatedSkills ?? []),
+      transferableSkills: calculated.flatMap(({ result }) => result.transferableSkills ?? []),
       missingSkills: calculated.flatMap(({ result }) => result.missingSkills ?? []),
       reasons: calculated.flatMap(({ result }) => result.reasons),
     };

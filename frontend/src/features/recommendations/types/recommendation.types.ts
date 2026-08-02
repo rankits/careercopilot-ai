@@ -5,6 +5,7 @@ export interface RecommendationScoreResult {
   components: Record<string, number>;
   matchedSkills: string[];
   relatedSkills: string[];
+  transferableSkills: string[];
   missingSkills: string[];
   reasons: Array<{ component: string; message: string; evidence: string[] }>;
 }
@@ -22,6 +23,7 @@ export interface RecommendationExplanation {
   }>;
   matchedSkills: string[];
   relatedSkills: string[];
+  transferableSkills: string[];
   missingSkills: string[];
   scoreModel: {
     overallScore: number;

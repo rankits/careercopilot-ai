@@ -10,4 +10,8 @@ export const CURATED_SKILL_ALIASES: readonly CuratedSkillAlias[] = [
   { canonical: 'JavaScript', aliases: ['Javascript', 'JS'] },
   { canonical: 'React', aliases: ['React.js', 'ReactJS'] },
   { canonical: 'Amazon Web Services', aliases: ['AWS'] },
+  { canonical: 'Express', aliases: ['Express.js', 'ExpressJS'] },
+  { canonical: 'Next.js', aliases: ['NextJS', 'Next JS'] },
+  { canonical: 'MySQL', aliases: ['Mysql'] },
+  { canonical: 'Google Cloud Platform', aliases: ['GCP', 'Google Cloud'] },
 ];

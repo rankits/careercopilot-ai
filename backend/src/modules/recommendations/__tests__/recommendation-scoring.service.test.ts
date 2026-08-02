@@ -136,7 +136,41 @@ describe('RecommendationScoringService hybrid fusion', () => {
     expect(scored.scoreResult.components.preferredSkills).toBe(1);
     expect(scored.scoreResult.matchedSkills).toEqual(['Node.js']);
     expect(scored.scoreResult.relatedSkills).toEqual(['PostgreSQL']);
+    expect(scored.scoreResult.transferableSkills).toEqual([]);
     expect(scored.scoreResult.missingSkills).toEqual([]);
+  });
+
+  it('uses related skill edges as partial matches without marking them exact', async () => {
+    const [scored] = await service.score(
+      { ...context(), requiredSkills: ['React'], preferredSkills: [] },
+      [{ job: { ...job(), skills: ['NextJS'] }, retrievalScore: 1 }],
+    );
+
+    expect(scored.scoreResult.components.requiredSkills).toBe(0.65);
+    expect(scored.scoreResult.matchedSkills).toEqual([]);
+    expect(scored.scoreResult.relatedSkills).toEqual(['Next.js']);
+    expect(scored.scoreResult.transferableSkills).toEqual([]);
+    expect(scored.scoreResult.missingSkills).toEqual([]);
+    expect(scored.matchType).toBe('RELATED');
+  });
+
+  it('uses transferable skill edges with lower credit and explicit evidence', async () => {
+    const [scored] = await service.score(
+      { ...context(), requiredSkills: ['TypeScript'], preferredSkills: [] },
+      [{ job: { ...job(), skills: ['JavaScript'] }, retrievalScore: 1 }],
+    );
+
+    expect(scored.scoreResult.components.requiredSkills).toBe(0.35);
+    expect(scored.scoreResult.matchedSkills).toEqual([]);
+    expect(scored.scoreResult.relatedSkills).toEqual([]);
+    expect(scored.scoreResult.transferableSkills).toEqual(['JavaScript']);
+    expect(scored.scoreResult.missingSkills).toEqual([]);
+    expect(scored.matchType).toBe('TRANSFERABLE');
+    expect(
+      scored.scoreResult.reasons.some((reason) =>
+        reason.evidence.includes('transferable: JavaScript covers TypeScript'),
+      ),
+    ).toBe(true);
   });
 
   it('supports deterministic tie-break when sorted by the production comparator', async () => {

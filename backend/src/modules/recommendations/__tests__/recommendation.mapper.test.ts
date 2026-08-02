@@ -38,6 +38,7 @@ const recommendation = (overallScore: number): JobRecommendationRecord => ({
     },
     matchedSkills: ['TypeScript'],
     relatedSkills: [],
+    transferableSkills: [],
     missingSkills: [],
     reasons: [],
   },

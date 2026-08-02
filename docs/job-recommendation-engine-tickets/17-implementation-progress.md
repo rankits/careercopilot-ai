@@ -11,7 +11,7 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 | Metric | Value |
 |---|---|
 | Tickets total | 61 |
-| Implemented | 15 |
+| Implemented | 16 |
 | Verified | 0 |
 | In Progress | 0 |
 | Last updated | 2026-08-02 |
@@ -19,6 +19,50 @@ Progress log for Job Recommendation Engine tickets on branch `feat/job-recommend
 ---
 
 ## Progress log
+
+### 2026-08-02 - JRE-SKILL-002 - Add related and transferable skill relationships
+
+- Status: Implemented
+- Implemented files:
+  - `backend/prisma/skills.prisma`
+  - `backend/prisma/recommendations.prisma`
+  - `backend/prisma/migrations/20260802142000_add_skill_relationships/migration.sql`
+  - `backend/prisma/migrations/20260802143000_add_transferable_recommendation_skills/migration.sql`
+  - `backend/src/modules/recommendations/skills/skill-relationship.catalog.ts`
+  - `backend/src/modules/recommendations/skills/skill-relationship.service.ts`
+  - `backend/src/modules/recommendations/skills/skill-alias.catalog.ts`
+  - `backend/src/modules/recommendations/scoring/calculators/heuristic-score.calculators.ts`
+  - `backend/src/modules/recommendations/scoring/default-match-type.classifier.ts`
+  - `backend/src/modules/recommendations/scoring/recommendation-scoring.engine.ts`
+  - `backend/src/modules/recommendations/services/recommendation-explanation.service.ts`
+  - `backend/src/modules/recommendations/repositories/prisma-recommendation.unit-of-work.ts`
+  - `backend/src/modules/recommendations/swagger/recommendations.swagger.ts`
+  - `backend/src/modules/recommendations/types/recommendations.types.ts`
+  - `backend/src/modules/recommendations/index.ts`
+  - `backend/src/seed/seed/skills.seed.ts`
+  - `frontend/src/features/recommendations/types/recommendation.types.ts`
+  - `docs/job-recommendation-engine-tickets/SKILL_RELATIONSHIP_CONTRACT.md`
+- API changes: additive `transferableSkills` array on `scoreResult` and explanation DTOs; existing `skillGap.transferable` now has persisted data
+- Database changes: added `SkillRelationshipType`, `SkillRelationship`, and `job_recommendations.transferable_skills`
+- Tests added:
+  - Relationship graph gives partial related credit without exact hits
+  - Transferable graph gives lower credit and explicit evidence
+  - Scoring classifier returns `RELATED` / `TRANSFERABLE` for relationship-only matches
+  - Skill gap de-duplicates transferable skills from missing
+- Commands executed:
+  - `npm --prefix backend run prisma:generate`
+  - `npm --prefix backend run typecheck`
+  - `npm --prefix backend run test -- recommendations/__tests__/skill-relationship.service.test.ts recommendations/__tests__/skill-canonicalization.service.test.ts recommendations/__tests__/recommendation-scoring.service.test.ts recommendations/__tests__/recommendation-core.test.ts recommendations/__tests__/recommendation-generation.test.ts recommendations/__tests__/recommendation-explanation.service.test.ts recommendations/__tests__/recommendation.mapper.test.ts recommendations/__tests__/recommendations.api.test.ts`
+  - `npm --prefix frontend run typecheck`
+  - `npm exec -- eslint ... --max-warnings=0`
+- Results:
+  - Prisma client generation passed
+  - Backend typecheck passed
+  - Focused skill-relationship/scoring/classifier/persistence/API tests passed
+  - Frontend typecheck passed
+  - Touched-file lint passed
+- Known limitations: graph is curated and process-cached; richer classifier/pair evidence remains in `JRE-SKILL-003` / `JRE-SKILL-004`
+- Next ticket: `JRE-SKILL-003`
 
 ### 2026-08-02 - JRE-SKILL-001 - Introduce skill alias and canonicalization table
 

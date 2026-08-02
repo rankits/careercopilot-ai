@@ -53,6 +53,7 @@ const scored = (
     },
     matchedSkills: [],
     relatedSkills: [],
+    transferableSkills: [],
     missingSkills: [],
     reasons: [],
   },

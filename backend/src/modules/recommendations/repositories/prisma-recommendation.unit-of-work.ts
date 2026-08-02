@@ -94,6 +94,7 @@ const toScoreResult = (
     components,
     matchedSkills: recommendation.matchedSkills,
     relatedSkills: recommendation.relatedSkills,
+    transferableSkills: recommendation.transferableSkills,
     missingSkills: recommendation.missingSkills,
     reasons: toReasons(recommendation.reasons),
   };
@@ -326,6 +327,7 @@ const createRecommendationRepository = (
             rank: index + 1,
             matchedSkills: item.scoreResult.matchedSkills,
             relatedSkills: item.scoreResult.relatedSkills,
+            transferableSkills: item.scoreResult.transferableSkills,
             missingSkills: item.scoreResult.missingSkills,
             reasons: item.scoreResult.reasons as unknown as Prisma.InputJsonValue,
             scoreComponents: {
