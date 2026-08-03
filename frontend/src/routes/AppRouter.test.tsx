@@ -25,6 +25,27 @@ vi.mock('@/features/resume/services/resume.service', () => ({
   },
 }));
 
+vi.mock('@/services/resumeBuilder.service', () => ({
+  resumeBuilderService: {
+    listResumes: vi.fn().mockResolvedValue([]),
+    listSavedVersions: vi.fn().mockResolvedValue([]),
+    getAnalysis: vi.fn().mockResolvedValue(null),
+    getVersions: vi.fn().mockResolvedValue([]),
+    getKeywords: vi.fn().mockResolvedValue({ matched: [], missing: [], partial: [] }),
+    getSuggestions: vi.fn().mockResolvedValue([]),
+    uploadResume: vi.fn(),
+    startAnalysis: vi.fn(),
+    updateStep: vi.fn(),
+    updateContent: vi.fn(),
+    applySuggestion: vi.fn(),
+    ignoreSuggestion: vi.fn(),
+    recheckAts: vi.fn(),
+    saveVersion: vi.fn(),
+    exportResume: vi.fn(),
+    getSavedVersion: vi.fn(),
+  },
+}));
+
 const user: User = {
   email: 'ada@example.com',
   id: 'user-1',
@@ -83,6 +104,49 @@ describe('AppRouter routing flow', () => {
     renderRoute('/jobs-feed');
 
     expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+  });
+
+  it.each([
+    ['/resume-builder'],
+    ['/resume-builder/saved'],
+    ['/resume-builder/resume-1'],
+  ])('blocks unauthenticated access to %s and redirects to Login', async (path) => {
+    renderRoute(path);
+
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /resume/i })).not.toBeInTheDocument();
+  });
+
+  it('sends incomplete profiles from Resume Builder to onboarding', async () => {
+    renderRoute(
+      '/resume-builder',
+      createStore({
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete: false,
+        isSessionResolved: true,
+        user,
+      }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: /let's build your professional profile/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('allows authenticated complete profiles to open Resume Builder', async () => {
+    renderRoute(
+      '/resume-builder',
+      createStore({
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete: true,
+        isSessionResolved: true,
+        user,
+      }),
+    );
+
+    expect(await screen.findByRole('heading', { name: /^resume builder$/i })).toBeInTheDocument();
   });
 
   it('redirects authenticated users away from Login to Onboarding when profile is incomplete', async () => {

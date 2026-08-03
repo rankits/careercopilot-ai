@@ -45,7 +45,7 @@ export function AppRouter() {
           <Route path={ROUTES.APPLICATIONS} element={<ApplicationsPage />} />
           <Route path={ROUTES.SAVED_RESUMES} element={<SavedResumesPage />} />
           <Route path={ROUTES.RESUME_BUILDER} element={<ResumeBuilderPage />} />
-           <Route path={`${ROUTES.RESUME_BUILDER}/:resumeId`} element={<ResumeBuilderPage />} />
+          <Route path={`${ROUTES.RESUME_BUILDER}/:resumeId`} element={<ResumeBuilderPage />} />
           <Route path={ROUTES.PROFILE_EDIT} element={<ProfilePage mode="edit" />} />
         </Route>
       </Route>
