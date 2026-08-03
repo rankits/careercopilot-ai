@@ -1,0 +1,141 @@
+enum RecommendationSourceType {
+  PROFILE
+  RESUME
+  JOB
+  TARGET_TEXT
+  CAREER_GOAL
+  SAVED_SEARCH
+}
+
+enum RecommendationRunStatus {
+  PENDING
+  RETRIEVING
+  SCORING
+  COMPLETED
+  FAILED
+}
+
+enum RecommendationCategory {
+  BEST_MATCH
+  GOOD_MATCH
+  STRETCH_OPPORTUNITY
+  RELATED_CAREER_PATH
+}
+
+enum RecommendationMatchType {
+  EXACT
+  ALIAS
+  RELATED
+  TRANSFERABLE
+  MISSING
+}
+
+enum RecommendationFeedbackAction {
+  VIEWED
+  OPENED
+  SAVED
+  APPLIED
+  DISMISSED
+  NOT_RELEVANT
+  MORE_LIKE_THIS
+  LESS_LIKE_THIS
+}
+
+enum RecommendationScoreComponentName {
+  requiredSkills
+  title
+  experience
+  responsibilities
+  preferredSkills
+  location
+  industry
+  salary
+  qualifications
+}
+
+/// User-owned generation lifecycle. `userId` is `String(User.id)` matching JWT `principalId` (no User FK).
+model RecommendationRun {
+  id                   String                   @id @default(uuid())
+  userId               String                   @map("user_id")
+  sourceType           RecommendationSourceType @map("source_type")
+  sourceId             String?                  @map("source_id")
+  status               RecommendationRunStatus  @default(PENDING)
+  candidateCount       Int                      @default(0) @map("candidate_count")
+  failureCode          String?                  @map("failure_code")
+  configurationVersion String                   @default("1") @map("configuration_version")
+  createdAt            DateTime                 @default(now()) @map("created_at")
+  updatedAt            DateTime                 @updatedAt @map("updated_at")
+  completedAt          DateTime?                @map("completed_at")
+
+  recommendations JobRecommendation[]
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, id])
+  @@map("recommendation_runs")
+}
+
+model JobRecommendation {
+  id             String                     @id @default(uuid())
+  runId          String                     @map("run_id")
+  userId         String                     @map("user_id")
+  jobId          String                     @map("job_id")
+  overallScore   Float                      @map("overall_score")
+  category       RecommendationCategory
+  matchType      RecommendationMatchType    @map("match_type")
+  rank           Int
+  matchedSkills  String[]                   @default([]) @map("matched_skills")
+  aliasSkills    String[]                   @default([]) @map("alias_skills")
+  relatedSkills  String[]                   @default([]) @map("related_skills")
+  transferableSkills String[]                @default([]) @map("transferable_skills")
+  missingSkills  String[]                   @default([]) @map("missing_skills")
+  reasons        Json                       @default("[]")
+  createdAt      DateTime                   @default(now()) @map("created_at")
+  updatedAt      DateTime                   @updatedAt @map("updated_at")
+
+  run            RecommendationRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
+  job            Job                        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  scoreComponents RecommendationScoreComponent[]
+  feedback       RecommendationFeedback[]
+
+  @@unique([runId, jobId])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, runId, rank])
+  @@index([runId, rank])
+  @@index([userId, id])
+  @@index([jobId])
+  @@map("job_recommendations")
+}
+
+model RecommendationScoreComponent {
+  id               String                           @id @default(uuid())
+  recommendationId String                           @map("recommendation_id")
+  component        RecommendationScoreComponentName
+  weight           Float
+  score            Float
+  explanationMetadata Json?                         @map("explanation_metadata")
+  createdAt        DateTime                         @default(now()) @map("created_at")
+
+  recommendation   JobRecommendation                @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+
+  @@unique([recommendationId, component])
+  @@index([recommendationId])
+  @@map("recommendation_score_components")
+}
+
+model RecommendationFeedback {
+  id               String                       @id @default(uuid())
+  userId           String                       @map("user_id")
+  recommendationId String                       @map("recommendation_id")
+  jobId            String                       @map("job_id")
+  action           RecommendationFeedbackAction
+  note             String?                      @db.VarChar(1000)
+  createdAt        DateTime                     @default(now()) @map("created_at")
+  updatedAt        DateTime                     @updatedAt @map("updated_at")
+
+  recommendation   JobRecommendation            @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  job              Job                          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, recommendationId])
+  @@index([userId, jobId])
+  @@map("recommendation_feedback")
+}

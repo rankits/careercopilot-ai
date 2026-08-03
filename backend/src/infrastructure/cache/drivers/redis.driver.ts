@@ -132,4 +132,13 @@ export class RedisCacheDriver implements ICacheDriver {
   async disconnect(): Promise<void> {
     this.client.disconnect();
   }
+
+  async tryAcquireLock(key: string, ttlSeconds: number): Promise<boolean> {
+    const res = await this.client.set(key, '1', 'EX', ttlSeconds, 'NX');
+    return res === 'OK';
+  }
+
+  async releaseLock(key: string): Promise<void> {
+    await this.delete(key);
+  }
 }

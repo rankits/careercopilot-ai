@@ -2,6 +2,7 @@ import { authSwagger } from '@/modules/auth/swagger/index.js';
 import { userSwagger } from '@/modules/user/swagger/index.js';
 import { adminSwagger } from '@/modules/admin/swagger/index.js';
 import { applicationSwagger } from '@/modules/application-management/swagger/index.js';
+import { recommendationsSwagger } from '@/modules/recommendations/swagger/index.js';
 import { env } from '@/shared/config/env.conf.js';
 
 /**
@@ -9,8 +10,7 @@ import { env } from '@/shared/config/env.conf.js';
  * Each implemented module owns its own `swagger/*.swagger.ts` fragment
  * (paths only) built via `shared/swagger/factory.ts`; this file only
  * merges them under one spec. Modules that are still placeholder scaffolds
- * (resume, jobs, ...) have no routes yet and therefore
- * contribute nothing here - add their import + spread once they gain real
+ * contribute nothing here — add their import + spread once they gain real
  * endpoints.
  */
 export const swaggerSpec = {
@@ -41,5 +41,6 @@ export const swaggerSpec = {
     ...userSwagger,
     ...adminSwagger,
     ...applicationSwagger,
+    ...recommendationsSwagger,
   },
 };

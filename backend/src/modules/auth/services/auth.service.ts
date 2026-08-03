@@ -28,7 +28,6 @@ import type {
   RegisterInput,
   ResendOtpInput,
   ResetPasswordInput,
-  VerifyRegistrationOtpInput,
 } from '@/modules/auth/validations/auth.schema.js';
 import type {
   AuthSession,
@@ -36,6 +35,7 @@ import type {
   RequestContext,
   SafeUser,
 } from '@/modules/auth/types/auth.types.js';
+import { isProduction } from '@/shared/config/env.conf.js';
 
 const assertLoginable = (user: UserWithRole): void => {
   if (!user.isEmailVerified || user.status === Status.PendingVerification) {
@@ -65,13 +65,16 @@ const issueAndSendOtp = async (
   context: RequestContext,
 ): Promise<void> => {
   const code = await OtpService.issue(purpose, user.email);
-  await EmailQueue.sendOtpEmail({
-    to: user.email,
-    firstName: user.firstName,
-    code,
-    purposeLabel: OTP_PURPOSE_LABELS[purpose],
-    expiresInMinutes: Math.round(securityConfig.otp.ttlSeconds / 60),
-  });
+
+  if (isProduction) {
+    await EmailQueue.sendOtpEmail({
+      to: user.email,
+      firstName: user.firstName,
+      code,
+      purposeLabel: OTP_PURPOSE_LABELS[purpose],
+      expiresInMinutes: Math.round(securityConfig.otp.ttlSeconds / 60),
+    });
+  }
   await AuditService.write({
     userId: user.id,
     action: AuditAction.OtpRequested,
@@ -116,7 +119,7 @@ const publishAuthUpdated = async (
 ): Promise<void> => {
   await messageBus
     .publishEvent(MessageExchanges.DOMAIN_EVENTS, MessageRoutingKeys.AUTH_UPDATED, {
-      userId: user.publicId,
+      userId: user.id,
       email: user.email,
       reason,
       timestamp: new Date().toISOString(),
@@ -129,7 +132,7 @@ const publishAuthUpdated = async (
 export const register = async (
   input: RegisterInput,
   context: RequestContext,
-): Promise<{ message: string; email: string }> => {
+): Promise<AuthSession> => {
   const existing = await authRepository.findUserByEmail(input.email);
 
   if (existing?.isEmailVerified) {
@@ -153,65 +156,15 @@ export const register = async (
         phone: input.phone,
       });
 
-  await issueAndSendOtp(user, OtpPurpose.Registration, context);
+  const verifiedUser = await authRepository.markEmailVerified(user.id);
   await AuditService.write({ userId: user.id, action: AuditAction.Register, context });
 
-  return {
-    message: 'Registration initiated. Please verify the code sent to your email.',
-    email: user.email,
-  };
-};
-
-export const resendOtp = async (
-  input: ResendOtpInput,
-  context: RequestContext,
-): Promise<{ message: string }> => {
-  const user = await authRepository.findUserByEmail(input.email);
-  if (!user) {
-    // Registration is the one flow where account existence is already
-    // knowable from the register form itself, so we keep this specific;
-    // every other purpose intentionally stays generic (see below).
-    return { message: GENERIC_OTP_SENT_MESSAGE };
-  }
-
-  if (input.purpose === OtpPurpose.Registration && user.isEmailVerified) {
-    throw new AppError('This email is already verified. Please sign in.', 409, 'CONFLICT');
-  }
-  if (input.purpose !== OtpPurpose.Registration && !user.isEmailVerified) {
-    return { message: GENERIC_OTP_SENT_MESSAGE };
-  }
-
-  await issueAndSendOtp(user, input.purpose, context);
-  return { message: GENERIC_OTP_SENT_MESSAGE };
-};
-
-export const verifyRegistrationOtp = async (
-  input: VerifyRegistrationOtpInput,
-  context: RequestContext,
-): Promise<AuthSession> => {
-  const user = await authRepository.findUserByEmail(input.email);
-  if (!user) {
-    throw new AppError('Invalid email or verification code', 400);
-  }
-  if (user.isEmailVerified) {
-    throw new AppError('This email is already verified. Please sign in.', 409, 'CONFLICT');
-  }
-
-  await consumeOtpOrThrow(
-    OtpPurpose.Registration,
-    user,
-    input.code,
-    context,
-    'Invalid or expired verification code',
-  );
-
-  const verifiedUser = await authRepository.markEmailVerified(user.id);
-  await authRepository.recordSuccessfulLogin(user.id, context.ipAddress);
+  await authRepository.recordSuccessfulLogin(verifiedUser.id, context.ipAddress);
   await AuditService.write({
-    userId: user.id,
+    userId: verifiedUser.id,
     action: AuditAction.LoginSuccess,
     context,
-    metadata: { via: 'REGISTRATION_VERIFIED' },
+    metadata: { via: 'REGISTERED' },
   });
 
   const tokens = await TokenService.issueSession(toTokenContext(verifiedUser), context);
@@ -221,6 +174,19 @@ export const verifyRegistrationOtp = async (
   const safeUser = toSafeUser(verifiedUser);
   await cacheUserSession(safeUser);
   return { user: safeUser, tokens };
+};
+
+export const resendOtp = async (
+  input: ResendOtpInput,
+  context: RequestContext,
+): Promise<{ message: string }> => {
+  const user = await authRepository.findUserByEmail(input.email);
+  if (!user || !user.isEmailVerified) {
+    return { message: GENERIC_OTP_SENT_MESSAGE };
+  }
+
+  await issueAndSendOtp(user, input.purpose, context);
+  return { message: GENERIC_OTP_SENT_MESSAGE };
 };
 
 export const login = async (input: LoginInput, context: RequestContext): Promise<AuthSession> => {
@@ -268,7 +234,7 @@ export const login = async (input: LoginInput, context: RequestContext): Promise
 
   messageBus
     .publishEvent(MessageExchanges.DOMAIN_EVENTS, MessageRoutingKeys.AUTH_SIGNIN, {
-      userId: user.publicId,
+      userId: user.id,
       email: user.email,
       timestamp: new Date().toISOString(),
     })
@@ -374,11 +340,11 @@ export const resetPassword = async (
 };
 
 export const changePassword = async (
-  principalId: string,
+  principalId: number,
   input: ChangePasswordInput,
   context: RequestContext,
 ): Promise<{ message: string }> => {
-  const user = await authRepository.findUserByPublicId(principalId);
+  const user = await authRepository.findUserById(principalId);
   if (!user) {
     throw new AppError('Account not found', 404);
   }
@@ -426,10 +392,10 @@ export const logout = async (
 };
 
 export const logoutAll = async (
-  principalId: string,
+  principalId: number,
   context: RequestContext,
 ): Promise<{ message: string }> => {
-  const user = await authRepository.findUserByPublicId(principalId);
+  const user = await authRepository.findUserById(principalId);
   if (!user) {
     throw new AppError('Account not found', 404);
   }
@@ -440,8 +406,8 @@ export const logoutAll = async (
   return { message: 'Logged out from all devices' };
 };
 
-export const getCurrentUser = async (principalId: string): Promise<SafeUser> => {
-  const user = await authRepository.findUserByPublicId(principalId);
+export const getCurrentUser = async (principalId: number): Promise<SafeUser> => {
+  const user = await authRepository.findUserById(principalId);
   if (!user) {
     throw new AppError('Account not found', 404);
   }
@@ -451,7 +417,6 @@ export const getCurrentUser = async (principalId: string): Promise<SafeUser> => 
 export default {
   register,
   resendOtp,
-  verifyRegistrationOtp,
   login,
   requestLoginOtp,
   verifyLoginOtp,

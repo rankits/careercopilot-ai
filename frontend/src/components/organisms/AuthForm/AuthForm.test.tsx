@@ -12,7 +12,7 @@ describe('AuthForm', () => {
     expect(screen.getByRole('button', { name: /continue with google/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /continue with linkedin/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /email address/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /remember me/i })).toBeChecked();
   });
 
@@ -20,9 +20,10 @@ describe('AuthForm', () => {
     render(<AuthForm mode="register" />);
 
     expect(screen.getByRole('heading', { name: /create account/i })).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /full name/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/^password$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/confirm password/i)).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /first name/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /last name/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toBeInTheDocument();
+    expect(screen.getByLabelText(/confirm password/i, { selector: 'input' })).toBeInTheDocument();
     expect(screen.getByTestId('PhoneOutlinedIcon')).toBeInTheDocument();
     expect(screen.queryByText(/forgot password/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: /remember me/i })).not.toBeInTheDocument();
@@ -45,7 +46,7 @@ describe('AuthForm', () => {
     await user.click(screen.getByRole('button', { name: /continue with google/i }));
     await user.click(screen.getByRole('button', { name: /continue with linkedin/i }));
     await user.type(screen.getByRole('textbox', { name: /email address/i }), 'user@example.com');
-    await user.type(screen.getByLabelText(/^password$/i), 'password123');
+    await user.type(screen.getByLabelText(/^password$/i, { selector: 'input' }), 'password123');
     await user.click(screen.getByRole('button', { name: /login/i }));
 
     expect(handleGoogle).toHaveBeenCalledTimes(1);

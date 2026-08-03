@@ -43,5 +43,13 @@ export const securityConfig = {
       windowMinutes: env.AUTH_RATE_LIMIT_WINDOW_MINUTES,
       max: env.OTP_RATE_LIMIT_MAX_REQUESTS,
     },
+    jobListing: {
+      windowMinutes: env.JOB_LISTING_RATE_LIMIT_WINDOW_MINUTES,
+      max: env.JOB_LISTING_RATE_LIMIT_MAX_REQUESTS,
+    },
+    recommendation: {
+      windowMinutes: env.RECOMMENDATION_RATE_LIMIT_WINDOW_MINUTES,
+      max: env.RECOMMENDATION_RATE_LIMIT_MAX_REQUESTS,
+    },
   },
 };

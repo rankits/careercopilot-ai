@@ -23,8 +23,8 @@ export const adminRepository = {
     return prisma.admin.findUnique({ where: { email: email.toLowerCase() }, ...withRole });
   },
 
-  async findByPublicId(publicId: string): Promise<AdminWithRole | null> {
-    return prisma.admin.findUnique({ where: { publicId }, ...withRole });
+  async findById(id: number): Promise<AdminWithRole | null> {
+    return prisma.admin.findUnique({ where: { id }, ...withRole });
   },
 
   async getPasswordCredentials(adminId: number): Promise<PasswordCredentials | null> {

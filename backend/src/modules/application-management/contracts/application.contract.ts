@@ -17,6 +17,13 @@ import {
 
 export interface IApplicationManagementService {
   createApplication(userId: string, input: CreateApplicationInput): Promise<ApplicationDto>;
+  /** Idempotent bookmark of a platform job as Application SAVED (JOB-BE-004 / PROD-002). */
+  savePlatformJob(
+    userId: string,
+    jobId: string,
+  ): Promise<{ application: ApplicationDto; created: boolean }>;
+  /** Idempotent remove of a SAVED platform application for jobId. */
+  unsavePlatformJob(userId: string, jobId: string): Promise<void>;
   getApplications(options: ApplicationListOptions): Promise<PaginatedApplicationResult<ApplicationDto>>;
   getApplicationById(userId: string, applicationId: string): Promise<ApplicationDetailDto | null>;
   updateApplication(userId: string, applicationId: string, input: UpdateApplicationInput): Promise<ApplicationDto>;

@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import { Status, type OtpPurpose, type OtpTransport } from '@prisma/client';
+import { ROLE_PERMISSION_MAP, type SystemRole } from '@/shared/rbac/permission.catalog.js';
 
 /**
  * A small, purpose-built in-memory stand-in for PrismaClient, covering
@@ -13,11 +14,14 @@ import { Status, type OtpPurpose, type OtpTransport } from '@prisma/client';
 export interface FakeRole {
   id: number;
   name: string;
+  /** Permission keys granted to this role - mirrors `RolePermission` rows,
+   * seeded from the same `ROLE_PERMISSION_MAP` the real `prisma/seed/roles.seed.ts`
+   * uses, so `PermissionCache`-driven specs see the actual production catalog. */
+  permissions: string[];
 }
 
 export interface FakeUser {
   id: number;
-  publicId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -26,6 +30,7 @@ export interface FakeUser {
   bio: string | null;
   status: Status;
   isEmailVerified: boolean;
+  isProfileCreated: boolean;
   roleId: number;
   tokenVersion: number;
   failedLoginAttempts: number;
@@ -58,7 +63,6 @@ export interface FakeUserSession {
 
 export interface FakeAdmin {
   id: number;
-  publicId: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -121,6 +125,49 @@ export interface FakeAuditLog {
   createdAt: Date;
 }
 
+export interface FakeCandidateProfile {
+  id: string;
+  userId: string;
+  personalDetails: unknown;
+  experience: unknown;
+  education: unknown;
+  skills: unknown;
+  certifications: unknown;
+  sourceResumeId: string | null;
+  confirmedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FakeResume {
+  id: string;
+  userId: string | null;
+  fileName: string;
+  originalName: string;
+  mimeType: string;
+  sizeBytes: number;
+  fileUrl: string;
+  storageKey: string;
+  storageDriver: 'LOCAL' | 'S3';
+  status: 'UPLOADED' | 'PROCESSING' | 'PROCESSED' | 'FAILED';
+  failureReason: string | null;
+  uploadedAt: Date;
+  processedAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FakeResumeExtraction {
+  id: string;
+  resumeId: string;
+  parseRunId: string | null;
+  extractedText: string | null;
+  extractedData: unknown;
+  parserVersion: string;
+  confidenceScore: number | null;
+  createdAt: Date;
+}
+
 const withRole = <T extends { roleId: number }>(record: T, roles: Map<number, FakeRole>) => ({
   ...record,
   role: { name: roles.get(record.roleId)?.name ?? 'USER' },
@@ -160,13 +207,27 @@ const allocId = () => nextId++;
 
 export class FakeDb {
   roles = new Map<number, FakeRole>([
-    [1, { id: 1, name: 'USER' }],
-    [2, { id: 2, name: 'ADMIN' }],
+    [1, { id: 1, name: 'USER', permissions: ROLE_PERMISSION_MAP.USER }],
+    [2, { id: 2, name: 'ADMIN', permissions: ROLE_PERMISSION_MAP.ADMIN }],
   ]);
+
+  /** Test-only hook for permission-gate specs - e.g. `setRolePermissions('ADMIN', [])`
+   * to assert a role stripped of a permission gets a 403 from `requirePermission`. */
+  setRolePermissions(roleName: SystemRole, permissionKeys: string[]): void {
+    for (const role of this.roles.values()) {
+      if (role.name === roleName) {
+        role.permissions = permissionKeys;
+        return;
+      }
+    }
+  }
 
   users: FakeUser[] = [];
   userMetas: FakeUserMeta[] = [];
   userSessions: FakeUserSession[] = [];
+  candidateProfiles: FakeCandidateProfile[] = [];
+  resumes: FakeResume[] = [];
+  resumeExtractions: FakeResumeExtraction[] = [];
   admins: FakeAdmin[] = [];
   adminMetas: FakeAdminMeta[] = [];
   adminSessions: FakeAdminSession[] = [];
@@ -177,11 +238,16 @@ export class FakeDb {
     this.users = [];
     this.userMetas = [];
     this.userSessions = [];
+    this.candidateProfiles = [];
+    this.resumes = [];
+    this.resumeExtractions = [];
     this.admins = [];
     this.adminMetas = [];
     this.adminSessions = [];
     this.otps = [];
     this.auditLogs = [];
+    this.setRolePermissions('USER', ROLE_PERMISSION_MAP.USER);
+    this.setRolePermissions('ADMIN', ROLE_PERMISSION_MAP.ADMIN);
   }
 
   seedUser(
@@ -190,7 +256,6 @@ export class FakeDb {
     const now = new Date();
     const user: FakeUser = {
       id: allocId(),
-      publicId: randomUUID(),
       firstName: 'Jane',
       lastName: 'Doe',
       email: `user${Date.now()}${Math.random()}@example.com`,
@@ -199,6 +264,7 @@ export class FakeDb {
       bio: null,
       status: Status.Active,
       isEmailVerified: true,
+      isProfileCreated: false,
       roleId: 1,
       tokenVersion: 0,
       failedLoginAttempts: 0,
@@ -224,7 +290,6 @@ export class FakeDb {
     const now = new Date();
     const admin: FakeAdmin = {
       id: allocId(),
-      publicId: randomUUID(),
       firstName: 'Ada',
       lastName: 'Admin',
       email: `admin${Date.now()}${Math.random()}@example.com`,
@@ -254,10 +319,26 @@ export class FakeDb {
 
     return {
       role: {
-        findUnique: async ({ where }: { where: { name?: string } }) => {
+        findUnique: async ({
+          where,
+          include,
+        }: {
+          where: { name?: string };
+          include?: { permissions?: { include?: { permission?: boolean } } };
+        }) => {
           if (where.name === undefined) return null;
           for (const role of db.roles.values()) {
-            if (role.name === where.name) return { ...role };
+            if (role.name !== where.name) continue;
+            const { permissions, ...rest } = role;
+            if (!include?.permissions) return { ...rest };
+            // Mirrors the real `RolePermission -> Permission` shape so
+            // `PermissionCache#getPermissionsForRole` (which reads
+            // `role.permissions.map((rp) => rp.permission.key)`) works
+            // unchanged against this fake.
+            return {
+              ...rest,
+              permissions: permissions.map((key) => ({ permission: { key } })),
+            };
           }
           return null;
         },
@@ -269,15 +350,14 @@ export class FakeDb {
           select,
           include,
         }: {
-          where: { id?: number; email?: string; publicId?: string };
+          where: { id?: number; email?: string };
           select?: Record<string, boolean>;
           include?: { role?: boolean };
         }) => {
           const found = db.users.find(
             (u) =>
               (where.id !== undefined && u.id === where.id) ||
-              (where.email !== undefined && u.email === where.email) ||
-              (where.publicId !== undefined && u.publicId === where.publicId),
+              (where.email !== undefined && u.email === where.email),
           );
           if (!found) return null;
           if (select) return project(found, select);
@@ -298,12 +378,12 @@ export class FakeDb {
           const { meta, ...userData } = data;
           const user: FakeUser = {
             id: allocId(),
-            publicId: randomUUID(),
             phone: null,
             profileImage: null,
             bio: null,
             status: Status.PendingVerification,
             isEmailVerified: false,
+            isProfileCreated: false,
             tokenVersion: 0,
             failedLoginAttempts: 0,
             lockedUntil: null,
@@ -326,22 +406,24 @@ export class FakeDb {
           select,
           include,
         }: {
-          where: { id: number };
+          where: { id?: number };
           data: Record<string, unknown> & {
             meta?: { create?: FakeUserMeta; update?: Partial<FakeUserMeta> };
           };
           select?: Record<string, boolean>;
           include?: { role?: boolean };
         }) => {
-          const index = db.users.findIndex((u) => u.id === where.id);
-          if (index === -1) throw new Error(`FakeDb: user ${where.id} not found`);
+          const index = db.users.findIndex((u) => where.id !== undefined && u.id === where.id);
+          if (index === -1) {
+            throw new Error(`FakeDb: user ${where.id ?? 'unknown'} not found`);
+          }
           const updated = applyIncrements(
             db.users[index] as unknown as Record<string, unknown>,
             data,
           ) as unknown as FakeUser;
           db.users[index] = updated;
 
-          if (data.meta?.update) {
+          if (data.meta?.update && where.id !== undefined) {
             const metaIndex = db.userMetas.findIndex((m) => m.userId === where.id);
             if (metaIndex !== -1) {
               db.userMetas[metaIndex] = { ...db.userMetas[metaIndex], ...data.meta.update };
@@ -421,6 +503,93 @@ export class FakeDb {
           if (index === -1) throw new Error(`FakeDb: userMeta ${where.userId} not found`);
           db.userMetas[index] = { ...db.userMetas[index], ...data };
           return { ...db.userMetas[index] };
+        },
+      },
+
+      candidateProfile: {
+        findUnique: async ({ where }: { where: { userId: string } }) => {
+          const found = db.candidateProfiles.find((profile) => profile.userId === where.userId);
+          return found ? { ...found } : null;
+        },
+        update: async ({
+          where,
+          data,
+        }: {
+          where: { userId: string };
+          data: Partial<FakeCandidateProfile>;
+        }) => {
+          const index = db.candidateProfiles.findIndex((p) => p.userId === where.userId);
+          if (index === -1) throw new Error(`FakeDb: candidateProfile ${where.userId} not found`);
+          db.candidateProfiles[index] = applyIncrements(
+            db.candidateProfiles[index] as unknown as Record<string, unknown>,
+            data as Record<string, unknown>,
+          ) as unknown as FakeCandidateProfile;
+          return { ...db.candidateProfiles[index] };
+        },
+        upsert: async ({
+          where,
+          create,
+          update,
+        }: {
+          where: { userId: string };
+          create: Omit<FakeCandidateProfile, 'id' | 'createdAt' | 'updatedAt'>;
+          update: Partial<FakeCandidateProfile>;
+        }) => {
+          const now = new Date();
+          const index = db.candidateProfiles.findIndex((p) => p.userId === where.userId);
+          if (index === -1) {
+            const record: FakeCandidateProfile = {
+              id: randomUUID(),
+              createdAt: now,
+              updatedAt: now,
+              ...create,
+            };
+            db.candidateProfiles.push(record);
+            return { ...record };
+          }
+          db.candidateProfiles[index] = {
+            ...db.candidateProfiles[index],
+            ...update,
+            updatedAt: now,
+          };
+          return { ...db.candidateProfiles[index] };
+        },
+      },
+
+      resume: {
+        findUnique: async ({ where }: { where: { id: string } }) => {
+          const found = db.resumes.find((resume) => resume.id === where.id);
+          return found ? { ...found } : null;
+        },
+        create: async ({
+          data,
+        }: {
+          data: Omit<
+            FakeResume,
+            'status' | 'failureReason' | 'uploadedAt' | 'processedAt' | 'createdAt' | 'updatedAt'
+          >;
+        }) => {
+          const now = new Date();
+          const resume: FakeResume = {
+            status: 'UPLOADED',
+            failureReason: null,
+            uploadedAt: now,
+            processedAt: null,
+            createdAt: now,
+            updatedAt: now,
+            ...data,
+          };
+          db.resumes.push(resume);
+          return { ...resume };
+        },
+      },
+
+      resumeExtraction: {
+        findFirst: async ({ where }: { where: { resumeId: string } }) => {
+          const matches = db.resumeExtractions
+            .filter((extraction) => extraction.resumeId === where.resumeId)
+            .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+          return matches[0] ? { ...matches[0] } : null;
         },
       },
 
@@ -508,15 +677,14 @@ export class FakeDb {
           select,
           include,
         }: {
-          where: { id?: number; email?: string; publicId?: string };
+          where: { id?: number; email?: string };
           select?: Record<string, boolean>;
           include?: { role?: boolean };
         }) => {
           const found = db.admins.find(
             (a) =>
               (where.id !== undefined && a.id === where.id) ||
-              (where.email !== undefined && a.email === where.email) ||
-              (where.publicId !== undefined && a.publicId === where.publicId),
+              (where.email !== undefined && a.email === where.email),
           );
           if (!found) return null;
           if (select) return project(found, select);
@@ -719,7 +887,47 @@ export class FakeDb {
         },
       },
 
+      // Minimal recommendation surfaces so list/detail smoke tests can hit the
+      // Prisma UoW against FakeDb without a live Postgres. Writes for generate
+      // are not fully modeled here.
+      recommendationRun: {
+        findFirst: async () => null,
+        create: async () => {
+          throw new Error('FakeDb: recommendationRun.create is not implemented');
+        },
+        updateMany: async () => ({ count: 0 }),
+      },
+      jobRecommendation: {
+        findFirst: async () => null,
+        findMany: async () => [],
+        count: async () => 0,
+        create: async () => {
+          throw new Error('FakeDb: jobRecommendation.create is not implemented');
+        },
+      },
+      recommendationFeedback: {
+        findFirst: async () => null,
+        findMany: async () => [],
+        upsert: async () => {
+          throw new Error('FakeDb: recommendationFeedback.upsert is not implemented');
+        },
+      },
+      job: {
+        findMany: async () => [],
+        findUnique: async () => null,
+        findFirst: async () => null,
+      },
+
+      $transaction: async (arg: unknown) => {
+        const client = db.toPrismaClient();
+        if (typeof arg === 'function') {
+          return (arg as (tx: typeof client) => Promise<unknown>)(client);
+        }
+        throw new Error('FakeDb: only interactive $transaction callbacks are supported');
+      },
+
       $queryRaw: async () => [{ '?column?': 1 }],
+      $executeRaw: async () => 0,
     };
   }
 }

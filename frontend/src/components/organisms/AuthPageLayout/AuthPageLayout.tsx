@@ -20,7 +20,6 @@ import * as Styled from './styles';
 
 interface AuthPageLayoutProps {
   children: ReactNode;
-  error?: string | null;
   mode: Styled.AuthPageMode;
 }
 
@@ -167,7 +166,7 @@ function RegisterPanel() {
   );
 }
 
-export function AuthPageLayout({ children, error, mode }: AuthPageLayoutProps) {
+export function AuthPageLayout({ children, mode }: AuthPageLayoutProps) {
   const isRegister = mode === 'register';
 
   return (
@@ -188,7 +187,6 @@ export function AuthPageLayout({ children, error, mode }: AuthPageLayoutProps) {
         {isRegister ? <RegisterPanel /> : <LoginHero />}
         <Styled.FormColumn mode={mode}>
           <Styled.FormStack mode={mode}>
-            {error ? <Styled.ErrorAlert role="alert">{error}</Styled.ErrorAlert> : null}
             {children}
             {!isRegister ? <TrustPanel /> : null}
           </Styled.FormStack>

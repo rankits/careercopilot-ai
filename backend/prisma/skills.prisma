@@ -1,0 +1,46 @@
+enum SkillRelationshipType {
+  RELATED
+  TRANSFERABLE
+}
+
+model SkillCanonical {
+  id                    String              @id @default(uuid())
+  name                  String              @unique
+  normalizedName        String              @unique @map("normalized_name")
+  aliases               SkillAlias[]
+  outgoingRelationships SkillRelationship[] @relation("SkillRelationshipFrom")
+  incomingRelationships SkillRelationship[] @relation("SkillRelationshipTo")
+  createdAt             DateTime            @default(now()) @map("created_at")
+  updatedAt             DateTime            @updatedAt @map("updated_at")
+
+  @@map("skill_canonicals")
+}
+
+model SkillAlias {
+  id              String         @id @default(uuid())
+  canonicalId     String         @map("canonical_id")
+  alias           String
+  normalizedAlias String         @unique @map("normalized_alias")
+  canonical       SkillCanonical @relation(fields: [canonicalId], references: [id], onDelete: Cascade)
+  createdAt       DateTime       @default(now()) @map("created_at")
+  updatedAt       DateTime       @updatedAt @map("updated_at")
+
+  @@index([canonicalId])
+  @@map("skill_aliases")
+}
+
+model SkillRelationship {
+  id          String                @id @default(uuid())
+  fromSkillId String                @map("from_skill_id")
+  toSkillId   String                @map("to_skill_id")
+  type        SkillRelationshipType
+  fromSkill   SkillCanonical        @relation("SkillRelationshipFrom", fields: [fromSkillId], references: [id], onDelete: Cascade)
+  toSkill     SkillCanonical        @relation("SkillRelationshipTo", fields: [toSkillId], references: [id], onDelete: Cascade)
+  createdAt   DateTime              @default(now()) @map("created_at")
+  updatedAt   DateTime              @updatedAt @map("updated_at")
+
+  @@unique([fromSkillId, toSkillId, type])
+  @@index([fromSkillId])
+  @@index([toSkillId])
+  @@map("skill_relationships")
+}

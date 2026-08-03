@@ -20,8 +20,8 @@ export const DEFAULT_USER_ROLE_NAME = 'USER';
 /**
  * Deliberately identical response for "no account" vs "account exists but
  * can't receive this OTP right now" on sensitive lookup endpoints
- * (login-otp request, forgot-password) to avoid leaking account existence.
- * Registration is intentionally NOT anti-enumerated - see auth.service.ts.
+ * (login-otp request, forgot-password, OTP resend) to avoid leaking
+ * account existence.
  */
 export const GENERIC_OTP_SENT_MESSAGE =
   'If an account with that email exists, a verification code has been sent.';

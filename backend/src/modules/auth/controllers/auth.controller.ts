@@ -16,7 +16,7 @@ const getRequestContext = (req: Request): RequestContext => ({
   userAgent: req.headers['user-agent'],
 });
 
-const requirePrincipalId = (req: Request): string => {
+const requirePrincipalId = (req: Request): number => {
   if (!req.user) throw new AppError('Authentication required', 401);
   return req.user.principalId;
 };
@@ -34,10 +34,12 @@ const clearRefreshTokenCookie = (res: Response): void => {
   res.clearCookie(REFRESH_TOKEN_COOKIE_KEY, clearRefreshCookieOptions);
 };
 
-const sendSession = (res: Response, session: AuthSession, message: string) => {
+const sendSession = (res: Response, session: AuthSession, message: string, statusCode = 200) => {
   setRefreshTokenCookie(res, session.tokens.refreshToken);
-  return res.status(200).json({
-    ...successResponse(message, { user: toSafeUserResponse(session.user) }),
+  return res.status(statusCode).json({
+    ...successResponse(message, {
+      user: toSafeUserResponse(session.user),
+    }),
     accessToken: session.tokens.accessToken,
     accessTokenExpiresInSeconds: session.tokens.accessTokenExpiresInSeconds,
   });
@@ -53,18 +55,13 @@ const sendTokens = (res: Response, tokens: AuthTokens, message: string) => {
 };
 
 export const registerController = catchAsync(async (req: Request, res: Response) => {
-  const result = await authService.register(req.body, getRequestContext(req));
-  return res.status(201).json(successResponse(result.message, { email: result.email }));
+  const session = await authService.register(req.body, getRequestContext(req));
+  return sendSession(res, session, 'Registration successful', 201);
 });
 
 export const resendOtpController = catchAsync(async (req: Request, res: Response) => {
   const result = await authService.resendOtp(req.body, getRequestContext(req));
   return res.status(200).json(successResponse(result.message));
-});
-
-export const verifyRegistrationOtpController = catchAsync(async (req: Request, res: Response) => {
-  const session = await authService.verifyRegistrationOtp(req.body, getRequestContext(req));
-  return sendSession(res, session, 'Email verified successfully');
 });
 
 export const loginController = catchAsync(async (req: Request, res: Response) => {
@@ -131,7 +128,6 @@ export const meController = catchAsync(async (req: Request, res: Response) => {
 export default {
   registerController,
   resendOtpController,
-  verifyRegistrationOtpController,
   loginController,
   requestLoginOtpController,
   verifyLoginOtpController,

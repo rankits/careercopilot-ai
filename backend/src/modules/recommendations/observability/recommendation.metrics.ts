@@ -1,0 +1,349 @@
+import type { Logger } from 'pino';
+import type {
+  RecommendationCategory,
+  RecommendationFeedbackAction,
+  RecommendationFilterMode,
+  RetrievalBackend,
+} from '@/modules/recommendations/types/recommendations.types.js';
+
+export type RecommendationGenerateStage =
+  'context' | 'feedback' | 'retrieval' | 'scoring' | 'ranking' | 'persistence';
+
+export type RecommendationGenerateStageLatencyBucket =
+  'le_100' | 'le_250' | 'le_500' | 'le_1000' | 'le_2500' | 'le_5000' | 'gt_5000';
+
+export type RetrievalBackendLatencyBucket =
+  'le_50' | 'le_100' | 'le_250' | 'le_500' | 'le_1000' | 'gt_1000';
+
+export type FeedbackFunnelStep = 'IMPRESSION' | 'VIEW' | 'CLICK' | 'SAVE' | 'APPLY';
+
+export interface RecommendationGenerateMetricEvent {
+  userId: string;
+  runId?: string;
+  candidateCount: number;
+  durationMs: number;
+  success: boolean;
+  filterMode?: RecommendationFilterMode;
+  failureCode?: string;
+  empty: boolean;
+  stageDurationsMs?: Partial<Record<RecommendationGenerateStage, number>>;
+}
+
+export interface RecommendationRerankMetricEvent {
+  userId: string;
+  runId?: string;
+  candidateCount: number;
+  durationMs: number;
+  success: boolean;
+  fallback: boolean;
+}
+
+let generateCount = 0;
+let emptyCount = 0;
+let failureCount = 0;
+let failureCountByCode: Record<string, number> = {};
+let totalLatencyMs = 0;
+const createStageTotals = (): Record<RecommendationGenerateStage, number> => ({
+  context: 0,
+  feedback: 0,
+  retrieval: 0,
+  scoring: 0,
+  ranking: 0,
+  persistence: 0,
+});
+const createStageLatencyHistogram = (): Record<
+  RecommendationGenerateStage,
+  Record<RecommendationGenerateStageLatencyBucket, number>
+> => ({
+  context: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  feedback: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  retrieval: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  scoring: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  ranking: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+  persistence: { le_100: 0, le_250: 0, le_500: 0, le_1000: 0, le_2500: 0, le_5000: 0, gt_5000: 0 },
+});
+const createBackendLatencyHistogram = (): Record<
+  RetrievalBackend,
+  Record<RetrievalBackendLatencyBucket, number>
+> => ({
+  DATABASE: { le_50: 0, le_100: 0, le_250: 0, le_500: 0, le_1000: 0, gt_1000: 0 },
+  PGVECTOR: { le_50: 0, le_100: 0, le_250: 0, le_500: 0, le_1000: 0, gt_1000: 0 },
+  ELASTICSEARCH: { le_50: 0, le_100: 0, le_250: 0, le_500: 0, le_1000: 0, gt_1000: 0 },
+  OPENSEARCH: { le_50: 0, le_100: 0, le_250: 0, le_500: 0, le_1000: 0, gt_1000: 0 },
+  EXTERNAL_VECTOR: { le_50: 0, le_100: 0, le_250: 0, le_500: 0, le_1000: 0, gt_1000: 0 },
+});
+
+let generateStageLatencyMs = createStageTotals();
+let generateStageSampleCount = createStageTotals();
+let generateStageLatencyHistogram = createStageLatencyHistogram();
+let retrievalBackendLatencyHistogram = createBackendLatencyHistogram();
+let filterCertExcludeTotal = 0;
+let rerankSuccessCount = 0;
+let rerankFailureCount = 0;
+let rerankFallbackCount = 0;
+let rerankTotalLatencyMs = 0;
+let careerGoalApiTotal = 0;
+let savedSearchApiTotal = 0;
+let feedbackAppliedLinkedTotal = 0;
+let feedbackMoreLessTotal = 0;
+let recommendationInvalidationTotal = 0;
+let userRecommendationPurgeTotal = 0;
+let jobRecommendationHiddenTotal = 0;
+let cacheHitsTotal = 0;
+let cacheMissesTotal = 0;
+let feedbackFunnel: Record<FeedbackFunnelStep, number> = {
+  IMPRESSION: 0,
+  VIEW: 0,
+  CLICK: 0,
+  SAVE: 0,
+  APPLY: 0,
+};
+let careerCategoryDistribution: Record<RecommendationCategory, number> = {
+  BEST_MATCH: 0,
+  GOOD_MATCH: 0,
+  STRETCH_OPPORTUNITY: 0,
+  RELATED_CAREER_PATH: 0,
+};
+let feedbackActionTotal: Partial<Record<RecommendationFeedbackAction, number>> = {};
+
+export const recommendationMetricsSnapshot = () => ({
+  generateCount,
+  emptyCount,
+  failureCount,
+  failureCountByCode: { ...failureCountByCode },
+  averageLatencyMs: generateCount > 0 ? totalLatencyMs / generateCount : 0,
+  stageAverageLatencyMs: Object.fromEntries(
+    Object.entries(generateStageLatencyMs).map(([stage, total]) => [
+      stage,
+      generateStageSampleCount[stage as RecommendationGenerateStage] > 0
+        ? total / generateStageSampleCount[stage as RecommendationGenerateStage]
+        : 0,
+    ]),
+  ) as Record<RecommendationGenerateStage, number>,
+  stageLatencyHistogram: {
+    context: { ...generateStageLatencyHistogram.context },
+    feedback: { ...generateStageLatencyHistogram.feedback },
+    retrieval: { ...generateStageLatencyHistogram.retrieval },
+    scoring: { ...generateStageLatencyHistogram.scoring },
+    ranking: { ...generateStageLatencyHistogram.ranking },
+    persistence: { ...generateStageLatencyHistogram.persistence },
+  },
+  retrievalBackendLatencyHistogram: {
+    DATABASE: { ...retrievalBackendLatencyHistogram.DATABASE },
+    PGVECTOR: { ...retrievalBackendLatencyHistogram.PGVECTOR },
+    ELASTICSEARCH: { ...retrievalBackendLatencyHistogram.ELASTICSEARCH },
+    OPENSEARCH: { ...retrievalBackendLatencyHistogram.OPENSEARCH },
+    EXTERNAL_VECTOR: { ...retrievalBackendLatencyHistogram.EXTERNAL_VECTOR },
+  },
+  cacheHitsTotal,
+  cacheMissesTotal,
+  cacheHitRatio:
+    cacheHitsTotal + cacheMissesTotal > 0
+      ? cacheHitsTotal / (cacheHitsTotal + cacheMissesTotal)
+      : 0,
+  feedbackFunnel: { ...feedbackFunnel },
+  filterCertExcludeTotal,
+  rerankSuccessCount,
+  rerankFailureCount,
+  rerankFallbackCount,
+  rerankAverageLatencyMs:
+    rerankSuccessCount + rerankFailureCount > 0
+      ? rerankTotalLatencyMs / (rerankSuccessCount + rerankFailureCount)
+      : 0,
+  careerGoalApiTotal,
+  savedSearchApiTotal,
+  feedbackAppliedLinkedTotal,
+  feedbackMoreLessTotal,
+  recommendationInvalidationTotal,
+  userRecommendationPurgeTotal,
+  jobRecommendationHiddenTotal,
+  careerCategoryDistribution: { ...careerCategoryDistribution },
+  feedbackActionTotal: { ...feedbackActionTotal },
+});
+
+export const recordUserRecommendationPurge = (): void => {
+  userRecommendationPurgeTotal += 1;
+};
+
+export const recordCertificationFilterExclusion = (): void => {
+  filterCertExcludeTotal += 1;
+};
+
+export const recordCareerGoalApiRequest = (): void => {
+  careerGoalApiTotal += 1;
+};
+
+export const recordSavedSearchApiRequest = (): void => {
+  savedSearchApiTotal += 1;
+};
+
+export const recordRecommendationInvalidation = (): void => {
+  recommendationInvalidationTotal += 1;
+};
+
+export const recordJobRecommendationHidden = (count = 1): void => {
+  if (count > 0) {
+    jobRecommendationHiddenTotal += count;
+  }
+};
+
+export const recordCareerCategory = (category: RecommendationCategory): void => {
+  careerCategoryDistribution[category] += 1;
+};
+
+export const recordFeedbackAction = (action: RecommendationFeedbackAction): void => {
+  feedbackActionTotal[action] = (feedbackActionTotal[action] ?? 0) + 1;
+  if (action === 'APPLIED') {
+    feedbackAppliedLinkedTotal += 1;
+  }
+  if (action === 'MORE_LIKE_THIS' || action === 'LESS_LIKE_THIS') {
+    feedbackMoreLessTotal += 1;
+  }
+};
+
+export const recordRetrievalBackendLatency = (
+  backend: RetrievalBackend,
+  durationMs: number,
+): void => {
+  const bucket =
+    durationMs <= 50
+      ? 'le_50'
+      : durationMs <= 100
+        ? 'le_100'
+        : durationMs <= 250
+          ? 'le_250'
+          : durationMs <= 500
+            ? 'le_500'
+            : durationMs <= 1000
+              ? 'le_1000'
+              : 'gt_1000';
+  if (retrievalBackendLatencyHistogram[backend]) {
+    retrievalBackendLatencyHistogram[backend][bucket] += 1;
+  }
+};
+
+export const recordRecommendationCacheHit = (count = 1): void => {
+  if (count > 0) cacheHitsTotal += count;
+};
+
+export const recordRecommendationCacheMiss = (count = 1): void => {
+  if (count > 0) cacheMissesTotal += count;
+};
+
+export const recordFeedbackFunnelStep = (step: FeedbackFunnelStep, count = 1): void => {
+  if (count > 0 && step in feedbackFunnel) {
+    feedbackFunnel[step] += count;
+  }
+};
+
+const stageLatencyBucketFor = (durationMs: number): RecommendationGenerateStageLatencyBucket => {
+  if (durationMs <= 100) return 'le_100';
+  if (durationMs <= 250) return 'le_250';
+  if (durationMs <= 500) return 'le_500';
+  if (durationMs <= 1000) return 'le_1000';
+  if (durationMs <= 2500) return 'le_2500';
+  if (durationMs <= 5000) return 'le_5000';
+  return 'gt_5000';
+};
+
+export const recordRecommendationGenerate = (
+  logger: Logger,
+  event: RecommendationGenerateMetricEvent,
+): void => {
+  generateCount += 1;
+  totalLatencyMs += event.durationMs;
+  for (const [stage, duration] of Object.entries(event.stageDurationsMs ?? {})) {
+    if (stage in generateStageLatencyMs && typeof duration === 'number' && duration >= 0) {
+      const typedStage = stage as RecommendationGenerateStage;
+      generateStageLatencyMs[typedStage] += duration;
+      generateStageSampleCount[typedStage] += 1;
+      generateStageLatencyHistogram[typedStage][stageLatencyBucketFor(duration)] += 1;
+    }
+  }
+  if (event.empty) emptyCount += 1;
+  if (!event.success) {
+    failureCount += 1;
+    if (event.failureCode) {
+      failureCountByCode[event.failureCode] = (failureCountByCode[event.failureCode] ?? 0) + 1;
+    }
+  }
+
+  logger.info(
+    {
+      metric: 'recommendation.generate',
+      userId: event.userId,
+      runId: event.runId,
+      candidateCount: event.candidateCount,
+      durationMs: event.durationMs,
+      success: event.success,
+      filterMode: event.filterMode,
+      failureCode: event.failureCode,
+      empty: event.empty,
+      stageDurationsMs: event.stageDurationsMs,
+    },
+    'Recommendation generation metric',
+  );
+};
+
+export const recordRecommendationRerank = (
+  logger: Logger,
+  event: RecommendationRerankMetricEvent,
+): void => {
+  rerankTotalLatencyMs += event.durationMs;
+  if (event.success) rerankSuccessCount += 1;
+  else rerankFailureCount += 1;
+  if (event.fallback) rerankFallbackCount += 1;
+
+  logger.info(
+    {
+      metric: 'recommendation.rerank',
+      userId: event.userId,
+      runId: event.runId,
+      candidateCount: event.candidateCount,
+      durationMs: event.durationMs,
+      success: event.success,
+      fallback: event.fallback,
+    },
+    'Recommendation rerank metric',
+  );
+};
+
+export const resetRecommendationMetricsForTests = (): void => {
+  generateCount = 0;
+  emptyCount = 0;
+  failureCount = 0;
+  failureCountByCode = {};
+  totalLatencyMs = 0;
+  generateStageLatencyMs = createStageTotals();
+  generateStageSampleCount = createStageTotals();
+  generateStageLatencyHistogram = createStageLatencyHistogram();
+  filterCertExcludeTotal = 0;
+  rerankSuccessCount = 0;
+  rerankFailureCount = 0;
+  rerankFallbackCount = 0;
+  rerankTotalLatencyMs = 0;
+  careerGoalApiTotal = 0;
+  savedSearchApiTotal = 0;
+  feedbackAppliedLinkedTotal = 0;
+  feedbackMoreLessTotal = 0;
+  recommendationInvalidationTotal = 0;
+  userRecommendationPurgeTotal = 0;
+  jobRecommendationHiddenTotal = 0;
+  retrievalBackendLatencyHistogram = createBackendLatencyHistogram();
+  cacheHitsTotal = 0;
+  cacheMissesTotal = 0;
+  feedbackFunnel = {
+    IMPRESSION: 0,
+    VIEW: 0,
+    CLICK: 0,
+    SAVE: 0,
+    APPLY: 0,
+  };
+  careerCategoryDistribution = {
+    BEST_MATCH: 0,
+    GOOD_MATCH: 0,
+    STRETCH_OPPORTUNITY: 0,
+    RELATED_CAREER_PATH: 0,
+  };
+  feedbackActionTotal = {};
+};

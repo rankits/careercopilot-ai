@@ -1,0 +1,19 @@
+model CandidateEmbedding {
+  id          String                      @id @default(uuid())
+  userId      String                      @map("user_id")
+  sourceType  RecommendationSourceType    @map("source_type")
+  sourceId    String?                     @map("source_id")
+  sourceKey   String                      @map("source_key")
+  provider    String                      @db.VarChar(100)
+  model       String                      @db.VarChar(200)
+  dimensions  Int                         @default(768)
+  contentHash String                      @map("content_hash") @db.Char(64)
+  embedding   Unsupported("vector(768)")
+  createdAt   DateTime                    @default(now()) @map("created_at")
+  updatedAt   DateTime                    @updatedAt @map("updated_at")
+
+  @@unique([userId, sourceType, sourceKey, provider, model])
+  @@index([userId, sourceType, sourceKey])
+  @@index([contentHash])
+  @@map("candidate_embeddings")
+}

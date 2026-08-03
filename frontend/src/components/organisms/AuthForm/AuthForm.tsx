@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useForm, type FieldValues, type Path, type Resolver } from 'react-hook-form';
 
 import { Button } from '@/components/atoms/Button';
@@ -16,6 +16,7 @@ import {
   PhoneOutlinedIcon,
   Typography,
   VisibilityOffOutlinedIcon,
+  VisibilityOutlinedIcon,
   yupResolver,
 } from '@/lib/material';
 
@@ -32,6 +33,8 @@ const fieldIcons: AuthFieldIconMap = {
   phone: PhoneOutlinedIcon,
   visibilityOff: VisibilityOffOutlinedIcon,
 };
+
+const PASSWORD_FIELDS = new Set(['password', 'confirmPassword']);
 
 function renderIcon(icon?: AuthFieldIcon) {
   if (!icon) {
@@ -63,6 +66,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
   validationSchema,
 }: AuthFormProps<TFormValues>) {
   const content = AUTH_FORM_CONTENT[mode];
+  const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
   const fields = useMemo<AuthFormField[]>(
     () => [...AUTH_FORM_FIELDS[mode], ...extraFields],
     [extraFields, mode],
@@ -72,7 +76,10 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
     formState: { errors },
     handleSubmit,
     register,
+    trigger,
   } = useForm<TFormValues>({
+    mode: 'onTouched',
+    reValidateMode: 'onChange',
     resolver: yupResolver(schema) as Resolver<TFormValues>,
   });
   const submitHandler = onValidSubmit ? handleSubmit(onValidSubmit) : onSubmit;
@@ -102,8 +109,12 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
       <Box sx={authFormSx.stack}>
         {fields.map((field) => {
           const fieldError = errors[field.name]?.message;
+          const isPasswordField = PASSWORD_FIELDS.has(field.name);
           const isPhoneField = field.type === 'tel';
           const inputMode = isPhoneField ? 'tel' : undefined;
+          const isVisible = Boolean(visibleFields[field.name]);
+          const resolvedType = isPasswordField && isVisible ? 'text' : (field.type ?? 'text');
+          const registeredField = register(field.name as Path<TFormValues>);
 
           return (
             <Input
@@ -113,6 +124,11 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               inputMode={inputMode}
               key={field.name}
               label={field.label}
+              {...registeredField}
+              onBlur={(event) => {
+                void registeredField.onBlur(event);
+                void trigger(field.name as Path<TFormValues>);
+              }}
               onInput={
                 isPhoneField
                   ? (event) => {
@@ -123,9 +139,37 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               }
               placeholder={field.placeholder}
               startAdornment={renderIcon(field.startIcon)}
-              type={field.type ?? 'text'}
-              {...register(field.name as Path<TFormValues>)}
-              endAdornment={renderIcon(field.endIcon)}
+              type={resolvedType}
+              endAdornment={
+                isPasswordField ? (
+                  <button
+                    aria-label={isVisible ? `Hide ${field.label}` : `Show ${field.label}`}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      setVisibleFields((current) => ({
+                        ...current,
+                        [field.name]: !current[field.name],
+                      }));
+                    }}
+                    style={{
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      padding: 0,
+                    }}
+                    type="button"
+                  >
+                    {isVisible ? (
+                      <VisibilityOutlinedIcon fontSize="small" />
+                    ) : (
+                      <VisibilityOffOutlinedIcon fontSize="small" />
+                    )}
+                  </button>
+                ) : (
+                  renderIcon(field.endIcon)
+                )
+              }
             />
           );
         })}

@@ -82,7 +82,6 @@ export const login = async (
   const tokens = await AdminTokenService.issueSession(
     {
       id: admin.id,
-      publicId: admin.publicId,
       email: admin.email,
       role: admin.role.name,
       tokenVersion: admin.tokenVersion,
@@ -95,11 +94,11 @@ export const login = async (
 };
 
 export const changePassword = async (
-  principalId: string,
+  principalId: number,
   input: AdminChangePasswordInput,
   context: RequestContext,
 ): Promise<{ message: string }> => {
-  const admin = await adminRepository.findByPublicId(principalId);
+  const admin = await adminRepository.findById(principalId);
   if (!admin) {
     throw new AppError('Account not found', 404);
   }
@@ -130,7 +129,7 @@ export const changePassword = async (
 
   await messageBus
     .publishEvent(MessageExchanges.DOMAIN_EVENTS, MessageRoutingKeys.AUTH_UPDATED, {
-      adminId: admin.publicId,
+      adminId: admin.id,
       email: admin.email,
       reason: 'PASSWORD_CHANGED',
       timestamp: new Date().toISOString(),
@@ -158,10 +157,10 @@ export const logout = async (
 };
 
 export const logoutAll = async (
-  principalId: string,
+  principalId: number,
   context: RequestContext,
 ): Promise<{ message: string }> => {
-  const admin = await adminRepository.findByPublicId(principalId);
+  const admin = await adminRepository.findById(principalId);
   if (!admin) {
     throw new AppError('Account not found', 404);
   }
@@ -176,8 +175,8 @@ export const logoutAll = async (
   return { message: 'Logged out from all devices' };
 };
 
-export const getCurrentAdmin = async (principalId: string): Promise<SafeAdmin> => {
-  const admin = await adminRepository.findByPublicId(principalId);
+export const getCurrentAdmin = async (principalId: number): Promise<SafeAdmin> => {
+  const admin = await adminRepository.findById(principalId);
   if (!admin) {
     throw new AppError('Account not found', 404);
   }
@@ -188,8 +187,8 @@ export const getSystemStats = async (): Promise<SystemStats> => {
   return adminRepository.getSystemStats();
 };
 
-export const validateAdmin = async (principalId: string): Promise<boolean> => {
-  const admin = await adminRepository.findByPublicId(principalId);
+export const validateAdmin = async (principalId: number): Promise<boolean> => {
+  const admin = await adminRepository.findById(principalId);
   return admin !== null && admin.status === Status.Active;
 };
 

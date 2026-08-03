@@ -33,8 +33,8 @@ export interface WriteAuditLogInput {
 const withRole = { include: { role: true } } as const;
 
 export const userRepository = {
-  async findByPublicId(publicId: string): Promise<UserWithRole | null> {
-    return prisma.user.findUnique({ where: { publicId }, ...withRole });
+  async findById(id: number): Promise<UserWithRole | null> {
+    return prisma.user.findUnique({ where: { id }, ...withRole });
   },
 
   async updateProfile(userId: number, data: UpdateProfileData): Promise<UserWithRole> {
