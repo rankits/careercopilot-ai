@@ -1,5 +1,9 @@
 import { describe, expect, it } from 'vitest';
-import { clampScore, termAppearsIn, uniqSkills } from './text-match.js';
+import {
+  clampScore,
+  termAppearsIn,
+  uniqSkills,
+} from '@/modules/resume-analysis/utils/text-match.js';
 
 describe('text-match', () => {
   it('matches multi-word and special tech tokens', () => {

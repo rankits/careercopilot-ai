@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { resumeAnalysisAiSchema } from './resume-analysis-ai.schema.js';
+import { resumeAnalysisAiSchema } from '@/modules/resume-analysis/ai/resume-analysis-ai.schema.js';
 
 describe('resumeAnalysisAiSchema', () => {
   it('parses a minimal valid AI payload', () => {
