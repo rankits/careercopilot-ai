@@ -119,6 +119,8 @@ services:
       GOOGLE_EMBEDDING_BASE_URL: '${GOOGLE_EMBEDDING_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}'
       GROQ_API_KEY: '${GROQ_API_KEY:-}'
       GROQ_EMBEDDING_BASE_URL: '${GROQ_EMBEDDING_BASE_URL:-https://api.groq.com/openai/v1}'
+      OPENROUTER_MODEL: '${OPENROUTER_MODEL:-openai/gpt-4o-mini}'
+      OPENROUTER_TIMEOUT_MS: '${OPENROUTER_TIMEOUT_MS:-60000}'
       AWS_REGION: '${AWS_REGION:-us-east-1}'
       RESUME_S3_PREFIX: '${RESUME_S3_PREFIX:-users}'
       JOB_STORAGE_AGE_FILTER_ENABLED: '${JOB_STORAGE_AGE_FILTER_ENABLED:-true}'
