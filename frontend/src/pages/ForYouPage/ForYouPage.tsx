@@ -123,7 +123,7 @@ export function ForYouPage() {
   const activeMode = getModeFromSearchParams(searchParams);
   const similarSourceJobId = searchParams.get('jobId') || undefined;
   const activeModeMeta =
-    recommendationModes.find((mode) => mode.id === activeMode) ?? recommendationModes[0];
+    recommendationModes.find((mode) => mode.id === activeMode) ?? recommendationModes[0]!;
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
   const [page, setPage] = useState(1);
   const [generatedOnce, setGeneratedOnce] = useState(false);

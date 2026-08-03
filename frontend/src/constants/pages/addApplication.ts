@@ -101,7 +101,7 @@ export const jobFeedPickerJobs: JobFeedPickerJob[] = jobs.slice(0, 3).map((job, 
   id: `${job.company}-${job.title}`.toLowerCase().replace(/\s+/g, '-'),
   initials: job.logo.toUpperCase(),
   location: job.location,
-  match: job.match,
+  match: job.match ?? 0,
   title: job.title,
   type: job.type,
 }));

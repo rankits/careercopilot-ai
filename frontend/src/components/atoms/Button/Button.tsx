@@ -1,3 +1,5 @@
+import type { ElementType } from 'react';
+
 import { CircularProgress, MuiButton, type MuiButtonProps } from '@/lib/material';
 
 import { getButtonSx, type ButtonSize, type ButtonTone, type ButtonVariant } from './styles';
@@ -6,9 +8,14 @@ export interface ButtonProps extends Omit<
   MuiButtonProps,
   'color' | 'size' | 'variant' | 'disableElevation'
 > {
+  component?: ElementType;
+  href?: string;
   isLoading?: boolean;
-  tone?: ButtonTone;
+  rel?: string;
   size?: ButtonSize;
+  target?: string;
+  to?: string;
+  tone?: ButtonTone;
   variant?: ButtonVariant;
 }
 
