@@ -6,6 +6,17 @@ const toPositiveInt = (value: string | undefined, fallback: number) => {
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 };
 
+const resolveLocalStorageDir = () => {
+  const configuredDir = process.env.RESUME_LOCAL_STORAGE_DIR;
+  if (!configuredDir) return path.resolve(process.cwd(), 'storage', 'resumes');
+
+  if (process.platform === 'win32' && configuredDir.startsWith('/app/')) {
+    return path.resolve(process.cwd(), configuredDir.replace(/^\/app\//, ''));
+  }
+
+  return configuredDir;
+};
+
 export const resumeConfig = {
   storageDriver: (
     process.env.RESUME_STORAGE_DRIVER || 'LOCAL'
@@ -14,12 +25,11 @@ export const resumeConfig = {
   maxFileSizeBytes: toPositiveInt(process.env.RESUME_MAX_FILE_SIZE_MB, 10) * 1024 * 1024,
   ai: {
     provider: (process.env.AI_RESUME_PARSER_PROVIDER || 'google').toLowerCase(),
-    model: process.env.AI_RESUME_PARSER_MODEL || 'gemini-3.5-flash',
+    model: process.env.AI_RESUME_PARSER_MODEL || 'gemini-2.0-flash',
     temperature: Number(process.env.AI_RESUME_PARSER_TEMPERATURE ?? '0'),
     maxRetries: toPositiveInt(process.env.AI_RESUME_PARSER_MAX_RETRIES, 2),
   },
-  localStorageDir:
-    process.env.RESUME_LOCAL_STORAGE_DIR || path.resolve(process.cwd(), 'storage', 'resumes'),
+  localStorageDir: resolveLocalStorageDir(),
   s3: {
     bucket: process.env.RESUME_S3_BUCKET || '',
     region: process.env.AWS_REGION || 'us-east-1',
@@ -31,6 +41,7 @@ export const allowedResumeMimeTypes = new Set([
   'application/pdf',
   'application/msword',
   'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'text/plain',
 ]);
 
-export const allowedResumeExtensions = new Set(['.pdf', '.doc', '.docx']);
+export const allowedResumeExtensions = new Set(['.pdf', '.doc', '.docx', '.txt']);

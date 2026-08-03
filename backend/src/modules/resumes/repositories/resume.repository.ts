@@ -90,6 +90,14 @@ export const resumeRepository = {
     return prisma.resume.findUnique({ where: { id } });
   },
 
+  listResumes(userId?: string): Promise<Resume[]> {
+    return prisma.resume.findMany({
+      where: userId ? { userId } : undefined,
+      orderBy: { uploadedAt: 'desc' },
+      take: 25,
+    });
+  },
+
   findLatestExtraction(resumeId: string): Promise<ResumeExtraction | null> {
     return prisma.resumeExtraction.findFirst({
       where: { resumeId },

@@ -2,6 +2,7 @@ import { createAiModel } from '@/modules/resumes/ai/ai-model.factory.js';
 import { RESUME_PARSER_SYSTEM_PROMPT } from '@/modules/resumes/ai/prompts/resume-parser.prompt.js';
 import { ExpandedCanonicalResumeSchema } from '@/modules/resumes/schemas/canonical-resume.schema.js';
 import { resumeNormaliserService } from '@/modules/resumes/normalisation/resume-normaliser.service.js';
+import { normalizeProfessionalSkills } from '@/modules/resumes/utils/skill-normalizer.js';
 import {
   CanonicalResume,
   LanguageProficiency,
@@ -493,7 +494,7 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
   const data = isRecord(value) ? value : {};
 
   if (Array.isArray(value)) {
-    const skills = normalizeStringArray(
+    const skills = normalizeProfessionalSkills(
       value.flatMap((item) => {
         if (typeof item === 'string') {
           return [item];
@@ -516,7 +517,7 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
     };
   }
 
-  const groupedSkills = [
+  const groupedSkills = normalizeProfessionalSkills([
     data.backend,
     data.frontend,
     data.data,
@@ -535,17 +536,17 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
     data.frontend_technologies,
     data.database,
     data.databases,
-  ].flatMap(normalizeStringArray);
+  ].flatMap(normalizeStringArray));
 
   return {
     technical:
-      normalizeStringArray(data.technical).length > 0
-        ? normalizeStringArray(data.technical)
+      normalizeProfessionalSkills(data.technical).length > 0
+        ? normalizeProfessionalSkills(data.technical)
         : groupedSkills,
-    tools: normalizeStringArray(data.tools),
-    frameworks: normalizeStringArray(data.frameworks),
-    softSkills: normalizeStringArray(data.softSkills),
-    domains: normalizeStringArray(data.domains),
+    tools: normalizeProfessionalSkills(data.tools),
+    frameworks: normalizeProfessionalSkills(data.frameworks),
+    softSkills: [],
+    domains: [],
   };
 };
 
