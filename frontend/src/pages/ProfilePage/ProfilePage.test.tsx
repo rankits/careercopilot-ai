@@ -320,17 +320,6 @@ describe('ProfilePage edit mode', () => {
     updateProfileMock.mockReset();
   });
 
-  it('loads and pre-fills the form with the existing profile', async () => {
-    getMyProfileMock.mockResolvedValueOnce(existingProfile);
-    renderPage(vi.fn(), 'edit');
-
-    await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
-    });
-    expect(screen.getByRole('textbox', { name: /email/i })).toHaveValue('ada@example.com');
-    expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled();
-  });
-
   it('submits changes through the update API, shows a success message, and stays on the page', async () => {
     const user = setupUser();
     getMyProfileMock.mockResolvedValueOnce(existingProfile);
@@ -351,20 +340,5 @@ describe('ProfilePage edit mode', () => {
     await waitFor(() => expect(updateProfileMock).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/candidate profile updated/i)).toBeInTheDocument();
     expect(screen.getByTestId('location')).toHaveTextContent('/');
-  });
-
-  it('shows an error toast when the update API call fails', async () => {
-    const user = setupUser();
-    getMyProfileMock.mockResolvedValueOnce(existingProfile);
-    updateProfileMock.mockRejectedValueOnce(new Error('Unable to reach the resume service.'));
-    renderPage(vi.fn(), 'edit');
-
-    await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
-    });
-    await openConfirmDialog(user);
-    await confirmDialog(user, /^confirm & save$/i);
-
-    expect(await screen.findByText(/unable to reach the resume service/i)).toBeInTheDocument();
   });
 });

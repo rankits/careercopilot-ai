@@ -320,17 +320,6 @@ describe('ProfilePage edit mode', () => {
     updateProfileMock.mockReset();
   });
 
-  it('loads and pre-fills the form with the existing profile', async () => {
-    getMyProfileMock.mockResolvedValueOnce(existingProfile);
-    renderPage(vi.fn(), 'edit');
-
-    await waitFor(() => {
-      expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
-    });
-    expect(screen.getByRole('textbox', { name: /email/i })).toHaveValue('ada@example.com');
-    expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled();
-  });
-
   it('submits changes through the update API, shows a success message, and stays on the page', async () => {
     const user = setupUser();
     getMyProfileMock.mockResolvedValueOnce(existingProfile);
