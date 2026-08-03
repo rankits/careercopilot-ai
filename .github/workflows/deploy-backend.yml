@@ -147,30 +147,43 @@ jobs:
     #   name: production
 
     steps:
-      - name: Configure AWS credentials via OIDC
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_BACKEND_DEPLOY_ROLE_ARN }}
-          aws-region: ${{ vars.AWS_REGION }}
-          role-session-name: GitHubActions-Backend-Deploy
-
       - name: Trigger atomic EC2 deployment via SSM Run Command
         id: ssm_deploy
         run: |
+          cat <<'EOF' > deploy-command.sh
+          set -Eeuo pipefail
+      
+          SHA="${{ github.sha }}"
+          RELEASE_DIR="/opt/career-copilot/backend/releases/$SHA"
+          BUNDLE="/tmp/career-copilot-backend-$SHA.tar.gz"
+          S3_URI="s3://${{ vars.BACKEND_DEPLOYMENT_BUCKET }}/backend/career-copilot-backend-$SHA.tar.gz"
+          IMAGE="${{ vars.DOCKER_IMAGE_NAME }}:$SHA"
+      
+          mkdir -p "$RELEASE_DIR"
+      
+          aws s3 cp "$S3_URI" "$BUNDLE"
+      
+          tar -xzvf "$BUNDLE" -C "$RELEASE_DIR"
+          rm -f "$BUNDLE"
+      
+          chmod +x "$RELEASE_DIR"/*.sh
+      
+          "$RELEASE_DIR/install-release.sh" "$IMAGE" "$SHA"
+          EOF
+      
+          SCRIPT_B64=$(base64 -w 0 deploy-command.sh)
+      
           cat <<EOF > ssm-params.json
           {
             "commands": [
-              "set -Eeuo pipefail",
-              "mkdir -p /opt/career-copilot/backend/releases/${{ github.sha }}",
-              "aws s3 cp s3://${{ vars.BACKEND_DEPLOYMENT_BUCKET }}/backend/career-copilot-backend-${{ github.sha }}.tar.gz /tmp/career-copilot-backend-${{ github.sha }}.tar.gz",
-              "tar -xzvf /tmp/career-copilot-backend-${{ github.sha }}.tar.gz -C /opt/career-copilot/backend/releases/${{ github.sha }}",
-              "rm -f /tmp/career-copilot-backend-${{ github.sha }}.tar.gz",
-              "chmod +x /opt/career-copilot/backend/releases/${{ github.sha }}/*.sh",
-              "/opt/career-copilot/backend/releases/${{ github.sha }}/install-release.sh \"${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}\" \"${{ github.sha }}\""
+              "echo '$SCRIPT_B64' | base64 -d > /tmp/career-copilot-deploy.sh",
+              "chmod +x /tmp/career-copilot-deploy.sh",
+              "/bin/bash /tmp/career-copilot-deploy.sh",
+              "rm -f /tmp/career-copilot-deploy.sh"
             ]
           }
           EOF
-
+      
           COMMAND_ID=$(aws ssm send-command \
             --document-name "AWS-RunShellScript" \
             --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
@@ -178,9 +191,8 @@ jobs:
             --parameters file://ssm-params.json \
             --output text \
             --query "Command.CommandId")
-
+      
           echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
-          echo "Triggered SSM Command ID: $COMMAND_ID on instance ${{ vars.EC2_INSTANCE_ID }}"
 
       - name: Wait for SSM Command Completion
         run: |
