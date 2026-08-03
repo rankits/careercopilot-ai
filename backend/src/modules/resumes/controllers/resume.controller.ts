@@ -158,7 +158,8 @@ export const updateMyCandidateProfileController = async (
   next: NextFunction,
 ) => {
   try {
-    const profile = await resumeService.updateCandidateProfile(requirePrincipalId(req), req.body);
+    const userId = requirePrincipalId(req);
+    const profile = await resumeService.updateCandidateProfile(userId, req.body);
     return res.status(200).json(successResponse('Candidate profile updated', profile));
   } catch (error) {
     return next(error);

@@ -47,5 +47,9 @@ export const securityConfig = {
       windowMinutes: env.JOB_LISTING_RATE_LIMIT_WINDOW_MINUTES,
       max: env.JOB_LISTING_RATE_LIMIT_MAX_REQUESTS,
     },
+    recommendation: {
+      windowMinutes: env.RECOMMENDATION_RATE_LIMIT_WINDOW_MINUTES,
+      max: env.RECOMMENDATION_RATE_LIMIT_MAX_REQUESTS,
+    },
   },
 };

@@ -261,6 +261,16 @@ export class PrismaJobEmbeddingRepository implements JobEmbeddingRepository {
       }
       conditions.push(Prisma.sql`UPPER(j."currency") = ${currency}`);
     }
+    if (filters?.embeddingCutoff) {
+      if (Number.isNaN(filters.embeddingCutoff.getTime())) {
+        throw new AppError(
+          'embeddingCutoff must be a valid date',
+          422,
+          'INVALID_JOB_EMBEDDING_SEARCH_FILTER',
+        );
+      }
+      conditions.push(Prisma.sql`j."effective_posted_at" >= ${filters.embeddingCutoff}`);
+    }
 
     const rows = await this.sql.query<SearchResultRow>(Prisma.sql`
       SELECT

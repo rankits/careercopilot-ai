@@ -84,6 +84,22 @@ export abstract class BaseEmbeddingProvider implements EmbeddingProvider {
     return results;
   }
 
+  async embedDocument(text: string): Promise<number[]> {
+    return this.generateEmbedding(text, 'DOCUMENT');
+  }
+
+  async embedQuery(text: string): Promise<number[]> {
+    return this.generateEmbedding(text, 'QUERY');
+  }
+
+  async embedDocuments(texts: readonly string[]): Promise<number[][]> {
+    return this.generateEmbeddings(texts, 'DOCUMENT');
+  }
+
+  async embedQueries(texts: readonly string[]): Promise<number[][]> {
+    return this.generateEmbeddings(texts, 'QUERY');
+  }
+
   protected abstract requestBatch(
     texts: readonly string[],
     purpose: EmbeddingPurpose,

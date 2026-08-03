@@ -32,6 +32,7 @@ export const jobDetailPageSx = {
   } satisfies SxProps<Theme>,
   actions: {
     display: 'flex',
+    flexWrap: 'wrap',
     gap: spacing[2],
   } satisfies SxProps<Theme>,
   muted: {

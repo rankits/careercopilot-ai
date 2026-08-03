@@ -21,6 +21,10 @@ export const DEFAULT_RECOMMENDATION_WEIGHTS: Readonly<
 export const DEFAULT_RECOMMENDATION_LIMIT = 20;
 export const DEFAULT_RETRIEVAL_BACKEND: RetrievalBackend = 'PGVECTOR';
 
+/** Hybrid overall score blend weights (JR-PROD-001). Must sum to 1. */
+export const RETRIEVAL_SCORE_BLEND_WEIGHT = 0.4;
+export const HEURISTIC_SCORE_BLEND_WEIGHT = 0.6;
+
 export const assertValidRecommendationWeights = (
   weights: Readonly<Record<RecommendationScoreComponentName, number>>,
 ): void => {

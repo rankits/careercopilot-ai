@@ -49,6 +49,8 @@ export interface BulkIngestionSummary {
   readonly persistedMetadataOnly: number;
   readonly persistedUnchanged: number;
   readonly persistedFailed: number;
+  readonly storageAgeSkipped: number;
+  readonly embeddingAgeSkipped: number;
   readonly providerBreakdown: Record<
     string,
     { fetched: number; durationMs: number; error?: string }

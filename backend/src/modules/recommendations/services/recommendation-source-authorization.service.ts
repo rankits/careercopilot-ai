@@ -4,10 +4,10 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
-import {
-  hasRecommendationSignal,
-  toCandidateProfileSourcePayload,
-} from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
+import { buildCareerGoalRecommendationPayload } from '@/modules/recommendations/mappers/career-target-source.mapper.js';
+import { hasRecommendationSignal } from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
+import { buildSavedSearchRecommendationPayload } from '@/modules/recommendations/mappers/saved-search-source.mapper.js';
+import { buildProfilePrimaryRecommendationPayload } from '@/modules/recommendations/utils/candidate-recommendation-document.js';
 import type { BuildRecommendationContextInput } from '@/modules/recommendations/types/recommendations.types.js';
 import type {
   CreateRecommendationFromTextInput,
@@ -61,7 +61,10 @@ export class RecommendationSourceAuthorizationService {
             RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
           );
         }
-        const payload = toCandidateProfileSourcePayload(profile);
+        const resumeFallback = profile.sourceResumeId
+          ? await this.profiles.findOwnedResumeProfileSource(userId, profile.sourceResumeId)
+          : null;
+        const payload = buildProfilePrimaryRecommendationPayload(profile, resumeFallback);
         if (!hasRecommendationSignal(payload)) {
           throw new RecommendationError(
             'Candidate profile does not contain titles, skills, or summary text for recommendations',
@@ -83,15 +86,26 @@ export class RecommendationSourceAuthorizationService {
             RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
           );
         }
-        const parsed = await this.profiles.findOwnedResumeProfileSource(userId, input.sourceId);
-        if (!parsed) {
+        const lookup = this.profiles.lookupOwnedResumeProfileSource
+          ? await this.profiles.lookupOwnedResumeProfileSource(userId, input.sourceId)
+          : await this.profiles.findOwnedResumeProfileSource(userId, input.sourceId).then((payload) =>
+              payload ? { status: 'FOUND' as const, payload } : { status: 'NOT_FOUND' as const },
+            );
+        if (lookup.status === 'NOT_FOUND') {
           throw new RecommendationError(
             'Owned resume with completed parse data was not found',
             404,
             RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
           );
         }
-        const payload = toCandidateProfileSourcePayload(parsed);
+        if (lookup.status === 'INCOMPLETE') {
+          throw new RecommendationError(
+            'Resume parse data is not complete enough for recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        const payload = buildProfilePrimaryRecommendationPayload(lookup.payload, null);
         if (!hasRecommendationSignal(payload)) {
           throw new RecommendationError(
             'Resume parse data does not contain titles, skills, or summary text for recommendations',
@@ -106,13 +120,95 @@ export class RecommendationSourceAuthorizationService {
           authorizedSourcePayload: payload,
         };
       }
-      case 'CAREER_GOAL':
-      case 'SAVED_SEARCH':
-        throw new RecommendationError(
-          `${input.sourceType} authorization is not available until its domain models exist`,
-          501,
-          RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
-        );
+      case 'CAREER_GOAL': {
+        if (!input.sourceId) {
+          throw new RecommendationError(
+            'sourceId is required for CAREER_GOAL recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        if (!this.profiles.findOwnedCareerTargetSource) {
+          throw new RecommendationError(
+            'Career goal recommendation sources are not configured',
+            501,
+            RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
+          );
+        }
+        const target = await this.profiles.findOwnedCareerTargetSource(userId, input.sourceId);
+        if (!target) {
+          throw new RecommendationError(
+            'Owned career target was not found',
+            404,
+            RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+          );
+        }
+        const profile = await this.profiles.findCandidateProfileByUserId(userId);
+        const resumeFallback = profile?.sourceResumeId
+          ? await this.profiles.findOwnedResumeProfileSource(userId, profile.sourceResumeId)
+          : null;
+        const profilePayload = profile
+          ? buildProfilePrimaryRecommendationPayload(profile, resumeFallback)
+          : buildProfilePrimaryRecommendationPayload({
+              personalDetails: {},
+              experience: [],
+              education: [],
+              skills: [],
+              certifications: [],
+            });
+        const payload = buildCareerGoalRecommendationPayload(target, profilePayload);
+        if (!hasRecommendationSignal(payload)) {
+          throw new RecommendationError(
+            'Career target does not contain titles, skills, or goal text for recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        return {
+          userId,
+          sourceType: 'CAREER_GOAL',
+          sourceId: input.sourceId,
+          authorizedSourcePayload: payload,
+        };
+      }
+      case 'SAVED_SEARCH': {
+        if (!input.sourceId) {
+          throw new RecommendationError(
+            'sourceId is required for SAVED_SEARCH recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        if (!this.profiles.findOwnedSavedSearchSource) {
+          throw new RecommendationError(
+            'Saved search recommendation sources are not configured',
+            501,
+            RECOMMENDATION_ERROR_CODES.NOT_IMPLEMENTED,
+          );
+        }
+        const savedSearch = await this.profiles.findOwnedSavedSearchSource(userId, input.sourceId);
+        if (!savedSearch) {
+          throw new RecommendationError(
+            'Owned saved search was not found',
+            404,
+            RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+          );
+        }
+        const payload = buildSavedSearchRecommendationPayload(savedSearch);
+        if (!hasRecommendationSignal(payload)) {
+          throw new RecommendationError(
+            'Saved search does not contain titles, skills, or query text for recommendations',
+            422,
+            RECOMMENDATION_ERROR_CODES.CONTEXT_INVALID,
+          );
+        }
+        return {
+          userId,
+          sourceType: 'SAVED_SEARCH',
+          sourceId: input.sourceId,
+          authorizedSourcePayload: payload,
+        };
+      }
       default: {
         const exhaustive: never = input.sourceType;
         throw new RecommendationError(

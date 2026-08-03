@@ -106,6 +106,7 @@ describe('PrismaJobEmbeddingRepository', () => {
     const queryText = statement.strings.join('');
     expect(queryText).toContain('je."job_version" = j."version"');
     expect(queryText).toContain('j."status" = ');
+    expect(queryText).toContain('j."id" NOT IN');
     expect(queryText).toContain('salary_min');
     expect(queryText).toContain('UPPER(j."currency")');
     expect(queryText).not.toContain('DELETE FROM jobs');
@@ -113,6 +114,25 @@ describe('PrismaJobEmbeddingRepository', () => {
     expect(statement.values).toContain(25);
     expect(statement.values).toContain(160_000);
     expect(statement.values).toContain('USD');
+  });
+
+  it('applies embeddingCutoff against effective_posted_at', async () => {
+    const sql = new RecordingSqlExecutor();
+    sql.queryResults = [[{ jobId: 'job-id', similarity: 0.9 }]];
+    const repository = new PrismaJobEmbeddingRepository(sql);
+    const cutoff = new Date('2026-06-03T00:00:00.000Z');
+
+    await repository.searchNearest({
+      provider: 'google',
+      model: 'gemini-embedding-2',
+      embedding: embedding(),
+      limit: 5,
+      filters: { embeddingCutoff: cutoff },
+    });
+
+    const statement = sql.queryStatements[0];
+    expect(statement.strings.join('')).toContain('j."effective_posted_at" >=');
+    expect(statement.values).toContain(cutoff);
   });
 
   it('deletes embeddings for a job through a bound parameter', async () => {

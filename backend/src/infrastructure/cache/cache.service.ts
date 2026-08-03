@@ -56,6 +56,14 @@ export class CacheService implements ICacheService {
     await this.set(key, value, ttlSeconds);
     return value;
   }
+
+  async tryAcquireLock(key: string, ttlSeconds: number): Promise<boolean> {
+    return this.driver.tryAcquireLock(key, ttlSeconds);
+  }
+
+  async releaseLock(key: string): Promise<void> {
+    return this.driver.releaseLock(key);
+  }
 }
 
 export const cacheService = new CacheService();

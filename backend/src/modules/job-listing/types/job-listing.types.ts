@@ -8,6 +8,7 @@ export interface JobSearchFilters {
   minSalary?: number;
   maxSalary?: number;
   postedWithinDays?: number;
+  postedSince?: Date;
 }
 
 export interface JobSearchPagination {
@@ -33,6 +34,17 @@ export interface PaginatedJobResult<T> {
     hasNextPage: boolean;
     hasPreviousPage: boolean;
   };
+}
+
+export interface JobRecommendationEligibility {
+  /** Certifications explicitly required by the job; omitted/empty means unknown or not required. */
+  requiredCertifications?: string[];
+  /** Countries whose residents/citizens are eligible when the posting discloses a restriction. */
+  eligibleCountries?: string[];
+  /** Whether the employer explicitly offers sponsorship for this role. */
+  sponsorshipOffered?: boolean | null;
+  /** Whether the role explicitly requires existing work authorization. */
+  requiresWorkAuthorization?: boolean | null;
 }
 
 /**
@@ -62,6 +74,8 @@ export interface JobListDto {
   publishedAt: string | null;
   /** Primary JobSource apply URL (priority desc); http(s) only, else null. */
   applyUrl: string | null;
+  /** Optional internal eligibility metadata for recommendation filtering when providers expose it. */
+  recommendationEligibility?: JobRecommendationEligibility;
 }
 
 export interface JobDetailDto extends JobListDto {

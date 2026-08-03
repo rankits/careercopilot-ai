@@ -1,10 +1,11 @@
 import type { RecommendationScoreCalculator } from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
 import {
   clampScore,
-  listOverlapRatio,
   textOverlapRatio,
   tokenize,
 } from '@/modules/recommendations/utils/recommendation-matching.js';
+import { defaultSkillRelationshipService } from '@/modules/recommendations/skills/skill-relationship.service.js';
+import type { SkillRelationshipHit } from '@/modules/recommendations/skills/skill-relationship.service.js';
 
 const reason = (
   component: RecommendationScoreCalculator['component'],
@@ -12,22 +13,81 @@ const reason = (
   evidence: string[] = [],
 ) => [{ component, message, evidence }];
 
+const MISSING_SIGNAL_SCORE = 0.5;
+
+const formatRelationshipEvidence = (
+  hits: readonly SkillRelationshipHit[],
+  verb: 'covers' | 'supports',
+): string[] =>
+  hits.map(
+    (hit) => `${hit.type.toLowerCase()}: ${hit.availableSkill} ${verb} ${hit.requiredSkill}`,
+  );
+
+const formatSkillCoverageMessage = (
+  total: number,
+  covered: number,
+  hits: readonly SkillRelationshipHit[],
+  label: 'required' | 'preferred',
+): string => {
+  const transferableHits = hits.filter((hit) => hit.type === 'TRANSFERABLE');
+  if (transferableHits.length === 1 && hits.length === 1 && covered === 1) {
+    const [hit] = transferableHits;
+    return `Transferable skill ${hit!.availableSkill} can help with ${hit!.requiredSkill}, but it is lower confidence than an exact ${label}-skill match`;
+  }
+  if (transferableHits.length > 0) {
+    return `Covered ${covered} of ${total || covered} ${label} skills, including ${transferableHits.length} lower-confidence transferable skill signal${
+      transferableHits.length === 1 ? '' : 's'
+    }`;
+  }
+  return `Covered ${covered} of ${total || covered} ${label} skills with exact, alias, or related skills`;
+};
+
 const requiredSkillsCalculator: RecommendationScoreCalculator = {
   component: 'requiredSkills',
   async calculate(context, job) {
-    const { ratio, matched, missing } = listOverlapRatio(context.requiredSkills, job.skills);
+    if (context.requiredSkills.length === 0) {
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        matchedSkills: [],
+        missingSkills: [],
+        reasons: reason('requiredSkills', 'No required skills specified; used neutral score'),
+      };
+    }
+    if (job.skills.length === 0) {
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        matchedSkills: [],
+        missingSkills: context.requiredSkills,
+        reasons: reason('requiredSkills', 'Job skills unavailable; used neutral score'),
+      };
+    }
+    const { ratio, exact, alias, related, transferable, missing, hits } =
+      defaultSkillRelationshipService.overlap(context.requiredSkills, job.skills);
+    const evidence = [
+      ...exact,
+      ...alias.map((skill) => `alias: ${skill}`),
+      ...formatRelationshipEvidence(hits, 'covers'),
+    ];
     return {
       score: clampScore(ratio),
-      matchedSkills: matched,
+      matchedSkills: exact,
+      aliasSkills: alias,
+      relatedSkills: related,
+      transferableSkills: transferable,
       missingSkills: missing,
       reasons: reason(
         'requiredSkills',
-        matched.length > 0
-          ? `Matched ${matched.length} of ${context.requiredSkills.length || matched.length} required skills`
+        evidence.length > 0
+          ? formatSkillCoverageMessage(
+              context.requiredSkills.length,
+              evidence.length,
+              hits,
+              'required',
+            )
           : context.requiredSkills.length === 0
             ? 'No required skills were specified'
             : 'No required skills matched the job',
-        matched,
+        evidence,
       ),
     };
   },
@@ -36,16 +96,40 @@ const requiredSkillsCalculator: RecommendationScoreCalculator = {
 const preferredSkillsCalculator: RecommendationScoreCalculator = {
   component: 'preferredSkills',
   async calculate(context, job) {
-    const { ratio, matched } = listOverlapRatio(context.preferredSkills, job.skills);
+    if (context.preferredSkills.length === 0) {
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        relatedSkills: [],
+        reasons: reason('preferredSkills', 'No preferred skills specified; used neutral score'),
+      };
+    }
+    if (job.skills.length === 0) {
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        relatedSkills: [],
+        reasons: reason('preferredSkills', 'Job skills unavailable; used neutral score'),
+      };
+    }
+    const { ratio, exact, alias, related, transferable, hits } = defaultSkillRelationshipService.overlap(
+      context.preferredSkills,
+      job.skills,
+    );
+    const evidence = [
+      ...exact,
+      ...alias.map((skill) => `alias: ${skill}`),
+      ...formatRelationshipEvidence(hits, 'supports'),
+    ];
     return {
       score: clampScore(ratio),
-      relatedSkills: matched,
+      aliasSkills: alias,
+      relatedSkills: [...exact, ...related],
+      transferableSkills: transferable,
       reasons: reason(
         'preferredSkills',
-        matched.length > 0
-          ? `Matched ${matched.length} preferred skills`
+        evidence.length > 0
+          ? formatSkillCoverageMessage(context.preferredSkills.length, evidence.length, hits, 'preferred')
           : 'No preferred-skill overlap',
-        matched,
+        evidence,
       ),
     };
   },
@@ -59,7 +143,7 @@ const titleCalculator: RecommendationScoreCalculator = {
       return {
         score: context.sourceText
           ? clampScore(textOverlapRatio(context.sourceText, job.title))
-          : 0.5,
+          : MISSING_SIGNAL_SCORE,
         reasons: reason('title', 'No target titles provided; used neutral/source-text title score'),
       };
     }
@@ -79,8 +163,8 @@ const experienceCalculator: RecommendationScoreCalculator = {
   async calculate(context, job) {
     if (!context.seniority && context.yearsOfExperience === undefined) {
       return {
-        score: 0.5,
-        reasons: reason('experience', 'No experience preference provided'),
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('experience', 'No experience preference provided; used neutral score'),
       };
     }
     const haystack = `${job.title} ${job.skills.join(' ')}`.toLowerCase();
@@ -116,8 +200,11 @@ const responsibilitiesCalculator: RecommendationScoreCalculator = {
   async calculate(context, job) {
     if (!context.sourceText?.trim()) {
       return {
-        score: 0.5,
-        reasons: reason('responsibilities', 'No source text available for responsibility matching'),
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason(
+          'responsibilities',
+          'No source text available for responsibility matching; used neutral score',
+        ),
       };
     }
     const jobText = `${job.title} ${job.skills.join(' ')}`;
@@ -136,7 +223,10 @@ const locationCalculator: RecommendationScoreCalculator = {
   component: 'location',
   async calculate(context, job) {
     if (!context.locations.length && !context.remotePreference) {
-      return { score: 1, reasons: reason('location', 'No location preference provided') };
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('location', 'No location preference provided; used neutral score'),
+      };
     }
     const jobLocation = `${job.location.formatted} ${job.location.remoteType ?? ''}`.toLowerCase();
     let score = 0;
@@ -166,11 +256,19 @@ const industryCalculator: RecommendationScoreCalculator = {
   component: 'industry',
   async calculate(context, job) {
     if (!context.industries.length) {
-      return { score: 1, reasons: reason('industry', 'No industry preference provided') };
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('industry', 'No industry preference provided; used neutral score'),
+      };
     }
     // JobListDto does not expose industry; use company name as a weak signal only.
     const company = job.company.name.toLowerCase();
-    const { ratio, matched } = listOverlapRatio(context.industries, [job.company.name]);
+    const ratio = context.industries.some(
+      (industry) => industry.trim().toLowerCase() === job.company.name.trim().toLowerCase(),
+    )
+      ? 1
+      : 0;
+    const matched = ratio > 0 ? [job.company.name] : [];
     const tokenHits = context.industries.some((industry) =>
       company.includes(industry.trim().toLowerCase()),
     );
@@ -193,10 +291,16 @@ const salaryCalculator: RecommendationScoreCalculator = {
   async calculate(context, job) {
     const expectation = context.salaryExpectation;
     if (expectation.minimum === undefined && expectation.maximum === undefined) {
-      return { score: 1, reasons: reason('salary', 'No salary expectation provided') };
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('salary', 'No salary expectation provided; used neutral score'),
+      };
     }
     if (job.salary.minimum === null && job.salary.maximum === null) {
-      return { score: 0.5, reasons: reason('salary', 'Job salary is undisclosed') };
+      return {
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason('salary', 'Job salary is undisclosed; used neutral score'),
+      };
     }
     const jobMin = job.salary.minimum ?? job.salary.maximum ?? 0;
     const jobMax = job.salary.maximum ?? job.salary.minimum ?? 0;
@@ -231,8 +335,11 @@ const qualificationsCalculator: RecommendationScoreCalculator = {
     const signals = [...context.education, ...context.certifications];
     if (signals.length === 0) {
       return {
-        score: 1,
-        reasons: reason('qualifications', 'No qualification preferences provided'),
+        score: MISSING_SIGNAL_SCORE,
+        reasons: reason(
+          'qualifications',
+          'No qualification preferences provided; used neutral score',
+        ),
       };
     }
     const haystack = `${job.title} ${job.skills.join(' ')}`.toLowerCase();

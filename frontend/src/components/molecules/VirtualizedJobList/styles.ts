@@ -27,7 +27,7 @@ export const VirtualListRoot = styled('div')({
   },
 
   '@media (max-width: 48rem)': {
-    maxHeight: 'calc(100vh - 14rem)',
+    maxHeight: '70dvh',
   },
 });
 
