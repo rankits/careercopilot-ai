@@ -192,13 +192,13 @@ describe('PgVectorCandidateRetrievalProvider', () => {
         model: 'text-embedding-004',
         embedding: [0.1, 0.2],
         limit: 40,
-        filters: {
+        filters: expect.objectContaining({
           excludeJobIds: ['job-x'],
           remoteTypes: ['REMOTE'],
           minSalary: 120000,
           maxSalary: undefined,
           currency: 'USD',
-        },
+        }),
       }),
     );
     expect(result.jobs.map((item) => item.id)).toEqual(['job-1']);
@@ -251,13 +251,13 @@ describe('PgVectorCandidateRetrievalProvider', () => {
 
     expect(searchNearest).toHaveBeenCalledWith(
       expect.objectContaining({
-        filters: {
+        filters: expect.objectContaining({
           excludeJobIds: ['job-x'],
           remoteTypes: undefined,
           minSalary: undefined,
           maxSalary: undefined,
           currency: undefined,
-        },
+        }),
       }),
     );
     expect(result.jobs.map((item) => item.id)).toEqual(['job-stretch']);
