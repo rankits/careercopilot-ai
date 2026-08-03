@@ -18,6 +18,18 @@ export const resumeUploadMiddleware = multer({
   },
 }).single('resume');
 
+export const listResumesController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const resumes = await resumeService.listResumes({
+      userId: typeof req.query.userId === 'string' ? req.query.userId : undefined,
+    });
+
+    return res.status(200).json(successResponse('Resumes retrieved successfully', resumes));
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const uploadResumeController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const resume = await resumeService.uploadResume({
@@ -30,7 +42,10 @@ export const uploadResumeController = async (req: Request, res: Response, next: 
         id: resume.id,
         status: resume.status,
         fileName: resume.fileName,
+        originalName: resume.originalName,
+        sizeBytes: resume.sizeBytes,
         storageDriver: resume.storageDriver,
+        createdAt: resume.uploadedAt,
         uploadedAt: resume.uploadedAt,
       }),
     );
