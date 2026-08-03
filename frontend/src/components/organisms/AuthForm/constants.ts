@@ -123,4 +123,19 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
         message: 'Enter a valid phone number',
       }),
   }),
+  forgotPassword: yup.object({
+    email: yup
+      .string()
+      .email('Enter a valid email address')
+      .matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/, 'Enter a valid email address')
+      .required('Email is required'),
+    confirmPassword: yup
+      .string()
+      .oneOf([yup.ref('password')], 'Passwords must match')
+      .required('Confirm password is required'),
+    password: yup
+      .string()
+      .min(8, 'Password must be at least 8 characters')
+      .required('Password is required'),
+  }),
 } as const;
