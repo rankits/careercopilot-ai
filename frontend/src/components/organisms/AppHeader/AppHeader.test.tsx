@@ -52,6 +52,7 @@ describe('AppHeader', () => {
     const handleLogoutClick = vi.fn();
     const handleNotificationClick = vi.fn();
     const handleSettingsClick = vi.fn();
+    const handleUploadResumeClick = vi.fn();
     const handleUserMenuClick = vi.fn();
 
     render(
@@ -59,19 +60,23 @@ describe('AppHeader', () => {
         onLogoutClick={handleLogoutClick}
         onNotificationClick={handleNotificationClick}
         onSettingsClick={handleSettingsClick}
+        onUploadResumeClick={handleUploadResumeClick}
         onUserMenuClick={handleUserMenuClick}
       />,
     );
 
     await user.click(screen.getByLabelText(/notifications/i));
     await user.click(screen.getByRole('button', { name: /user menu/i }));
-    await user.click(screen.getByRole('menuitem', { name: /settings/i }));
+    await user.click(screen.getByRole('menuitem', { name: /edit profile/i }));
+    await user.click(screen.getByRole('button', { name: /user menu/i }));
+    await user.click(screen.getByRole('menuitem', { name: /upload resume/i }));
     await user.click(screen.getByRole('button', { name: /user menu/i }));
     await user.click(screen.getByRole('menuitem', { name: /logout/i }));
 
     expect(handleNotificationClick).toHaveBeenCalledTimes(1);
-    expect(handleUserMenuClick).toHaveBeenCalledTimes(2);
+    expect(handleUserMenuClick).toHaveBeenCalledTimes(3);
     expect(handleSettingsClick).toHaveBeenCalledTimes(1);
+    expect(handleUploadResumeClick).toHaveBeenCalledTimes(1);
     expect(handleLogoutClick).toHaveBeenCalledTimes(1);
   });
 });

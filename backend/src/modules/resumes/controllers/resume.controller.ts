@@ -147,6 +147,11 @@ export const confirmProfileController = async (req: Request, res: Response, next
     await resumeService.confirmProfile({
       userId: principalId,
       resumeId: req.body.resumeId,
+      personalDetails: req.body.personalDetails,
+      experience: req.body.experience,
+      education: req.body.education,
+      skills: req.body.skills,
+      certifications: req.body.certifications,
     });
     return res.status(200).json(successResponse('Profile created successfully'));
   } catch (error) {
