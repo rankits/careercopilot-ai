@@ -67,7 +67,7 @@ export const createEmbeddingProvider = (
       {
         ...base,
         provider: 'openrouter',
-        apiKey: required(config.openrouter.apiKey, 'OPENROUTER_API_KEY'),
+        apiKey: required(config.openrouter.apiKey, config.openrouter.apiKeyEnvName),
         baseUrl: config.openrouter.baseUrl,
         httpReferer: config.openrouter.httpReferer,
         appTitle: config.openrouter.appTitle,
