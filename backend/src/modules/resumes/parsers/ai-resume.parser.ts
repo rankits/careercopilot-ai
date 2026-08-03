@@ -1,5 +1,6 @@
-import { createAiModel } from '@/modules/resumes/ai/ai-model.factory.js';
+import { createResumeAiProviders } from '@/modules/resumes/ai/ai-model.factory.js';
 import { RESUME_PARSER_SYSTEM_PROMPT } from '@/modules/resumes/ai/prompts/resume-parser.prompt.js';
+import { parseResumeWithFallback } from '@/modules/resumes/ai/resumeParser.js';
 import { ExpandedCanonicalResumeSchema } from '@/modules/resumes/schemas/canonical-resume.schema.js';
 import { resumeNormaliserService } from '@/modules/resumes/normalisation/resume-normaliser.service.js';
 import { normalizeProfessionalSkills } from '@/modules/resumes/utils/skill-normalizer.js';
@@ -517,26 +518,28 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
     };
   }
 
-  const groupedSkills = normalizeProfessionalSkills([
-    data.backend,
-    data.frontend,
-    data.data,
-    data.cloudDevops,
-    data.cloud_devops,
-    data.practices,
-    data.tools,
-    data.frameworks,
-    data.softSkills,
-    data.soft_skills,
-    data.domains,
-    data.technical,
-    data.backendTechnologies,
-    data.backend_technologies,
-    data.frontendTechnologies,
-    data.frontend_technologies,
-    data.database,
-    data.databases,
-  ].flatMap(normalizeStringArray));
+  const groupedSkills = normalizeProfessionalSkills(
+    [
+      data.backend,
+      data.frontend,
+      data.data,
+      data.cloudDevops,
+      data.cloud_devops,
+      data.practices,
+      data.tools,
+      data.frameworks,
+      data.softSkills,
+      data.soft_skills,
+      data.domains,
+      data.technical,
+      data.backendTechnologies,
+      data.backend_technologies,
+      data.frontendTechnologies,
+      data.frontend_technologies,
+      data.database,
+      data.databases,
+    ].flatMap(normalizeStringArray),
+  );
 
   return {
     technical:
@@ -895,19 +898,20 @@ const toParsedResumeData = (canonical: CanonicalResume) =>
 
 export class AiResumeParser implements ResumeParser {
   async parseResume(input: ResumeParserInput): Promise<ResumeParserResult> {
-    const model = createAiModel();
-
-    const response = await model.extract({
-      systemPrompt: RESUME_PARSER_SYSTEM_PROMPT,
-      documentText: input.extractedText,
-      schema: {
-        parse: (value: unknown) => value,
-      } as never,
-      metadata: {
-        promptVersion: 'resume-parser-v2',
-        schemaVersion: 'resume-schema-v2',
+    const response = await parseResumeWithFallback(
+      {
+        systemPrompt: RESUME_PARSER_SYSTEM_PROMPT,
+        documentText: input.extractedText,
+        schema: {
+          parse: (value: unknown) => value,
+        } as never,
+        metadata: {
+          promptVersion: 'resume-parser-v2',
+          schemaVersion: 'resume-schema-v2',
+        },
       },
-    });
+      createResumeAiProviders(),
+    );
     const parsed = typeof response === 'string' ? JSON.parse(response) : response;
     const canonical = buildCanonicalResume(parsed);
     const parsedData = resumeNormaliserService.normalize(toParsedResumeData(canonical));

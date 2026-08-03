@@ -28,6 +28,7 @@ export interface RecommendationRunRepository {
   markCompleted(userId: string, runId: string): Promise<RecommendationRunRecord>;
   markFailed(userId: string, runId: string, failureCode: string): Promise<RecommendationRunRecord>;
   findById(userId: string, runId: string): Promise<RecommendationRunRecord | null>;
+  findLatestByUser(userId: string): Promise<RecommendationRunRecord | null>;
 }
 
 export interface JobRecommendationRepository {
@@ -35,6 +36,7 @@ export interface JobRecommendationRepository {
     userId: string,
     runId: string,
     recommendations: readonly ScoredJobRecommendation[],
+    options?: { preserveOrder?: boolean },
   ): Promise<JobRecommendationRecord[]>;
   findById(userId: string, recommendationId: string): Promise<JobRecommendationRecord | null>;
   listByRun(
@@ -62,6 +64,12 @@ export interface RecommendationFeedbackRepository {
     recommendationId: string,
   ): Promise<RecommendationFeedbackRecord | null>;
   listByJob(userId: string, jobId: string): Promise<RecommendationFeedbackRecord[]>;
+  listByAction(
+    userId: string,
+    action: RecommendationFeedbackAction,
+    options?: { limit?: number },
+  ): Promise<RecommendationFeedbackRecord[]>;
+  listExcludedJobIds(userId: string): Promise<string[]>;
 }
 
 export interface RecommendationUnitOfWork {

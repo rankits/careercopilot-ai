@@ -54,35 +54,189 @@ export interface SalaryExpectation {
   currency?: string;
 }
 
+/**
+ * Frozen schema version for RecommendationContext.
+ * Bump when optional fields or semantics change in a breaking way.
+ * Documented in docs/job-recommendation-engine-tickets/CONTEXT_CONTRACT.md
+ */
+export const RECOMMENDATION_CONTEXT_SCHEMA_VERSION = '1.1.0' as const;
+
+export const RECOMMENDATION_FILTER_MODE_VALUES = ['STRICT', 'FLEXIBLE'] as const;
+export type RecommendationFilterMode = (typeof RECOMMENDATION_FILTER_MODE_VALUES)[number];
+export type RecommendationFlexibilityMode = 'STRICT' | 'FLEXIBLE' | 'STRETCH';
+
+export type WorkAuthorizationStatus =
+  'AUTHORIZED' | 'NEEDS_SPONSORSHIP' | 'UNKNOWN' | 'NOT_APPLICABLE';
+
+export interface WorkAuthorizationRequirement {
+  status?: WorkAuthorizationStatus;
+  eligibleCountries: string[];
+  requiresSponsorship?: boolean;
+}
+
+export interface CareerGoalIntent {
+  currentRole?: string;
+  targetRole?: string;
+  summary?: string;
+  targetIndustries: string[];
+  timeframe?: string;
+}
+
+export interface SavedSearchSnapshot {
+  searchId?: string;
+  criteriaVersion?: string;
+  query?: string;
+  filters: {
+    titles: string[];
+    locations: string[];
+    remotePreference?: ExtractedRecommendationContext['remotePreference'];
+    employmentTypes: string[];
+    industries: string[];
+    minimumSalary?: number;
+    maximumSalary?: number;
+    currency?: string;
+  };
+}
+
+/**
+ * Canonical extracted recommendation intent shared by all six source types.
+ * Optional fields default to empty / undefined; PROFILE must remain valid
+ * without populating full-engine-only fields.
+ */
 export interface ExtractedRecommendationContext {
   targetTitles: string[];
   relatedTitles: string[];
   requiredSkills: string[];
   preferredSkills: string[];
   yearsOfExperience?: number;
+  minimumExperience?: number;
+  maximumExperience?: number;
   seniority?: string;
+  careerLevel?: string;
   industries: string[];
   locations: string[];
-  remotePreference?: string;
+  eligibleCountries?: string[];
+  remotePreference?: 'REMOTE' | 'HYBRID' | 'ONSITE' | 'ANY' | string;
   employmentTypes: string[];
   salaryExpectation: SalaryExpectation;
+  /** Non-negotiable floor for hard filters when flexibility is STRICT. */
+  salaryMinimumNonNegotiable?: number;
   education: string[];
   certifications: string[];
   excludedCompanies: string[];
   excludedSkills: string[];
+  excludedJobIds?: string[];
+  excludedRoles?: string[];
+  filterMode?: RecommendationFilterMode;
+  workAuthorization?: WorkAuthorizationStatus;
+  workAuthorizationRequirement?: WorkAuthorizationRequirement;
+  requiresSponsorship?: boolean;
+  languages?: string[];
+  /** STRICT excludes stretch; FLEXIBLE softens some filters; STRETCH allows gaps. */
+  flexibilityMode?: RecommendationFlexibilityMode;
+  /** Career-goal transition intent (populated by CAREER_GOAL / TARGET_TEXT extractors). */
+  goalIntent?: CareerGoalIntent;
+  currentRole?: string;
+  targetRole?: string;
+  careerTransitionSummary?: string;
+  transferableSkillsHint?: string[];
+  /** Opaque snapshot id for SAVED_SEARCH reruns. */
+  savedSearchCriteriaVersion?: string;
+  savedSearchSnapshot?: SavedSearchSnapshot;
   sourceText?: string;
+  /** Schema version stamped at build time. */
+  contextSchemaVersion?: string;
+  generatedAt?: Date;
 }
 
 export interface RecommendationContext extends ExtractedRecommendationContext {
   sourceId?: string;
   userId: string;
   sourceType: RecommendationSourceType;
+  contextSchemaVersion: string;
 }
 
 export interface CandidateProfileSourcePayload extends Partial<ExtractedRecommendationContext> {
   targetTitles: string[];
   requiredSkills: string[];
 }
+
+export type NormalizedExtractedRecommendationContext = ExtractedRecommendationContext & {
+  contextSchemaVersion: string;
+};
+
+export const normalizeExtractedRecommendationContext = (
+  extracted: Partial<ExtractedRecommendationContext>,
+): NormalizedExtractedRecommendationContext => ({
+  targetTitles: extracted.targetTitles ?? [],
+  relatedTitles: extracted.relatedTitles ?? [],
+  requiredSkills: extracted.requiredSkills ?? [],
+  preferredSkills: extracted.preferredSkills ?? [],
+  yearsOfExperience: extracted.yearsOfExperience,
+  minimumExperience: extracted.minimumExperience,
+  maximumExperience: extracted.maximumExperience,
+  seniority: extracted.seniority,
+  careerLevel: extracted.careerLevel,
+  industries: extracted.industries ?? [],
+  locations: extracted.locations ?? [],
+  eligibleCountries: extracted.eligibleCountries,
+  remotePreference: extracted.remotePreference,
+  employmentTypes: extracted.employmentTypes ?? [],
+  salaryExpectation: extracted.salaryExpectation ?? {},
+  salaryMinimumNonNegotiable: extracted.salaryMinimumNonNegotiable,
+  education: extracted.education ?? [],
+  certifications: extracted.certifications ?? [],
+  excludedCompanies: extracted.excludedCompanies ?? [],
+  excludedSkills: extracted.excludedSkills ?? [],
+  excludedJobIds: extracted.excludedJobIds,
+  excludedRoles: extracted.excludedRoles,
+  filterMode: extracted.filterMode,
+  workAuthorization: extracted.workAuthorization,
+  workAuthorizationRequirement: extracted.workAuthorizationRequirement
+    ? {
+        status: extracted.workAuthorizationRequirement.status,
+        eligibleCountries: extracted.workAuthorizationRequirement.eligibleCountries ?? [],
+        requiresSponsorship: extracted.workAuthorizationRequirement.requiresSponsorship,
+      }
+    : undefined,
+  requiresSponsorship: extracted.requiresSponsorship,
+  languages: extracted.languages,
+  flexibilityMode: extracted.flexibilityMode,
+  goalIntent: extracted.goalIntent
+    ? {
+        currentRole: extracted.goalIntent.currentRole,
+        targetRole: extracted.goalIntent.targetRole,
+        summary: extracted.goalIntent.summary,
+        targetIndustries: extracted.goalIntent.targetIndustries ?? [],
+        timeframe: extracted.goalIntent.timeframe,
+      }
+    : undefined,
+  currentRole: extracted.currentRole,
+  targetRole: extracted.targetRole,
+  careerTransitionSummary: extracted.careerTransitionSummary,
+  transferableSkillsHint: extracted.transferableSkillsHint,
+  savedSearchCriteriaVersion: extracted.savedSearchCriteriaVersion,
+  savedSearchSnapshot: extracted.savedSearchSnapshot
+    ? {
+        searchId: extracted.savedSearchSnapshot.searchId,
+        criteriaVersion: extracted.savedSearchSnapshot.criteriaVersion,
+        query: extracted.savedSearchSnapshot.query,
+        filters: {
+          titles: extracted.savedSearchSnapshot.filters?.titles ?? [],
+          locations: extracted.savedSearchSnapshot.filters?.locations ?? [],
+          remotePreference: extracted.savedSearchSnapshot.filters?.remotePreference,
+          employmentTypes: extracted.savedSearchSnapshot.filters?.employmentTypes ?? [],
+          industries: extracted.savedSearchSnapshot.filters?.industries ?? [],
+          minimumSalary: extracted.savedSearchSnapshot.filters?.minimumSalary,
+          maximumSalary: extracted.savedSearchSnapshot.filters?.maximumSalary,
+          currency: extracted.savedSearchSnapshot.filters?.currency,
+        },
+      }
+    : undefined,
+  sourceText: extracted.sourceText,
+  contextSchemaVersion: extracted.contextSchemaVersion ?? RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+  generatedAt: extracted.generatedAt,
+});
 
 export interface RecommendationSourcePayloadMap {
   PROFILE: CandidateProfileSourcePayload;
@@ -124,11 +278,49 @@ export interface RecommendationReason {
   evidence: string[];
 }
 
+export interface RecommendationExplanationBullet {
+  component: RecommendationScoreComponentName;
+  label: string;
+  score: number;
+  weight: number;
+  contribution: number;
+  message: string;
+  evidence: string[];
+}
+
+export interface RecommendationExplanation {
+  summary: string;
+  bullets: RecommendationExplanationBullet[];
+  matchedSkills: string[];
+  aliasSkills: string[];
+  relatedSkills: string[];
+  transferableSkills: string[];
+  missingSkills: string[];
+  scoreModel: {
+    overallScore: number;
+    displayScore?: number;
+    heuristicWeight: number;
+    retrievalWeight: number;
+    heuristicScore?: number;
+    retrievalScore?: number;
+  };
+}
+
+export interface RecommendationSkillGap {
+  exact: string[];
+  alias: string[];
+  related: string[];
+  transferable: string[];
+  missing: string[];
+}
+
 export interface RecommendationScoreResult {
   overallScore: number;
   components: RecommendationScoreComponents;
   matchedSkills: string[];
+  aliasSkills: string[];
   relatedSkills: string[];
+  transferableSkills: string[];
   missingSkills: string[];
   reasons: RecommendationReason[];
 }
@@ -153,6 +345,19 @@ export const RECOMMENDATION_RUN_STATUS_VALUES = [
   'FAILED',
 ] as const;
 export type RecommendationRunStatus = (typeof RECOMMENDATION_RUN_STATUS_VALUES)[number];
+
+export const RECOMMENDATION_LIFECYCLE_STATE_VALUES = [
+  'NOT_STARTED',
+  'QUEUED',
+  'PROCESSING',
+  'READY',
+  'STALE',
+  'FAILED',
+  'FAILED_TIMEOUT',
+  'FAILED_PROVIDER',
+  'FAILED_EMPTY',
+] as const;
+export type RecommendationLifecycleState = (typeof RECOMMENDATION_LIFECYCLE_STATE_VALUES)[number];
 
 export interface RecommendationRunRecord {
   id: string;
@@ -189,4 +394,23 @@ export interface RecommendationPage {
   page: number;
   limit: number;
   total: number;
+}
+
+export interface RecommendationRunPage extends RecommendationPage {
+  run: RecommendationRunRecord;
+}
+
+/** Foundation response for readiness/status API (JR-ARCH-001). */
+export interface RecommendationReadinessStatus {
+  ready: boolean;
+  lifecycleState: RecommendationLifecycleState;
+  canGenerateFromProfile: boolean;
+  blockers: string[];
+  stale?: boolean;
+  lastGeneratedAt?: string | null;
+  retrieval: {
+    backend: RetrievalBackend;
+    configured: boolean;
+    embeddingCoverageRatio?: number;
+  };
 }

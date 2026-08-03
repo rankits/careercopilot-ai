@@ -1,4 +1,8 @@
 import type { RecommendationFeedbackRepository } from '@/modules/recommendations/contracts/recommendation.repository.js';
+import {
+  recordFeedbackAction,
+  recordFeedbackFunnelStep,
+} from '@/modules/recommendations/observability/recommendation.metrics.js';
 import type {
   RecommendationFeedbackAction,
   RecommendationFeedbackRecord,
@@ -14,6 +18,12 @@ export class RecommendationFeedbackService {
     action: RecommendationFeedbackAction;
     note?: string;
   }): Promise<RecommendationFeedbackRecord> {
+    recordFeedbackAction(input.action);
+    if (input.action === 'SAVED') {
+      recordFeedbackFunnelStep('SAVE');
+    } else if (input.action === 'APPLIED') {
+      recordFeedbackFunnelStep('APPLY');
+    }
     return this.repository.upsert(input);
   }
 

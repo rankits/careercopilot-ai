@@ -53,7 +53,7 @@ enum RecommendationScoreComponentName {
   qualifications
 }
 
-/// User-owned generation lifecycle. `userId` is User.publicId (no User FK).
+/// User-owned generation lifecycle. `userId` is `String(User.id)` matching JWT `principalId` (no User FK).
 model RecommendationRun {
   id                   String                   @id @default(uuid())
   userId               String                   @map("user_id")
@@ -84,7 +84,9 @@ model JobRecommendation {
   matchType      RecommendationMatchType    @map("match_type")
   rank           Int
   matchedSkills  String[]                   @default([]) @map("matched_skills")
+  aliasSkills    String[]                   @default([]) @map("alias_skills")
   relatedSkills  String[]                   @default([]) @map("related_skills")
+  transferableSkills String[]                @default([]) @map("transferable_skills")
   missingSkills  String[]                   @default([]) @map("missing_skills")
   reasons        Json                       @default("[]")
   createdAt      DateTime                   @default(now()) @map("created_at")
@@ -98,6 +100,7 @@ model JobRecommendation {
   @@unique([runId, jobId])
   @@index([userId, createdAt(sort: Desc)])
   @@index([userId, runId, rank])
+  @@index([runId, rank])
   @@index([userId, id])
   @@index([jobId])
   @@map("job_recommendations")

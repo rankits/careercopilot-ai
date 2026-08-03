@@ -41,4 +41,12 @@ describe('buildJobSearchWhere', () => {
     });
     expect(JSON.stringify(where)).not.toMatch(/currency/i);
   });
+
+  it('applies postedSince against effectivePostedAt', () => {
+    const postedSince = new Date('2026-05-03T00:00:00.000Z');
+    expect(buildJobSearchWhere({ postedSince })).toEqual({
+      status: 'ACTIVE',
+      effectivePostedAt: { gte: postedSince },
+    });
+  });
 });

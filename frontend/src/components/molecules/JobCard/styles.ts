@@ -30,6 +30,10 @@ export const JobCardRoot = styled('article')({
     gridTemplateColumns: '0.125rem 3.75rem minmax(0, 1fr)',
     paddingRight: spacing[3],
   },
+
+  '@media (max-width: 30rem)': {
+    gridTemplateColumns: '0.125rem minmax(0, 1fr)',
+  },
 });
 
 export const Accent = styled('span', {
@@ -59,12 +63,20 @@ export const CompanyLogo = styled('div')({
     objectFit: 'cover',
     width: '100%',
   },
+
+  '@media (max-width: 30rem)': {
+    gridColumn: '2 / -1',
+  },
 });
 
 export const JobDetails = styled('div')({
   display: 'grid',
   gap: spacing[1],
   minWidth: 0,
+
+  '@media (max-width: 30rem)': {
+    gridColumn: '2 / -1',
+  },
 });
 
 export const RecommendationPill = styled('span')({
@@ -102,6 +114,24 @@ export const TitleRow = styled('div')({
   },
 });
 
+export const OpenJobButton = styled('button')({
+  background: 'transparent',
+  border: 0,
+  color: 'inherit',
+  cursor: 'pointer',
+  font: 'inherit',
+  fontWeight: 'inherit',
+  margin: 0,
+  padding: 0,
+  textAlign: 'left',
+
+  '&:focus-visible': {
+    borderRadius: borderRadius.sm,
+    outline: `0.1875rem solid ${colorTokens.actionPrimary}`,
+    outlineOffset: '0.1875rem',
+  },
+});
+
 export const VerifiedIcon = styled(CheckCircleIcon)({
   color: jobFeedTokens.verifiedIcon,
   flexShrink: 0,
@@ -113,7 +143,7 @@ export const JobMeta = styled('div')({
   display: 'flex',
   flexWrap: 'wrap',
   fontSize: fontSize.xs,
-  gap: spacing[4],
+  gap: `${spacing[2]} ${spacing[4]}`,
 
   '& span': {
     alignItems: 'center',
@@ -154,14 +184,17 @@ export const JobActions = styled('div')({
   },
 
   '@media (max-width: 36rem)': {
-    gridTemplateColumns: '1fr auto',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr))',
+  },
+
+  '@media (max-width: 30rem)': {
+    gridColumn: '2 / -1',
   },
 
   '& > button:last-child': {
     minWidth: '7.5rem',
 
     '@media (max-width: 36rem)': {
-      gridColumn: '1 / -1',
       width: '100%',
     },
   },
@@ -199,4 +232,61 @@ export const SaveButton = styled(IconButton)({
   border: `0.0625rem solid ${colorTokens.borderDefault}`,
   borderRadius: borderRadius.lg,
   color: colorTokens.textSecondary,
+});
+
+export const RecommendationDetails = styled('div')({
+  borderTop: `0.0625rem solid ${colorTokens.borderSubtle}`,
+  color: colorTokens.textSecondary,
+  display: 'grid',
+  gap: spacing[3],
+  gridColumn: '2 / -1',
+  paddingTop: spacing[3],
+
+  '& p': {
+    fontSize: fontSize.sm,
+    lineHeight: 1.5,
+    margin: 0,
+  },
+
+  '@media (max-width: 48rem)': {
+    gridColumn: '2 / -1',
+  },
+
+  '@media (max-width: 30rem)': {
+    gridColumn: '2 / -1',
+  },
+});
+
+export const RecommendationDetailsGrid = styled('div')({
+  display: 'grid',
+  gap: spacing[2],
+  gridTemplateColumns: 'repeat(auto-fit, minmax(12rem, 1fr))',
+
+  '& h3': {
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.extraBold,
+    margin: `0 0 ${spacing[1]}`,
+  },
+});
+
+export const RecommendationDetailSkillGroup = styled('div')({
+  display: 'grid',
+  gap: spacing[1],
+
+  '& div': {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[1],
+  },
+
+  '& span': {
+    background: jobFeedTokens.skillBackground,
+    border: `0.0625rem solid ${colorTokens.borderSubtle}`,
+    borderRadius: borderRadius.md,
+    color: colorTokens.textSecondary,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    padding: `${spacing[1]} ${spacing[2]}`,
+  },
 });
