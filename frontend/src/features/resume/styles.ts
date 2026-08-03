@@ -13,10 +13,10 @@ export const OnboardingPage = styled('main')(({ theme }) => ({
   gap: spacing[5],
   margin: '0 auto',
   maxWidth: '91rem',
-  padding: `${spacing[6]} ${spacing[4]} ${spacing[28]}`,
+  padding: `${spacing[6]} ${spacing[4]} ${spacing[8]}`,
   width: '100%',
   [theme.breakpoints.up('md')]: {
-    padding: `${spacing[8]} ${spacing[6]} ${spacing[28]}`,
+    padding: `${spacing[8]} ${spacing[6]} ${spacing[8]}`,
   },
 }));
 
@@ -37,7 +37,7 @@ export const ProfileReviewColumn = styled(Box)({
 });
 
 export const ProfileStickyActions = styled(Box)(({ theme }) => ({
-  alignItems: 'center',
+  alignItems: 'stretch',
   backdropFilter: 'blur(16px)',
   background: colorTokens.backgroundCardTranslucent,
   border: `${borderWidth.thin} solid ${colorTokens.borderSubtle}`,
@@ -47,17 +47,23 @@ export const ProfileStickyActions = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   gap: spacing[3],
-  left: spacing[4],
+  justifyContent: 'flex-end',
+  marginTop: spacing[4],
   padding: spacing[3],
-  position: 'fixed',
-  right: spacing[4],
+  position: 'sticky',
+  width: '100%',
   zIndex: theme.zIndex.appBar,
+  '& > .MuiButton-root': {
+    alignSelf: 'flex-end',
+  },
   [theme.breakpoints.up('sm')]: {
+    alignItems: 'center',
     flexDirection: 'row',
-    left: spacing[6],
-    margin: '0 auto',
-    maxWidth: '87rem',
-    right: spacing[6],
+    justifyContent: 'space-between',
+    '& > .MuiButton-root': {
+      alignSelf: 'auto',
+      flexShrink: 0,
+    },
   },
 }));
 
