@@ -1,4 +1,6 @@
-# version: "3.8"
+# Isolated project name so prod does not recreate/replace the default
+# `career-copilot` project used by docker-compose.dev.yml.
+name: career-copilot-prod
 
 services:
   postgres:
@@ -9,8 +11,10 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password is required in .env}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Host 5433 avoids clashing with a local/system Postgres on 5432.
+    # Containers still reach this service at postgres:5432 on the Docker network.
     ports:
-      - '127.0.0.1:5432:5432' # Securely bind only to localhost
+      - '127.0.0.1:5433:5432'
     volumes:
       - pg_prod_data:/var/lib/postgresql/data
     healthcheck:
@@ -39,8 +43,9 @@ services:
     container_name: career_copilot_redis_prod
     restart: always
     command: redis-server --requirepass "${REDIS_PASSWORD}"
+    # Host 6380 avoids clashing with a local Redis or the dev stack on 6379.
     ports:
-      - '127.0.0.1:6379:6379'
+      - '127.0.0.1:6380:6379'
     volumes:
       - redis_prod_data:/data
     healthcheck:
@@ -67,8 +72,9 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RabbitMQ password is required in .env}
+    # Host 5673 avoids clashing with a local RabbitMQ or the dev stack on 5672.
     ports:
-      - '127.0.0.1:5672:5672' # Securely bind AMQP only to localhost
+      - '127.0.0.1:5673:5672'
     volumes:
       - rabbitmq_prod_data:/var/lib/rabbitmq
     healthcheck:
@@ -155,6 +161,10 @@ services:
       AI_RESUME_PARSER_MAX_RETRIES: ${AI_RESUME_PARSER_MAX_RETRIES:-2}
       GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_TIMEOUT_MS: ${OPENROUTER_TIMEOUT_MS:-60000}
 
       # Job embeddings (query-time + shared provider config)
       AI_EMBEDDING_PROVIDER: ${AI_EMBEDDING_PROVIDER:-}

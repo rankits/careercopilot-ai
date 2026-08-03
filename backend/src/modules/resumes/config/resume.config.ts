@@ -28,6 +28,12 @@ export const resumeConfig = {
     model: process.env.AI_RESUME_PARSER_MODEL || 'gemini-2.0-flash',
     temperature: Number(process.env.AI_RESUME_PARSER_TEMPERATURE ?? '0'),
     maxRetries: toPositiveInt(process.env.AI_RESUME_PARSER_MAX_RETRIES, 2),
+    openrouter: {
+      apiKey: process.env.OPENROUTER_API_KEY || '',
+      model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
+      baseUrl: process.env.OPENROUTER_BASE_URL || 'https://openrouter.ai/api/v1',
+      timeoutMs: toPositiveInt(process.env.OPENROUTER_TIMEOUT_MS, 60000),
+    },
   },
   localStorageDir: resolveLocalStorageDir(),
   s3: {

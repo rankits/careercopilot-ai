@@ -19,6 +19,8 @@ import {
   type JobSemanticContentChangedEvent,
 } from '@/modules/jobs/events/job.events.js';
 import { serializeJobSemanticContent } from '@/modules/jobs/utils/job-semantic-content.js';
+import { resolveJobEffectiveDate } from '@/modules/jobs/utils/job-effective-date-resolver.js';
+import { jobAgePolicy } from '@/modules/jobs/policies/job-age-policy.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
 
 export interface PersistedCanonicalJob {
@@ -33,6 +35,8 @@ export interface PersistedCanonicalJob {
   skills: unknown;
   tags: unknown;
   version: number;
+  firstSeen: Date;
+  createdAt: Date;
 }
 
 export interface PersistedJobSource {
@@ -58,6 +62,7 @@ export interface CanonicalJobWrite {
   tags: Prisma.InputJsonArray;
   providerMetadata: Prisma.InputJsonObject;
   postedAt: Date;
+  effectivePostedAt: Date | null;
   version: number;
   now: Date;
 }
@@ -100,6 +105,8 @@ const toPersistedJob = (job: {
   tags: Prisma.JsonValue;
   providerMetadata: Prisma.JsonValue;
   version: number;
+  firstSeen: Date;
+  createdAt: Date;
   company: { name: string };
 }): PersistedCanonicalJob => {
   const metadata =
@@ -121,6 +128,8 @@ const toPersistedJob = (job: {
     skills: job.skills,
     tags: job.tags,
     version: job.version,
+    firstSeen: job.firstSeen,
+    createdAt: job.createdAt,
   };
 };
 
@@ -184,6 +193,7 @@ class PrismaJobPersistenceTransaction implements JobPersistenceTransaction {
         providerMetadata: input.providerMetadata,
         status: JobStatus.ACTIVE,
         postedAt: input.postedAt,
+        effectivePostedAt: input.effectivePostedAt,
         version: input.version,
         lastSeen: input.now,
         lastChecked: input.now,
@@ -204,6 +214,7 @@ class PrismaJobPersistenceTransaction implements JobPersistenceTransaction {
         providerMetadata: input.providerMetadata,
         status: JobStatus.ACTIVE,
         postedAt: input.postedAt,
+        effectivePostedAt: input.effectivePostedAt,
         version: input.version,
         lastSeen: input.now,
         lastChecked: input.now,
@@ -306,6 +317,8 @@ const emptySummary = () => ({
   metadataOnly: 0,
   unchanged: 0,
   failed: 0,
+  storageAgeSkipped: 0,
+  embeddingAgeSkipped: 0,
 });
 
 const summarize = (outcomes: JobPersistenceResult[]): JobPersistenceBatchSummary => {
@@ -315,6 +328,8 @@ const summarize = (outcomes: JobPersistenceResult[]): JobPersistenceBatchSummary
     else if (result.outcome === 'SEMANTIC_CHANGED') summary.semanticChanged++;
     else if (result.outcome === 'METADATA_ONLY') summary.metadataOnly++;
     else if (result.outcome === 'UNCHANGED') summary.unchanged++;
+    else if (result.outcome === 'STORAGE_AGE_SKIPPED') summary.storageAgeSkipped++;
+    else if (result.outcome === 'EMBEDDING_AGE_SKIPPED') summary.embeddingAgeSkipped++;
     else summary.failed++;
   }
   return summary;
@@ -389,6 +404,28 @@ export class PrismaJobRepository implements IJobRepository {
       const hashMatch = source ? null : await transaction.findJobByCanonicalHash(job.canonicalHash);
       const existing = source?.job ?? hashMatch;
 
+      const effectivePostedAt = resolveJobEffectiveDate({
+        normalizedJob: job,
+        providerMetadata,
+        firstSeen: existing?.firstSeen,
+        createdAt: existing?.createdAt,
+      });
+
+      const storageEligibility = jobAgePolicy.evaluateStorageEligibility({
+        effectiveDate: effectivePostedAt,
+      });
+      if (!storageEligibility.eligible) {
+        jobsLogger.debug(
+          { jobId: job.id, providerJobId: job.providerJobId, reason: storageEligibility.reason },
+          'Skipping job ingestion due to storage age policy',
+        );
+        return {
+          providerInputId: job.providerJobId,
+          canonicalHash: job.canonicalHash,
+          outcome: 'STORAGE_AGE_SKIPPED',
+        };
+      }
+
       const incomingSemantic = serializeJobSemanticContent({
         companySlug: job.normalizedCompany,
         companyName: job.companyName,
@@ -402,7 +439,7 @@ export class PrismaJobRepository implements IJobRepository {
       const semanticChanged =
         existing !== null && serializeJobSemanticContent(existing) !== incomingSemantic;
       const sourceUnchanged = metadataMatches(source, job.applyUrl, priority, rawMetadata);
-      const outcome: JobPersistenceOutcome =
+      let outcome: JobPersistenceOutcome =
         existing === null
           ? 'INSERTED'
           : semanticChanged
@@ -430,6 +467,7 @@ export class PrismaJobRepository implements IJobRepository {
         tags,
         providerMetadata,
         postedAt,
+        effectivePostedAt,
         version: newVersion,
         now,
       });
@@ -441,16 +479,30 @@ export class PrismaJobRepository implements IJobRepository {
         applyUrl: job.applyUrl,
         rawMetadata,
       });
+
       if (outcome === 'INSERTED' || outcome === 'SEMANTIC_CHANGED') {
-        const event: JobSemanticContentChangedEvent = {
-          jobId: persisted.id,
-          jobVersion: persisted.version,
-          outcome,
-          occurredAt: now.toISOString(),
-        };
-        await transaction.createOutboxEvent(persisted.id, JOB_SEMANTIC_CONTENT_CHANGED_EVENT, {
-          ...event,
+        const embeddingEligibility = jobAgePolicy.evaluateEmbeddingEligibility({
+          effectiveDate: effectivePostedAt,
+          isActive: true,
         });
+
+        if (embeddingEligibility.eligible) {
+          const event: JobSemanticContentChangedEvent = {
+            jobId: persisted.id,
+            jobVersion: persisted.version,
+            outcome,
+            occurredAt: now.toISOString(),
+          };
+          await transaction.createOutboxEvent(persisted.id, JOB_SEMANTIC_CONTENT_CHANGED_EVENT, {
+            ...event,
+          });
+        } else {
+          jobsLogger.debug(
+            { jobId: persisted.id, reason: embeddingEligibility.reason },
+            'Skipping job embedding outbox event due to embedding age policy',
+          );
+          outcome = 'EMBEDDING_AGE_SKIPPED';
+        }
       }
 
       return {

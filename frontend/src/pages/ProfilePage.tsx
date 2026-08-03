@@ -350,26 +350,26 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
             ))}
           </Box>
         </ProfileReviewColumn>
-      </OnboardingPage>
 
-      <ProfileStickyActions>
-        <Box alignItems="center" display="flex" flex={1} gap={spacing[2]}>
-          <SecurityOutlinedIcon color="primary" fontSize="small" />
-          <Typography color="text.secondary" variant="caption">
-            Your data is secure and only used to enhance your job match experience.
-          </Typography>
-        </Box>
-        <Button
-          disabled={isLoadingProfile || (mode !== 'edit' && saveCompleted) || !canSubmit}
-          form="profile-review-form"
-          isLoading={saveMutation.isPending}
-          size="medium"
-          sx={resumePrimaryActionSx}
-          type="submit"
-        >
-          {mode === 'edit' ? 'Save Changes' : 'Save Profile & Continue'}
-        </Button>
-      </ProfileStickyActions>
+        <ProfileStickyActions>
+          <Box alignItems="center" display="flex" flex={1} gap={spacing[2]}>
+            <SecurityOutlinedIcon color="primary" fontSize="small" />
+            <Typography color="text.secondary" variant="caption">
+              Your data is secure and only used to enhance your job match experience.
+            </Typography>
+          </Box>
+          <Button
+            disabled={isLoadingProfile || (mode !== 'edit' && saveCompleted) || !canSubmit}
+            form="profile-review-form"
+            isLoading={saveMutation.isPending}
+            size="medium"
+            sx={resumePrimaryActionSx}
+            type="submit"
+          >
+            {mode === 'edit' ? 'Save Changes' : 'Save Profile & Continue'}
+          </Button>
+        </ProfileStickyActions>
+      </OnboardingPage>
 
       <Dialog
         aria-describedby="confirm-profile-description"

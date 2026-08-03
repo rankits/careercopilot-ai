@@ -24,6 +24,7 @@ interface ScanRow {
   skills: Prisma.JsonValue;
   tags: Prisma.JsonValue;
   providerMetadata: Prisma.JsonValue;
+  effectivePostedAt: Date | null;
   currentContentHash: string | null;
   currentJobVersion: number | null;
   currentDimensions: number | null;
@@ -66,6 +67,7 @@ const toCandidate = (row: ScanRow): JobEmbeddingBackfillCandidate => ({
   employmentType: row.employmentType,
   skills: row.skills,
   tags: row.tags,
+  effectivePostedAt: row.effectivePostedAt,
   currentContentHash: row.currentContentHash,
   currentJobVersion: row.currentJobVersion,
   currentDimensions: row.currentDimensions,
@@ -115,6 +117,7 @@ export class PrismaJobEmbeddingBackfillRepository implements JobEmbeddingBackfil
         j."employment_type" AS "employmentType",
         j."skills",
         j."tags",
+        j."effective_posted_at" AS "effectivePostedAt",
         j."provider_metadata" AS "providerMetadata",
         je."content_hash" AS "currentContentHash",
         je."job_version" AS "currentJobVersion",

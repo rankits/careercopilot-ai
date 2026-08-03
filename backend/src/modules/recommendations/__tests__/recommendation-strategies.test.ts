@@ -10,6 +10,7 @@ import {
 } from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 import { RecommendationStrategyResolver } from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
 import { RECOMMENDATION_ERROR_CODES } from '@/modules/recommendations/errors/recommendation.error.js';
+import { RECOMMENDATION_CONTEXT_SCHEMA_VERSION } from '@/modules/recommendations/types/recommendations.types.js';
 
 const job: JobDetailDto = {
   id: 'job-id',
@@ -74,6 +75,17 @@ describe('recommendation source strategies', () => {
       sourceType: 'PROFILE',
       requiredSkills: ['Node.js'],
       targetTitles: ['Backend Engineer'],
+      relatedTitles: [],
+      preferredSkills: [],
+      industries: [],
+      locations: [],
+      employmentTypes: [],
+      salaryExpectation: {},
+      education: [],
+      certifications: [],
+      excludedCompanies: [],
+      excludedSkills: [],
+      contextSchemaVersion: RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
     });
   });
 
@@ -102,6 +114,7 @@ describe('recommendation source strategies', () => {
     expect(context.preferredSkills).toEqual(['SaaS']);
     expect(context.targetTitles).toEqual(['Backend Engineer']);
     expect(context.yearsOfExperience).toBe(3);
+    expect(context.contextSchemaVersion).toBe(RECOMMENDATION_CONTEXT_SCHEMA_VERSION);
   });
 
   it('normalizes a job DTO without retrieving or scoring', async () => {
@@ -116,6 +129,131 @@ describe('recommendation source strategies', () => {
       targetTitles: ['Platform Engineer'],
       locations: ['Remote'],
       requiredSkills: ['TypeScript'],
+      contextSchemaVersion: RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+    });
+  });
+
+  it('extracts structured context for target text before retrieval', async () => {
+    const context = await new TargetTextSourceStrategy().buildContext({
+      userId: 'user-id',
+      sourceType: 'TARGET_TEXT',
+      authorizedSourcePayload:
+        'Looking for remote Node.js backend roles in fintech, full-time, at least USD 120,000.',
+    });
+
+    expect(context).toMatchObject({
+      sourceType: 'TARGET_TEXT',
+      targetTitles: ['Backend Engineer'],
+      requiredSkills: ['Node.js'],
+      industries: ['Fintech'],
+      remotePreference: 'REMOTE',
+      employmentTypes: ['FULL_TIME'],
+      salaryExpectation: { minimum: 120000, currency: 'USD' },
+      sourceText:
+        'Looking for remote Node.js backend roles in fintech, full-time, at least USD 120,000.',
+    });
+  });
+
+  it('falls back to heuristic target-text extraction when provider extraction fails', async () => {
+    const context = await new TargetTextSourceStrategy({
+      extractContextFromText: async () => {
+        throw new Error('extractor unavailable');
+      },
+    }).buildContext({
+      userId: 'user-id',
+      sourceType: 'TARGET_TEXT',
+      authorizedSourcePayload: 'Hybrid React frontend engineer contract',
+    });
+
+    expect(context).toMatchObject({
+      targetTitles: ['Frontend Engineer'],
+      requiredSkills: ['React'],
+      remotePreference: 'HYBRID',
+      employmentTypes: ['CONTRACT'],
+    });
+  });
+
+  it('keeps full-engine context fields optional but available for career goals', async () => {
+    const context = await new CareerGoalSourceStrategy().buildContext({
+      userId: 'user-id',
+      sourceType: 'CAREER_GOAL',
+      sourceId: 'goal-id',
+      authorizedSourcePayload: {
+        targetTitles: ['Engineering Manager'],
+        requiredSkills: ['Leadership'],
+        careerLevel: 'MANAGER',
+        filterMode: 'FLEXIBLE',
+        goalIntent: {
+          currentRole: 'Senior Engineer',
+          targetRole: 'Engineering Manager',
+          summary: 'Move into people leadership',
+          targetIndustries: ['SaaS'],
+          timeframe: '12 months',
+        },
+        workAuthorizationRequirement: {
+          status: 'AUTHORIZED',
+          eligibleCountries: ['US'],
+          requiresSponsorship: false,
+        },
+      },
+    });
+
+    expect(context).toMatchObject({
+      sourceType: 'CAREER_GOAL',
+      sourceId: 'goal-id',
+      targetTitles: ['Engineering Manager'],
+      careerLevel: 'MANAGER',
+      filterMode: 'FLEXIBLE',
+      goalIntent: {
+        targetRole: 'Engineering Manager',
+        targetIndustries: ['SaaS'],
+      },
+      workAuthorizationRequirement: {
+        status: 'AUTHORIZED',
+        eligibleCountries: ['US'],
+        requiresSponsorship: false,
+      },
+      contextSchemaVersion: RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+    });
+  });
+
+  it('keeps saved-search snapshots typed and defaults missing snapshot arrays', async () => {
+    const context = await new SavedSearchSourceStrategy().buildContext({
+      userId: 'user-id',
+      sourceType: 'SAVED_SEARCH',
+      sourceId: 'search-id',
+      authorizedSourcePayload: {
+        targetTitles: ['Backend Engineer'],
+        requiredSkills: ['TypeScript'],
+        savedSearchCriteriaVersion: 'criteria-v1',
+        savedSearchSnapshot: {
+          searchId: 'search-id',
+          criteriaVersion: 'criteria-v1',
+          query: 'backend typescript',
+          filters: {
+            titles: ['Backend Engineer'],
+            locations: ['Remote'],
+            employmentTypes: ['FULL_TIME'],
+            industries: ['SaaS'],
+          },
+        },
+      },
+    });
+
+    expect(context.savedSearchSnapshot).toEqual({
+      searchId: 'search-id',
+      criteriaVersion: 'criteria-v1',
+      query: 'backend typescript',
+      filters: {
+        titles: ['Backend Engineer'],
+        locations: ['Remote'],
+        remotePreference: undefined,
+        employmentTypes: ['FULL_TIME'],
+        industries: ['SaaS'],
+        minimumSalary: undefined,
+        maximumSalary: undefined,
+        currency: undefined,
+      },
     });
   });
 });

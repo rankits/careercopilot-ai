@@ -24,6 +24,7 @@ export interface JobEmbeddingBackfillCandidate {
   readonly currentContentHash: string | null;
   readonly currentJobVersion: number | null;
   readonly currentDimensions: number | null;
+  readonly effectivePostedAt: Date | null;
 }
 
 export interface JobEmbeddingBackfillBatch {
@@ -33,8 +34,12 @@ export interface JobEmbeddingBackfillBatch {
 
 export interface JobEmbeddingBackfillSummary {
   readonly scanned: number;
-  readonly enqueued: number;
-  readonly skippedCurrent: number;
+  readonly storageEligible: number;
+  readonly storageIneligible: number;
+  readonly embeddingEligible: number;
+  readonly embeddingIneligible: number;
+  readonly queued: number;
+  readonly alreadyCurrent: number;
   readonly failed: number;
   readonly dryRun: boolean;
   readonly force: boolean;
