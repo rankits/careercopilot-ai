@@ -19,4 +19,16 @@ export const RESUME_PARSER_SYSTEM_PROMPT = [
   '13. Extract spoken languages only when explicitly mentioned.',
   '14. Extract LinkedIn, GitHub, portfolio, and other professional URLs when present.',
   '15. Return output matching the supplied schema exactly.',
+  '16. Return only a valid JSON object. Do not wrap it in markdown fences.',
 ].join('\n');
+
+/** Shared user prompt for every resume AI provider. */
+export const buildResumeParserUserPrompt = (documentText: string): string =>
+  `
+Extract the resume information from the content below.
+
+<resume_content>
+${documentText}
+</resume_content>
+Return only a valid JSON object that matches the requested schema.
+`.trim();

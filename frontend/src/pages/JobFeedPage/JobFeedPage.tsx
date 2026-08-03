@@ -156,12 +156,6 @@ export function JobFeedPage() {
       </Box>
 
       <Box sx={jobFeedPageSx.filters}>
-        <JobFilterBar
-          filters={activeFilters}
-          onFilterClick={(filter) =>
-            patch({ workMode: filter.id as JobFeedWorkMode }, { resetPage: true })
-          }
-        />
         <Input
           aria-busy={isSearchPending || undefined}
           aria-label="Search jobs"
@@ -174,6 +168,12 @@ export function JobFeedPage() {
           placeholder="Search title, company..."
           size="small"
           value={searchDraft}
+        />
+        <JobFilterBar
+          filters={activeFilters}
+          onFilterClick={(filter) =>
+            patch({ workMode: filter.id as JobFeedWorkMode }, { resetPage: true })
+          }
         />
         <FilterDropdown
           label="Salary"
