@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   RESUME_ANALYSIS_COMPACT_SYSTEM_PROMPT,
   buildResumeAnalysisPrompt,
-} from './resume-analysis.prompt.js';
+} from '@/modules/resume-analysis/ai/prompts/resume-analysis.prompt.js';
 
 describe('resume-analysis.prompt', () => {
   it('builds full prompt by default', () => {

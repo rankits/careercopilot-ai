@@ -3,7 +3,7 @@ import {
   analyzeResumeSchema,
   exportResumeQuerySchema,
   updateAnalysisContentSchema,
-} from './resume-analysis.schema.js';
+} from '@/modules/resume-analysis/validations/resume-analysis.schema.js';
 
 describe('resume-analysis.schema', () => {
   it('requires target role for analyze', () => {
