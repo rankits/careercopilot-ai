@@ -157,7 +157,7 @@ export const resumeBuilderService = {
   async uploadResume(file: File): Promise<UploadedResume> {
     const formData = new FormData();
     formData.append('resume', file);
-    const res = await httpClient.post<{ data: { data: UploadedResume } }>(
+    const res = await httpClient.post<{ data: UploadedResume }>(
       `${BASE}/resumes/upload`,
       formData,
       { headers: { 'Content-Type': 'multipart/form-data' } },
@@ -166,9 +166,7 @@ export const resumeBuilderService = {
   },
 
   async listResumes(): Promise<UploadedResume[]> {
-    const res = await httpClient.get<{ data: { data: UploadedResume[] } }>(
-      `${BASE}/resumes`,
-    );
+    const res = await httpClient.get<{ data: UploadedResume[] }>(`${BASE}/resumes`);
     return unwrap(res) ?? [];
   },
 
@@ -178,7 +176,7 @@ export const resumeBuilderService = {
     resumeId: string,
     payload: { targetRole: string; experienceLevel: string; jobDescription?: string },
   ): Promise<{ analysisId: number; status: string }> {
-    const res = await httpClient.post<{ data: { data: { analysisId: number; status: string } } }>(
+    const res = await httpClient.post<{ data: { analysisId: number; status: string } }>(
       `${BASE}/resume-analysis/${resumeId}/analyze`,
       payload,
     );
@@ -186,7 +184,7 @@ export const resumeBuilderService = {
   },
 
   async getAnalysis(resumeId: string): Promise<AnalysisResult | null> {
-    const res = await httpClient.get<{ data: { data: AnalysisResult | null } }>(
+    const res = await httpClient.get<{ data: AnalysisResult | null }>(
       `${BASE}/resume-analysis/${resumeId}/analysis`,
       {
         headers: {
@@ -206,7 +204,7 @@ export const resumeBuilderService = {
   // ─── Keywords ───────────────────────────────────────────────────────────
 
   async getKeywords(resumeId: string): Promise<KeywordsResponse> {
-    const res = await httpClient.get<{ data: { data: KeywordsResponse } }>(
+    const res = await httpClient.get<{ data: KeywordsResponse }>(
       `${BASE}/resume-analysis/${resumeId}/keywords`,
     );
     return unwrap(res);
@@ -215,14 +213,14 @@ export const resumeBuilderService = {
   // ─── Suggestions ────────────────────────────────────────────────────────
 
   async getSuggestions(resumeId: string): Promise<SuggestionItem[]> {
-    const res = await httpClient.get<{ data: { data: SuggestionItem[] } }>(
+    const res = await httpClient.get<{ data: SuggestionItem[] }>(
       `${BASE}/resume-analysis/${resumeId}/suggestions`,
     );
     return unwrap(res) ?? [];
   },
 
   async applySuggestion(resumeId: string, suggestionId: number): Promise<SuggestionItem> {
-    const res = await httpClient.post<{ data: { data: SuggestionItem } }>(
+    const res = await httpClient.post<{ data: SuggestionItem }>(
       `${BASE}/resume-analysis/${resumeId}/suggestions/${suggestionId}/apply`,
       {},
     );
@@ -230,7 +228,7 @@ export const resumeBuilderService = {
   },
 
   async ignoreSuggestion(resumeId: string, suggestionId: number): Promise<SuggestionItem> {
-    const res = await httpClient.post<{ data: { data: SuggestionItem } }>(
+    const res = await httpClient.post<{ data: SuggestionItem }>(
       `${BASE}/resume-analysis/${resumeId}/suggestions/${suggestionId}/ignore`,
       {},
     );
@@ -246,7 +244,7 @@ export const resumeBuilderService = {
   // ─── Recheck ────────────────────────────────────────────────────────────
 
   async recheckAts(resumeId: string): Promise<RecheckResult> {
-    const res = await httpClient.post<{ data: { data: RecheckResult } }>(
+    const res = await httpClient.post<{ data: RecheckResult }>(
       `${BASE}/resume-analysis/${resumeId}/recheck`,
       {},
     );
@@ -255,12 +253,8 @@ export const resumeBuilderService = {
 
   // ─── Versions ───────────────────────────────────────────────────────────
 
-  async saveVersion(
-    resumeId: string,
-    label: string,
-    content?: string,
-  ): Promise<ResumeVersion> {
-    const res = await httpClient.post<{ data: { data: ResumeVersion } }>(
+  async saveVersion(resumeId: string, label: string, content?: string): Promise<ResumeVersion> {
+    const res = await httpClient.post<{ data: ResumeVersion }>(
       `${BASE}/resume-analysis/${resumeId}/versions`,
       { label, content },
     );
@@ -268,21 +262,21 @@ export const resumeBuilderService = {
   },
 
   async getVersions(resumeId: string): Promise<ResumeVersion[]> {
-    const res = await httpClient.get<{ data: { data: ResumeVersion[] } }>(
+    const res = await httpClient.get<{ data: ResumeVersion[] }>(
       `${BASE}/resume-analysis/${resumeId}/versions`,
     );
     return unwrap(res) ?? [];
   },
 
   async listSavedVersions(): Promise<SavedResumeVersion[]> {
-    const res = await httpClient.get<{ data: { data: SavedResumeVersion[] } }>(
+    const res = await httpClient.get<{ data: SavedResumeVersion[] }>(
       `${BASE}/resume-analysis/saved-versions`,
     );
     return unwrap(res) ?? [];
   },
 
   async getSavedVersion(versionId: number): Promise<SavedResumeVersion> {
-    const res = await httpClient.get<{ data: { data: SavedResumeVersion } }>(
+    const res = await httpClient.get<{ data: SavedResumeVersion }>(
       `${BASE}/resume-analysis/saved-versions/${versionId}`,
     );
     return unwrap(res);
@@ -291,7 +285,7 @@ export const resumeBuilderService = {
   // ─── Export ─────────────────────────────────────────────────────────────
 
   async exportResume(resumeId: string, format: 'pdf' | 'docx' | 'txt'): Promise<ExportResult> {
-    const res = await httpClient.get<{ data: { data: ExportResult } }>(
+    const res = await httpClient.get<{ data: ExportResult }>(
       `${BASE}/resume-analysis/${resumeId}/export?format=${format}`,
     );
     return unwrap(res);

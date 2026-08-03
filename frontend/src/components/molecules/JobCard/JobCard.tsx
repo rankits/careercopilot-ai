@@ -221,7 +221,7 @@ export function JobCard({
                 onDismiss(job);
               }}
               size="small"
-              variant="text"
+              variant="ghost"
             >
               Dismiss
             </Button>
@@ -234,7 +234,7 @@ export function JobCard({
                 onNotRelevant(job);
               }}
               size="small"
-              variant="text"
+              variant="ghost"
             >
               Not relevant
             </Button>
@@ -253,7 +253,7 @@ export function JobCard({
                 onMoreLikeThis(job);
               }}
               size="small"
-              variant="text"
+              variant="ghost"
             >
               More like this
             </Button>
@@ -266,7 +266,7 @@ export function JobCard({
                 onLessLikeThis(job);
               }}
               size="small"
-              variant="text"
+              variant="ghost"
             >
               Less like this
             </Button>
@@ -318,7 +318,7 @@ export function JobCard({
                   sx={{ transform: detailsOpen ? 'rotate(180deg)' : undefined }}
                 />
               }
-              variant="text"
+              variant="ghost"
             >
               Details
             </Button>

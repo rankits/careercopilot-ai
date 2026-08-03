@@ -26,7 +26,7 @@ export function parseProjectBlocks(text: string): ProjectEntry[] {
     if (!cleaned) continue;
 
     const header = cleaned.match(PROJECT_HEADER_LINE);
-    if (header) {
+    if (header && header[1] && header[2]) {
       pushCurrent();
       current = {
         id: newId(),

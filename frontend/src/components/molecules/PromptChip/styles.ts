@@ -7,7 +7,7 @@ export const PromptChipButton = styled(Chip)({
   borderRadius: borderRadius.full,
   color: colorTokens.textPrimary,
   fontSize: fontSize.sm,
-  fontWeight: fontWeight.semibold,
+  fontWeight: fontWeight.semiBold,
   height: 'auto',
   justifyContent: 'flex-start',
   maxWidth: '100%',
