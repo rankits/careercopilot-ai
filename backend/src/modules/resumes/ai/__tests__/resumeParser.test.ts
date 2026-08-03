@@ -190,7 +190,7 @@ describe('OpenRouterStructuredAiModel', () => {
     const model = new OpenRouterStructuredAiModel({
       apiKey: 'test-key',
       baseUrl: 'https://openrouter.ai/api/v1',
-      model: 'anthropic/claude-3.7-sonnet',
+      model: 'anthropic/claude-sonnet-4',
       temperature: 0,
       timeoutMs: 5000,
     });
@@ -221,7 +221,7 @@ describe('OpenRouterStructuredAiModel', () => {
     const model = new OpenRouterStructuredAiModel({
       apiKey: 'test-key',
       baseUrl: 'https://openrouter.ai/api/v1',
-      model: 'anthropic/claude-3.7-sonnet',
+      model: 'anthropic/claude-sonnet-4',
       temperature: 0,
       timeoutMs: 5000,
     });
