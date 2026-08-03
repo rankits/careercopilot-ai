@@ -62,10 +62,7 @@ export const matchesLocationPreference = (
   });
 };
 
-export const matchesRemotePreference = (
-  job: JobListDto,
-  remotePreference?: string,
-): boolean => {
+export const matchesRemotePreference = (job: JobListDto, remotePreference?: string): boolean => {
   if (!remotePreference) return true;
   const preference = normalizeToken(remotePreference);
   if (!preference || preference === 'any') return true;
@@ -74,10 +71,7 @@ export const matchesRemotePreference = (
   return remoteType === preference || formatted.includes(preference);
 };
 
-const matchesSalaryCurrency = (
-  job: JobListDto,
-  currency?: string,
-): boolean => {
+const matchesSalaryCurrency = (job: JobListDto, currency?: string): boolean => {
   if (!currency || !job.salary.currency) return true;
   return currency.trim().toUpperCase() === job.salary.currency.trim().toUpperCase();
 };

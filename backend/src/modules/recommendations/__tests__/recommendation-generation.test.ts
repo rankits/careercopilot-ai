@@ -919,9 +919,7 @@ describe('RecommendationsService generation', () => {
       runId: latestRun.id,
       job: expect.objectContaining({ id: 'duplicate-job' }),
     });
-    expect(new Set(latestPage.items.map((item) => item.job.id)).size).toBe(
-      latestPage.items.length,
-    );
+    expect(new Set(latestPage.items.map((item) => item.job.id)).size).toBe(latestPage.items.length);
     expect(allHistoryPage.total).toBe(2);
   });
 
@@ -1145,8 +1143,7 @@ describe('RecommendationsService generation', () => {
     });
     await feedbackService.store({
       userId: 'user-1',
-      recommendationId: previousRecommendations.find((item) => item.job.id === 'job-excluded')!
-        .id,
+      recommendationId: previousRecommendations.find((item) => item.job.id === 'job-excluded')!.id,
       jobId: 'job-excluded',
       action: 'LESS_LIKE_THIS',
     });
@@ -1362,12 +1359,10 @@ describe('RecommendationsService generation', () => {
         new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
       ),
       retrievalService: {
-        retrieve: vi
-          .fn()
-          .mockResolvedValue([
-            { job: jobList('job-low'), retrievalScore: 0.5 },
-            { job: jobList('job-high'), retrievalScore: 0.9 },
-          ]),
+        retrieve: vi.fn().mockResolvedValue([
+          { job: jobList('job-low'), retrievalScore: 0.5 },
+          { job: jobList('job-high'), retrievalScore: 0.9 },
+        ]),
       } as unknown as RecommendationRetrievalService,
       scoringService,
       unitOfWork: new InMemoryRecommendationUnitOfWork(),
@@ -1430,12 +1425,10 @@ describe('RecommendationsService generation', () => {
         new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
       ),
       retrievalService: {
-        retrieve: vi
-          .fn()
-          .mockResolvedValue([
-            { job: jobList('job-low'), retrievalScore: 0.5 },
-            { job: jobList('job-high'), retrievalScore: 0.9 },
-          ]),
+        retrieve: vi.fn().mockResolvedValue([
+          { job: jobList('job-low'), retrievalScore: 0.5 },
+          { job: jobList('job-high'), retrievalScore: 0.9 },
+        ]),
       } as unknown as RecommendationRetrievalService,
       scoringService,
       unitOfWork: new InMemoryRecommendationUnitOfWork(),
@@ -1581,7 +1574,9 @@ describe('RecommendationsService readiness', () => {
           findOwnedResumeProfileSource: vi.fn(),
         },
       ),
-      profileUpdatedAfter: vi.fn().mockImplementation(() => Promise.resolve(profileUpdatedAfterRun)),
+      profileUpdatedAfter: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(profileUpdatedAfterRun)),
     });
 
     await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({

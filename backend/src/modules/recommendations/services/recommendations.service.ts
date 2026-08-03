@@ -196,9 +196,8 @@ export class RecommendationsService {
         await dependencies.unitOfWork.execute(({ runs }) =>
           runs.updateStatus(input.userId, run.id, 'RETRIEVING'),
         );
-        const { excludedJobIds, affinityAnchorJobs } = await measureStage(
-          'feedback',
-          async () => dependencies.unitOfWork.execute(async ({ feedback, recommendations }) => {
+        const { excludedJobIds, affinityAnchorJobs } = await measureStage('feedback', async () =>
+          dependencies.unitOfWork.execute(async ({ feedback, recommendations }) => {
             const [feedbackExcludedJobIds, moreLikeThisFeedback] = await Promise.all([
               feedback.listExcludedJobIds(input.userId),
               feedback.listByAction(input.userId, 'MORE_LIKE_THIS', {

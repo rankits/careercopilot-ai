@@ -7,29 +7,13 @@ import type {
 } from '@/modules/recommendations/types/recommendations.types.js';
 
 export type RecommendationGenerateStage =
-  | 'context'
-  | 'feedback'
-  | 'retrieval'
-  | 'scoring'
-  | 'ranking'
-  | 'persistence';
+  'context' | 'feedback' | 'retrieval' | 'scoring' | 'ranking' | 'persistence';
 
 export type RecommendationGenerateStageLatencyBucket =
-  | 'le_100'
-  | 'le_250'
-  | 'le_500'
-  | 'le_1000'
-  | 'le_2500'
-  | 'le_5000'
-  | 'gt_5000';
+  'le_100' | 'le_250' | 'le_500' | 'le_1000' | 'le_2500' | 'le_5000' | 'gt_5000';
 
 export type RetrievalBackendLatencyBucket =
-  | 'le_50'
-  | 'le_100'
-  | 'le_250'
-  | 'le_500'
-  | 'le_1000'
-  | 'gt_1000';
+  'le_50' | 'le_100' | 'le_250' | 'le_500' | 'le_1000' | 'gt_1000';
 
 export type FeedbackFunnelStep = 'IMPRESSION' | 'VIEW' | 'CLICK' | 'SAVE' | 'APPLY';
 

@@ -33,4 +33,3 @@ describe('Recommendation lifecycle invalidation (JRE-LIFE-001)', () => {
     expect(recommendationMetricsSnapshot().recommendationInvalidationTotal).toBe(1);
   });
 });
-

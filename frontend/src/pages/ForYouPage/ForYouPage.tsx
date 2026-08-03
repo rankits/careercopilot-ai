@@ -1,11 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import {
-  Link as RouterLink,
-  useLocation,
-  useNavigate,
-  useSearchParams,
-} from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
 import { JobCard, VirtualizedJobList, type JobCardData } from '@/components/molecules';
@@ -375,13 +370,14 @@ export function ForYouPage() {
   );
   const careerGroups = groupCareerRecommendations(visibleCareerRecommendations);
   const viewedRecommendationIds = useMemo(
-    () => [
-      ...visibleCards.map((card) => card.recommendationId),
-      ...visibleResumeRecommendations.map((card) => card.recommendationId),
-      ...visibleTextRecommendations.map((card) => card.recommendationId),
-      ...visibleCareerRecommendations.map((item) => item.id),
-      ...visibleSavedSearchRecommendations.map((card) => card.recommendationId),
-    ].filter((id): id is string => Boolean(id)),
+    () =>
+      [
+        ...visibleCards.map((card) => card.recommendationId),
+        ...visibleResumeRecommendations.map((card) => card.recommendationId),
+        ...visibleTextRecommendations.map((card) => card.recommendationId),
+        ...visibleCareerRecommendations.map((item) => item.id),
+        ...visibleSavedSearchRecommendations.map((card) => card.recommendationId),
+      ].filter((id): id is string => Boolean(id)),
     [
       visibleCards,
       visibleResumeRecommendations,
@@ -612,7 +608,9 @@ export function ForYouPage() {
             </Box>
           ) : null}
 
-          {!resumeProfile.isPending && !resumeProfile.isError && selectedResumeOption.length === 0 ? (
+          {!resumeProfile.isPending &&
+          !resumeProfile.isError &&
+          selectedResumeOption.length === 0 ? (
             <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
               <Typography component="h2" sx={{ fontSize: '1rem', fontWeight: 800, m: 0 }}>
                 Resume recommendations
@@ -657,7 +655,9 @@ export function ForYouPage() {
                   setResumeGeneratedOnce(true);
                   void generateResume
                     .mutateAsync(selectedResumeId)
-                    .then((items) => setResumeRecommendations(items.map(mapRecommendationDtoToCard)))
+                    .then((items) =>
+                      setResumeRecommendations(items.map(mapRecommendationDtoToCard)),
+                    )
                     .catch(() => undefined);
                 }}
                 size="small"
@@ -846,9 +846,7 @@ export function ForYouPage() {
             ) : null}
 
             <Button
-              disabled={
-                !trimmedCareerGoalText || careerGoalTooLong || generateCareerGoal.isPending
-              }
+              disabled={!trimmedCareerGoalText || careerGoalTooLong || generateCareerGoal.isPending}
               isLoading={generateCareerGoal.isPending}
               onClick={() => {
                 if (!trimmedCareerGoalText || careerGoalTooLong) return;
@@ -987,7 +985,9 @@ export function ForYouPage() {
             </Button>
           </Box>
 
-          {!textGeneratedOnce && !generateText.isPending && visibleTextRecommendations.length === 0 ? (
+          {!textGeneratedOnce &&
+          !generateText.isPending &&
+          visibleTextRecommendations.length === 0 ? (
             <Typography role="status" sx={{ color: 'text.secondary', py: 2 }}>
               Paste a target role or career note to generate text-based matches.
             </Typography>
@@ -1317,7 +1317,11 @@ export function ForYouPage() {
                 ? 'Your recommendation run is queued.'
                 : 'Your recommendation run is processing.'}
             </Typography>
-            <Button disabled={readiness.isFetching} onClick={() => void readiness.refetch()} size="small">
+            <Button
+              disabled={readiness.isFetching}
+              onClick={() => void readiness.refetch()}
+              size="small"
+            >
               Refresh status
             </Button>
           </Box>

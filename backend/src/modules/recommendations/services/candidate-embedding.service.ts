@@ -2,7 +2,10 @@ import { createHash } from 'node:crypto';
 import { JOB_EMBEDDING_DIMENSIONS } from '@/modules/job-embeddings/constants/job-embedding.constants.js';
 import type { CandidateEmbeddingRepository } from '@/modules/recommendations/contracts/candidate-embedding.repository.js';
 import type { CandidateEmbeddingIdentity } from '@/modules/recommendations/types/candidate-embedding.types.js';
-import { RecommendationError, RECOMMENDATION_ERROR_CODES } from '@/modules/recommendations/errors/recommendation.error.js';
+import {
+  RecommendationError,
+  RECOMMENDATION_ERROR_CODES,
+} from '@/modules/recommendations/errors/recommendation.error.js';
 
 export interface ResolveCandidateEmbeddingInput extends CandidateEmbeddingIdentity {
   content: string;

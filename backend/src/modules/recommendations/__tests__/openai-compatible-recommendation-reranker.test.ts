@@ -64,7 +64,9 @@ const scored = (jobId: string, score: number): ScoredJobRecommendation => ({
   matchType: 'EXACT',
 });
 
-const config = (overrides: Partial<RecommendationRerankConfig> = {}): RecommendationRerankConfig => ({
+const config = (
+  overrides: Partial<RecommendationRerankConfig> = {},
+): RecommendationRerankConfig => ({
   enabled: true,
   apiKey: 'test-key',
   baseUrl: 'https://rerank.example/v1',
@@ -88,10 +90,9 @@ describe('OpenAICompatibleRecommendationReranker', () => {
     const post = vi.fn().mockResolvedValue({
       choices: [{ message: { content: JSON.stringify({ orderedJobIds: ['job-b'] }) } }],
     });
-    const reranker = new OpenAICompatibleRecommendationReranker(
-      config(),
-      { post } as unknown as EmbeddingHttpClient,
-    );
+    const reranker = new OpenAICompatibleRecommendationReranker(config(), {
+      post,
+    } as unknown as EmbeddingHttpClient);
     const input = [scored('job-a', 0.9), scored('job-b', 0.8), scored('job-c', 0.7)];
 
     const output = await reranker.rerank(context(), input);
@@ -108,14 +109,11 @@ describe('OpenAICompatibleRecommendationReranker', () => {
   });
 
   it('ignores invented job ids from the provider', async () => {
-    const reranker = new OpenAICompatibleRecommendationReranker(
-      config(),
-      {
-        post: vi.fn().mockResolvedValue({
-          choices: [{ message: { content: JSON.stringify({ orderedJobIds: ['invented'] }) } }],
-        }),
-      } as unknown as EmbeddingHttpClient,
-    );
+    const reranker = new OpenAICompatibleRecommendationReranker(config(), {
+      post: vi.fn().mockResolvedValue({
+        choices: [{ message: { content: JSON.stringify({ orderedJobIds: ['invented'] }) } }],
+      }),
+    } as unknown as EmbeddingHttpClient);
 
     await expect(
       reranker.rerank(context(), [scored('job-a', 0.9), scored('job-b', 0.8)]),

@@ -21,4 +21,3 @@ export const isRecommendationJobEligible = (
   if (isPast(job.expiresAt, now)) return false;
   return true;
 };
-

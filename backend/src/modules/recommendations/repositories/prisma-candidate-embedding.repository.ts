@@ -87,12 +87,7 @@ const validateEmbedding = (embedding: readonly number[]): string => {
 
 const parseVector = (value: string | number[]): number[] => {
   if (Array.isArray(value)) return value;
-  return value
-    .replace(/^\[/, '')
-    .replace(/\]$/, '')
-    .split(',')
-    .filter(Boolean)
-    .map(Number);
+  return value.replace(/^\[/, '').replace(/\]$/, '').split(',').filter(Boolean).map(Number);
 };
 
 const toRecord = (row: CandidateEmbeddingRow): CandidateEmbeddingRecord => ({
@@ -105,7 +100,9 @@ export class PrismaCandidateEmbeddingRepository implements CandidateEmbeddingRep
     private readonly sql: CandidateEmbeddingSqlExecutor = new PrismaCandidateEmbeddingSqlExecutor(),
   ) {}
 
-  async findFresh(input: FindFreshCandidateEmbeddingInput): Promise<CandidateEmbeddingRecord | null> {
+  async findFresh(
+    input: FindFreshCandidateEmbeddingInput,
+  ): Promise<CandidateEmbeddingRecord | null> {
     const identity = this.validateIdentity(input);
     const contentHash = validateContentHash(input.contentHash);
     const rows = await this.sql.query<CandidateEmbeddingRow>(Prisma.sql`
@@ -252,10 +249,7 @@ export class PrismaCandidateEmbeddingRepository implements CandidateEmbeddingRep
         );
       }
       conditions.push(
-        Prisma.sql`"source_key" = ${candidateEmbeddingSourceKey(
-          input.sourceType,
-          input.sourceId,
-        )}`,
+        Prisma.sql`"source_key" = ${candidateEmbeddingSourceKey(input.sourceType, input.sourceId)}`,
       );
     }
     return this.sql.execute(Prisma.sql`

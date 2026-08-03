@@ -17,4 +17,3 @@ describe('recommendation retrieval budget (JRE-PERF-001)', () => {
     ).toBe(200);
   });
 });
-

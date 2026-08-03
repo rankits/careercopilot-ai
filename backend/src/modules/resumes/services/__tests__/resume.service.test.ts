@@ -7,15 +7,13 @@ const {
   findCandidateProfileByUserIdMock,
   updateCandidateProfileMock,
   upsertCandidateProfileMock,
-} = vi.hoisted(
-  () => ({
-    findResumeByIdMock: vi.fn(),
-    findLatestExtractionMock: vi.fn(),
-    findCandidateProfileByUserIdMock: vi.fn(),
-    updateCandidateProfileMock: vi.fn(),
-    upsertCandidateProfileMock: vi.fn(),
-  }),
-);
+} = vi.hoisted(() => ({
+  findResumeByIdMock: vi.fn(),
+  findLatestExtractionMock: vi.fn(),
+  findCandidateProfileByUserIdMock: vi.fn(),
+  updateCandidateProfileMock: vi.fn(),
+  upsertCandidateProfileMock: vi.fn(),
+}));
 
 vi.mock('@/modules/resumes/repositories/resume.repository.js', () => ({
   resumeRepository: {

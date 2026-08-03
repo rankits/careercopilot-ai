@@ -5,7 +5,9 @@ import {
 } from '@/modules/recommendations/services/recommendation-explanation.service.js';
 import type { JobRecommendationRecord } from '@/modules/recommendations/types/recommendations.types.js';
 
-const recommendation = (overrides: Partial<JobRecommendationRecord> = {}): JobRecommendationRecord => ({
+const recommendation = (
+  overrides: Partial<JobRecommendationRecord> = {},
+): JobRecommendationRecord => ({
   id: 'rec-1',
   runId: 'run-1',
   userId: 'user-1',

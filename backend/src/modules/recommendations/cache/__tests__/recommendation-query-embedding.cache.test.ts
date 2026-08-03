@@ -7,9 +7,24 @@ import { cacheService } from '@/infrastructure/cache/index.js';
 
 describe('recommendation query embedding cache', () => {
   it('builds stable user-scoped cache keys from query text hash', () => {
-    const keyA = recommendationQueryEmbeddingCacheKey('u1', 'google', 'text-embedding-004', 'hello');
-    const keyB = recommendationQueryEmbeddingCacheKey('u1', 'google', 'text-embedding-004', 'hello');
-    const keyC = recommendationQueryEmbeddingCacheKey('u2', 'google', 'text-embedding-004', 'hello');
+    const keyA = recommendationQueryEmbeddingCacheKey(
+      'u1',
+      'google',
+      'text-embedding-004',
+      'hello',
+    );
+    const keyB = recommendationQueryEmbeddingCacheKey(
+      'u1',
+      'google',
+      'text-embedding-004',
+      'hello',
+    );
+    const keyC = recommendationQueryEmbeddingCacheKey(
+      'u2',
+      'google',
+      'text-embedding-004',
+      'hello',
+    );
     expect(keyA).toBe(keyB);
     expect(keyA).not.toBe(keyC);
   });

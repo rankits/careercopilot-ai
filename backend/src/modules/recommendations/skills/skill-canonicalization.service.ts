@@ -1,4 +1,7 @@
-import { CURATED_SKILL_ALIASES, type CuratedSkillAlias } from '@/modules/recommendations/skills/skill-alias.catalog.js';
+import {
+  CURATED_SKILL_ALIASES,
+  type CuratedSkillAlias,
+} from '@/modules/recommendations/skills/skill-alias.catalog.js';
 
 export interface CanonicalSkill {
   input: string;

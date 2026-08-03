@@ -72,7 +72,9 @@ describe('JRE-QA-002 Scoring, Skill Filter, and Explanation Policy Suite', () =>
     ];
 
     const scored = await scoringService.score(context, candidates);
-    expect(scored[0]!.scoreResult.overallScore).toBeGreaterThan(scored[1]!.scoreResult.overallScore);
+    expect(scored[0]!.scoreResult.overallScore).toBeGreaterThan(
+      scored[1]!.scoreResult.overallScore,
+    );
     expect(scored[1]!.scoreResult.missingSkills.length).toBeGreaterThan(0);
   });
 
@@ -87,8 +89,12 @@ describe('JRE-QA-002 Scoring, Skill Filter, and Explanation Policy Suite', () =>
     });
 
     const job = sampleJob('job-salary');
-    const [strictResult] = await scoringService.score(strictContext, [{ job, retrievalScore: 0.8 }]);
-    const [flexibleResult] = await scoringService.score(flexibleContext, [{ job, retrievalScore: 0.8 }]);
+    const [strictResult] = await scoringService.score(strictContext, [
+      { job, retrievalScore: 0.8 },
+    ]);
+    const [flexibleResult] = await scoringService.score(flexibleContext, [
+      { job, retrievalScore: 0.8 },
+    ]);
 
     expect(flexibleResult!.category).toBe('STRETCH_OPPORTUNITY');
     expect(flexibleResult!.scoreResult.reasons.some((r) => r.component === 'salary')).toBe(true);

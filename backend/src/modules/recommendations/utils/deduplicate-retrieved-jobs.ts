@@ -34,7 +34,11 @@ export const deduplicateRetrievedJobs = (
     const key = canonicalRetrievedJobKey(job);
     const score = retrievalScores[job.id] ?? 0;
     const existing = byKey.get(key);
-    if (!existing || score > existing.score || (score === existing.score && job.id < existing.job.id)) {
+    if (
+      !existing ||
+      score > existing.score ||
+      (score === existing.score && job.id < existing.job.id)
+    ) {
       byKey.set(key, { job, score });
     }
   }

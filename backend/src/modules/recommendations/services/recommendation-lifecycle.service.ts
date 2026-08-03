@@ -31,7 +31,9 @@ export const createRecommendationLifecycleService = (
   dependencies: RecommendationLifecycleDependencies,
 ) => ({
   /** Clears cached query and candidate embeddings when profile/resume material changes (JR-LIFE-001). */
-  async invalidateUserRecommendationState(input: string | RecommendationInvalidationInput): Promise<void> {
+  async invalidateUserRecommendationState(
+    input: string | RecommendationInvalidationInput,
+  ): Promise<void> {
     const normalized = typeof input === 'string' ? { userId: input } : input;
     await Promise.all([
       dependencies.invalidateUserQueryEmbeddings(normalized.userId),
@@ -87,10 +89,7 @@ export const purgeUserRecommendationData = async (
   };
 };
 
-export const profileUpdatedAfter = async (
-  userId: string,
-  timestamp: Date,
-): Promise<boolean> => {
+export const profileUpdatedAfter = async (userId: string, timestamp: Date): Promise<boolean> => {
   const { prisma } = await import('@/shared/config/db.conf.js');
   const profile = await prisma.candidateProfile.findUnique({ where: { userId } });
   if (!profile) return false;

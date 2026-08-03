@@ -18,9 +18,7 @@ const tokenize = (value: string | null | undefined): Set<string> =>
 
 const normalizeList = (values: readonly string[] | null | undefined): Set<string> =>
   new Set(
-    (values ?? [])
-      .map((value) => value.trim().toLowerCase())
-      .filter((value) => value.length > 0),
+    (values ?? []).map((value) => value.trim().toLowerCase()).filter((value) => value.length > 0),
   );
 
 const overlapRatio = (left: Set<string>, right: Set<string>): number => {
@@ -39,7 +37,10 @@ const companyKey = (job: JobListDto): string =>
 const jobSimilarity = (candidate: JobListDto, anchor: JobListDto): number => {
   if (candidate.id === anchor.id) return 0;
 
-  const skillSimilarity = overlapRatio(normalizeList(candidate.skills), normalizeList(anchor.skills));
+  const skillSimilarity = overlapRatio(
+    normalizeList(candidate.skills),
+    normalizeList(anchor.skills),
+  );
   const titleSimilarity = overlapRatio(tokenize(candidate.title), tokenize(anchor.title));
   const companySimilarity =
     companyKey(candidate) && companyKey(candidate) === companyKey(anchor) ? 1 : 0;
@@ -47,7 +48,11 @@ const jobSimilarity = (candidate: JobListDto, anchor: JobListDto): number => {
   return Math.min(1, skillSimilarity * 0.7 + titleSimilarity * 0.2 + companySimilarity * 0.1);
 };
 
-const affinityReason = (similarity: number, boost: number, anchorJobId: string): RecommendationReason => ({
+const affinityReason = (
+  similarity: number,
+  boost: number,
+  anchorJobId: string,
+): RecommendationReason => ({
   component: 'requiredSkills',
   message: 'More-like-this feedback lightly boosted this recommendation',
   evidence: [
@@ -89,4 +94,3 @@ export const applyMoreLikeThisAffinityBoost = <T extends ScoredJobRecommendation
     };
   });
 };
-

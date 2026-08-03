@@ -58,9 +58,7 @@ const capFlexibleCategory = (
   hasViolation: boolean,
 ): RecommendationCategory => {
   if (!hasViolation) return category;
-  return category === 'BEST_MATCH' || category === 'GOOD_MATCH'
-    ? 'STRETCH_OPPORTUNITY'
-    : category;
+  return category === 'BEST_MATCH' || category === 'GOOD_MATCH' ? 'STRETCH_OPPORTUNITY' : category;
 };
 
 export class RecommendationScoringService {

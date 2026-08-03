@@ -3,6 +3,7 @@ import { RESUME_PARSER_SYSTEM_PROMPT } from '@/modules/resumes/ai/prompts/resume
 import { parseResumeWithFallback } from '@/modules/resumes/ai/resumeParser.js';
 import { ExpandedCanonicalResumeSchema } from '@/modules/resumes/schemas/canonical-resume.schema.js';
 import { resumeNormaliserService } from '@/modules/resumes/normalisation/resume-normaliser.service.js';
+import { normalizeProfessionalSkills } from '@/modules/resumes/utils/skill-normalizer.js';
 import {
   CanonicalResume,
   LanguageProficiency,
@@ -494,7 +495,7 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
   const data = isRecord(value) ? value : {};
 
   if (Array.isArray(value)) {
-    const skills = normalizeStringArray(
+    const skills = normalizeProfessionalSkills(
       value.flatMap((item) => {
         if (typeof item === 'string') {
           return [item];
@@ -517,36 +518,38 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
     };
   }
 
-  const groupedSkills = [
-    data.backend,
-    data.frontend,
-    data.data,
-    data.cloudDevops,
-    data.cloud_devops,
-    data.practices,
-    data.tools,
-    data.frameworks,
-    data.softSkills,
-    data.soft_skills,
-    data.domains,
-    data.technical,
-    data.backendTechnologies,
-    data.backend_technologies,
-    data.frontendTechnologies,
-    data.frontend_technologies,
-    data.database,
-    data.databases,
-  ].flatMap(normalizeStringArray);
+  const groupedSkills = normalizeProfessionalSkills(
+    [
+      data.backend,
+      data.frontend,
+      data.data,
+      data.cloudDevops,
+      data.cloud_devops,
+      data.practices,
+      data.tools,
+      data.frameworks,
+      data.softSkills,
+      data.soft_skills,
+      data.domains,
+      data.technical,
+      data.backendTechnologies,
+      data.backend_technologies,
+      data.frontendTechnologies,
+      data.frontend_technologies,
+      data.database,
+      data.databases,
+    ].flatMap(normalizeStringArray),
+  );
 
   return {
     technical:
-      normalizeStringArray(data.technical).length > 0
-        ? normalizeStringArray(data.technical)
+      normalizeProfessionalSkills(data.technical).length > 0
+        ? normalizeProfessionalSkills(data.technical)
         : groupedSkills,
-    tools: normalizeStringArray(data.tools),
-    frameworks: normalizeStringArray(data.frameworks),
-    softSkills: normalizeStringArray(data.softSkills),
-    domains: normalizeStringArray(data.domains),
+    tools: normalizeProfessionalSkills(data.tools),
+    frameworks: normalizeProfessionalSkills(data.frameworks),
+    softSkills: [],
+    domains: [],
   };
 };
 

@@ -88,7 +88,9 @@ describe('JobCard', () => {
 
   it('disables Apply when applyUrl is missing', () => {
     render(<JobCard job={{ ...baseJob, applyUrl: null }} onApply={vi.fn()} />);
-    expect(screen.getByRole('button', { name: /apply to frontend engineer unavailable/i })).toBeDisabled();
+    expect(
+      screen.getByRole('button', { name: /apply to frontend engineer unavailable/i }),
+    ).toBeDisabled();
   });
 
   it('expands recommendation details with reasons and skill gaps', async () => {

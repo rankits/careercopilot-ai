@@ -118,7 +118,11 @@ const listFromRecords = (records: readonly JsonRecord[], category: string): stri
 const stringListFromRecord = (record: JsonRecord, keys: readonly string[]): string[] =>
   keys.flatMap((key) => asStringList(record[key]));
 
-const normalizeToken = (value: string): string => value.trim().replace(/[\s-]+/g, '_').toUpperCase();
+const normalizeToken = (value: string): string =>
+  value
+    .trim()
+    .replace(/[\s-]+/g, '_')
+    .toUpperCase();
 
 const normalizeRemotePreference = (value: unknown): string | undefined => {
   const raw = asString(value);
@@ -242,9 +246,9 @@ export const toCandidateProfileSourcePayload = (
   const years =
     typeof input.totalExperienceYears === 'number' && Number.isFinite(input.totalExperienceYears)
       ? input.totalExperienceYears
-      : asNumber(personalDetails.totalExperience) ??
+      : (asNumber(personalDetails.totalExperience) ??
         asNumber(personalDetails.totalExperienceYears) ??
-        asNumber(professionalProfile.totalExperienceYears);
+        asNumber(professionalProfile.totalExperienceYears));
   const remotePreference =
     normalizeRemotePreference(personalDetails.remotePreference) ??
     normalizeRemotePreference(personalDetails.workMode) ??

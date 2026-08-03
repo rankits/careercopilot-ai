@@ -162,7 +162,9 @@ export const recommendationsService = {
     return unwrapList(response);
   },
 
-  async getReadiness(options: { signal?: AbortSignal } = {}): Promise<RecommendationReadinessStatus> {
+  async getReadiness(
+    options: { signal?: AbortSignal } = {},
+  ): Promise<RecommendationReadinessStatus> {
     const response = await httpClient.get('/job-recommendations/status', {
       signal: options.signal,
     });

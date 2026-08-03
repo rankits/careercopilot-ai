@@ -31,11 +31,7 @@ export class SavedSearchService {
     return this.repository.create({ ...input, userId });
   }
 
-  async update(
-    userId: string,
-    id: string,
-    input: UpdateSavedSearchInput,
-  ): Promise<SavedSearch> {
+  async update(userId: string, id: string, input: UpdateSavedSearchInput): Promise<SavedSearch> {
     recordSavedSearchApiRequest();
     const savedSearch = await this.repository.updateOwned(userId, id, input);
     if (!savedSearch) throw this.notFound();

@@ -81,10 +81,11 @@ export const buildCareerGoalRecommendationPayload = (
   const currentRole = firstString(structured, ['currentRole', 'fromRole']);
   const targetRole = firstString(structured, ['targetRole', 'desiredRole', 'role']);
   const summary = firstString(structured, ['summary', 'description']);
-  const targetTitles = uniqueStrings([
-    targetRole,
-    ...listFromKeys(structured, ['targetTitles', 'targetRoles', 'roles']),
-  ].filter((item): item is string => Boolean(item)));
+  const targetTitles = uniqueStrings(
+    [targetRole, ...listFromKeys(structured, ['targetTitles', 'targetRoles', 'roles'])].filter(
+      (item): item is string => Boolean(item),
+    ),
+  );
   const targetSkills = uniqueStrings(
     listFromKeys(structured, ['requiredSkills', 'targetSkills', 'skills']),
   );
@@ -109,7 +110,8 @@ export const buildCareerGoalRecommendationPayload = (
       ...listFromKeys(structured, ['locations']),
       ...(profile.locations ?? []),
     ]),
-    remotePreference: firstString(structured, ['remotePreference', 'workMode']) ?? profile.remotePreference,
+    remotePreference:
+      firstString(structured, ['remotePreference', 'workMode']) ?? profile.remotePreference,
     employmentTypes: uniqueStrings([
       ...listFromKeys(structured, ['employmentTypes', 'jobTypes']),
       ...(profile.employmentTypes ?? []),
@@ -128,6 +130,8 @@ export const buildCareerGoalRecommendationPayload = (
     transferableSkillsHint: uniqueStrings(
       listFromKeys(structured, ['transferableSkills', 'transferableSkillsHint']),
     ),
-    sourceText: uniqueStrings([target.goalText, profile.sourceText].filter(Boolean) as string[]).join('\n'),
+    sourceText: uniqueStrings(
+      [target.goalText, profile.sourceText].filter(Boolean) as string[],
+    ).join('\n'),
   };
 };

@@ -176,11 +176,7 @@ describe('recommendation module invariants', () => {
     [
       Pick<
         ScoredJobRecommendation['scoreResult'],
-        | 'matchedSkills'
-        | 'aliasSkills'
-        | 'relatedSkills'
-        | 'transferableSkills'
-        | 'missingSkills'
+        'matchedSkills' | 'aliasSkills' | 'relatedSkills' | 'transferableSkills' | 'missingSkills'
       >,
       ScoredJobRecommendation['matchType'],
     ]
@@ -318,8 +314,9 @@ describe('recommendation module invariants', () => {
       filters: { locations: ['Remote'] },
     });
     expect(createSavedSearchSchema.safeParse({ body: { name: '' } }).success).toBe(false);
-    expect(updateSavedSearchSchema.safeParse({ params: { savedSearchId: uuid }, body: {} }).success)
-      .toBe(false);
+    expect(
+      updateSavedSearchSchema.safeParse({ params: { savedSearchId: uuid }, body: {} }).success,
+    ).toBe(false);
     expect(
       updateSavedSearchSchema.safeParse({
         params: { savedSearchId: uuid },
