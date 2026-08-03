@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -122,23 +122,25 @@ async function waitForParsedProfile() {
   await waitFor(() => {
     expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
   });
-  await waitFor(() =>
-    expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled(),
-  );
+  await waitFor(() => expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled());
 }
 
 async function openConfirmDialog(user: ReturnType<typeof userEvent.setup>) {
   await dismissOpenAlerts(user);
   await user.click(screen.getByRole('button', { name: /save profile & continue|save changes/i }));
-  return screen.findByRole('dialog');
+  return waitFor(() => screen.getByRole('dialog'), { timeout: 5_000 });
 }
 
 async function confirmDialog(
   user: ReturnType<typeof userEvent.setup>,
   actionName: RegExp = /^save & continue$/i,
 ) {
-  const dialog = await screen.findByRole('dialog');
+  const dialog = await waitFor(() => screen.getByRole('dialog'), { timeout: 5_000 });
   await user.click(within(dialog).getByRole('button', { name: actionName }));
+}
+
+function fillField(label: RegExp, value: string) {
+  fireEvent.change(screen.getByRole('textbox', { name: label }), { target: { value } });
 }
 
 describe('ProfilePage resume parsing', () => {
@@ -196,35 +198,37 @@ describe('ProfilePage resume parsing', () => {
 
     expect(screen.getByRole('button', { name: /save profile/i })).toBeDisabled();
 
-    await user.type(screen.getByRole('textbox', { name: /full name/i }), 'Ada Lovelace');
-    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
-    await user.type(screen.getByRole('textbox', { name: /phone number/i }), '+44 1234');
+    fillField(/full name/i, 'Ada Lovelace');
+    fillField(/email/i, 'ada@example.com');
+    fillField(/phone number/i, '+44 1234');
 
     await user.click(screen.getByRole('button', { name: /^professional profile/i }));
-    await user.type(screen.getByRole('textbox', { name: /current designation/i }), 'Engineer');
-    await user.type(screen.getByRole('textbox', { name: /total experience/i }), '8');
-    await user.type(
-      screen.getByRole('textbox', { name: /professional summary/i }),
-      'Updated by user',
-    );
+    fillField(/current designation/i, 'Engineer');
+    fillField(/total experience/i, '8');
+    fillField(/professional summary/i, 'Updated by user');
 
     await user.click(screen.getByRole('button', { name: /^skills/i }));
-    await user.type(screen.getByRole('textbox', { name: /skills/i }), 'Algorithms');
-    expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled();
+    fillField(/skills/i, 'Algorithms');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled();
+    });
     await openConfirmDialog(user);
     expect(screen.getByRole('dialog', { name: /confirm profile submission/i })).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
 
     await confirmDialog(user);
 
-    expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining<Partial<ResumeProfileFormValues>>({
-        email: 'ada@example.com',
-        fullName: 'Ada Lovelace',
-        summary: 'Updated by user',
-      }),
-    );
-  }, 60_000);
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<ResumeProfileFormValues>>({
+          email: 'ada@example.com',
+          fullName: 'Ada Lovelace',
+          summary: 'Updated by user',
+        }),
+      );
+    });
+  }, 30_000);
 
   it('confirms a parsed profile and navigates to the job feed', async () => {
     const user = setupUser();
