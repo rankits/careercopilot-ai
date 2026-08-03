@@ -16,6 +16,8 @@
     "worker:job-embeddings:build": "node dist/workers/run-job-embedding-worker.js",
     "job-embeddings:backfill": "tsx src/modules/job-embeddings/cli/run-job-embedding-backfill.ts",
     "job-embeddings:backfill:build": "node dist/modules/job-embeddings/cli/run-job-embedding-backfill.js",
+    "jobs:cleanup:storage-retention": "tsx src/modules/jobs/cli/run-storage-retention-cleanup.ts",
+    "jobs:cleanup:embedding-age": "tsx src/modules/jobs/cli/run-embedding-age-cleanup.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",

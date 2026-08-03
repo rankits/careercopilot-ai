@@ -1,4 +1,14 @@
 import type { CandidateProfileSourceInput } from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
+import type { CareerTargetSourceRecord } from '@/modules/recommendations/mappers/career-target-source.mapper.js';
+import type { SavedSearchSourceRecord } from '@/modules/recommendations/mappers/saved-search-source.mapper.js';
+
+export type ResumeProfileSourceLookup =
+  | { status: 'FOUND'; payload: CandidateProfileSourceInput }
+  | { status: 'NOT_FOUND' }
+  | {
+      status: 'INCOMPLETE';
+      reason: 'PARSE_NOT_READY' | 'PARSE_DATA_MISSING';
+    };
 
 /**
  * Narrow loader for recommendation source authorization.
@@ -6,8 +16,20 @@ import type { CandidateProfileSourceInput } from '@/modules/recommendations/mapp
  */
 export interface RecommendationSourceLoader {
   findCandidateProfileByUserId(userId: string): Promise<CandidateProfileSourceInput | null>;
+  lookupOwnedResumeProfileSource?(
+    userId: string,
+    resumeId: string,
+  ): Promise<ResumeProfileSourceLookup>;
   findOwnedResumeProfileSource(
     userId: string,
     resumeId: string,
   ): Promise<CandidateProfileSourceInput | null>;
+  findOwnedCareerTargetSource?(
+    userId: string,
+    careerTargetId: string,
+  ): Promise<CareerTargetSourceRecord | null>;
+  findOwnedSavedSearchSource?(
+    userId: string,
+    savedSearchId: string,
+  ): Promise<SavedSearchSourceRecord | null>;
 }

@@ -9,6 +9,9 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
+import { isRecommendationJobEligible } from '@/modules/recommendations/utils/recommendation-job-eligibility.js';
+import { recordJobRecommendationHidden } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import type {
   JobRecommendationRecord,
   RecommendationFeedbackRecord,
@@ -18,6 +21,7 @@ import type {
   RecommendationSourceType,
   ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
+import { RETRIEVAL_EXCLUSION_FEEDBACK_ACTIONS } from '@/modules/recommendations/constants/recommendation-feedback.constants.js';
 
 /**
  * Process-local recommendation store for unit tests and ephemeral local runs.
@@ -94,6 +98,17 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       if (!run || run.userId !== userId) return null;
       return { ...run };
     },
+
+    findLatestByUser: async (userId: string): Promise<RecommendationRunRecord | null> => {
+      const [latest] = [...this.runs.values()]
+        .filter((run) => run.userId === userId)
+        .sort(
+          (left, right) =>
+            right.createdAt.getTime() - left.createdAt.getTime() ||
+            right.id.localeCompare(left.id),
+        );
+      return latest ? { ...latest } : null;
+    },
   };
 
   private readonly recommendationRepository: JobRecommendationRepository = {
@@ -101,11 +116,12 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       userId: string,
       runId: string,
       recommendations: readonly ScoredJobRecommendation[],
+      options?: { preserveOrder?: boolean },
     ): Promise<JobRecommendationRecord[]> => {
       this.requireRun(userId, runId);
-      const ranked = [...recommendations].sort(
-        (left, right) => right.scoreResult.overallScore - left.scoreResult.overallScore,
-      );
+      const ranked = options?.preserveOrder
+        ? [...recommendations]
+        : sortRecommendationsForRanking(recommendations);
       const created = ranked.map((item, index): JobRecommendationRecord => {
         const record: JobRecommendationRecord = {
           id: randomUUID(),
@@ -127,6 +143,10 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
     ): Promise<JobRecommendationRecord | null> => {
       const record = this.recommendations.get(recommendationId);
       if (!record || record.userId !== userId) return null;
+      if (!isRecommendationJobEligible(record.job)) {
+        recordJobRecommendationHidden();
+        return null;
+      }
       return { ...record };
     },
 
@@ -138,7 +158,9 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       const items = [...this.recommendations.values()]
         .filter((item) => item.userId === userId && item.runId === runId)
         .sort((left, right) => left.rank - right.rank);
-      return paginate(items, pagination);
+      const visible = items.filter((item) => isRecommendationJobEligible(item.job));
+      recordJobRecommendationHidden(items.length - visible.length);
+      return paginate(visible, pagination);
     },
 
     listByUser: async (
@@ -147,8 +169,15 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
     ): Promise<RecommendationPage> => {
       const items = [...this.recommendations.values()]
         .filter((item) => item.userId === userId)
-        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime());
-      return paginate(items, pagination);
+        .sort(
+          (left, right) =>
+            right.createdAt.getTime() - left.createdAt.getTime() ||
+            left.rank - right.rank ||
+            left.id.localeCompare(right.id),
+        );
+      const visible = items.filter((item) => isRecommendationJobEligible(item.job));
+      recordJobRecommendationHidden(items.length - visible.length);
+      return paginate(visible, pagination);
     },
 
     existsByRunAndJob: async (userId: string, runId: string, jobId: string): Promise<boolean> =>
@@ -193,6 +222,22 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
       [...this.feedback.values()]
         .filter((item) => item.userId === userId && item.jobId === jobId)
         .map((item) => ({ ...item })),
+    listByAction: async (userId, action, options) =>
+      [...this.feedback.values()]
+        .filter((item) => item.userId === userId && item.action === action)
+        .sort((left, right) => right.createdAt.getTime() - left.createdAt.getTime())
+        .slice(0, options?.limit)
+        .map((item) => ({ ...item })),
+    listExcludedJobIds: async (userId) => {
+      const ids = new Set<string>();
+      for (const item of this.feedback.values()) {
+        if (item.userId !== userId) continue;
+        if ((RETRIEVAL_EXCLUSION_FEEDBACK_ACTIONS as readonly string[]).includes(item.action)) {
+          ids.add(item.jobId);
+        }
+      }
+      return [...ids];
+    },
   };
 
   async execute<T>(

@@ -4,6 +4,7 @@ import type {
   RecommendationCandidate,
   RecommendationContext,
   RetrievalBackend,
+  ScoredJobRecommendation,
 } from '@/modules/recommendations/types/recommendations.types.js';
 export type { EmbeddingProvider } from '@/modules/ai-embeddings/contracts/embedding-provider.js';
 
@@ -21,6 +22,13 @@ export interface CandidateRetrievalResult {
   totalCandidates?: number;
   /** Cosine similarity (or equivalent) keyed by job id when the backend provides one. */
   retrievalScores?: Readonly<Record<string, number>>;
+  metadata?: {
+    embeddingCacheHit?: boolean;
+    candidateEmbeddingCacheHit?: boolean;
+    retrievalCandidateCount?: number;
+    retrievalDedupRemoved?: number;
+    retrievalLatencyMs?: number;
+  };
 }
 
 export interface CandidateRetrievalProvider {
@@ -35,6 +43,6 @@ export interface RecommendationExtractionProvider {
 export interface RecommendationReranker {
   rerank(
     context: RecommendationContext,
-    candidates: RecommendationCandidate[],
-  ): Promise<RecommendationCandidate[]>;
+    recommendations: readonly ScoredJobRecommendation[],
+  ): Promise<ScoredJobRecommendation[]>;
 }

@@ -1,5 +1,11 @@
 export type JobPersistenceOutcome =
-  'INSERTED' | 'SEMANTIC_CHANGED' | 'METADATA_ONLY' | 'UNCHANGED' | 'FAILED';
+  | 'INSERTED'
+  | 'SEMANTIC_CHANGED'
+  | 'METADATA_ONLY'
+  | 'UNCHANGED'
+  | 'FAILED'
+  | 'STORAGE_AGE_SKIPPED'
+  | 'EMBEDDING_AGE_SKIPPED';
 
 export interface JobPersistenceResult {
   readonly providerInputId: string;
@@ -18,6 +24,8 @@ export interface JobPersistenceBatchSummary {
   readonly metadataOnly: number;
   readonly unchanged: number;
   readonly failed: number;
+  readonly storageAgeSkipped: number;
+  readonly embeddingAgeSkipped: number;
 }
 
 export interface JobPersistenceBatchResult {

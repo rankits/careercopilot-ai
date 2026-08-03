@@ -43,7 +43,7 @@ export function VirtualizedJobList<TItem>({
   });
 
   return (
-    <VirtualListRoot aria-label={ariaLabel} ref={parentRef}>
+    <VirtualListRoot aria-label={ariaLabel} ref={parentRef} role="list">
       <VirtualListSpacer style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((virtualRow) => {
           const item = items[virtualRow.index];
@@ -51,8 +51,11 @@ export function VirtualizedJobList<TItem>({
 
           return (
             <VirtualListItem
+              aria-posinset={virtualRow.index + 1}
+              aria-setsize={items.length}
               data-index={virtualRow.index}
               key={virtualRow.key}
+              role="listitem"
               style={{
                 height: virtualRow.size,
                 transform: `translateY(${virtualRow.start}px)`,
