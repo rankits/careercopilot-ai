@@ -36,12 +36,25 @@ describe('HeaderUserMenu', () => {
     );
 
     await user.click(screen.getByRole('button', { name: /user menu/i }));
-    await user.click(screen.getByRole('menuitem', { name: /settings/i }));
+    await user.click(screen.getByRole('menuitem', { name: /edit profile/i }));
     await user.click(screen.getByRole('button', { name: /user menu/i }));
     await user.click(screen.getByRole('menuitem', { name: /logout/i }));
 
     expect(handleMenuClick).toHaveBeenCalledTimes(2);
     expect(handleSettingsClick).toHaveBeenCalledTimes(1);
     expect(handleLogoutClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('calls onUploadResumeClick when the Upload Resume item is clicked', async () => {
+    const user = userEvent.setup();
+    const handleUploadResumeClick = vi.fn();
+
+    render(<HeaderUserMenu name="User" onUploadResumeClick={handleUploadResumeClick} />);
+
+    await user.click(screen.getByRole('button', { name: /user menu/i }));
+    await user.click(screen.getByRole('menuitem', { name: /upload resume/i }));
+
+    expect(handleUploadResumeClick).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('menu')).not.toBeInTheDocument();
   });
 });

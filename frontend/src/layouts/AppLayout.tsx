@@ -24,12 +24,13 @@ export function AppLayout() {
         : pathname === ROUTES.APPLICATIONS
           ? 'applications'
           : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
-            ? 'jobs-feed' : pathname === ROUTES.SAVED_RESUMES || pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
-        ? 'saved-resumes'
-        : pathname.startsWith(ROUTES.RESUME_BUILDER)
-          ? 'resume-builder'
-          : 'dashboard';
-          
+            ? 'jobs-feed'
+            : pathname === ROUTES.SAVED_RESUMES || pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
+              ? 'saved-resumes'
+              : pathname.startsWith(ROUTES.RESUME_BUILDER)
+                ? 'resume-builder'
+                : 'dashboard';
+
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);
   const userName = user?.name ?? user?.email ?? 'User';
@@ -51,6 +52,7 @@ export function AppLayout() {
               }
             }}
             onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
+            onUploadResumeClick={() => void navigate(ROUTES.PROFILE)}
             userAvatarUrl={user?.profileImage ?? undefined}
             userName={userName}
             userRoleLabel={userRoleLabel}
