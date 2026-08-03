@@ -45,6 +45,7 @@ const base = {
 
 const mockOpenRouterConfig = {
   apiKey: 'openrouter-key',
+  apiKeyEnvName: 'OPENROUTER_API_KEY',
   baseUrl: 'https://openrouter.example',
   httpReferer: undefined,
   appTitle: 'Career Copilot',
@@ -62,6 +63,7 @@ describe('embedding providers', () => {
       requestDimensions: undefined,
       timeoutMs: 10_000,
       batchSize: 16,
+      batchMaxCharacters: 200_000,
       maxRetries: 3,
       documentPrefix: 'doc: ',
       queryPrefix: 'query: ',
@@ -87,6 +89,7 @@ describe('embedding providers', () => {
       requestDimensions: undefined,
       timeoutMs: 10_000,
       batchSize: 16,
+      batchMaxCharacters: 200_000,
       maxRetries: 3,
       documentPrefix: 'doc: ',
       queryPrefix: 'query: ',

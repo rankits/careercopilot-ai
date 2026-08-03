@@ -29,6 +29,10 @@ import { RecommendationFeedbackService } from '@/modules/recommendations/service
 import { SavedSearchService } from '@/modules/recommendations/services/saved-search.service.js';
 import { createResumeRecommendationSourceLoader } from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
 import { profileUpdatedAfter } from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
+import {
+  createEmbeddingProvider,
+  recommendationEmbeddingConfig,
+} from '@/modules/ai-embeddings/index.js';
 import { jobEmbeddingRepository } from '@/modules/job-embeddings/index.js';
 import { prismaJobSearchRepository } from '@/modules/job-listing/index.js';
 import { prismaCareerTargetRepository } from '@/modules/recommendations/repositories/prisma-career-target.repository.js';
@@ -37,7 +41,9 @@ import { createChildLogger } from '@/shared/logger/logger.js';
 
 export const recommendationsLogger = createChildLogger({ scope: 'job-recommendations' });
 export const candidateEmbeddingRepository = new PrismaCandidateEmbeddingRepository();
-export const candidateEmbeddingService = new CandidateEmbeddingService(candidateEmbeddingRepository);
+export const candidateEmbeddingService = new CandidateEmbeddingService(
+  candidateEmbeddingRepository,
+);
 export const recommendationStrategyResolver = new RecommendationStrategyResolver([
   new ProfileSourceStrategy(),
   new ResumeSourceStrategy(),
@@ -49,7 +55,7 @@ export const recommendationStrategyResolver = new RecommendationStrategyResolver
 export const pgVectorCandidateRetrievalProvider = new PgVectorCandidateRetrievalProvider(
   jobEmbeddingRepository,
   prismaJobSearchRepository,
-  undefined,
+  () => createEmbeddingProvider(recommendationEmbeddingConfig),
   candidateEmbeddingService,
 );
 export const candidateRetrievalRegistry = new CandidateRetrievalRegistry([
