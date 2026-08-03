@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -106,10 +106,41 @@ async function uploadResume(user: ReturnType<typeof userEvent.setup>, name = 're
 }
 
 async function dismissOpenAlerts(user: ReturnType<typeof userEvent.setup>) {
+  const parseNotice = /resume parsed\. review your details before continuing/i;
+  if (!screen.queryByText(parseNotice)) return;
+
   const closeButtons = screen.queryAllByRole('button', { name: /^close$/i });
   for (const button of closeButtons) {
     await user.click(button);
   }
+  await waitFor(() => {
+    expect(screen.queryByText(parseNotice)).not.toBeInTheDocument();
+  });
+}
+
+async function waitForParsedProfile() {
+  await waitFor(() => {
+    expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
+  });
+  await waitFor(() => expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled());
+}
+
+async function openConfirmDialog(user: ReturnType<typeof userEvent.setup>) {
+  await dismissOpenAlerts(user);
+  await user.click(screen.getByRole('button', { name: /save profile & continue|save changes/i }));
+  return waitFor(() => screen.getByRole('dialog'), { timeout: 5_000 });
+}
+
+async function confirmDialog(
+  user: ReturnType<typeof userEvent.setup>,
+  actionName: RegExp = /^save & continue$/i,
+) {
+  const dialog = await waitFor(() => screen.getByRole('dialog'), { timeout: 5_000 });
+  await user.click(within(dialog).getByRole('button', { name: actionName }));
+}
+
+function fillField(label: RegExp, value: string) {
+  fireEvent.change(screen.getByRole('textbox', { name: label }), { target: { value } });
 }
 
 describe('ProfilePage resume parsing', () => {
@@ -167,35 +198,37 @@ describe('ProfilePage resume parsing', () => {
 
     expect(screen.getByRole('button', { name: /save profile/i })).toBeDisabled();
 
-    await user.type(screen.getByRole('textbox', { name: /full name/i }), 'Ada Lovelace');
-    await user.type(screen.getByRole('textbox', { name: /email/i }), 'ada@example.com');
-    await user.type(screen.getByRole('textbox', { name: /phone number/i }), '+44 1234');
+    fillField(/full name/i, 'Ada Lovelace');
+    fillField(/email/i, 'ada@example.com');
+    fillField(/phone number/i, '+44 1234');
 
     await user.click(screen.getByRole('button', { name: /^professional profile/i }));
-    await user.type(screen.getByRole('textbox', { name: /current designation/i }), 'Engineer');
-    await user.type(screen.getByRole('textbox', { name: /total experience/i }), '8');
-    await user.type(
-      screen.getByRole('textbox', { name: /professional summary/i }),
-      'Updated by user',
-    );
+    fillField(/current designation/i, 'Engineer');
+    fillField(/total experience/i, '8');
+    fillField(/professional summary/i, 'Updated by user');
 
     await user.click(screen.getByRole('button', { name: /^skills/i }));
-    await user.type(screen.getByRole('textbox', { name: /skills/i }), 'Algorithms');
-    expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled();
-    await user.click(screen.getByRole('button', { name: /save profile/i }));
+    fillField(/skills/i, 'Algorithms');
+
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled();
+    });
+    await openConfirmDialog(user);
     expect(screen.getByRole('dialog', { name: /confirm profile submission/i })).toBeInTheDocument();
     expect(onSave).not.toHaveBeenCalled();
 
-    await user.click(screen.getByRole('button', { name: /save & continue/i }));
+    await confirmDialog(user);
 
-    expect(onSave).toHaveBeenCalledWith(
-      expect.objectContaining<Partial<ResumeProfileFormValues>>({
-        email: 'ada@example.com',
-        fullName: 'Ada Lovelace',
-        summary: 'Updated by user',
-      }),
-    );
-  }, 60_000);
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining<Partial<ResumeProfileFormValues>>({
+          email: 'ada@example.com',
+          fullName: 'Ada Lovelace',
+          summary: 'Updated by user',
+        }),
+      );
+    });
+  }, 30_000);
 
   it('confirms a parsed profile and navigates to the job feed', async () => {
     const user = setupUser();
@@ -206,12 +239,9 @@ describe('ProfilePage resume parsing', () => {
     const { onSave, store } = renderPage();
 
     await uploadResume(user);
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled(),
-    );
-    await dismissOpenAlerts(user);
-    await user.click(screen.getByRole('button', { name: /save profile/i }));
-    await user.click(screen.getByRole('button', { name: /save & continue/i }));
+    await waitForParsedProfile();
+    await openConfirmDialog(user);
+    await confirmDialog(user);
 
     await waitFor(() =>
       expect(confirmProfileMock).toHaveBeenCalledWith({
@@ -240,12 +270,9 @@ describe('ProfilePage resume parsing', () => {
     });
 
     await uploadResume(user);
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled(),
-    );
-    await dismissOpenAlerts(user);
-    await user.click(screen.getByRole('button', { name: /save profile/i }));
-    await user.click(screen.getByRole('button', { name: /save & continue/i }));
+    await waitForParsedProfile();
+    await openConfirmDialog(user);
+    await confirmDialog(user);
 
     expect(
       await screen.findByText(/you must be signed in to confirm your profile/i),
@@ -259,12 +286,9 @@ describe('ProfilePage resume parsing', () => {
     const { onSave } = renderPage();
 
     await uploadResume(user);
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled(),
-    );
-    await dismissOpenAlerts(user);
-    await user.click(screen.getByRole('button', { name: /save profile/i }));
-    await user.click(screen.getByRole('button', { name: /cancel/i }));
+    await waitForParsedProfile();
+    const dialog = await openConfirmDialog(user);
+    await user.click(within(dialog).getByRole('button', { name: /^cancel$/i }));
 
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(onSave).not.toHaveBeenCalled();
@@ -300,13 +324,15 @@ describe('ProfilePage edit mode', () => {
     getMyProfileMock.mockResolvedValueOnce(existingProfile);
     renderPage(vi.fn(), 'edit');
 
-    expect(await screen.findByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
+    });
     expect(screen.getByRole('textbox', { name: /email/i })).toHaveValue('ada@example.com');
     expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled();
   });
 
   it('submits changes through the update API, shows a success message, and stays on the page', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     getMyProfileMock.mockResolvedValueOnce(existingProfile);
     updateProfileMock.mockResolvedValueOnce({
       message: 'Candidate profile updated',
@@ -314,11 +340,13 @@ describe('ProfilePage edit mode', () => {
     });
     renderPage(vi.fn(), 'edit');
 
-    await screen.findByRole('textbox', { name: /full name/i });
-    await user.click(screen.getByRole('button', { name: /save changes/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
+    });
+    await openConfirmDialog(user);
     expect(screen.getByRole('dialog', { name: /confirm profile changes/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: /confirm & save/i }));
+    await confirmDialog(user, /^confirm & save$/i);
 
     await waitFor(() => expect(updateProfileMock).toHaveBeenCalledTimes(1));
     expect(await screen.findByText(/candidate profile updated/i)).toBeInTheDocument();
@@ -326,14 +354,16 @@ describe('ProfilePage edit mode', () => {
   });
 
   it('shows an error toast when the update API call fails', async () => {
-    const user = userEvent.setup();
+    const user = setupUser();
     getMyProfileMock.mockResolvedValueOnce(existingProfile);
     updateProfileMock.mockRejectedValueOnce(new Error('Unable to reach the resume service.'));
     renderPage(vi.fn(), 'edit');
 
-    await screen.findByRole('textbox', { name: /full name/i });
-    await user.click(screen.getByRole('button', { name: /save changes/i }));
-    await user.click(screen.getByRole('button', { name: /confirm & save/i }));
+    await waitFor(() => {
+      expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
+    });
+    await openConfirmDialog(user);
+    await confirmDialog(user, /^confirm & save$/i);
 
     expect(await screen.findByText(/unable to reach the resume service/i)).toBeInTheDocument();
   });

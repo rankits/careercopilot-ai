@@ -164,6 +164,33 @@ export const shadows = {
   focus: '0 0 0 3px rgba(43, 105, 220, 0.15)',
 } as const;
 
+export const resumeBuilderTokens = {
+  primary: '#7C3AED',
+  primaryHover: '#6D28D9',
+  primarySoft: '#F5F0FF',
+  primarySofter: '#F8F5FF',
+  background: '#FFFFFF',
+  border: '#EAEAEA',
+  text: '#111827',
+  textSecondary: '#6B7280',
+  textMuted: '#8B95A7',
+  surface: '#FFFFFF',
+  surfaceSubtle: '#FEFEFF',
+  greenBadgeBg: '#ECFDF5',
+  greenBadgeBorder: '#BBF7D0',
+  greenBadgeText: '#059669',
+  amberBadgeBg: '#FFFBEB',
+  amberBadgeBorder: '#FDE68A',
+  amberBadgeText: '#D97706',
+  redBadgeBg: '#FEF2F2',
+  redBadgeBorder: '#FECACA',
+  redBadgeText: '#EF4444',
+  rowShadow: '0 12px 34px rgba(17,24,39,0.07)',
+  cardShadow: '0 16px 48px rgba(17,24,39,0.055)',
+  purpleShadow: '0 12px 32px rgba(124,58,237,0.18)',
+  buttonShadow: '0 10px 24px rgba(124,58,237,0.22)',
+} as const;
+
 export const tokens = {
   borderRadius,
   borderWidth,
@@ -173,6 +200,7 @@ export const tokens = {
   fontWeight,
   jobFeed: jobFeedTokens,
   palette,
+  resumeBuilder: resumeBuilderTokens,
   shadows,
   sizing,
   spacing,

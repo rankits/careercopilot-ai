@@ -1,0 +1,1 @@
+export { UploadedResumeList } from './UploadedResumeList';

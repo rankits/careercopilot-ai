@@ -92,7 +92,7 @@ describe('JobFeedPage', () => {
     expect(await screen.findByText(/microsoft/i)).toBeInTheDocument();
     expectListJobsCalledWith({ page: 1, limit: 20, sortBy: 'newest' });
     expect(screen.getByText(/2 jobs found/i)).toBeInTheDocument();
-    const applyButtons = screen.getAllByRole('button', { name: /apply now/i });
+    const applyButtons = screen.getAllByRole('button', { name: /apply to/i });
     expect(applyButtons[0]).toBeEnabled();
     expect(applyButtons[1]).toBeDisabled();
   });
