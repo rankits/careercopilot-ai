@@ -26,13 +26,13 @@ import {
   VersionsGrid,
 } from './styles';
 
-function truncate(text: string | null | undefined, max = 220): string {
+export function truncate(text: string | null | undefined, max = 220): string {
   if (!text?.trim()) return 'No job description saved for this version.';
   const cleaned = text.replace(/\s+/g, ' ').trim();
   return cleaned.length > max ? `${cleaned.slice(0, max)}…` : cleaned;
 }
 
-function fileBase(version: SavedResumeVersion): string {
+export function fileBase(version: SavedResumeVersion): string {
   const role = (version.targetRole || 'resume').replace(/[^\w\- ]+/g, '').trim();
   return `${role || 'resume'}_v${version.id}`.replace(/\s+/g, '_');
 }

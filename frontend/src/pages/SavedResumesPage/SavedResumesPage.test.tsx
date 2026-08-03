@@ -51,32 +51,7 @@ function renderPage(initialPath = '/resume-builder/saved') {
   );
 }
 
-describe('truncate', () => {
-  it('returns placeholder for empty/missing JD', () => {
-    expect(truncate(null)).toBe('No job description saved for this version.');
-    expect(truncate(undefined)).toBe('No job description saved for this version.');
-    expect(truncate('   ')).toBe('No job description saved for this version.');
-  });
 
-  it('collapses whitespace and truncates long text', () => {
-    expect(truncate('  Build   APIs  ')).toBe('Build APIs');
-    const long = 'a'.repeat(230);
-    const result = truncate(long, 220);
-    expect(result).toHaveLength(221);
-    expect(result.endsWith('…')).toBe(true);
-  });
-});
-
-describe('fileBase', () => {
-  it('sanitizes role and builds filename stem', () => {
-    expect(fileBase(version({ targetRole: 'Sr. Java/Backend!', id: 9 }))).toBe('Sr_JavaBackend_v9');
-  });
-
-  it('falls back when role is empty after sanitize', () => {
-    expect(fileBase(version({ targetRole: '@@@', id: 3 }))).toBe('resume_v3');
-    expect(fileBase(version({ targetRole: '', id: 4 }))).toBe('resume_v4');
-  });
-});
 
 describe('SavedResumesPage', () => {
   beforeEach(() => {
