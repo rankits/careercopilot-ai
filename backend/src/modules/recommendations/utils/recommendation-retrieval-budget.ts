@@ -25,4 +25,3 @@ export const resolveRecommendationRetrievalSearchLimit = (
   const limit = Number.isInteger(requestedLimit) && requestedLimit > 0 ? requestedLimit : 1;
   return Math.min(limit * budget.overfetchMultiplier, budget.maxSearchLimit);
 };
-

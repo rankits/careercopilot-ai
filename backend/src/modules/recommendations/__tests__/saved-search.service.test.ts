@@ -92,12 +92,12 @@ describe('SavedSearchService', () => {
       statusCode: 404,
       code: RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
     });
-    await expect(service.update('user-1', savedSearchId, { name: 'Updated' })).rejects.toMatchObject(
-      {
-        statusCode: 404,
-        code: RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
-      },
-    );
+    await expect(
+      service.update('user-1', savedSearchId, { name: 'Updated' }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+    });
     await expect(service.delete('user-1', savedSearchId)).rejects.toMatchObject({
       statusCode: 404,
       code: RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,

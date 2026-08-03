@@ -396,7 +396,11 @@ describe('PgVectorCandidateRetrievalProvider', () => {
       () => embeddingProvider,
       new CandidateEmbeddingService(new MemoryCandidateEmbeddingRepository()),
     );
-    const context = { ...baseContext(), sourceType: 'TARGET_TEXT' as const, sourceText: 'same text' };
+    const context = {
+      ...baseContext(),
+      sourceType: 'TARGET_TEXT' as const,
+      sourceText: 'same text',
+    };
 
     await provider.retrieve({ userId: 'user-1', context, backend: 'PGVECTOR', limit: 10 });
     await provider.retrieve({ userId: 'user-1', context, backend: 'PGVECTOR', limit: 10 });
@@ -410,11 +414,13 @@ describe('PgVectorCandidateRetrievalProvider', () => {
       { jobId: 'job-high', similarity: 0.95 },
       { jobId: 'job-distinct', similarity: 0.8 },
     ]);
-    const findByIds = vi.fn().mockResolvedValue([
-      job({ id: 'job-low' }),
-      job({ id: 'job-high' }),
-      job({ id: 'job-distinct', title: 'Frontend Engineer', skills: ['React'] }),
-    ]);
+    const findByIds = vi
+      .fn()
+      .mockResolvedValue([
+        job({ id: 'job-low' }),
+        job({ id: 'job-high' }),
+        job({ id: 'job-distinct', title: 'Frontend Engineer', skills: ['React'] }),
+      ]);
     const provider = new PgVectorCandidateRetrievalProvider(
       { searchNearest } as unknown as JobEmbeddingRepository,
       { findByIds } as unknown as IJobSearchRepository,

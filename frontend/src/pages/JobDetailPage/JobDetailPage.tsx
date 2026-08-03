@@ -132,7 +132,9 @@ export function JobDetailPage() {
                 Similar jobs
               </Typography>
 
-              {similarJobs.isPending ? <JobFeedLoadingState label="Loading similar jobs..." /> : null}
+              {similarJobs.isPending ? (
+                <JobFeedLoadingState label="Loading similar jobs..." />
+              ) : null}
 
               {similarJobs.isError ? (
                 <JobFeedStatus
@@ -156,7 +158,9 @@ export function JobDetailPage() {
               {similarCards.length > 0 ? (
                 <VirtualizedJobList
                   ariaLabel="Similar jobs"
-                  getKey={(similarJob) => similarJob.id ?? `${similarJob.company}-${similarJob.title}`}
+                  getKey={(similarJob) =>
+                    similarJob.id ?? `${similarJob.company}-${similarJob.title}`
+                  }
                   items={similarCards}
                   renderItem={(similarJob) => (
                     <JobCard

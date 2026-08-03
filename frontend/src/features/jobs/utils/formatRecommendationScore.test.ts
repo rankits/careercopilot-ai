@@ -12,9 +12,7 @@ describe('formatRecommendationScorePercent', () => {
 
   it('prefers displayScore without multiplying it again', () => {
     expect(formatRecommendationScorePercent({ displayScore: 87, overallScore: 0.12 })).toBe(87);
-    expect(formatRecommendationScorePercent({ displayScore: 99.5, overallScore: 0.12 })).toBe(
-      100,
-    );
+    expect(formatRecommendationScorePercent({ displayScore: 99.5, overallScore: 0.12 })).toBe(100);
   });
 
   it('falls back to overallScore when displayScore is absent', () => {

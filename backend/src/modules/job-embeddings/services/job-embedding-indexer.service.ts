@@ -220,8 +220,7 @@ export class JobEmbeddingIndexerService {
   private async prepare(
     request: JobEmbeddingProcessRequest,
   ): Promise<
-    | { kind: 'done'; outcome: JobEmbeddingIndexOutcome }
-    | { kind: 'embed'; item: PreparedForEmbed }
+    { kind: 'done'; outcome: JobEmbeddingIndexOutcome } | { kind: 'embed'; item: PreparedForEmbed }
   > {
     const { eventId, event } = request;
     const claim = await this.consumedEvents.claim(
@@ -244,7 +243,11 @@ export class JobEmbeddingIndexerService {
           this.workerId,
         );
         if (!completed) {
-          throw new AppError('Embedding event ownership was lost', 409, 'EMBEDDING_EVENT_LOCK_LOST');
+          throw new AppError(
+            'Embedding event ownership was lost',
+            409,
+            'EMBEDDING_EVENT_LOCK_LOST',
+          );
         }
         this.onOutcome?.({ jobId: event.jobId, eventId, outcome: early.outcome });
         return early;
@@ -266,9 +269,7 @@ export class JobEmbeddingIndexerService {
     }
   }
 
-  private async evaluateWithoutProvider(
-    event: JobSemanticContentChangedEvent,
-  ): Promise<
+  private async evaluateWithoutProvider(event: JobSemanticContentChangedEvent): Promise<
     | { kind: 'done'; outcome: JobEmbeddingIndexOutcome }
     | {
         kind: 'embed';

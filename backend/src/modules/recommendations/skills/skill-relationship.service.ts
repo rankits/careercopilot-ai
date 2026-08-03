@@ -47,14 +47,25 @@ export class SkillRelationshipService {
     }
   }
 
-  findRelationship(required: CanonicalSkill, available: CanonicalSkill): SkillRelationshipType | null {
+  findRelationship(
+    required: CanonicalSkill,
+    available: CanonicalSkill,
+  ): SkillRelationshipType | null {
     return this.relationships.get(required.normalized)?.get(available.normalized) ?? null;
   }
 
   overlap(required: readonly string[], available: readonly string[]): SkillGraphOverlap {
     const requiredCanonical = this.canonicalizer.canonicalizeList(required);
     if (requiredCanonical.length === 0) {
-      return { ratio: 1, exact: [], alias: [], related: [], transferable: [], missing: [], hits: [] };
+      return {
+        ratio: 1,
+        exact: [],
+        alias: [],
+        related: [],
+        transferable: [],
+        missing: [],
+        hits: [],
+      };
     }
 
     const availableCanonical = this.canonicalizer.canonicalizeList(available);

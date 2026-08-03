@@ -104,8 +104,7 @@ export class InMemoryRecommendationUnitOfWork implements RecommendationUnitOfWor
         .filter((run) => run.userId === userId)
         .sort(
           (left, right) =>
-            right.createdAt.getTime() - left.createdAt.getTime() ||
-            right.id.localeCompare(left.id),
+            right.createdAt.getTime() - left.createdAt.getTime() || right.id.localeCompare(left.id),
         );
       return latest ? { ...latest } : null;
     },

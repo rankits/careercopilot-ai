@@ -207,10 +207,14 @@ describe('job recommendation HTTP gates', () => {
       .set('x-user-id', 'public-user-id');
 
     expect(response.status).toBe(200);
-    expect(listSpy).toHaveBeenCalledWith(String(user.id), { page: 1, limit: 20 }, {
-      latestOnly: false,
-      runId: undefined,
-    });
+    expect(listSpy).toHaveBeenCalledWith(
+      String(user.id),
+      { page: 1, limit: 20 },
+      {
+        latestOnly: false,
+        runId: undefined,
+      },
+    );
     expect(listSpy).not.toHaveBeenCalledWith('public-user-id', expect.anything());
   });
 
@@ -227,10 +231,14 @@ describe('job recommendation HTTP gates', () => {
     const response = await request(app).get(`${API}?latestOnly=true`).set(authHeader(token));
 
     expect(response.status).toBe(200);
-    expect(listSpy).toHaveBeenCalledWith(String(user.id), { page: 1, limit: 20 }, {
-      latestOnly: true,
-      runId: undefined,
-    });
+    expect(listSpy).toHaveBeenCalledWith(
+      String(user.id),
+      { page: 1, limit: 20 },
+      {
+        latestOnly: true,
+        runId: undefined,
+      },
+    );
   });
 
   it('refreshes recommendations from PROFILE by default and returns run details', async () => {
@@ -290,13 +298,15 @@ describe('job recommendation HTTP gates', () => {
     const user = await seedVerifiedUser({ email: 'recs-career-goal-idor@example.com' });
     const token = accessTokenForUser(user);
     const careerTargetId = '33333333-3333-3333-3333-333333333333';
-    const createSpy = vi.spyOn(recommendationsService, 'createForSource').mockRejectedValue(
-      new RecommendationError(
-        'Owned career target was not found',
-        404,
-        RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
-      ),
-    );
+    const createSpy = vi
+      .spyOn(recommendationsService, 'createForSource')
+      .mockRejectedValue(
+        new RecommendationError(
+          'Owned career target was not found',
+          404,
+          RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+        ),
+      );
 
     const response = await request(app).post(API).set(authHeader(token)).send({
       sourceType: 'CAREER_GOAL',
@@ -431,13 +441,15 @@ describe('job recommendation HTTP gates', () => {
   it('returns 404 for missing or unowned saved searches', async () => {
     const user = await seedVerifiedUser({ email: 'recs-saved-search-idor@example.com' });
     const token = accessTokenForUser(user);
-    const getSpy = vi.spyOn(savedSearchService, 'get').mockRejectedValue(
-      new RecommendationError(
-        'Saved search was not found',
-        404,
-        RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
-      ),
-    );
+    const getSpy = vi
+      .spyOn(savedSearchService, 'get')
+      .mockRejectedValue(
+        new RecommendationError(
+          'Saved search was not found',
+          404,
+          RECOMMENDATION_ERROR_CODES.SOURCE_NOT_FOUND,
+        ),
+      );
 
     const response = await request(app)
       .get(`${API}/saved-searches/${savedSearchId}`)
@@ -470,13 +482,15 @@ describe('job recommendation HTTP gates', () => {
   it('returns 404 for non-owned recommendation run details', async () => {
     const user = await seedVerifiedUser({ email: 'recs-run-idor@example.com' });
     const token = accessTokenForUser(user);
-    const getRunSpy = vi.spyOn(recommendationsService, 'getRunDetailsForUser').mockRejectedValue(
-      new RecommendationError(
-        'Recommendation run was not found',
-        404,
-        RECOMMENDATION_ERROR_CODES.RUN_NOT_FOUND,
-      ),
-    );
+    const getRunSpy = vi
+      .spyOn(recommendationsService, 'getRunDetailsForUser')
+      .mockRejectedValue(
+        new RecommendationError(
+          'Recommendation run was not found',
+          404,
+          RECOMMENDATION_ERROR_CODES.RUN_NOT_FOUND,
+        ),
+      );
 
     const response = await request(app).get(`${API}/runs/${runId}`).set(authHeader(token));
 

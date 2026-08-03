@@ -16,9 +16,8 @@ export const recommendationQueryEmbeddingCacheKey = (
 export const recommendationQueryEmbeddingCachePrefix = (userId: string): string =>
   `${QUERY_EMBEDDING_PREFIX}${userId}:`;
 
-export const getCachedQueryEmbedding = async (
-  key: string,
-): Promise<number[] | null> => cacheService.get<number[]>(key);
+export const getCachedQueryEmbedding = async (key: string): Promise<number[] | null> =>
+  cacheService.get<number[]>(key);
 
 export const setCachedQueryEmbedding = async (key: string, embedding: number[]): Promise<void> =>
   cacheService.set(key, embedding, CacheTTL.FIVE_MINUTES);

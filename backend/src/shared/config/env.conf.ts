@@ -1,5 +1,9 @@
-import 'dotenv/config';
+import path from 'node:path';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
 
 // Loaded here, as the first thing this module does, rather than relying on
 // the entrypoint (server.ts) to call `dotenv.config()` first: ES module
@@ -106,7 +110,9 @@ const envSchema = z
     JOB_STORAGE_MAX_AGE_DAYS: z.coerce.number().int().positive().default(90),
     JOB_EMBEDDING_AGE_FILTER_ENABLED: booleanFromString(true),
     JOB_EMBEDDING_MAX_AGE_DAYS: z.coerce.number().int().positive().default(5),
-    JOB_UNKNOWN_DATE_POLICY: z.enum(['REJECT', 'ALLOW_STORAGE_ONLY', 'ALLOW']).default('ALLOW_STORAGE_ONLY'),
+    JOB_UNKNOWN_DATE_POLICY: z
+      .enum(['REJECT', 'ALLOW_STORAGE_ONLY', 'ALLOW'])
+      .default('ALLOW_STORAGE_ONLY'),
     JOB_STORAGE_EXPIRED_ACTION: z.enum(['EXPIRE', 'DELETE']).default('EXPIRE'),
     JOB_REMOVE_OUTDATED_EMBEDDINGS: booleanFromString(true),
     JOB_RETENTION_CLEANUP_BATCH_SIZE: z.coerce.number().int().positive().default(500),
@@ -116,7 +122,12 @@ const envSchema = z
     JOB_INGESTION_ON_STARTUP_ENABLED: booleanFromString(false),
     JOB_INGESTION_ON_STARTUP_DELAY_MS: z.coerce.number().int().min(0).max(300_000).default(5000),
     JOB_INGESTION_ON_STARTUP_FAIL_APPLICATION: booleanFromString(false),
-    JOB_INGESTION_ON_STARTUP_LOCK_TTL_SECONDS: z.coerce.number().int().min(60).max(7200).default(1800),
+    JOB_INGESTION_ON_STARTUP_LOCK_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(7200)
+      .default(1800),
     JOB_INGESTION_ON_STARTUP_PROVIDERS: z.preprocess(emptyToUndefined, z.string().optional()),
     JOB_INGESTION_ON_STARTUP_ALLOWED_TIERS: z.preprocess(emptyToUndefined, z.string().optional()),
 

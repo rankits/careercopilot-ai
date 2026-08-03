@@ -27,11 +27,7 @@ describe('JRE-SEC-002 Prompt Injection Security Suite', () => {
       expect(result.industries).toContain('Fintech');
 
       // Ensures no instruction or prompt leakage occurs in any extracted field
-      const allExtracted = [
-        ...result.targetTitles,
-        ...result.requiredSkills,
-        ...result.industries,
-      ];
+      const allExtracted = [...result.targetTitles, ...result.requiredSkills, ...result.industries];
       expect(allExtracted.some((token) => token.includes('IGNORE'))).toBe(false);
       expect(allExtracted.some((token) => token.includes('SYSTEM'))).toBe(false);
       expect(allExtracted.some((token) => token.includes('admin'))).toBe(false);

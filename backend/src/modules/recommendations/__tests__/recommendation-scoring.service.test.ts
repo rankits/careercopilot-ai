@@ -87,7 +87,8 @@ describe('RecommendationScoringService hybrid fusion', () => {
       defaultMatchTypeClassifier,
     ).score(context(), job());
     const expected =
-      RETRIEVAL_SCORE_BLEND_WEIGHT * 0.8 + HEURISTIC_SCORE_BLEND_WEIGHT * engineOnly.scoreResult.overallScore;
+      RETRIEVAL_SCORE_BLEND_WEIGHT * 0.8 +
+      HEURISTIC_SCORE_BLEND_WEIGHT * engineOnly.scoreResult.overallScore;
     expect(scored.scoreResult.overallScore).toBeCloseTo(expected, 5);
   });
 
@@ -103,7 +104,9 @@ describe('RecommendationScoringService hybrid fusion', () => {
 
   it('adds hybrid explanation reason text', async () => {
     const [scored] = await service.score(context(), [{ job: job(), retrievalScore: 0.7 }]);
-    const hybrid = scored.scoreResult.reasons.find((reason) => reason.message.includes('Hybrid match'));
+    const hybrid = scored.scoreResult.reasons.find((reason) =>
+      reason.message.includes('Hybrid match'),
+    );
     expect(hybrid).toBeTruthy();
     expect(hybrid?.evidence.some((entry) => entry.startsWith('retrievalWeight='))).toBe(true);
   });
@@ -151,9 +154,11 @@ describe('RecommendationScoringService hybrid fusion', () => {
 
     expect(scored.scoreResult.components.requiredSkills).toBe(0.5);
     expect(scored.scoreResult.components.preferredSkills).toBe(0.5);
-    expect(scored.scoreResult.reasons.filter((reason) =>
-      reason.message.includes('Job skills unavailable; used neutral score'),
-    )).toHaveLength(2);
+    expect(
+      scored.scoreResult.reasons.filter((reason) =>
+        reason.message.includes('Job skills unavailable; used neutral score'),
+      ),
+    ).toHaveLength(2);
   });
 
   it('treats curated skill aliases as full-credit alias matches', async () => {

@@ -18,16 +18,13 @@ const run = (
   candidateCount: 0,
   failureCode,
   createdAt: new Date('2026-08-02T00:00:00.000Z'),
-  completedAt: status === 'COMPLETED' || status === 'FAILED'
-    ? new Date('2026-08-02T00:01:00.000Z')
-    : null,
+  completedAt:
+    status === 'COMPLETED' || status === 'FAILED' ? new Date('2026-08-02T00:01:00.000Z') : null,
 });
 
 describe('mapRecommendationLifecycleState', () => {
   it('maps absent and active run statuses to lifecycle states', () => {
-    expect(mapRecommendationLifecycleState({ latestRun: null, stale: false })).toBe(
-      'NOT_STARTED',
-    );
+    expect(mapRecommendationLifecycleState({ latestRun: null, stale: false })).toBe('NOT_STARTED');
     expect(mapRecommendationLifecycleState({ latestRun: run('PENDING'), stale: false })).toBe(
       'QUEUED',
     );
@@ -102,4 +99,3 @@ describe('isRecommendationSetStale', () => {
     expect(stale).toBe(false);
   });
 });
-

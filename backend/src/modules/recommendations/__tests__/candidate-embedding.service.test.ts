@@ -1,7 +1,15 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { CandidateEmbeddingRepository } from '@/modules/recommendations/contracts/candidate-embedding.repository.js';
-import { CandidateEmbeddingService, createCandidateEmbeddingContentHash, resetCandidateEmbeddingMetricsForTests, candidateEmbeddingMetricsSnapshot } from '@/modules/recommendations/services/candidate-embedding.service.js';
-import type { CandidateEmbeddingRecord, UpsertCandidateEmbeddingInput } from '@/modules/recommendations/types/candidate-embedding.types.js';
+import {
+  CandidateEmbeddingService,
+  createCandidateEmbeddingContentHash,
+  resetCandidateEmbeddingMetricsForTests,
+  candidateEmbeddingMetricsSnapshot,
+} from '@/modules/recommendations/services/candidate-embedding.service.js';
+import type {
+  CandidateEmbeddingRecord,
+  UpsertCandidateEmbeddingInput,
+} from '@/modules/recommendations/types/candidate-embedding.types.js';
 import { JOB_EMBEDDING_DIMENSIONS } from '@/modules/job-embeddings/constants/job-embedding.constants.js';
 
 const vector = (seed = 1): number[] =>

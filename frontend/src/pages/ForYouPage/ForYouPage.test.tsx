@@ -32,25 +32,25 @@ const {
   feedbackMock,
   similarMock,
 } = vi.hoisted(() => ({
-    listMock: vi.fn(),
-    generateMock: vi.fn(),
-    refreshMock: vi.fn(),
-    generateResumeMock: vi.fn(),
-    generateTextMock: vi.fn(),
-    createCareerTargetMock: vi.fn(),
-    generateCareerGoalMock: vi.fn(),
-    listSavedSearchesMock: vi.fn(),
-    createSavedSearchMock: vi.fn(),
-    deleteSavedSearchMock: vi.fn(),
-    generateSavedSearchMock: vi.fn(),
-    listSavedMock: vi.fn(),
-    saveJobMock: vi.fn(),
-    unsaveJobMock: vi.fn(),
-    profileMock: vi.fn(),
-    readinessMock: vi.fn(),
-    feedbackMock: vi.fn(),
-    similarMock: vi.fn(),
-  }));
+  listMock: vi.fn(),
+  generateMock: vi.fn(),
+  refreshMock: vi.fn(),
+  generateResumeMock: vi.fn(),
+  generateTextMock: vi.fn(),
+  createCareerTargetMock: vi.fn(),
+  generateCareerGoalMock: vi.fn(),
+  listSavedSearchesMock: vi.fn(),
+  createSavedSearchMock: vi.fn(),
+  deleteSavedSearchMock: vi.fn(),
+  generateSavedSearchMock: vi.fn(),
+  listSavedMock: vi.fn(),
+  saveJobMock: vi.fn(),
+  unsaveJobMock: vi.fn(),
+  profileMock: vi.fn(),
+  readinessMock: vi.fn(),
+  feedbackMock: vi.fn(),
+  similarMock: vi.fn(),
+}));
 
 vi.mock('@/features/recommendations/services/recommendations.service', () => ({
   recommendationsService: {
@@ -203,10 +203,7 @@ describe('ForYouPage', () => {
       'aria-selected',
       'true',
     );
-    expect(screen.getByRole('tab', { name: /resume/i })).toHaveAttribute(
-      'aria-selected',
-      'false',
-    );
+    expect(screen.getByRole('tab', { name: /resume/i })).toHaveAttribute('aria-selected', 'false');
     expect(screen.getByRole('tabpanel', { name: /profile/i })).toBeInTheDocument();
   });
 
@@ -546,7 +543,9 @@ describe('ForYouPage', () => {
       'href',
       '/profile',
     );
-    expect(screen.queryByRole('button', { name: /generate recommendations/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /generate recommendations/i }),
+    ).not.toBeInTheDocument();
   });
 
   it('shows generate CTA when profile complete and list empty without calling generate on load', async () => {
@@ -566,7 +565,9 @@ describe('ForYouPage', () => {
     });
     renderPage(true);
 
-    expect(await screen.findByRole('button', { name: /generate recommendations/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', { name: /generate recommendations/i }),
+    ).toBeInTheDocument();
     expect(listMock).toHaveBeenCalledWith(
       { page: 1, limit: 20, latestOnly: true },
       expect.anything(),
@@ -620,7 +621,9 @@ describe('ForYouPage', () => {
 
     renderPage(true);
 
-    expect(await screen.findByText(/profile changed since these matches were generated/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/profile changed since these matches were generated/i),
+    ).toBeInTheDocument();
     await user.click(screen.getAllByRole('button', { name: /refresh matches/i })[0]);
     await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
     expect(generateMock).not.toHaveBeenCalled();
@@ -646,7 +649,9 @@ describe('ForYouPage', () => {
     renderPage(true);
 
     expect(await screen.findByText(/recommendation run is processing/i)).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /generate recommendations/i })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /generate recommendations/i }),
+    ).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /refresh status/i }));
     expect(refetchReadiness).toHaveBeenCalledTimes(1);
   });
@@ -746,15 +751,11 @@ describe('ForYouPage', () => {
     renderPage(true);
 
     expect(await screen.findByText(/tracked frontend engineer/i)).toBeInTheDocument();
-    await waitFor(() =>
-      expect(feedbackMock).toHaveBeenCalledWith('r-track', 'VIEWED'),
-    );
+    await waitFor(() => expect(feedbackMock).toHaveBeenCalledWith('r-track', 'VIEWED'));
     await user.click(
       screen.getByRole('button', { name: /open tracked frontend engineer at acme/i }),
     );
-    await waitFor(() =>
-      expect(feedbackMock).toHaveBeenCalledWith('r-track', 'OPENED'),
-    );
+    await waitFor(() => expect(feedbackMock).toHaveBeenCalledWith('r-track', 'OPENED'));
     await user.click(screen.getByRole('button', { name: /save tracked frontend engineer/i }));
     await waitFor(() => expect(saveJobMock).toHaveBeenCalledWith('job-track'));
     await waitFor(() => expect(feedbackMock).toHaveBeenCalledWith('r-track', 'SAVED'));
@@ -770,10 +771,10 @@ describe('ForYouPage', () => {
     await user.click(
       screen.getByRole('button', { name: /show more jobs like tracked frontend engineer/i }),
     );
-    await waitFor(() =>
-      expect(feedbackMock).toHaveBeenCalledWith('r-track', 'MORE_LIKE_THIS'),
-    );
-    expect(await screen.findByText(/future matches will lean toward jobs like this/i)).toBeInTheDocument();
+    await waitFor(() => expect(feedbackMock).toHaveBeenCalledWith('r-track', 'MORE_LIKE_THIS'));
+    expect(
+      await screen.findByText(/future matches will lean toward jobs like this/i),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /more jobs like tracked frontend engineer selected/i }),
     ).toBeDisabled();
@@ -781,10 +782,10 @@ describe('ForYouPage', () => {
     await user.click(
       screen.getByRole('button', { name: /show fewer jobs like tracked frontend engineer/i }),
     );
-    await waitFor(() =>
-      expect(feedbackMock).toHaveBeenCalledWith('r-track', 'LESS_LIKE_THIS'),
-    );
-    expect(await screen.findByText(/future matches will avoid jobs like this/i)).toBeInTheDocument();
+    await waitFor(() => expect(feedbackMock).toHaveBeenCalledWith('r-track', 'LESS_LIKE_THIS'));
+    expect(
+      await screen.findByText(/future matches will avoid jobs like this/i),
+    ).toBeInTheDocument();
     await waitFor(() =>
       expect(screen.queryByText(/tracked frontend engineer/i)).not.toBeInTheDocument(),
     );

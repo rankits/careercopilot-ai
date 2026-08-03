@@ -8,7 +8,9 @@ import type {
 
 export interface CandidateEmbeddingRepository {
   findFresh(input: FindFreshCandidateEmbeddingInput): Promise<CandidateEmbeddingRecord | null>;
-  findReusable(input: FindReusableCandidateEmbeddingInput): Promise<CandidateEmbeddingRecord | null>;
+  findReusable(
+    input: FindReusableCandidateEmbeddingInput,
+  ): Promise<CandidateEmbeddingRecord | null>;
   upsert(input: UpsertCandidateEmbeddingInput): Promise<CandidateEmbeddingRecord>;
   deleteForUserSource(input: {
     userId: string;

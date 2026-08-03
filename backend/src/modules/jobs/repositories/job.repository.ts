@@ -411,11 +411,13 @@ export class PrismaJobRepository implements IJobRepository {
         createdAt: existing?.createdAt,
       });
 
-      const storageEligibility = jobAgePolicy.evaluateStorageEligibility({ effectiveDate: effectivePostedAt });
+      const storageEligibility = jobAgePolicy.evaluateStorageEligibility({
+        effectiveDate: effectivePostedAt,
+      });
       if (!storageEligibility.eligible) {
         jobsLogger.debug(
           { jobId: job.id, providerJobId: job.providerJobId, reason: storageEligibility.reason },
-          'Skipping job ingestion due to storage age policy'
+          'Skipping job ingestion due to storage age policy',
         );
         return {
           providerInputId: job.providerJobId,
@@ -497,7 +499,7 @@ export class PrismaJobRepository implements IJobRepository {
         } else {
           jobsLogger.debug(
             { jobId: persisted.id, reason: embeddingEligibility.reason },
-            'Skipping job embedding outbox event due to embedding age policy'
+            'Skipping job embedding outbox event due to embedding age policy',
           );
           outcome = 'EMBEDDING_AGE_SKIPPED';
         }

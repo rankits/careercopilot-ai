@@ -110,10 +110,8 @@ const preferredSkillsCalculator: RecommendationScoreCalculator = {
         reasons: reason('preferredSkills', 'Job skills unavailable; used neutral score'),
       };
     }
-    const { ratio, exact, alias, related, transferable, hits } = defaultSkillRelationshipService.overlap(
-      context.preferredSkills,
-      job.skills,
-    );
+    const { ratio, exact, alias, related, transferable, hits } =
+      defaultSkillRelationshipService.overlap(context.preferredSkills, job.skills);
     const evidence = [
       ...exact,
       ...alias.map((skill) => `alias: ${skill}`),
@@ -127,7 +125,12 @@ const preferredSkillsCalculator: RecommendationScoreCalculator = {
       reasons: reason(
         'preferredSkills',
         evidence.length > 0
-          ? formatSkillCoverageMessage(context.preferredSkills.length, evidence.length, hits, 'preferred')
+          ? formatSkillCoverageMessage(
+              context.preferredSkills.length,
+              evidence.length,
+              hits,
+              'preferred',
+            )
           : 'No preferred-skill overlap',
         evidence,
       ),

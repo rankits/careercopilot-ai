@@ -8,11 +8,7 @@ import type {
 } from '@/modules/recommendations/types/recommendations.types.js';
 
 export type CareerGoalPathKind =
-  | 'TARGET_ROLE'
-  | 'TRANSITIONAL_BRIDGE'
-  | 'STRETCH_TARGET'
-  | 'CURRENT_ROLE'
-  | 'RELATED_PATH';
+  'TARGET_ROLE' | 'TRANSITIONAL_BRIDGE' | 'STRETCH_TARGET' | 'CURRENT_ROLE' | 'RELATED_PATH';
 
 export interface CareerGoalCategoryResult {
   category: RecommendationCategory;
@@ -111,7 +107,8 @@ export const classifyCareerGoalCategory = (
   const relatedTitles = uniqueStrings(context.relatedTitles);
   const targetAligned = titleMatchesAny(job.title, targetTitles);
   const currentAligned = titleMatchesAny(job.title, currentTitles);
-  const bridgeAligned = titleMatchesAny(job.title, relatedTitles) || bridgeSkillEvidence(scoreResult);
+  const bridgeAligned =
+    titleMatchesAny(job.title, relatedTitles) || bridgeSkillEvidence(scoreResult);
   const hasSevereSkillGap = severeSkillGap(scoreResult, matchType);
   const evidence = [
     ...targetTitles.slice(0, 3).map((title) => `targetRole=${title}`),

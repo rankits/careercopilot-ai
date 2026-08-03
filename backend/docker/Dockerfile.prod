@@ -11,6 +11,9 @@ COPY package*.json ./
 COPY prisma.config.ts ./
 COPY prisma ./prisma
 RUN npm ci && npx prisma generate
+COPY prisma.config.ts ./prisma.config.ts
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi \
+  && npx prisma generate
 
 # --- Stage 3: TypeScript Build ---
 FROM deps AS build
@@ -31,6 +34,11 @@ COPY package*.json ./
 COPY prisma.config.ts ./
 COPY prisma ./prisma
 COPY --from=production-deps /app/node_modules ./node_modules
+COPY prisma.config.ts ./prisma.config.ts
+COPY docker/entrypoint.sh ./docker/entrypoint.sh
+RUN if [ -f package-lock.json ]; then npm ci --include=dev; else npm install --include=dev; fi \
+  && npx prisma generate
+
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma/migrations ./prisma/migrations
 

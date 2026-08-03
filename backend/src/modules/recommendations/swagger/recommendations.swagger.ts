@@ -223,13 +223,7 @@ const recommendationArraySchema = {
 
 const readinessStatusSchema = {
   type: 'object',
-  required: [
-    'ready',
-    'lifecycleState',
-    'canGenerateFromProfile',
-    'blockers',
-    'retrieval',
-  ],
+  required: ['ready', 'lifecycleState', 'canGenerateFromProfile', 'blockers', 'retrieval'],
   properties: {
     ready: {
       type: 'boolean',
@@ -591,8 +585,7 @@ export const recommendationsSwagger = mergeSwaggerDocs(
     `${BASE_URL}/career-targets`,
     {
       summary: 'List career targets for the current user',
-      description:
-        'Returns only active career targets owned by the authenticated USER principal.',
+      description: 'Returns only active career targets owned by the authenticated USER principal.',
       queryParams: [
         {
           name: 'page',
@@ -901,7 +894,8 @@ export const recommendationsSwagger = mergeSwaggerDocs(
           name: 'runId',
           in: 'query',
           required: false,
-          description: 'Restrict recommendations to one owned run. Cannot be combined with latestOnly.',
+          description:
+            'Restrict recommendations to one owned run. Cannot be combined with latestOnly.',
           schema: { type: 'string', format: 'uuid' },
         },
         {

@@ -25,7 +25,8 @@ export interface RecommendationRerankConfig {
 
 export const recommendationRerankConfig: RecommendationRerankConfig = {
   enabled: booleanFromEnv(process.env.ENABLE_RECOMMENDATION_RERANK, false),
-  apiKey: optional(process.env.RECOMMENDATION_RERANK_API_KEY) ?? optional(process.env.OPENAI_API_KEY),
+  apiKey:
+    optional(process.env.RECOMMENDATION_RERANK_API_KEY) ?? optional(process.env.OPENAI_API_KEY),
   baseUrl:
     optional(process.env.RECOMMENDATION_RERANK_BASE_URL) ??
     optional(process.env.OPENAI_BASE_URL) ??

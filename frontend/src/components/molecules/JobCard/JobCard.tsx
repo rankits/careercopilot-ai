@@ -132,12 +132,7 @@ export function JobCard({
       <Accent tone={job.accent} />
       <CompanyLogo aria-label={`${job.company} logo`}>
         {showLogoImage ? (
-          <img
-            alt=""
-            loading="lazy"
-            onError={() => setLogoFailed(true)}
-            src={job.logoUrl}
-          />
+          <img alt="" loading="lazy" onError={() => setLogoFailed(true)} src={job.logoUrl} />
         ) : (
           job.logo || '?'
         )}
@@ -173,7 +168,10 @@ export function JobCard({
               {job.company} <span>-</span> {job.location}
             </Typography>
             {job.matchSubtitle ? (
-              <Typography component="p" sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}>
+              <Typography
+                component="p"
+                sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}
+              >
                 {job.matchSubtitle}
               </Typography>
             ) : null}
@@ -329,7 +327,11 @@ export function JobCard({
       ) : null}
 
       {hasDetails && detailsOpen ? (
-        <RecommendationDetails aria-label={`${job.title} recommendation details`} id={detailsId} role="region">
+        <RecommendationDetails
+          aria-label={`${job.title} recommendation details`}
+          id={detailsId}
+          role="region"
+        >
           {details?.summary ? <Typography component="p">{details.summary}</Typography> : null}
 
           {details?.bullets.length ? (
@@ -338,7 +340,9 @@ export function JobCard({
                 <div key={`${bullet.label}-${bullet.message}`}>
                   <Typography component="h3">
                     {bullet.label}
-                    {typeof bullet.score === 'number' ? ` - ${Math.round(bullet.score * 100)}%` : ''}
+                    {typeof bullet.score === 'number'
+                      ? ` - ${Math.round(bullet.score * 100)}%`
+                      : ''}
                   </Typography>
                   <Typography component="p">{bullet.message}</Typography>
                   {bullet.evidence.length ? (

@@ -36,15 +36,17 @@ describe('JRE-QA-003 End-to-End Recommendation Workflow (Generate -> Feedback ->
     const allJobs = [jobA, jobB, jobC];
 
     const retrievalService = {
-      retrieve: vi.fn().mockImplementation(async ({ excludeJobIds }: { excludeJobIds?: string[] }) => {
-        const excluded = new Set(excludeJobIds ?? []);
-        return allJobs
-          .filter((job) => !excluded.has(job.id))
-          .map((job, idx) => ({
-            job,
-            retrievalScore: 0.9 - idx * 0.1,
-          }));
-      }),
+      retrieve: vi
+        .fn()
+        .mockImplementation(async ({ excludeJobIds }: { excludeJobIds?: string[] }) => {
+          const excluded = new Set(excludeJobIds ?? []);
+          return allJobs
+            .filter((job) => !excluded.has(job.id))
+            .map((job, idx) => ({
+              job,
+              retrievalScore: 0.9 - idx * 0.1,
+            }));
+        }),
     } as unknown as RecommendationRetrievalService;
 
     const unitOfWork = new InMemoryRecommendationUnitOfWork();
@@ -65,15 +67,18 @@ describe('JRE-QA-003 End-to-End Recommendation Workflow (Generate -> Feedback ->
       },
     );
 
-    const recsService = new RecommendationsService(createChildLogger({ scope: 'test-e2e-workflow' }), {
-      contextService: new RecommendationContextService(
-        new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
-      ),
-      retrievalService,
-      scoringService,
-      unitOfWork,
-      sourceAuthorization,
-    });
+    const recsService = new RecommendationsService(
+      createChildLogger({ scope: 'test-e2e-workflow' }),
+      {
+        contextService: new RecommendationContextService(
+          new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
+        ),
+        retrievalService,
+        scoringService,
+        unitOfWork,
+        sourceAuthorization,
+      },
+    );
 
     const feedbackRepo = await unitOfWork.execute(async ({ feedback }) => feedback);
     const feedbackService = new RecommendationFeedbackService(feedbackRepo);
@@ -133,9 +138,7 @@ describe('JRE-QA-003 End-to-End Recommendation Workflow (Generate -> Feedback ->
     expect(refreshPage.items.map((r) => r.job.id)).toContain('job-c');
 
     // Verify latest run in repository is the new refresh run
-    const latestRun = await unitOfWork.execute(({ runs }) =>
-      runs.findLatestByUser('user-1'),
-    );
+    const latestRun = await unitOfWork.execute(({ runs }) => runs.findLatestByUser('user-1'));
     expect(latestRun?.id).toBe(run2Id);
 
     // Verify user recommendations total across runs
@@ -143,4 +146,3 @@ describe('JRE-QA-003 End-to-End Recommendation Workflow (Generate -> Feedback ->
     expect(allRecs.total).toBe(5); // 3 from initial run + 2 from refresh
   });
 });
-

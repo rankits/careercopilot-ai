@@ -221,9 +221,11 @@ describe('SimilarJobsService', () => {
         build: vi.fn().mockResolvedValue({ userId: 'user-1', sourceType: 'JOB' }),
       } as unknown as RecommendationContextService,
       {
-        retrieve: vi.fn().mockResolvedValue([
-          { job: candidate(sourceJobId, 'Backend Engineer'), retrievalScore: 1 },
-        ] satisfies RecommendationCandidate[]),
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: candidate(sourceJobId, 'Backend Engineer'), retrievalScore: 1 },
+          ] satisfies RecommendationCandidate[]),
       } as unknown as RecommendationRetrievalService,
       { score } as unknown as RecommendationScoringService,
     );

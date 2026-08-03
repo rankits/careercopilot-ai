@@ -7,10 +7,7 @@ export interface JobEmbeddingCoverageSnapshot {
   coverageRatio: number;
 }
 
-export const computeEmbeddingCoverageRatio = (
-  activeJobs: number,
-  embeddedJobs: number,
-): number => {
+export const computeEmbeddingCoverageRatio = (activeJobs: number, embeddedJobs: number): number => {
   if (activeJobs <= 0) return 1;
   return Math.min(1, embeddedJobs / activeJobs);
 };

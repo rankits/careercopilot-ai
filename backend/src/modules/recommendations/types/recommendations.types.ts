@@ -66,10 +66,7 @@ export type RecommendationFilterMode = (typeof RECOMMENDATION_FILTER_MODE_VALUES
 export type RecommendationFlexibilityMode = 'STRICT' | 'FLEXIBLE' | 'STRETCH';
 
 export type WorkAuthorizationStatus =
-  | 'AUTHORIZED'
-  | 'NEEDS_SPONSORSHIP'
-  | 'UNKNOWN'
-  | 'NOT_APPLICABLE';
+  'AUTHORIZED' | 'NEEDS_SPONSORSHIP' | 'UNKNOWN' | 'NOT_APPLICABLE';
 
 export interface WorkAuthorizationRequirement {
   status?: WorkAuthorizationStatus;
@@ -237,8 +234,7 @@ export const normalizeExtractedRecommendationContext = (
       }
     : undefined,
   sourceText: extracted.sourceText,
-  contextSchemaVersion:
-    extracted.contextSchemaVersion ?? RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+  contextSchemaVersion: extracted.contextSchemaVersion ?? RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
   generatedAt: extracted.generatedAt,
 });
 
@@ -361,8 +357,7 @@ export const RECOMMENDATION_LIFECYCLE_STATE_VALUES = [
   'FAILED_PROVIDER',
   'FAILED_EMPTY',
 ] as const;
-export type RecommendationLifecycleState =
-  (typeof RECOMMENDATION_LIFECYCLE_STATE_VALUES)[number];
+export type RecommendationLifecycleState = (typeof RECOMMENDATION_LIFECYCLE_STATE_VALUES)[number];
 
 export interface RecommendationRunRecord {
   id: string;

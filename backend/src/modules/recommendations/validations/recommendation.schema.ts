@@ -111,10 +111,11 @@ const savedSearchBodySchema = z
   })
   .strict();
 
-const savedSearchUpdateBodySchema = savedSearchBodySchema.partial().refine(
-  (value) => Object.keys(value).length > 0,
-  { message: 'At least one saved search field is required' },
-);
+const savedSearchUpdateBodySchema = savedSearchBodySchema
+  .partial()
+  .refine((value) => Object.keys(value).length > 0, {
+    message: 'At least one saved search field is required',
+  });
 
 const savedSearchParamsSchema = z.object({ savedSearchId: uuid });
 
@@ -127,12 +128,14 @@ const careerTargetBodySchema = z
 
 const careerTargetParamsSchema = z.object({ careerTargetId: uuid });
 
-const paginationQuerySchema = paginationBaseQuerySchema.extend({
-  runId: uuid.optional(),
-  latestOnly: optionalBooleanQuery.default(false),
-}).refine((query) => !(query.runId && query.latestOnly), {
-  message: 'runId and latestOnly cannot be combined',
-});
+const paginationQuerySchema = paginationBaseQuerySchema
+  .extend({
+    runId: uuid.optional(),
+    latestOnly: optionalBooleanQuery.default(false),
+  })
+  .refine((query) => !(query.runId && query.latestOnly), {
+    message: 'runId and latestOnly cannot be combined',
+  });
 
 export const listRecommendationsSchema = z.object({
   body: z.object({}).optional(),

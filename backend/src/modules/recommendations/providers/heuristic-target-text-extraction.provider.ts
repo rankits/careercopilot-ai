@@ -85,7 +85,9 @@ const employmentTypesFrom = (text: string): string[] => {
 
 const salaryFrom = (text: string): ExtractedRecommendationContext['salaryExpectation'] => {
   const currency = /\bINR\b|₹/i.test(text) ? 'INR' : /\bUSD\b|\$/i.test(text) ? 'USD' : undefined;
-  const minimumMatch = /\b(?:min(?:imum)?|at least|from)\s*(?:USD|INR|[$₹])?\s*([\d,]+)/i.exec(text);
+  const minimumMatch = /\b(?:min(?:imum)?|at least|from)\s*(?:USD|INR|[$₹])?\s*([\d,]+)/i.exec(
+    text,
+  );
   const maximumMatch = /\b(?:max(?:imum)?|up to|under)\s*(?:USD|INR|[$₹])?\s*([\d,]+)/i.exec(text);
   const toNumber = (value: string | undefined): number | undefined => {
     if (!value) return undefined;
@@ -116,7 +118,8 @@ export class HeuristicTargetTextExtractionProvider implements RecommendationExtr
     const targetTitles = uniqueMatches(sourceText, TITLE_PATTERNS);
 
     return {
-      targetTitles: targetTitles.length > 0 ? targetTitles : fallbackTitleFromSkills(requiredSkills),
+      targetTitles:
+        targetTitles.length > 0 ? targetTitles : fallbackTitleFromSkills(requiredSkills),
       relatedTitles: [],
       requiredSkills,
       preferredSkills: [],

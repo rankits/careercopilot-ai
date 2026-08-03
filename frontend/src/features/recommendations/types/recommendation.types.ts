@@ -94,11 +94,7 @@ export type RecommendationReadinessBlocker =
   | 'EMBEDDING_COVERAGE_LOW';
 
 export type RecommendationRetrievalBackend =
-  | 'DATABASE'
-  | 'PGVECTOR'
-  | 'ELASTICSEARCH'
-  | 'OPENSEARCH'
-  | 'EXTERNAL_VECTOR';
+  'DATABASE' | 'PGVECTOR' | 'ELASTICSEARCH' | 'OPENSEARCH' | 'EXTERNAL_VECTOR';
 
 export interface RecommendationRunDto {
   id: string;

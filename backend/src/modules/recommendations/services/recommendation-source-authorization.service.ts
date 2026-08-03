@@ -88,9 +88,11 @@ export class RecommendationSourceAuthorizationService {
         }
         const lookup = this.profiles.lookupOwnedResumeProfileSource
           ? await this.profiles.lookupOwnedResumeProfileSource(userId, input.sourceId)
-          : await this.profiles.findOwnedResumeProfileSource(userId, input.sourceId).then((payload) =>
-              payload ? { status: 'FOUND' as const, payload } : { status: 'NOT_FOUND' as const },
-            );
+          : await this.profiles
+              .findOwnedResumeProfileSource(userId, input.sourceId)
+              .then((payload) =>
+                payload ? { status: 'FOUND' as const, payload } : { status: 'NOT_FOUND' as const },
+              );
         if (lookup.status === 'NOT_FOUND') {
           throw new RecommendationError(
             'Owned resume with completed parse data was not found',

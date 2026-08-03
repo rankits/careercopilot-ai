@@ -73,7 +73,9 @@ export const buildRecommendationExplanation = (
   }
 
   const bullets: RecommendationExplanationBullet[] = (
-    Object.entries(record.scoreResult.components) as Array<[RecommendationScoreComponentName, number]>
+    Object.entries(record.scoreResult.components) as Array<
+      [RecommendationScoreComponentName, number]
+    >
   )
     .map(([component, score]) => ({
       component,

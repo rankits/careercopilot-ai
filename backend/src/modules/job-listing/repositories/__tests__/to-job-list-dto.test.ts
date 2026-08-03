@@ -74,4 +74,3 @@ describe('toJobListDto applyUrl', () => {
     expect(dto.location.formatted).not.toBe('Unknown');
   });
 });
-
