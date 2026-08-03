@@ -1,0 +1,109 @@
+import { Box, Typography, styled } from '@/lib/material';
+import { borderRadius, colorTokens, fontSize, fontWeight, resumeBuilderTokens as t, spacing } from '@/tokens';
+
+export { t, borderRadius, colorTokens, fontSize, fontWeight, spacing };
+
+export const border = `1px solid ${t.border}`;
+export const primaryGradient = `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryHover} 100%)`;
+
+export const panel = {
+  background: t.background,
+  border,
+  borderRadius: borderRadius['2xl'],
+  boxShadow: t.cardShadow,
+  display: 'grid',
+  gap: spacing[3],
+  padding: spacing[4],
+} as const;
+
+export const title = {
+  color: t.text,
+  fontWeight: fontWeight.extraBold,
+  letterSpacing: 0,
+  margin: 0,
+} as const;
+
+export const muted = {
+  color: t.textSecondary,
+  fontSize: fontSize.sm,
+} as const;
+
+export const pill = {
+  borderRadius: borderRadius.full,
+  display: 'inline-flex',
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.extraBold,
+  padding: `${spacing[1]} ${spacing[3]}`,
+  whiteSpace: 'nowrap' as const,
+};
+
+export const iconBox = (size = '2.5rem') => ({
+  alignItems: 'center',
+  background: t.primarySoft,
+  borderRadius: borderRadius.xl,
+  color: t.primary,
+  display: 'flex',
+  height: size,
+  justifyContent: 'center',
+  width: size,
+});
+
+export const tone = {
+  error: { background: t.redBadgeBg, border: t.redBadgeBorder, color: t.redBadgeText },
+  warning: { background: t.amberBadgeBg, border: t.amberBadgeBorder, color: t.amberBadgeText },
+  success: { background: t.greenBadgeBg, border: t.greenBadgeBorder, color: t.greenBadgeText },
+} as const;
+
+export type ToneName = keyof typeof tone;
+
+export const CardTitle = styled(Typography)({
+  ...title,
+  fontSize: fontSize.xl,
+});
+
+export const CardSubtitle = styled(Typography)({
+  ...muted,
+});
+
+export const EmptyText = styled(Typography)({
+  ...muted,
+});
+
+export const FileTile = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'extension',
+})<{ extension: string }>(({ extension }) => {
+  const [background, color] =
+    extension === 'pdf'
+      ? ['linear-gradient(145deg, #FEF2F2, #FFFFFF)', '#EF4444']
+      : extension === 'docx'
+        ? ['linear-gradient(145deg, #EFF6FF, #FFFFFF)', '#2563EB']
+        : ['linear-gradient(145deg, #F3F4F6, #FFFFFF)', '#6B7280'];
+
+  return {
+    ...iconBox('3.1rem'),
+    background,
+    border,
+    borderRadius: borderRadius.xl,
+    color,
+    display: 'grid',
+    fontSize: '0.63rem',
+    fontWeight: fontWeight.extraBold,
+    justifyItems: 'center',
+    lineHeight: 1,
+    padding: spacing[1],
+    textTransform: 'uppercase',
+  };
+});
+
+export const ScoreBadge = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'score',
+})<{ score: number }>(({ score }) => {
+  const c = score >= 80 ? tone.success : score >= 60 ? tone.warning : tone.error;
+  return {
+    ...pill,
+    background: c.background,
+    border: `1px solid ${c.border}`,
+    color: c.color,
+    padding: '0.32rem 0.55rem',
+  };
+});
