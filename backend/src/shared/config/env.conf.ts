@@ -1,5 +1,9 @@
-import 'dotenv/config';
+import path from 'node:path';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
 
 // Loaded here, as the first thing this module does, rather than relying on
 // the entrypoint (server.ts) to call `dotenv.config()` first: ES module
