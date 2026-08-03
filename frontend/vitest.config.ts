@@ -25,6 +25,7 @@ export default defineConfig({
     environment: 'jsdom',
     // Playwright specs live under e2e/ and must not be collected by Vitest.
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
+    // fileParallelism: false,
     globals: true,
     setupFiles: './src/test/setup.ts',
     // Page tests fill large forms under parallel suite load; default 5s is too tight on Windows CI.
