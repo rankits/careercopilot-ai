@@ -1,0 +1,1 @@
+export { ForYouPage } from './ForYouPage';

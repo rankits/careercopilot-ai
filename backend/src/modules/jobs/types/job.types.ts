@@ -1,13 +1,13 @@
 export enum ProviderTier {
-  PUBLIC = "PUBLIC",
-  FREE_AUTH = "FREE_AUTH",
-  PAID_AUTH = "PAID_AUTH",
+  PUBLIC = 'PUBLIC',
+  FREE_AUTH = 'FREE_AUTH',
+  PAID_AUTH = 'PAID_AUTH',
 }
 
 export enum JobSalaryPeriod {
-  HOURLY = "HOURLY",
-  MONTHLY = "MONTHLY",
-  YEARLY = "YEARLY",
+  HOURLY = 'HOURLY',
+  MONTHLY = 'MONTHLY',
+  YEARLY = 'YEARLY',
 }
 
 export interface PaginationOptions {
@@ -44,6 +44,13 @@ export interface BulkIngestionSummary {
   readonly totalHarvested: number;
   readonly totalUnique: number;
   readonly totalDuplicates: number;
+  readonly persistedInserted: number;
+  readonly persistedUpdated: number;
+  readonly persistedMetadataOnly: number;
+  readonly persistedUnchanged: number;
+  readonly persistedFailed: number;
+  readonly storageAgeSkipped: number;
+  readonly embeddingAgeSkipped: number;
   readonly providerBreakdown: Record<
     string,
     { fetched: number; durationMs: number; error?: string }

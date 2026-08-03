@@ -2,7 +2,7 @@ import type { AdminWithRole } from '@/modules/admin/repositories/admin.repositor
 import type { SafeAdmin } from '@/modules/admin/types/admin.types.js';
 
 export const toSafeAdmin = (admin: AdminWithRole): SafeAdmin => ({
-  id: admin.publicId,
+  id: admin.id,
   email: admin.email,
   firstName: admin.firstName,
   lastName: admin.lastName,
@@ -13,7 +13,7 @@ export const toSafeAdmin = (admin: AdminWithRole): SafeAdmin => ({
 });
 
 export interface SafeAdminResponseDto {
-  id: string;
+  id: number;
   email: string;
   firstName: string;
   lastName: string;

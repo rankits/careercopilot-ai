@@ -92,7 +92,7 @@ Returns `UPLOADED`, `PROCESSING`, `PROCESSED`, or `FAILED`.
 
 Returns the latest extraction, parser version, confidence score, and structured resume data.
 
-### `POST /api/v1/profiles/{userId}/confirm`
+### `POST /api/v1/resumes/profile/{userId}`
 
 Body:
 
@@ -102,7 +102,7 @@ Body:
 }
 ```
 
-Confirms the latest extracted data into `CandidateProfile`.
+Confirms the latest extracted data into `CandidateProfile` and returns a success message only (no response data payload).
 
 ## Processing Workflow
 

@@ -28,6 +28,7 @@ export function Input({
   ...props
 }: InputProps) {
   const resolvedTone: InputTone = errorMessage ? 'error' : tone;
+  const inputLabelSlotProps = props.slotProps?.inputLabel;
 
   return (
     <TextField
@@ -37,6 +38,7 @@ export function Input({
       size={size}
       variant="outlined"
       slotProps={{
+        ...props.slotProps,
         input: {
           endAdornment: endAdornment ? (
             <InputAdornment position="end">{endAdornment}</InputAdornment>
@@ -44,8 +46,12 @@ export function Input({
           startAdornment: startAdornment ? (
             <InputAdornment position="start">{startAdornment}</InputAdornment>
           ) : undefined,
+          ...props.slotProps?.input,
         },
-        ...props.slotProps,
+        inputLabel: {
+          shrink: true,
+          ...(typeof inputLabelSlotProps === 'function' ? {} : inputLabelSlotProps),
+        },
       }}
       sx={getInputSx({
         consumerSx: props.sx,

@@ -1,14 +1,20 @@
+# Isolated project name so prod does not recreate/replace the default
+# `career-copilot` project used by docker-compose.dev.yml.
+name: career-copilot-prod
+
 services:
   postgres:
-    image: postgres:16-alpine
+    image: pgvector/pgvector:pg16
     container_name: career_copilot_pg_prod
     restart: always
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Database password is required in .env}
       POSTGRES_DB: ${POSTGRES_DB}
+    # Host 5433 avoids clashing with a local/system Postgres on 5432.
+    # Containers still reach this service at postgres:5432 on the Docker network.
     ports:
-      - '127.0.0.1:5432:5432'
+      - '127.0.0.1:5433:5432'
     volumes:
       - pg_prod_data:/var/lib/postgresql/data
     healthcheck:
@@ -37,8 +43,9 @@ services:
     container_name: career_copilot_redis_prod
     restart: always
     command: redis-server --requirepass "${REDIS_PASSWORD}"
+    # Host 6380 avoids clashing with a local Redis or the dev stack on 6379.
     ports:
-      - '127.0.0.1:6379:6379'
+      - '127.0.0.1:6380:6379'
     volumes:
       - redis_prod_data:/data
     healthcheck:
@@ -65,8 +72,9 @@ services:
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD:?RabbitMQ password is required in .env}
+    # Host 5673 avoids clashing with a local RabbitMQ or the dev stack on 5672.
     ports:
-      - '127.0.0.1:5672:5672'
+      - '127.0.0.1:5673:5672'
     volumes:
       - rabbitmq_prod_data:/var/lib/rabbitmq
     healthcheck:
@@ -95,35 +103,120 @@ services:
     ports:
       - '5001:5001'
     environment:
-      NODE_ENV: ${NODE_ENV}
-      PORT: ${PORT}
-      BASE_URL: ${BASE_URL}
-      DATABASE_URL: ${DATABASE_URL}
+      # Application
+      NODE_ENV: ${NODE_ENV:-production}
+      PORT: ${PORT:-5001}
+      BASE_URL: ${BASE_URL:?BASE_URL is required in .env}
+      APP_NAME: ${APP_NAME:-CareerCopilot}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in .env}
+      RUN_MIGRATIONS: ${RUN_MIGRATIONS:-true}
+      RUN_SEEDS_ON_STARTUP: ${RUN_SEEDS_ON_STARTUP:-false}
+
+      # Auth / JWT
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?JWT Access Secret is required in .env}
       JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?JWT Refresh Secret is required in .env}
-      CACHE_DRIVER: ${CACHE_DRIVER}
-      REDIS_MODE: ${REDIS_MODE}
-      REDIS_HOST: ${REDIS_HOST}
-      REDIS_PORT: ${REDIS_PORT}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      JWT_ISSUER: ${JWT_ISSUER:-careercopilot-api}
+      JWT_AUDIENCE: ${JWT_AUDIENCE:-careercopilot-client}
+
+      # CORS
+      CORS_ORIGIN: ${CORS_ORIGIN:?CORS_ORIGIN is required in .env}
+
+      # Cache / Redis
+      CACHE_DRIVER: ${CACHE_DRIVER:-redis}
+      REDIS_MODE: ${REDIS_MODE:-standalone}
+      REDIS_HOST: ${REDIS_HOST:-redis}
+      REDIS_PORT: ${REDIS_PORT:-6379}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
-      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX}
-      RABBITMQ_URL: ${RABBITMQ_URL}
-      LOGGING_ENABLED: ${LOGGING_ENABLED}
-      LOG_PRETTY: ${LOG_PRETTY}
-      LOG_LEVEL: ${LOG_LEVEL}
-      CORS_ORIGIN: ${CORS_ORIGIN}
-      RESUME_STORAGE_DRIVER: ${RESUME_STORAGE_DRIVER}
-      RESUME_MAX_FILE_SIZE_MB: ${RESUME_MAX_FILE_SIZE_MB}
-      RESUME_LOCAL_STORAGE_DIR: ${RESUME_LOCAL_STORAGE_DIR}
-      PARSER_ENGINE: ${PARSER_ENGINE}
-      AI_RESUME_PARSER_PROVIDER: ${AI_RESUME_PARSER_PROVIDER}
-      AI_RESUME_PARSER_MODEL: ${AI_RESUME_PARSER_MODEL}
-      AI_RESUME_PARSER_TEMPERATURE: ${AI_RESUME_PARSER_TEMPERATURE}
-      AI_RESUME_PARSER_MAX_RETRIES: ${AI_RESUME_PARSER_MAX_RETRIES}
-      AWS_REGION: ${AWS_REGION}
-      RESUME_S3_PREFIX: ${RESUME_S3_PREFIX}
-      RUN_MIGRATIONS: ${RUN_MIGRATIONS}
-      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      REDIS_KEY_PREFIX: ${REDIS_KEY_PREFIX:-careercopilot:}
+      REDIS_SENTINELS: ${REDIS_SENTINELS:-}
+      REDIS_SENTINEL_MASTER: ${REDIS_SENTINEL_MASTER:-}
+      REDIS_CLUSTER_NODES: ${REDIS_CLUSTER_NODES:-}
+
+      # Messaging
+      RABBITMQ_URL: ${RABBITMQ_URL:?RABBITMQ_URL is required in .env}
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-50}
+      OUTBOX_MAX_ATTEMPTS: ${OUTBOX_MAX_ATTEMPTS:-10}
+      OUTBOX_LOCK_TIMEOUT_MS: ${OUTBOX_LOCK_TIMEOUT_MS:-60000}
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+      OUTBOX_RETRY_BASE_DELAY_MS: ${OUTBOX_RETRY_BASE_DELAY_MS:-5000}
+
+      # Logging
+      LOGGING_ENABLED: ${LOGGING_ENABLED:-true}
+      LOG_PRETTY: ${LOG_PRETTY:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+
+      # Resume storage / parser
+      RESUME_STORAGE_DRIVER: ${RESUME_STORAGE_DRIVER:-LOCAL}
+      RESUME_MAX_FILE_SIZE_MB: ${RESUME_MAX_FILE_SIZE_MB:-10}
+      RESUME_LOCAL_STORAGE_DIR: ${RESUME_LOCAL_STORAGE_DIR:-/app/storage/resumes}
+      RESUME_S3_BUCKET: ${RESUME_S3_BUCKET:-}
+      RESUME_S3_PREFIX: ${RESUME_S3_PREFIX:-users}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+      PARSER_ENGINE: ${PARSER_ENGINE:-RULE_BASED}
+      AI_RESUME_PARSER_PROVIDER: ${AI_RESUME_PARSER_PROVIDER:-google}
+      AI_RESUME_PARSER_MODEL: ${AI_RESUME_PARSER_MODEL:-gemini-3.5-flash}
+      AI_RESUME_PARSER_TEMPERATURE: ${AI_RESUME_PARSER_TEMPERATURE:-0}
+      AI_RESUME_PARSER_MAX_RETRIES: ${AI_RESUME_PARSER_MAX_RETRIES:-2}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_TIMEOUT_MS: ${OPENROUTER_TIMEOUT_MS:-60000}
+
+      # Job embeddings (query-time + shared provider config)
+      AI_EMBEDDING_PROVIDER: ${AI_EMBEDDING_PROVIDER:-}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-}
+      AI_EMBEDDING_DIMENSIONS: ${AI_EMBEDDING_DIMENSIONS:-768}
+      AI_EMBEDDING_TIMEOUT_MS: ${AI_EMBEDDING_TIMEOUT_MS:-30000}
+      AI_EMBEDDING_BATCH_SIZE: ${AI_EMBEDDING_BATCH_SIZE:-32}
+      AI_EMBEDDING_DOCUMENT_PREFIX: ${AI_EMBEDDING_DOCUMENT_PREFIX:-}
+      AI_EMBEDDING_QUERY_PREFIX: ${AI_EMBEDDING_QUERY_PREFIX:-}
+      GOOGLE_EMBEDDING_BASE_URL: ${GOOGLE_EMBEDDING_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_EMBEDDING_BASE_URL: ${GROQ_EMBEDDING_BASE_URL:-https://api.groq.com/openai/v1}
+      JOB_EMBEDDING_DOCUMENT_SCHEMA_VERSION: ${JOB_EMBEDDING_DOCUMENT_SCHEMA_VERSION:-1}
+      JOB_EMBEDDING_BACKFILL_BATCH_SIZE: ${JOB_EMBEDDING_BACKFILL_BATCH_SIZE:-100}
+
+      # Mailer (SMTP)
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_SECURE: ${SMTP_SECURE:-true}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      MAIL_FROM_NAME: ${MAIL_FROM_NAME:-CareerCopilot}
+      MAIL_FROM_ADDRESS: ${MAIL_FROM_ADDRESS:-no-reply@careercopilot.dev}
+
+      # Auth / OTP / session tuning
+      OTP_LENGTH: ${OTP_LENGTH:-6}
+      OTP_TTL_SECONDS: ${OTP_TTL_SECONDS:-600}
+      OTP_RESEND_COOLDOWN_SECONDS: ${OTP_RESEND_COOLDOWN_SECONDS:-60}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
+      OTP_MAX_RESEND_COUNT: ${OTP_MAX_RESEND_COUNT:-20}
+      PASSWORD_MIN_LENGTH: ${PASSWORD_MIN_LENGTH:-8}
+      ACCOUNT_LOCK_THRESHOLD: ${ACCOUNT_LOCK_THRESHOLD:-5}
+      ACCOUNT_LOCK_DURATION_MINUTES: ${ACCOUNT_LOCK_DURATION_MINUTES:-15}
+      REFRESH_TOKEN_MAX_SESSIONS: ${REFRESH_TOKEN_MAX_SESSIONS:-5}
+      SHORT_SESSION_TTL_HOURS: ${SHORT_SESSION_TTL_HOURS:-24}
+
+      # Rate limiting
+      RATE_LIMIT_WINDOW_MINUTES: ${RATE_LIMIT_WINDOW_MINUTES:-15}
+      RATE_LIMIT_MAX_REQUESTS: ${RATE_LIMIT_MAX_REQUESTS:-300}
+      AUTH_RATE_LIMIT_WINDOW_MINUTES: ${AUTH_RATE_LIMIT_WINDOW_MINUTES:-15}
+      AUTH_RATE_LIMIT_MAX_REQUESTS: ${AUTH_RATE_LIMIT_MAX_REQUESTS:-10}
+      OTP_RATE_LIMIT_MAX_REQUESTS: ${OTP_RATE_LIMIT_MAX_REQUESTS:-5}
+
+      # Feature flags / admin bootstrap
+      ENABLE_EMAIL_WORKER: ${ENABLE_EMAIL_WORKER:-true}
+      ENABLE_SWAGGER: ${ENABLE_SWAGGER:-false}
+      # Optional bootstrap admin — leave unset unless seeding an admin user.
+      # Empty strings are ignored by env validation; set both when used.
+      ADMIN_DEFAULT_EMAIL: ${ADMIN_DEFAULT_EMAIL:-}
+      ADMIN_DEFAULT_PASSWORD: ${ADMIN_DEFAULT_PASSWORD:-}
+      ADMIN_DEFAULT_FIRST_NAME: ${ADMIN_DEFAULT_FIRST_NAME:-Platform}
+      ADMIN_DEFAULT_LAST_NAME: ${ADMIN_DEFAULT_LAST_NAME:-Admin}
     volumes:
       - backend_prod_storage:/app/storage/resumes
     depends_on:
@@ -150,13 +243,76 @@ services:
       start_period: 10s
       retries: 3
 
+  outbox-relay:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.prod
+    container_name: career_copilot_outbox_relay_prod
+    restart: always
+    command: npm run worker:outbox:build
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in .env}
+      RABBITMQ_URL: ${RABBITMQ_URL:?RABBITMQ_URL is required in .env}
+      RUN_MIGRATIONS: 'false'
+      OUTBOX_BATCH_SIZE: ${OUTBOX_BATCH_SIZE:-50}
+      OUTBOX_MAX_ATTEMPTS: ${OUTBOX_MAX_ATTEMPTS:-10}
+      OUTBOX_LOCK_TIMEOUT_MS: ${OUTBOX_LOCK_TIMEOUT_MS:-60000}
+      OUTBOX_POLL_INTERVAL_MS: ${OUTBOX_POLL_INTERVAL_MS:-1000}
+      OUTBOX_RETRY_BASE_DELAY_MS: ${OUTBOX_RETRY_BASE_DELAY_MS:-5000}
+      LOGGING_ENABLED: ${LOGGING_ENABLED:-true}
+      LOG_PRETTY: ${LOG_PRETTY:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
+  job-embedding-worker:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.prod
+    profiles:
+      - embeddings
+    container_name: career_copilot_job_embedding_worker_prod
+    restart: always
+    command: npm run worker:job-embeddings:build
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in .env}
+      RABBITMQ_URL: ${RABBITMQ_URL:?RABBITMQ_URL is required in .env}
+      RUN_MIGRATIONS: 'false'
+      AI_EMBEDDING_PROVIDER: ${AI_EMBEDDING_PROVIDER:-}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-}
+      AI_EMBEDDING_DIMENSIONS: ${AI_EMBEDDING_DIMENSIONS:-768}
+      AI_EMBEDDING_TIMEOUT_MS: ${AI_EMBEDDING_TIMEOUT_MS:-30000}
+      AI_EMBEDDING_BATCH_SIZE: ${AI_EMBEDDING_BATCH_SIZE:-32}
+      AI_EMBEDDING_DOCUMENT_PREFIX: ${AI_EMBEDDING_DOCUMENT_PREFIX:-}
+      AI_EMBEDDING_QUERY_PREFIX: ${AI_EMBEDDING_QUERY_PREFIX:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_API_KEY: ${GEMINI_API_KEY:-}
+      GOOGLE_EMBEDDING_BASE_URL: ${GOOGLE_EMBEDDING_BASE_URL:-https://generativelanguage.googleapis.com/v1beta}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_EMBEDDING_BASE_URL: ${GROQ_EMBEDDING_BASE_URL:-https://api.groq.com/openai/v1}
+      JOB_EMBEDDING_DOCUMENT_SCHEMA_VERSION: ${JOB_EMBEDDING_DOCUMENT_SCHEMA_VERSION:-1}
+      JOB_EMBEDDING_BACKFILL_BATCH_SIZE: ${JOB_EMBEDDING_BACKFILL_BATCH_SIZE:-100}
+      LOGGING_ENABLED: ${LOGGING_ENABLED:-true}
+      LOG_PRETTY: ${LOG_PRETTY:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
   frontend:
     build:
       context: ./frontend
       dockerfile: docker/Dockerfile.prod
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL}
-        VITE_APP_NAME: ${VITE_APP_NAME}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:?VITE_API_BASE_URL is required in .env}
+        VITE_APP_NAME: ${VITE_APP_NAME:-CareerCopilot}
     profiles:
       - frontend
     container_name: career_copilot_frontend_prod

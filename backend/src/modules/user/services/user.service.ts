@@ -9,20 +9,20 @@ import type {
   UserListItem,
   UserProfile,
 } from '@/modules/user/types/user.types.js';
+import type { UserProfileService } from '@/modules/user/contracts/user-profile.service.js';
 
 /**
- * Cross-module lookup: other modules (resume, applications, ...) that need
- * a user's profile should import this directly rather than reaching into
- * `userRepository`, so the "external-facing shape" mapping stays in one
- * place.
+ * User-owned implementation of the cross-module profile contract.
+ * Consumers resolve USER_PROFILE_SERVICE from the central service registry
+ * at execution time rather than importing this function or the repository.
  */
-export const getUserProfile = async (publicId: string): Promise<UserProfile | null> => {
-  const user = await userRepository.findByPublicId(publicId);
+export const getUserProfile = async (userId: number): Promise<UserProfile | null> => {
+  const user = await userRepository.findById(userId);
   return user ? toUserProfile(user) : null;
 };
 
-export const getMyProfile = async (publicId: string): Promise<UserProfile> => {
-  const user = await userRepository.findByPublicId(publicId);
+export const getMyProfile = async (userId: number): Promise<UserProfile> => {
+  const user = await userRepository.findById(userId);
   if (!user) {
     throw new AppError('Account not found', 404);
   }
@@ -30,11 +30,11 @@ export const getMyProfile = async (publicId: string): Promise<UserProfile> => {
 };
 
 export const updateMyProfile = async (
-  publicId: string,
+  userId: number,
   input: UpdateProfileInput,
   context: RequestContext,
 ): Promise<UserProfile> => {
-  const existing = await userRepository.findByPublicId(publicId);
+  const existing = await userRepository.findById(userId);
   if (!existing) {
     throw new AppError('Account not found', 404);
   }
@@ -59,6 +59,15 @@ export const listUsers = async (query: ListUsersQuery): Promise<PaginatedResult<
     total,
     totalPages: Math.max(1, Math.ceil(total / query.limit)),
   };
+};
+
+/** Cross-module adapter: registry contract uses string ids; User rows use numeric ids. */
+export const userProfileService: UserProfileService = {
+  getUserProfile: async (publicId: string) => {
+    const id = Number(publicId);
+    if (!Number.isInteger(id)) return null;
+    return getUserProfile(id);
+  },
 };
 
 export default { getUserProfile, getMyProfile, updateMyProfile, listUsers };

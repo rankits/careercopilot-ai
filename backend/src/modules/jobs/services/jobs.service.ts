@@ -6,7 +6,7 @@ import {
   BulkIngestionOptions,
   BulkIngestionSummary,
 } from '@/modules/jobs/types/job.types.js';
-import { ProviderHealth } from '@/modules/jobs/types/provider.types.js';
+import { ProviderHealth, ProviderHealthStatus } from '@/modules/jobs/types/provider.types.js';
 import { NormalizedJob } from '@/modules/jobs/models/NormalizedJob.js';
 import { AggregationService } from '@/modules/jobs/services/aggregation/aggregation.service.js';
 import { IJobProviderRegistry } from '@/modules/jobs/registry/job-provider.registry.js';
@@ -101,8 +101,7 @@ export class JobsService implements IJobContract {
 
     const result = await this.aggregationService.aggregateJobs(filters);
 
-    // Persist to database
-    await this.jobRepository.upsertMany(result.jobs);
+    const persistence = await this.jobRepository.upsertMany(result.jobs);
 
     jobsLogger.info(
       {
@@ -110,6 +109,13 @@ export class JobsService implements IJobContract {
         totalHarvested: result.totalFetched,
         totalUnique: result.jobs.length,
         totalDuplicates: result.duplicatesRemoved,
+        persistedInserted: persistence.summary.inserted,
+        persistedUpdated: persistence.summary.semanticChanged,
+        persistedMetadataOnly: persistence.summary.metadataOnly,
+        persistedUnchanged: persistence.summary.unchanged,
+        persistedFailed: persistence.summary.failed,
+        storageAgeSkipped: persistence.summary.storageAgeSkipped,
+        embeddingAgeSkipped: persistence.summary.embeddingAgeSkipped,
       },
       'Bulk ingestion summary generated',
     );
@@ -118,6 +124,13 @@ export class JobsService implements IJobContract {
       totalHarvested: result.totalFetched,
       totalUnique: result.jobs.length,
       totalDuplicates: result.duplicatesRemoved,
+      persistedInserted: persistence.summary.inserted,
+      persistedUpdated: persistence.summary.semanticChanged,
+      persistedMetadataOnly: persistence.summary.metadataOnly,
+      persistedUnchanged: persistence.summary.unchanged,
+      persistedFailed: persistence.summary.failed,
+      storageAgeSkipped: persistence.summary.storageAgeSkipped,
+      embeddingAgeSkipped: persistence.summary.embeddingAgeSkipped,
       providerBreakdown: result.providerStats,
     };
   }
@@ -132,7 +145,7 @@ export class JobsService implements IJobContract {
         healthMap[provider.name] = await provider.healthCheck();
       } catch (err) {
         healthMap[provider.name] = {
-          status: 'UNREACHABLE' as any,
+          status: ProviderHealthStatus.UNREACHABLE,
           lastCheckedAt: new Date().toISOString(),
           errorMessage: err instanceof Error ? err.message : String(err),
           consecutiveFailures: 1,

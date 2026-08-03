@@ -1,0 +1,1 @@
+export { ResumeInsights } from './ResumeInsights';

@@ -1,5 +1,9 @@
-import 'dotenv/config';
+import path from 'node:path';
+import dotenv from 'dotenv';
 import { z } from 'zod';
+
+dotenv.config();
+dotenv.config({ path: path.resolve(process.cwd(), '..', '.env') });
 
 // Loaded here, as the first thing this module does, rather than relying on
 // the entrypoint (server.ts) to call `dotenv.config()` first: ES module
@@ -21,6 +25,12 @@ const booleanFromString = (defaultValue: boolean) =>
       if (value === undefined || value === '') return defaultValue;
       return ['true', '1', 'yes', 'on'].includes(value.trim().toLowerCase());
     });
+
+/** Compose often injects "" for unset optional vars; treat blanks as missing. */
+const emptyToUndefined = (value: unknown): unknown => {
+  if (typeof value !== 'string') return value;
+  return value.trim() === '' ? undefined : value;
+};
 
 const envSchema = z
   .object({
@@ -90,18 +100,63 @@ const envSchema = z
     AUTH_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
     AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
     OTP_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(5),
+    JOB_LISTING_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(1),
+    JOB_LISTING_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(60),
+    RECOMMENDATION_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
+    RECOMMENDATION_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
+
+    // Job Age & Retention Policies (day-based; embedding window may be tighter than storage)
+    JOB_STORAGE_AGE_FILTER_ENABLED: booleanFromString(true),
+    JOB_STORAGE_MAX_AGE_DAYS: z.coerce.number().int().positive().default(90),
+    JOB_EMBEDDING_AGE_FILTER_ENABLED: booleanFromString(true),
+    JOB_EMBEDDING_MAX_AGE_DAYS: z.coerce.number().int().positive().default(5),
+    JOB_UNKNOWN_DATE_POLICY: z
+      .enum(['REJECT', 'ALLOW_STORAGE_ONLY', 'ALLOW'])
+      .default('ALLOW_STORAGE_ONLY'),
+    JOB_STORAGE_EXPIRED_ACTION: z.enum(['EXPIRE', 'DELETE']).default('EXPIRE'),
+    JOB_REMOVE_OUTDATED_EMBEDDINGS: booleanFromString(true),
+    JOB_RETENTION_CLEANUP_BATCH_SIZE: z.coerce.number().int().positive().default(500),
+    JOB_EMBEDDING_CLEANUP_BATCH_SIZE: z.coerce.number().int().positive().default(500),
+
+    // Startup Ingestion
+    JOB_INGESTION_ON_STARTUP_ENABLED: booleanFromString(false),
+    JOB_INGESTION_ON_STARTUP_DELAY_MS: z.coerce.number().int().min(0).max(300_000).default(5000),
+    JOB_INGESTION_ON_STARTUP_FAIL_APPLICATION: booleanFromString(false),
+    JOB_INGESTION_ON_STARTUP_LOCK_TTL_SECONDS: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(7200)
+      .default(1800),
+    JOB_INGESTION_ON_STARTUP_PROVIDERS: z.preprocess(emptyToUndefined, z.string().optional()),
+    JOB_INGESTION_ON_STARTUP_ALLOWED_TIERS: z.preprocess(emptyToUndefined, z.string().optional()),
 
     // Feature flags
     ENABLE_EMAIL_WORKER: booleanFromString(true),
     ENABLE_SWAGGER: booleanFromString(true),
+    // Run database seeds automatically when the server starts (dev only)
+    RUN_SEEDS_ON_STARTUP: booleanFromString(true),
 
     // Default admin bootstrap (consumed by prisma/seed/admin.seed.ts)
-    ADMIN_DEFAULT_EMAIL: z.string().email().optional(),
-    ADMIN_DEFAULT_PASSWORD: z.string().min(8).optional(),
-    ADMIN_DEFAULT_FIRST_NAME: z.string().default('Platform'),
-    ADMIN_DEFAULT_LAST_NAME: z.string().default('Admin'),
+    ADMIN_DEFAULT_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),
+    ADMIN_DEFAULT_PASSWORD: z.preprocess(emptyToUndefined, z.string().min(8).optional()),
+    ADMIN_DEFAULT_FIRST_NAME: z.preprocess(emptyToUndefined, z.string().min(1).default('Platform')),
+    ADMIN_DEFAULT_LAST_NAME: z.preprocess(emptyToUndefined, z.string().min(1).default('Admin')),
   })
   .superRefine((value, ctx) => {
+    if (
+      value.JOB_EMBEDDING_AGE_FILTER_ENABLED &&
+      value.JOB_STORAGE_AGE_FILTER_ENABLED &&
+      value.JOB_EMBEDDING_MAX_AGE_DAYS > value.JOB_STORAGE_MAX_AGE_DAYS
+    ) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['JOB_EMBEDDING_MAX_AGE_DAYS'],
+        message:
+          'JOB_EMBEDDING_MAX_AGE_DAYS must be <= JOB_STORAGE_MAX_AGE_DAYS when both filters are enabled',
+      });
+    }
+
     if (value.NODE_ENV !== 'production') return;
 
     const insecureDefaults = new Set([
@@ -137,6 +192,8 @@ const envSchema = z
   });
 
 export type Env = z.infer<typeof envSchema>;
+/** Exported for unit tests of cross-field env validation. */
+export { envSchema };
 
 const parsed = envSchema.safeParse(process.env);
 

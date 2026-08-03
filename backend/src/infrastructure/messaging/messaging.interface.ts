@@ -3,6 +3,8 @@ export interface PublishOptions {
   expiration?: number | string;
   headers?: Record<string, unknown>;
   priority?: number;
+  messageId?: string;
+  timestamp?: number;
 }
 
 export interface SubscribeOptions {
@@ -23,9 +25,7 @@ export interface MessageEnvelope<T = unknown> {
   payload: T;
 }
 
-export type MessageHandler<T = unknown> = (
-  message: MessageEnvelope<T>
-) => Promise<void>;
+export type MessageHandler<T = unknown> = (message: MessageEnvelope<T>) => Promise<void>;
 
 export interface IMessageBusDriver {
   connect(): Promise<void>;
@@ -33,14 +33,20 @@ export interface IMessageBusDriver {
     exchange: string,
     routingKey: string,
     message: T,
-    options?: PublishOptions
+    options?: PublishOptions,
   ): Promise<boolean>;
   subscribe<T>(
     queue: string,
     exchange: string,
     routingKey: string,
     handler: MessageHandler<T>,
-    options?: SubscribeOptions
+    options?: SubscribeOptions,
+  ): Promise<void>;
+  ensureQueue(
+    queue: string,
+    exchange: string,
+    routingKey: string,
+    options?: SubscribeOptions,
   ): Promise<void>;
   close(): Promise<void>;
 }
@@ -50,6 +56,6 @@ export interface IMessageBus extends IMessageBusDriver {
     exchange: string,
     routingKey: string,
     payload: T,
-    options?: PublishOptions
+    options?: PublishOptions,
   ): Promise<boolean>;
 }

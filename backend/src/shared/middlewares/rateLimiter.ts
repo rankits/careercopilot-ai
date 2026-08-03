@@ -24,6 +24,13 @@ const emailAwareKeyGenerator = (req: Request): string => {
   return `${req.ip ?? 'unknown'}:${emailKey}`;
 };
 
+/** Keys by authenticated USER principal id when present, otherwise client IP. */
+const authenticatedUserKeyGenerator = (req: Request): string => {
+  const userId =
+    req.user?.principalType === 'USER' ? String(req.user.principalId).trim() : undefined;
+  return userId && userId.length > 0 ? userId : (req.ip ?? 'unknown');
+};
+
 /**
  * Fixed-window rate limiter built on top of `infrastructure/cache`'s
  * atomic `increment`, so it works identically whether `CACHE_DRIVER` is
@@ -71,4 +78,19 @@ export const otpRateLimiter = buildLimiter({
   max: securityConfig.rateLimit.otp.max,
   prefix: 'otp',
   keyGenerator: emailAwareKeyGenerator,
+});
+
+/** Tighter limiter for public job discovery (anti-scrape). */
+export const jobListingRateLimiter = buildLimiter({
+  windowMinutes: securityConfig.rateLimit.jobListing.windowMinutes,
+  max: securityConfig.rateLimit.jobListing.max,
+  prefix: 'job-listing',
+});
+
+/** Limits expensive sync recommendation generation (embedding + vector search). */
+export const recommendationRateLimiter = buildLimiter({
+  windowMinutes: securityConfig.rateLimit.recommendation.windowMinutes,
+  max: securityConfig.rateLimit.recommendation.max,
+  prefix: 'recommendation',
+  keyGenerator: authenticatedUserKeyGenerator,
 });

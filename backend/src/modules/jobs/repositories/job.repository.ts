@@ -1,4 +1,4 @@
-import { Prisma } from '@prisma/client';
+import { JobStatus, Prisma, ProviderType } from '@prisma/client';
 import { prisma } from '@/shared/config/db.conf.js';
 import { IJobRepository } from '@/modules/jobs/interfaces/IJobRepository.js';
 import { NormalizedJob } from '@/modules/jobs/models/NormalizedJob.js';
@@ -7,62 +7,513 @@ import {
   PaginationOptions,
   PaginatedResult,
 } from '@/modules/jobs/types/job.types.js';
+import { ProviderTier } from '@/modules/jobs/types/job.types.js';
+import type {
+  JobPersistenceBatchResult,
+  JobPersistenceBatchSummary,
+  JobPersistenceOutcome,
+  JobPersistenceResult,
+} from '@/modules/jobs/types/job-persistence.types.js';
+import {
+  JOB_SEMANTIC_CONTENT_CHANGED_EVENT,
+  type JobSemanticContentChangedEvent,
+} from '@/modules/jobs/events/job.events.js';
+import { serializeJobSemanticContent } from '@/modules/jobs/utils/job-semantic-content.js';
+import { resolveJobEffectiveDate } from '@/modules/jobs/utils/job-effective-date-resolver.js';
+import { jobAgePolicy } from '@/modules/jobs/policies/job-age-policy.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
 
-export class PrismaJobRepository implements IJobRepository {
-  async upsertMany(jobs: NormalizedJob[]): Promise<{ count: number }> {
-    let count = 0;
+export interface PersistedCanonicalJob {
+  id: string;
+  canonicalHash: string;
+  companySlug: string;
+  companyName: string;
+  title: string;
+  employmentType: string | null;
+  remoteType: string | null;
+  descriptionText: string;
+  skills: unknown;
+  tags: unknown;
+  version: number;
+  firstSeen: Date;
+  createdAt: Date;
+}
 
-    // Process jobs sequentially or in small batches to avoid deadlocks
+export interface PersistedJobSource {
+  applyUrl: string | null;
+  priority: number;
+  rawMetadata: unknown;
+  job: PersistedCanonicalJob;
+}
+
+export interface CanonicalJobWrite {
+  lookupHash: string;
+  canonicalHash: string;
+  companySlug: string;
+  title: string;
+  remoteType: string;
+  descriptionHtml: string;
+  descriptionText: string;
+  salaryMin?: number;
+  salaryMax?: number;
+  currency?: string;
+  skills: Prisma.InputJsonArray;
+  benefits: Prisma.InputJsonArray;
+  tags: Prisma.InputJsonArray;
+  providerMetadata: Prisma.InputJsonObject;
+  postedAt: Date;
+  effectivePostedAt: Date | null;
+  version: number;
+  now: Date;
+}
+
+export interface JobSourceWrite {
+  jobId: string;
+  provider: ProviderType;
+  providerJobId: string;
+  priority: number;
+  applyUrl: string;
+  rawMetadata: Prisma.InputJsonObject;
+}
+
+export interface JobPersistenceTransaction {
+  upsertCompany(slug: string, name: string): Promise<{ previousName: string | null }>;
+  findSource(provider: ProviderType, providerJobId: string): Promise<PersistedJobSource | null>;
+  findJobByCanonicalHash(canonicalHash: string): Promise<PersistedCanonicalJob | null>;
+  upsertJob(input: CanonicalJobWrite): Promise<{ id: string; version: number }>;
+  upsertSource(input: JobSourceWrite): Promise<void>;
+  createOutboxEvent(
+    aggregateId: string,
+    eventType: string,
+    payload: Prisma.InputJsonObject,
+  ): Promise<void>;
+}
+
+export interface JobTransactionRunner {
+  run<T>(operation: (transaction: JobPersistenceTransaction) => Promise<T>): Promise<T>;
+}
+
+const toPersistedJob = (job: {
+  id: string;
+  canonicalHash: string;
+  companySlug: string;
+  title: string;
+  employmentType: string | null;
+  remoteType: string | null;
+  descriptionText: string;
+  skills: Prisma.JsonValue;
+  tags: Prisma.JsonValue;
+  providerMetadata: Prisma.JsonValue;
+  version: number;
+  firstSeen: Date;
+  createdAt: Date;
+  company: { name: string };
+}): PersistedCanonicalJob => {
+  const metadata =
+    typeof job.providerMetadata === 'object' &&
+    job.providerMetadata !== null &&
+    !Array.isArray(job.providerMetadata)
+      ? job.providerMetadata
+      : {};
+  const semanticCompanyName = metadata.semanticCompanyName;
+  return {
+    id: job.id,
+    canonicalHash: job.canonicalHash,
+    companySlug: job.companySlug,
+    companyName: typeof semanticCompanyName === 'string' ? semanticCompanyName : job.company.name,
+    title: job.title,
+    employmentType: job.employmentType,
+    remoteType: job.remoteType,
+    descriptionText: job.descriptionText,
+    skills: job.skills,
+    tags: job.tags,
+    version: job.version,
+    firstSeen: job.firstSeen,
+    createdAt: job.createdAt,
+  };
+};
+
+class PrismaJobPersistenceTransaction implements JobPersistenceTransaction {
+  constructor(private readonly transaction: Prisma.TransactionClient) {}
+
+  async upsertCompany(slug: string, name: string): Promise<{ previousName: string | null }> {
+    const previous = await this.transaction.company.findUnique({
+      where: { slug },
+      select: { name: true },
+    });
+    await this.transaction.company.upsert({
+      where: { slug },
+      create: { slug, name },
+      update: { name },
+    });
+    return { previousName: previous?.name ?? null };
+  }
+
+  async findSource(
+    provider: ProviderType,
+    providerJobId: string,
+  ): Promise<PersistedJobSource | null> {
+    const source = await this.transaction.jobSource.findUnique({
+      where: { provider_providerJobId: { provider, providerJobId } },
+      include: { job: { include: { company: true } } },
+    });
+    if (!source) return null;
+    return {
+      applyUrl: source.applyUrl,
+      priority: source.priority,
+      rawMetadata: source.rawMetadata,
+      job: toPersistedJob(source.job),
+    };
+  }
+
+  async findJobByCanonicalHash(canonicalHash: string): Promise<PersistedCanonicalJob | null> {
+    const job = await this.transaction.job.findUnique({
+      where: { canonicalHash },
+      include: { company: true },
+    });
+    return job ? toPersistedJob(job) : null;
+  }
+
+  async upsertJob(input: CanonicalJobWrite): Promise<{ id: string; version: number }> {
+    return this.transaction.job.upsert({
+      where: { canonicalHash: input.lookupHash },
+      create: {
+        canonicalHash: input.canonicalHash,
+        companySlug: input.companySlug,
+        title: input.title,
+        descriptionHtml: input.descriptionHtml,
+        descriptionText: input.descriptionText,
+        remoteType: input.remoteType,
+        salaryMin: input.salaryMin,
+        salaryMax: input.salaryMax,
+        currency: input.currency,
+        skills: input.skills,
+        benefits: input.benefits,
+        tags: input.tags,
+        providerMetadata: input.providerMetadata,
+        status: JobStatus.ACTIVE,
+        postedAt: input.postedAt,
+        effectivePostedAt: input.effectivePostedAt,
+        version: input.version,
+        lastSeen: input.now,
+        lastChecked: input.now,
+      },
+      update: {
+        canonicalHash: input.canonicalHash,
+        companySlug: input.companySlug,
+        title: input.title,
+        descriptionHtml: input.descriptionHtml,
+        descriptionText: input.descriptionText,
+        remoteType: input.remoteType,
+        salaryMin: input.salaryMin,
+        salaryMax: input.salaryMax,
+        currency: input.currency,
+        skills: input.skills,
+        benefits: input.benefits,
+        tags: input.tags,
+        providerMetadata: input.providerMetadata,
+        status: JobStatus.ACTIVE,
+        postedAt: input.postedAt,
+        effectivePostedAt: input.effectivePostedAt,
+        version: input.version,
+        lastSeen: input.now,
+        lastChecked: input.now,
+      },
+      select: { id: true, version: true },
+    });
+  }
+
+  async upsertSource(input: JobSourceWrite): Promise<void> {
+    await this.transaction.jobSource.upsert({
+      where: {
+        provider_providerJobId: {
+          provider: input.provider,
+          providerJobId: input.providerJobId,
+        },
+      },
+      create: input,
+      update: {
+        jobId: input.jobId,
+        priority: input.priority,
+        applyUrl: input.applyUrl,
+        rawMetadata: input.rawMetadata,
+      },
+    });
+  }
+
+  async createOutboxEvent(
+    aggregateId: string,
+    eventType: string,
+    payload: Prisma.InputJsonObject,
+  ): Promise<void> {
+    await this.transaction.outboxEvent.create({
+      data: {
+        aggregateId,
+        eventType,
+        payload,
+      },
+    });
+  }
+}
+
+class PrismaJobTransactionRunner implements JobTransactionRunner {
+  run<T>(operation: (transaction: JobPersistenceTransaction) => Promise<T>): Promise<T> {
+    return prisma.$transaction((transaction) =>
+      operation(new PrismaJobPersistenceTransaction(transaction)),
+    );
+  }
+}
+
+class UnsupportedProviderError extends Error {}
+class InvalidJobInputError extends Error {}
+
+const PROVIDER_NAME_TO_TYPE: Record<string, ProviderType> = {
+  greenhouse: 'GREENHOUSE',
+  lever: 'LEVER',
+  arbeitnow: 'ARBEITNOW',
+  public_feed: 'ARBEITNOW',
+  remotive: 'REMOTIVE',
+  jobicy: 'JOBICY',
+  himalayas: 'HIMALAYAS',
+  remoteok: 'REMOTEOK',
+  remotejobs_org: 'REMOTEJOBS_ORG',
+  'remotejobs.org': 'REMOTEJOBS_ORG',
+  ashby: 'ASHBY',
+  recruitee: 'RECRUITEE',
+  personio: 'PERSONIO',
+};
+
+const mapProvider = (providerName: string): ProviderType => {
+  const normalized = providerName.trim().toLowerCase();
+  const provider = PROVIDER_NAME_TO_TYPE[normalized];
+  // Use string literals (not ProviderType.X) so a stale generated client
+  // missing new enum keys cannot silently pass `undefined` into Prisma.
+  if (!provider) {
+    throw new UnsupportedProviderError(`Unsupported job provider: ${providerName}`);
+  }
+  return provider;
+};
+
+const priorityForTier = (tier: ProviderTier): number => {
+  if (tier === ProviderTier.PAID_AUTH) return 100;
+  if (tier === ProviderTier.FREE_AUTH) return 80;
+  return 60;
+};
+
+const metadataMatches = (
+  source: PersistedJobSource | null,
+  applyUrl: string,
+  priority: number,
+  rawMetadata: Prisma.InputJsonObject,
+): boolean =>
+  source !== null &&
+  source.applyUrl === applyUrl &&
+  source.priority === priority &&
+  JSON.stringify(source.rawMetadata) === JSON.stringify(rawMetadata);
+
+const emptySummary = () => ({
+  inserted: 0,
+  semanticChanged: 0,
+  metadataOnly: 0,
+  unchanged: 0,
+  failed: 0,
+  storageAgeSkipped: 0,
+  embeddingAgeSkipped: 0,
+});
+
+const summarize = (outcomes: JobPersistenceResult[]): JobPersistenceBatchSummary => {
+  const summary = emptySummary();
+  for (const result of outcomes) {
+    if (result.outcome === 'INSERTED') summary.inserted++;
+    else if (result.outcome === 'SEMANTIC_CHANGED') summary.semanticChanged++;
+    else if (result.outcome === 'METADATA_ONLY') summary.metadataOnly++;
+    else if (result.outcome === 'UNCHANGED') summary.unchanged++;
+    else if (result.outcome === 'STORAGE_AGE_SKIPPED') summary.storageAgeSkipped++;
+    else if (result.outcome === 'EMBEDDING_AGE_SKIPPED') summary.embeddingAgeSkipped++;
+    else summary.failed++;
+  }
+  return summary;
+};
+
+export class PrismaJobRepository implements IJobRepository {
+  constructor(
+    private readonly transactionRunner: JobTransactionRunner = new PrismaJobTransactionRunner(),
+  ) {}
+
+  async upsertMany(jobs: NormalizedJob[]): Promise<JobPersistenceBatchResult> {
+    const outcomes: JobPersistenceResult[] = [];
+
     for (const job of jobs) {
       try {
-        // 1. Ensure company exists
-        await prisma.company.upsert({
-          where: { slug: job.normalizedCompany },
-          create: {
-            slug: job.normalizedCompany,
-            name: job.companyName,
-          },
-          update: {
-            name: job.companyName,
-          },
+        const result = await this.persistOne(job);
+        outcomes.push(result);
+      } catch (error) {
+        const unsupportedProvider = error instanceof UnsupportedProviderError;
+        const invalidInput = error instanceof InvalidJobInputError;
+        const failureCode = unsupportedProvider
+          ? 'UNSUPPORTED_PROVIDER'
+          : invalidInput
+            ? 'INVALID_JOB_INPUT'
+            : 'JOB_PERSISTENCE_FAILED';
+        const failureMessage =
+          unsupportedProvider || invalidInput ? error.message : 'Job persistence failed';
+        outcomes.push({
+          providerInputId: job.providerJobId,
+          canonicalHash: job.canonicalHash,
+          outcome: 'FAILED',
+          failureCode,
+          failureMessage,
         });
-
-        // 2. Upsert Job based on canonicalHash
-        await prisma.job.upsert({
-          where: { canonicalHash: job.canonicalHash },
-          create: {
-            canonicalHash: job.canonicalHash,
-            companySlug: job.normalizedCompany,
-            title: job.title,
-            descriptionHtml: job.description,
-            descriptionText: job.description,
-            remoteType: job.location.isRemote ? 'REMOTE' : 'ONSITE',
-            salaryMin: job.salary?.min,
-            salaryMax: job.salary?.max,
-            currency: job.salary?.currency,
-            skills: (job.tags || []) as any,
-            benefits: [] as any,
-            tags: (job.tags || []) as any,
-            status: 'ACTIVE',
-            postedAt: job.postedAt,
-          },
-          update: {
-            title: job.title,
-            descriptionHtml: job.description,
-            descriptionText: job.description,
-            status: 'ACTIVE',
-            lastSeen: new Date(),
-          },
-        });
-
-        count++;
-      } catch (err) {
-        jobsLogger.error({ err, jobId: job.id }, 'Failed to upsert job');
+        jobsLogger.error(
+          { jobId: job.id, providerInputId: job.providerJobId, failureCode },
+          'Failed to persist job',
+        );
       }
     }
 
-    return { count };
+    return { outcomes, summary: summarize(outcomes) };
+  }
+
+  private async persistOne(job: NormalizedJob): Promise<JobPersistenceResult> {
+    const provider = mapProvider(job.providerName);
+    const postedAt = new Date(job.postedAt);
+    if (Number.isNaN(postedAt.getTime())) {
+      throw new InvalidJobInputError('Job postedAt must be a valid ISO date');
+    }
+
+    const priority = priorityForTier(job.providerTier);
+    const rawMetadata: Prisma.InputJsonObject = {
+      providerName: job.providerName,
+      providerTier: job.providerTier,
+    };
+    const providerMetadata: Prisma.InputJsonObject = {
+      latestProvider: job.providerName,
+      latestProviderTier: job.providerTier,
+      semanticCompanyName: job.companyName,
+      ...(job.location.raw ? { locationRaw: job.location.raw } : {}),
+      ...(job.location.city ? { locationCity: job.location.city } : {}),
+      ...(job.location.country ? { locationCountry: job.location.country } : {}),
+    };
+    const skills: Prisma.InputJsonArray = [...job.tags];
+    const tags: Prisma.InputJsonArray = [...job.tags];
+    const benefits: Prisma.InputJsonArray = [];
+
+    return this.transactionRunner.run(async (transaction) => {
+      await transaction.upsertCompany(job.normalizedCompany, job.companyName);
+      const source = await transaction.findSource(provider, job.providerJobId);
+      const hashMatch = source ? null : await transaction.findJobByCanonicalHash(job.canonicalHash);
+      const existing = source?.job ?? hashMatch;
+
+      const effectivePostedAt = resolveJobEffectiveDate({
+        normalizedJob: job,
+        providerMetadata,
+        firstSeen: existing?.firstSeen,
+        createdAt: existing?.createdAt,
+      });
+
+      const storageEligibility = jobAgePolicy.evaluateStorageEligibility({
+        effectiveDate: effectivePostedAt,
+      });
+      if (!storageEligibility.eligible) {
+        jobsLogger.debug(
+          { jobId: job.id, providerJobId: job.providerJobId, reason: storageEligibility.reason },
+          'Skipping job ingestion due to storage age policy',
+        );
+        return {
+          providerInputId: job.providerJobId,
+          canonicalHash: job.canonicalHash,
+          outcome: 'STORAGE_AGE_SKIPPED',
+        };
+      }
+
+      const incomingSemantic = serializeJobSemanticContent({
+        companySlug: job.normalizedCompany,
+        companyName: job.companyName,
+        title: job.title,
+        descriptionText: job.description,
+        remoteType: job.location.isRemote ? 'REMOTE' : 'ONSITE',
+        skills,
+        tags,
+        employmentType: null,
+      });
+      const semanticChanged =
+        existing !== null && serializeJobSemanticContent(existing) !== incomingSemantic;
+      const sourceUnchanged = metadataMatches(source, job.applyUrl, priority, rawMetadata);
+      let outcome: JobPersistenceOutcome =
+        existing === null
+          ? 'INSERTED'
+          : semanticChanged
+            ? 'SEMANTIC_CHANGED'
+            : sourceUnchanged
+              ? 'UNCHANGED'
+              : 'METADATA_ONLY';
+      const previousVersion = existing?.version;
+      const newVersion =
+        existing === null ? 1 : semanticChanged ? existing.version + 1 : existing.version;
+      const now = new Date();
+      const persisted = await transaction.upsertJob({
+        lookupHash: existing?.canonicalHash ?? job.canonicalHash,
+        canonicalHash: job.canonicalHash,
+        companySlug: job.normalizedCompany,
+        title: job.title,
+        descriptionHtml: job.description,
+        descriptionText: job.description,
+        remoteType: job.location.isRemote ? 'REMOTE' : 'ONSITE',
+        salaryMin: job.salary?.min,
+        salaryMax: job.salary?.max,
+        currency: job.salary?.currency,
+        skills,
+        benefits,
+        tags,
+        providerMetadata,
+        postedAt,
+        effectivePostedAt,
+        version: newVersion,
+        now,
+      });
+      await transaction.upsertSource({
+        jobId: persisted.id,
+        provider,
+        providerJobId: job.providerJobId,
+        priority,
+        applyUrl: job.applyUrl,
+        rawMetadata,
+      });
+
+      if (outcome === 'INSERTED' || outcome === 'SEMANTIC_CHANGED') {
+        const embeddingEligibility = jobAgePolicy.evaluateEmbeddingEligibility({
+          effectiveDate: effectivePostedAt,
+          isActive: true,
+        });
+
+        if (embeddingEligibility.eligible) {
+          const event: JobSemanticContentChangedEvent = {
+            jobId: persisted.id,
+            jobVersion: persisted.version,
+            outcome,
+            occurredAt: now.toISOString(),
+          };
+          await transaction.createOutboxEvent(persisted.id, JOB_SEMANTIC_CONTENT_CHANGED_EVENT, {
+            ...event,
+          });
+        } else {
+          jobsLogger.debug(
+            { jobId: persisted.id, reason: embeddingEligibility.reason },
+            'Skipping job embedding outbox event due to embedding age policy',
+          );
+          outcome = 'EMBEDDING_AGE_SKIPPED';
+        }
+      }
+
+      return {
+        providerInputId: job.providerJobId,
+        canonicalJobId: persisted.id,
+        canonicalHash: job.canonicalHash,
+        outcome,
+        previousVersion,
+        newVersion: persisted.version,
+      };
+    });
   }
 
   async findById(id: string): Promise<NormalizedJob | null> {

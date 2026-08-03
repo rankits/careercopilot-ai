@@ -3,6 +3,7 @@ import request from 'supertest';
 import app, { fakeDb } from '@/test-utils/app.js';
 import { resetTestState } from '@/test-utils/reset.js';
 import { seedVerifiedUser, accessTokenForUser, authHeader } from '@/test-utils/fixtures.js';
+import { signAccessToken } from '@/shared/security/jwt.util.js';
 
 const API = '/api/v1/users';
 
@@ -27,7 +28,7 @@ describe('GET /users/me', () => {
         expect(res.body.data.email).toBe(user.email);
         expect(res.body.data.firstName).toBe('Priya');
         expect(res.body.data.bio).toBe('Backend engineer');
-        expect(res.body.data.id).toBe(user.publicId);
+        expect(res.body.data.id).toBe(user.id);
       });
     });
   });
@@ -37,6 +38,40 @@ describe('GET /users/me', () => {
       it('Then a 401 is returned', async () => {
         const res = await request(app).get(`${API}/me`);
         expect(res.status).toBe(401);
+      });
+    });
+  });
+
+  describe('Given the USER role has been stripped of the user.profile.read.own attribute', () => {
+    describe('When an otherwise-valid user requests their own profile', () => {
+      it('Then a 403 is returned (attribute-based RBAC gate, not just authentication)', async () => {
+        const user = await seedVerifiedUser({ email: 'no-read-perm@example.com' });
+        const token = accessTokenForUser(user);
+        fakeDb.setRolePermissions('USER', []);
+
+        const res = await request(app).get(`${API}/me`).set(authHeader(token));
+
+        expect(res.status).toBe(403);
+        expect(res.body.message).toMatch(/user\.profile\.read\.own/);
+      });
+    });
+  });
+
+  describe('Given a valid access token naming a role that no longer exists', () => {
+    describe('When requesting the profile endpoint', () => {
+      it('Then permission resolution fails closed with a 403, never a bypass', async () => {
+        const user = await seedVerifiedUser({ email: 'ghost-role@example.com' });
+        const token = signAccessToken({
+          sub: user.id,
+          principalType: 'USER',
+          email: user.email,
+          role: 'DELETED_ROLE',
+          tokenVersion: user.tokenVersion,
+        });
+
+        const res = await request(app).get(`${API}/me`).set(authHeader(token));
+
+        expect(res.status).toBe(403);
       });
     });
   });
@@ -62,7 +97,7 @@ describe('PATCH /users/me', () => {
         expect(res.body.data.firstName).toBe('Changed');
         expect(res.body.data.lastName).toBe('Name');
 
-        const stored = fakeDb.users.find((u) => u.publicId === user.publicId);
+        const stored = fakeDb.users.find((u) => u.id === user.id);
         expect(stored?.firstName).toBe('Changed');
         expect(stored?.lastName).toBe('Name');
       });
@@ -108,7 +143,7 @@ describe('PATCH /users/me', () => {
           .send({ phone: 'not-a-phone-number' });
 
         expect(res.status).toBe(400);
-        expect(fakeDb.users.find((u) => u.publicId === user.publicId)?.phone).toBeNull();
+        expect(fakeDb.users.find((u) => u.id === user.id)?.phone).toBeNull();
       });
     });
   });
@@ -118,6 +153,24 @@ describe('PATCH /users/me', () => {
       it('Then a 401 is returned', async () => {
         const res = await request(app).patch(`${API}/me`).send({ firstName: 'Nope' });
         expect(res.status).toBe(401);
+      });
+    });
+  });
+
+  describe('Given the USER role has been stripped of the user.profile.update.own attribute', () => {
+    describe('When an otherwise-valid user attempts to update their profile', () => {
+      it('Then a 403 is returned and nothing changes', async () => {
+        const user = await seedVerifiedUser({ email: 'no-update-perm@example.com' });
+        const token = accessTokenForUser(user);
+        fakeDb.setRolePermissions('USER', []);
+
+        const res = await request(app)
+          .patch(`${API}/me`)
+          .set(authHeader(token))
+          .send({ firstName: 'ShouldNotApply' });
+
+        expect(res.status).toBe(403);
+        expect(fakeDb.users.find((u) => u.id === user.id)?.firstName).not.toBe('ShouldNotApply');
       });
     });
   });
@@ -198,6 +251,21 @@ describe('GET /users (admin directory listing)', () => {
       it('Then a 401 is returned', async () => {
         const res = await request(app).get(API);
         expect(res.status).toBe(401);
+      });
+    });
+  });
+
+  describe('Given the ADMIN role has been stripped of the user.manage.any attribute', () => {
+    describe('When a caller whose role is ADMIN attempts to list users', () => {
+      it('Then a 403 is returned - the permission attribute gates it, not the role name alone', async () => {
+        const admin = await seedVerifiedUser({ email: 'admin-no-perm@example.com', roleId: 2 });
+        const adminToken = accessTokenForUser(admin);
+        fakeDb.setRolePermissions('ADMIN', []);
+
+        const res = await request(app).get(API).set(authHeader(adminToken));
+
+        expect(res.status).toBe(403);
+        expect(res.body.message).toMatch(/user\.manage\.any/);
       });
     });
   });

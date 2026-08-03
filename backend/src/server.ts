@@ -4,6 +4,9 @@ import { env } from '@/shared/config/env.conf.js';
 import { logger } from '@/shared/logger/logger.js';
 import { connectDatabase, disconnectDatabase } from '@/shared/config/db.conf.js';
 import { startEmailWorker } from '@/workers/email.worker.js';
+import { cacheService } from '@/infrastructure/cache/index.js';
+import { jobsService } from '@/modules/jobs/JobModule.js';
+import { JobIngestionStartupHook } from '@/modules/jobs/startup/job-ingestion-startup.hook.js';
 
 const PORT = env.PORT;
 const BASE_URL = env.BASE_URL || `http://localhost:${PORT}`;
@@ -14,6 +17,22 @@ let shuttingDown = false;
 
 const bootstrap = async (): Promise<void> => {
   await connectDatabase();
+
+  // Optionally run database seeds automatically on startup. This is
+  // intended for local development/demo environments only and is
+  // controlled via the RUN_SEEDS_ON_STARTUP env var.
+  if (env.RUN_SEEDS_ON_STARTUP) {
+    try {
+      // Importing the seed entrypoint executes the orchestrator and
+      // returns once it's complete. Allow any errors to surface so
+      // startup fails loudly if seeding cannot complete.
+      await import('./seed.js');
+      logger.info('Database seeding complete (startup hook)');
+    } catch (err) {
+      logger.error({ err }, 'Database seeding failed during startup');
+      throw err;
+    }
+  }
 
   if (env.ENABLE_EMAIL_WORKER) {
     try {
@@ -28,6 +47,15 @@ const bootstrap = async (): Promise<void> => {
   httpServer = app.listen(PORT, '0.0.0.0', () => {
     logger.info(`${env.APP_NAME} listening on port ${PORT} [${env.NODE_ENV}]`);
     logger.info(`Server is running on ${BASE_URL}`);
+
+    // Non-blocking: do not delay API readiness on ingestion.
+    const startupIngestion = new JobIngestionStartupHook(jobsService, cacheService);
+    void startupIngestion.run().catch((err) => {
+      logger.error({ err }, 'Startup ingestion hook failed');
+      if (env.JOB_INGESTION_ON_STARTUP_FAIL_APPLICATION) {
+        process.exit(1);
+      }
+    });
   });
 };
 

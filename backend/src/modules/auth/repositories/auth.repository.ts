@@ -40,10 +40,6 @@ export const authRepository = {
     return prisma.user.findUnique({ where: { id }, ...withRole });
   },
 
-  async findUserByPublicId(publicId: string): Promise<UserWithRole | null> {
-    return prisma.user.findUnique({ where: { publicId }, ...withRole });
-  },
-
   /** Deliberately separate from the general lookups above - credentials
    * should only ever be fetched by flows that are about to verify/rotate
    * a password, not joined onto every generic user read. */
@@ -104,6 +100,13 @@ export const authRepository = {
       where: { id: userId },
       data: { isEmailVerified: true, status: Status.Active },
       ...withRole,
+    });
+  },
+
+  async markProfileCreated(userId: number): Promise<void> {
+    await prisma.user.update({
+      where: { id: userId },
+      data: { isProfileCreated: true },
     });
   },
 

@@ -6,12 +6,16 @@ import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
 import { STORAGE_KEYS } from '@/constants/storage';
 import { authReducer } from '@/features/auth/authSlice';
 
 import { LoginPage } from './LoginPage';
 
-const { loginMock } = vi.hoisted(() => ({ loginMock: vi.fn() }));
+const { loginMock } = vi.hoisted(() => ({
+  loginMock: vi.fn(),
+}));
 
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
@@ -31,13 +35,16 @@ function renderPage() {
     ...render(
       <QueryClientProvider client={queryClient}>
         <Provider store={testStore}>
-          <MemoryRouter initialEntries={['/login']}>
-            <Routes>
-              <Route path="/login" element={<LoginPage />} />
-              <Route path="/profile" element={<h1>Profile destination</h1>} />
-              <Route path="/register" element={<h1>Register destination</h1>} />
-            </Routes>
-          </MemoryRouter>
+          <ToastProvider>
+            <MemoryRouter initialEntries={['/login']}>
+              <Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/profile" element={<h1>Profile destination</h1>} />
+                <Route path="/jobs-feed" element={<h1>Job feed destination</h1>} />
+                <Route path="/register" element={<h1>Register destination</h1>} />
+              </Routes>
+            </MemoryRouter>
+          </ToastProvider>
         </Provider>
       </QueryClientProvider>,
     ),
@@ -116,11 +123,17 @@ describe('LoginPage', () => {
     expect(loginMock).not.toHaveBeenCalled();
   });
 
-  it('logs in with a normalized email, persists auth, and redirects', async () => {
+  it('logs in and redirects to onboarding when the profile is incomplete', async () => {
     const user = userEvent.setup();
     const response = {
       accessToken: 'token',
-      user: { email: 'ada@example.com', id: '1', name: 'Ada', role: 'user' as const },
+      user: {
+        email: 'ada@example.com',
+        id: '1',
+        isProfileCreated: false,
+        name: 'Ada',
+        role: 'user' as const,
+      },
     };
     loginMock.mockResolvedValue(response);
     const { queryClient, store } = renderPage();
@@ -132,16 +145,44 @@ describe('LoginPage', () => {
       expect(loginMock).toHaveBeenCalledWith({
         email: 'ada@example.com',
         password: 'password123',
+        rememberMe: true,
       }),
     );
     expect(store.getState().auth.isAuthenticated).toBe(true);
+    expect(store.getState().auth.isProfileComplete).toBe(false);
     expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe(JSON.stringify('token'));
+    expect(localStorage.getItem(STORAGE_KEYS.PROFILE_COMPLETE)).toBe(JSON.stringify(false));
+    expect(localStorage.getItem(STORAGE_KEYS.USER_ID)).toBe(JSON.stringify('1'));
     expect(
       await screen.findByRole('heading', { name: /profile destination/i }),
     ).toBeInTheDocument();
     expect(
       queryClient.getMutationCache().find({ mutationKey: ['auth', 'login'] })?.state.status,
     ).toBe('success');
+  });
+
+  it('logs in and redirects to the job feed when the profile is complete', async () => {
+    const user = userEvent.setup();
+    loginMock.mockResolvedValue({
+      accessToken: 'token',
+      user: {
+        email: 'ada@example.com',
+        id: '1',
+        isProfileCreated: true,
+        name: 'Ada',
+        role: 'user' as const,
+      },
+    });
+    const { store } = renderPage();
+
+    await completeValidForm(user);
+    await user.click(screen.getByRole('button', { name: /^login$/i }));
+
+    expect(
+      await screen.findByRole('heading', { name: /job feed destination/i }),
+    ).toBeInTheDocument();
+    expect(store.getState().auth.isProfileComplete).toBe(true);
+    expect(localStorage.getItem(STORAGE_KEYS.PROFILE_COMPLETE)).toBe(JSON.stringify(true));
   });
 
   it('disables submission while pending and prevents duplicate requests', async () => {
@@ -152,7 +193,13 @@ describe('LoginPage', () => {
         resolveRequest = () =>
           resolve({
             accessToken: 'token',
-            user: { email: 'ada@example.com', id: '1', name: 'Ada', role: 'user' },
+            user: {
+              email: 'ada@example.com',
+              id: '1',
+              isProfileCreated: false,
+              name: 'Ada',
+              role: 'user',
+            },
           });
       }),
     );
@@ -174,7 +221,13 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     loginMock.mockRejectedValueOnce(new Error('Sensitive server detail')).mockResolvedValueOnce({
       accessToken: 'token',
-      user: { email: 'ada@example.com', id: '1', name: 'Ada', role: 'user' },
+      user: {
+        email: 'ada@example.com',
+        id: '1',
+        isProfileCreated: false,
+        name: 'Ada',
+        role: 'user',
+      },
     });
     renderPage();
 

@@ -7,7 +7,10 @@ describe('Input', () => {
   it('renders an accessible textbox with label and value', () => {
     render(<Input label="Email" value="hello@careercopilot.com" />);
 
-    expect(screen.getByRole('textbox', { name: /email/i })).toHaveValue('hello@careercopilot.com');
+    const input = screen.getByRole('textbox', { name: /email/i });
+
+    expect(input).toHaveValue('hello@careercopilot.com');
+    expect(document.querySelector(`label[for="${input.id}"]`)).toHaveClass('MuiInputLabel-shrink');
   });
 
   it('renders helper text when there is no error', () => {

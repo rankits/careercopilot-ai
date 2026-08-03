@@ -1,56 +1,38 @@
 import { useNavigate } from 'react-router-dom';
 
-import { Input } from '@/components/atoms/Input';
-import {
-  DashboardJobRow,
-  DashboardMetricCard,
-  FilterDropdown,
-  ResumeScoreCard,
-} from '@/components/molecules';
+import { Button } from '@/components/atoms/Button';
+import { DashboardMetricCard } from '@/components/molecules';
 
-import {
-  bestJobMatch,
-  dashboardFilters,
-  dashboardFilterOptions,
-  dashboardMetrics,
-  recommendedJobs,
-} from '@/constants/pages/dashboard';
+import { useRecommendationReadiness } from '@/features/recommendations/hooks/useRecommendations';
+
+import { dashboardMetrics } from '@/constants/pages/dashboard';
 import { ROUTES } from '@/constants/routes';
-import { SearchOutlinedIcon } from '@/lib/material';
 
 import {
-  BestMatchPanel,
-  DashboardFilterGrid,
-  DashboardHeader,
   DashboardMetricsGrid,
   DashboardPanel,
   DashboardRoot,
   DashboardTitle,
-  DashboardTopGrid,
-  RecommendationList,
-  ViewAllButton,
+  RecommendationsEmptyState,
+  RecommendationsEmptyText,
 } from './styles';
 
 export function HomePage() {
   const navigate = useNavigate();
-  const showJobFeed = () => {
-    void navigate(ROUTES.JOB_FEED);
+  const readiness = useRecommendationReadiness();
+
+  const openForYou = () => {
+    void navigate(ROUTES.FOR_YOU);
   };
-  const renderJobAction = (job: (typeof recommendedJobs)[number]) => (
-    <DashboardJobRow job={job} key={`${job.company}-${job.title}`} onApply={showJobFeed} />
-  );
+
+  const readinessHint = readiness.data?.canGenerateFromProfile
+    ? 'Your profile is ready — generate matches on For You.'
+    : readiness.data?.blockers.includes('PROFILE_INCOMPLETE')
+      ? 'Complete your profile to unlock personalized recommendations.'
+      : 'Open For You to check recommendation readiness from the backend.';
 
   return (
     <DashboardRoot aria-label="Dashboard page">
-      <DashboardTopGrid>
-        <ResumeScoreCard score={92} />
-
-        <BestMatchPanel>
-          <DashboardTitle>Best Job Match</DashboardTitle>
-          <DashboardJobRow featured job={bestJobMatch} onApply={showJobFeed} />
-        </BestMatchPanel>
-      </DashboardTopGrid>
-
       <DashboardMetricsGrid>
         {dashboardMetrics.map(({ icon: Icon, ...metric }) => (
           <DashboardMetricCard icon={<Icon fontSize="large" />} key={metric.label} {...metric} />
@@ -58,31 +40,13 @@ export function HomePage() {
       </DashboardMetricsGrid>
 
       <DashboardPanel>
-        <DashboardHeader>
-          <DashboardTitle>Recommended Jobs</DashboardTitle>
-          <ViewAllButton onClick={showJobFeed}>View All</ViewAllButton>
-        </DashboardHeader>
-
-        <DashboardFilterGrid>
-          <Input
-            aria-label="Search recommended jobs"
-            placeholder="Search by title, company or skills..."
-            size="small"
-            startAdornment={<SearchOutlinedIcon fontSize="small" />}
-          />
-          {dashboardFilters.map((filter) => (
-            <FilterDropdown
-              onChange={() => {}}
-              fullWidth
-              key={filter.key}
-              label={filter.label}
-              options={dashboardFilterOptions[filter.key]}
-              value={filter.value}
-            />
-          ))}
-        </DashboardFilterGrid>
-
-        <RecommendationList>{recommendedJobs.map(renderJobAction)}</RecommendationList>
+        <DashboardTitle>Recommended Jobs</DashboardTitle>
+        <RecommendationsEmptyState>
+          <RecommendationsEmptyText>{readinessHint}</RecommendationsEmptyText>
+          <Button onClick={openForYou} variant="contained">
+            Go to For You
+          </Button>
+        </RecommendationsEmptyState>
       </DashboardPanel>
     </DashboardRoot>
   );

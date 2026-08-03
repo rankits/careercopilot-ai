@@ -12,7 +12,7 @@ function renderSidebar(ui: ReactNode) {
 }
 
 describe('Sidebar', () => {
-  it('renders the default desktop navigation', () => {
+  it('renders the default desktop navigation including Saved Jobs', () => {
     renderSidebar(<Sidebar />);
 
     expect(screen.getByLabelText(/primary navigation/i)).toBeInTheDocument();
@@ -20,6 +20,16 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
       'aria-current',
       'page',
+    );
+    expect(screen.getByRole('link', { name: /jobs feed/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /saved jobs/i })).toHaveAttribute(
+      'href',
+      '/saved-jobs',
+    );
+    expect(screen.getByRole('link', { name: /for you/i })).toHaveAttribute('href', '/for-you');
+    expect(screen.getByRole('link', { name: /applications/i })).toHaveAttribute(
+      'href',
+      '/applications',
     );
     expect(screen.getByRole('button', { name: /upload now/i })).toBeInTheDocument();
   });
@@ -67,7 +77,6 @@ describe('Sidebar', () => {
     renderSidebar(<Sidebar mobileMode="bottomNav" />);
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(2);
-    expect(screen.getAllByRole('button')).toHaveLength(3);
+    expect(screen.getAllByRole('link')).toHaveLength(5);
   });
 });

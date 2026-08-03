@@ -10,6 +10,14 @@
     "start": "node dist/server.js",
     "worker:email": "tsx src/workers/run-email-worker.ts",
     "worker:email:build": "node dist/workers/run-email-worker.js",
+    "worker:outbox": "tsx src/workers/run-outbox-relay.ts",
+    "worker:outbox:build": "node dist/workers/run-outbox-relay.js",
+    "worker:job-embeddings": "tsx src/workers/run-job-embedding-worker.ts",
+    "worker:job-embeddings:build": "node dist/workers/run-job-embedding-worker.js",
+    "job-embeddings:backfill": "tsx src/modules/job-embeddings/cli/run-job-embedding-backfill.ts",
+    "job-embeddings:backfill:build": "node dist/modules/job-embeddings/cli/run-job-embedding-backfill.js",
+    "jobs:cleanup:storage-retention": "tsx src/modules/jobs/cli/run-storage-retention-cleanup.ts",
+    "jobs:cleanup:embedding-age": "tsx src/modules/jobs/cli/run-embedding-age-cleanup.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
@@ -19,12 +27,12 @@
     "prisma:generate": "prisma generate",
     "prisma:migrate": "prisma migrate dev",
     "prisma:deploy": "prisma migrate deploy",
-    "prisma:seed": "tsx prisma/seed.ts",
+    "prisma:seed": "tsx src/seed.ts",
     "prisma:studio": "prisma studio",
     "prisma:reset": "prisma migrate reset"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "tsx src/seed.ts"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1097.0",
@@ -33,7 +41,6 @@
     "@prisma/client": "^6.3.0",
     "amqplib": "^2.0.1",
     "bcrypt": "^5.1.1",
-    "careercopilot": "file:..",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

@@ -5,8 +5,9 @@ import { ROUTES } from '@/constants/routes';
 import { authService } from '@/features/auth/services/auth.service';
 import type { RegisterPayload } from '@/features/auth/types/auth.types';
 
-export interface RegisterFormValues extends RegisterPayload {
+export interface RegisterFormValues extends Omit<RegisterPayload, 'phone'> {
   confirmPassword: string;
+  phone: string;
 }
 
 export function useRegister() {
@@ -15,7 +16,7 @@ export function useRegister() {
     mutationFn: (payload: RegisterPayload) => authService.register(payload),
     mutationKey: ['auth', 'register'],
     onSuccess: () => {
-      void navigate(ROUTES.PROFILE, { replace: true });
+      void navigate(ROUTES.LOGIN, { replace: true });
     },
   });
   const goToLogin = () => {
@@ -24,19 +25,26 @@ export function useRegister() {
 
   const submit = async (values: RegisterFormValues) => {
     if (registerMutation.isPending) {
-      return;
+      return false;
     }
 
-    await registerMutation.mutateAsync({
+    try {
+      const phone = values.phone.replace(/[^\d+]/g, '');
+      await registerMutation.mutateAsync({
         email: values.email.trim().toLowerCase(),
-        name: values.name.trim(),
+        firstName: values.firstName.trim(),
+        lastName: values.lastName.trim(),
         password: values.password,
-        phoneNumber: values.phoneNumber.replace(/[^\d+]/g, ''),
-      }).catch(() => undefined);
+        ...(phone ? { phone } : {}),
+      });
+
+      return true;
+    } catch {
+      return false;
+    }
   };
 
   return {
-    error: registerMutation.isError ? 'Unable to create your account. Please try again.' : null,
     goToLogin,
     isSubmitting: registerMutation.isPending,
     submit,
