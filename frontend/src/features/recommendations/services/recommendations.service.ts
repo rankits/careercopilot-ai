@@ -63,7 +63,7 @@ const unwrapRunDetails = (response: unknown): RecommendationRunDetailsResult => 
   const list = unwrapList(response);
   return {
     ...list,
-    run: payload.run as RecommendationRunDetailsResult['run'],
+    run: payload.run as unknown as RecommendationRunDetailsResult['run'],
   };
 };
 

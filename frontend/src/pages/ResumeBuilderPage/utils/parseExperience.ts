@@ -12,10 +12,10 @@ function parseCompanyTitle(line: string): { company: string; title: string } | n
   if (cleaned.length < 8 || cleaned.length > 140) return null;
 
   const match = cleaned.match(COMPANY_TITLE_LINE);
-  if (match) return { company: match[1].trim(), title: match[2].trim() };
+  if (match && match[1] && match[2]) return { company: match[1].trim(), title: match[2].trim() };
 
   const dash = cleaned.match(/^(.+?)\s[-–—−]\s+(.+)$/);
-  if (!dash) return null;
+  if (!dash || !dash[1] || !dash[2]) return null;
   const left = dash[1].trim();
   const right = dash[2].trim();
   if (/https?:\/\//i.test(left) || /https?:\/\//i.test(right)) return null;
@@ -31,7 +31,9 @@ function parseCompanyTitle(line: string): { company: string; title: string } | n
   return { company: left, title: right };
 }
 
-function parseJobDate(line: string): { startDate: string; endDate: string; location: string } | null {
+function parseJobDate(
+  line: string,
+): { startDate: string; endDate: string; location: string } | null {
   const cleaned = cleanBulletText(line);
   if (!JOB_DATE_LINE.test(cleaned)) return null;
   const [datePart, ...rest] = cleaned.split(',');
@@ -44,7 +46,7 @@ function parseJobDate(line: string): { startDate: string; endDate: string; locat
 
 function splitInlineJobBoundary(line: string): { before: string; jobLine: string } | null {
   const pipeMatch = line.match(/^(.*?)(?:\s*\|\s+)([A-Z].+?\s[-–—−]\s+.+)$/);
-  if (pipeMatch && parseCompanyTitle(pipeMatch[2])) {
+  if (pipeMatch && pipeMatch[1] && pipeMatch[2] && parseCompanyTitle(pipeMatch[2])) {
     return { before: cleanBulletText(pipeMatch[1]), jobLine: pipeMatch[2].trim() };
   }
   return null;
@@ -99,7 +101,7 @@ export function parseExperienceBlocks(text: string): ExperienceEntry[] {
   };
 
   for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i];
+    const line = lines[i] ?? '';
     const next = lines[i + 1] ?? '';
     const companyTitle = parseCompanyTitle(line);
     const dateOnLine = parseJobDate(line);
@@ -163,7 +165,7 @@ export function parseExperienceBlocks(text: string): ExperienceEntry[] {
       parseJobDate(lines[i + 2] ?? '') &&
       line.length < 90
     ) {
-      const dateInfo = parseJobDate(lines[i + 2])!;
+      const dateInfo = parseJobDate(lines[i + 2] ?? '')!;
       pushCurrent();
       current = {
         id: newId(),

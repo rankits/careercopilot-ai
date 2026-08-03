@@ -1,3 +1,5 @@
+import type { ElementType } from 'react';
+
 import {
   Box,
   CloseIcon,
@@ -103,14 +105,14 @@ export const ChatHeaderIcon = styled('span')({
   width: '2.75rem',
 });
 
-export const ChatHeaderTitle = styled(Typography)({
+export const ChatHeaderTitle = styled(Typography)<{ component?: ElementType }>({
   color: colorTokens.textPrimary,
   fontSize: fontSize.lg,
   fontWeight: fontWeight.bold,
   lineHeight: 1.2,
 });
 
-export const ChatHeaderSubtitle = styled(Typography)({
+export const ChatHeaderSubtitle = styled(Typography)<{ component?: ElementType }>({
   color: colorTokens.textSecondary,
   fontSize: fontSize.xs,
   fontWeight: fontWeight.medium,

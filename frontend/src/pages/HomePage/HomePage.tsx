@@ -43,7 +43,7 @@ export function HomePage() {
         <DashboardTitle>Recommended Jobs</DashboardTitle>
         <RecommendationsEmptyState>
           <RecommendationsEmptyText>{readinessHint}</RecommendationsEmptyText>
-          <Button onClick={openForYou} variant="contained">
+          <Button onClick={openForYou} variant="solid">
             Go to For You
           </Button>
         </RecommendationsEmptyState>

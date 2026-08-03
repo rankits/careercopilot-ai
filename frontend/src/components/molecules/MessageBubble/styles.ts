@@ -1,10 +1,11 @@
+import type { ElementType } from 'react';
+
 import { Box, Typography, styled } from '@/lib/material';
 import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const MessageRow = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'isUser',
 })<{ isUser: boolean }>(({ isUser }) => ({
-  alignItems: 'flex-end',
   display: 'flex',
   flexDirection: 'column',
   gap: spacing[1],
@@ -39,13 +40,13 @@ export const MessageBubbleSurface = styled(Box, {
   wordBreak: 'break-word',
 }));
 
-export const MessageText = styled(Typography)({
+export const MessageText = styled(Typography)<{ component?: ElementType }>({
   fontSize: fontSize.sm,
   fontWeight: fontWeight.medium,
   lineHeight: 1.55,
 });
 
-export const MessageTimestamp = styled(Typography)({
+export const MessageTimestamp = styled(Typography)<{ component?: ElementType; dateTime?: string }>({
   color: colorTokens.textTertiary,
   fontSize: fontSize.xs,
   fontWeight: fontWeight.medium,
