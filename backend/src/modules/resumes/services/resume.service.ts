@@ -7,7 +7,7 @@ import {
   allowedResumeExtensions,
   allowedResumeMimeTypes,
 } from '@/modules/resumes/config/resume.config.js';
-import type { CandidateProfile } from '@prisma/client';
+import type { CandidateProfile, Resume } from '@prisma/client';
 import { resumeRepository } from '@/modules/resumes/repositories/resume.repository.js';
 import { createResumeStorage } from '@/modules/resumes/storage/resume-storage.factory.js';
 import {
@@ -135,6 +135,10 @@ export const resumeService = {
       uploadedAt: resume.uploadedAt,
       processedAt: resume.processedAt,
     };
+  },
+
+  async listResumes(input?: { userId?: string }): Promise<Resume[]> {
+    return resumeRepository.listResumes(input?.userId);
   },
 
   async getParsedData(resumeId: string, principalId: string) {
