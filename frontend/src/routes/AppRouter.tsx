@@ -11,7 +11,9 @@ import { LoginPage } from '@/pages/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { RegisterPage } from '@/pages/RegisterPage';
+import { ResumeBuilderPage } from '@/pages/ResumeBuilderPage';
 import { SavedJobsPage } from '@/pages/SavedJobsPage';
+import { SavedResumesPage } from '@/pages/SavedResumesPage';
 import {
   GuestRoute,
   OnboardingRoute,
@@ -41,6 +43,9 @@ export function AppRouter() {
           <Route path={ROUTES.FOR_YOU} element={<ForYouPage />} />
           <Route path={ROUTES.SAVED_JOBS} element={<SavedJobsPage />} />
           <Route path={ROUTES.APPLICATIONS} element={<ApplicationsPage />} />
+          <Route path={ROUTES.SAVED_RESUMES} element={<SavedResumesPage />} />
+          <Route path={ROUTES.RESUME_BUILDER} element={<ResumeBuilderPage />} />
+          <Route path={`${ROUTES.RESUME_BUILDER}/:resumeId`} element={<ResumeBuilderPage />} />
           <Route path={ROUTES.PROFILE_EDIT} element={<ProfilePage mode="edit" />} />
         </Route>
       </Route>

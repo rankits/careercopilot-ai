@@ -11,6 +11,8 @@ export const ROUTES = {
   PROFILE: '/profile',
   PROFILE_EDIT: '/profile/edit',
   UNAUTHORIZED: '/unauthorized',
+  RESUME_BUILDER: '/resume-builder',
+  SAVED_RESUMES: '/resume-builder/saved',
 } as const;
 
 export const jobDetailPath = (jobId: string) => `/jobs/${jobId}`;
