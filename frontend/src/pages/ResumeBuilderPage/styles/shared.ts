@@ -1,5 +1,14 @@
+import type { ElementType } from 'react';
+
 import { Box, Typography, styled } from '@/lib/material';
-import { borderRadius, colorTokens, fontSize, fontWeight, resumeBuilderTokens as t, spacing } from '@/tokens';
+import {
+  borderRadius,
+  colorTokens,
+  fontSize,
+  fontWeight,
+  resumeBuilderTokens as t,
+  spacing,
+} from '@/tokens';
 
 export { t, borderRadius, colorTokens, fontSize, fontWeight, spacing };
 
@@ -56,16 +65,16 @@ export const tone = {
 
 export type ToneName = keyof typeof tone;
 
-export const CardTitle = styled(Typography)({
+export const CardTitle = styled(Typography)<{ component?: ElementType }>({
   ...title,
   fontSize: fontSize.xl,
 });
 
-export const CardSubtitle = styled(Typography)({
+export const CardSubtitle = styled(Typography)<{ component?: ElementType }>({
   ...muted,
 });
 
-export const EmptyText = styled(Typography)({
+export const EmptyText = styled(Typography)<{ component?: ElementType }>({
   ...muted,
 });
 
