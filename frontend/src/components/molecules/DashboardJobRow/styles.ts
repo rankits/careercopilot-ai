@@ -9,11 +9,10 @@ export const DashboardJobRowRoot = styled('article', {
   border: `0.0625rem solid ${colorTokens.borderDefault}`,
   borderRadius: borderRadius.lg,
   display: 'grid',
-  gap: spacing[3],
+  columnGap: spacing[4],
   gridTemplateColumns: featured
     ? '3.5rem minmax(12rem, 1fr) auto'
-    : '3.25rem minmax(12rem, 1.1fr) minmax(5.5rem, auto) minmax(4.5rem, auto) minmax(5.5rem, auto) minmax(12rem, 0.9fr) auto',
-  minHeight: featured ? '7.25rem' : '4.75rem',
+    : '3.25rem minmax(12rem, 0.8fr) minmax(5.5rem, auto) minmax(4.5rem, auto) minmax(5.5rem, auto) minmax(12rem, 0.9fr) auto',
   padding: featured ? spacing[4] : `${spacing[2]} ${spacing[3]}`,
 
   '@media (max-width: 86rem)': {
@@ -139,7 +138,7 @@ export const JobCopy = styled('div')({
 export const TitleLine = styled('div')({
   alignItems: 'center',
   display: 'flex',
-  gap: spacing[2],
+  gap: spacing[1],
 
   '& h3': {
     color: colorTokens.textPrimary,
@@ -172,13 +171,18 @@ export const MetaLine = styled('div')({
 });
 
 export const SalaryText = styled('div')({
+  justifySelf: 'start',
+  textAlign: 'center',
+  whiteSpace: 'nowrap',
+  fontWeight: fontWeight.bold,
   color: colorTokens.textPrimary,
   fontSize: fontSize.sm,
-  fontWeight: fontWeight.bold,
-  whiteSpace: 'nowrap',
 });
 
 export const PostedText = styled('div')({
+  justifySelf: 'center',
+  textAlign: 'center',
+  whiteSpace: 'nowrap',
   color: colorTokens.textSecondary,
   fontSize: fontSize.xs,
   lineHeight: 1.35,

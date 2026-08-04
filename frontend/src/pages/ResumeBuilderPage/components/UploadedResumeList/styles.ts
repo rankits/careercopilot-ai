@@ -60,7 +60,7 @@ export const ResumeRow = styled(Box)({
   gridTemplateColumns: '3.25rem minmax(0, 1fr) auto auto 2rem',
   padding: spacing[4],
   '&:hover': {
-    borderColor: 'rgba(124,58,237,0.28)',
+    borderColor: 'rgba(37, 99, 235, 0.28)',
     boxShadow: t.rowShadow,
   },
   '@media (max-width: 48rem)': {

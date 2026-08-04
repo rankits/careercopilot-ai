@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
 
-import aiPlatformIllustration from '@/assets/illustrations/ai-platform-illustration.svg';
-import careerBoyIllustration from '@/assets/illustrations/career-boy-illustration.svg';
-import careerCopilotLogo from '@/assets/logo/career-copilot-full-logo.svg';
+import aiPlatformIllustration from '@/assets/illustrations/ai-platform-illustration.png';
+import careerBoyIllustration from '@/assets/illustrations/career-boy-illustration.png';
+import careerCopilotLogo from '@/assets/logo/career-copilot-logo.png';
 import { ROUTES } from '@/constants/routes';
 import {
   AutoAwesomeOutlinedIcon,
@@ -15,6 +15,7 @@ import {
   SecurityOutlinedIcon,
   type SvgIconComponent,
 } from '@/lib/material';
+import type { IconTone } from '@/tokens';
 
 import * as Styled from './styles';
 
@@ -27,6 +28,7 @@ interface Feature {
   description: string;
   icon: SvgIconComponent;
   title: string;
+  tone: IconTone;
 }
 
 const LOGIN_FEATURES: Feature[] = [
@@ -34,16 +36,19 @@ const LOGIN_FEATURES: Feature[] = [
     description: 'Opportunities aligned with your experience.',
     icon: SearchOutlinedIcon,
     title: 'Smart Job Matching',
+    tone: 'primary',
   },
   {
     description: 'Stronger applications with focused insights.',
     icon: InsightsOutlinedIcon,
     title: 'AI-powered guidance',
+    tone: 'success',
   },
   {
     description: 'Every application organized in one place.',
     icon: BookmarkBorderOutlinedIcon,
     title: 'Application tracking',
+    tone: 'warning',
   },
 ];
 
@@ -52,23 +57,26 @@ const TRUST_ITEMS: Feature[] = [
     description: 'Advanced encryption',
     icon: SecurityOutlinedIcon,
     title: 'Your data is safe',
+    tone: 'primary',
   },
   {
     description: 'Your data stays private',
     icon: LockOutlinedIcon,
     title: 'Privacy first',
+    tone: 'success',
   },
   {
     description: 'Transparent recommendations',
     icon: CheckCircleOutlineIcon,
     title: 'AI you can trust',
+    tone: 'warning',
   },
 ];
 
-function LoginFeatureRow({ description, icon: Icon, title }: Feature) {
+function LoginFeatureRow({ description, icon: Icon, title, tone }: Feature) {
   return (
     <Styled.LoginFeatureItem>
-      <Styled.FeatureIcon size="small">
+      <Styled.FeatureIcon size="small" tone={tone}>
         <Icon fontSize="small" />
       </Styled.FeatureIcon>
       <Box>
@@ -79,10 +87,10 @@ function LoginFeatureRow({ description, icon: Icon, title }: Feature) {
   );
 }
 
-function RegisterFeatureCard({ description, icon: Icon, title }: Feature) {
+function RegisterFeatureCard({ description, icon: Icon, title, tone }: Feature) {
   return (
     <Styled.RegisterFeatureCard>
-      <Styled.FeatureIcon size="large">
+      <Styled.FeatureIcon size="large" tone={tone}>
         <Icon />
       </Styled.FeatureIcon>
       <Styled.FeatureTitle>{title}</Styled.FeatureTitle>
@@ -125,9 +133,9 @@ function LoginHero() {
 function TrustPanel() {
   return (
     <Styled.TrustPanel aria-label="Security and trust">
-      {TRUST_ITEMS.map(({ description, icon: Icon, title }) => (
+      {TRUST_ITEMS.map(({ description, icon: Icon, title, tone }) => (
         <Styled.TrustItem key={title}>
-          <Styled.FeatureIcon size="small">
+          <Styled.FeatureIcon size="small" tone={tone}>
             <Icon fontSize="small" />
           </Styled.FeatureIcon>
           <Box>

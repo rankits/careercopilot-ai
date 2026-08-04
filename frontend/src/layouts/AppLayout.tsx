@@ -52,6 +52,7 @@ export function AppLayout() {
               }
             }}
             onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
+            onUploadResumeClick={() => void navigate(ROUTES.PROFILE)}
             userAvatarUrl={user?.profileImage ?? undefined}
             userName={userName}
             userRoleLabel={userRoleLabel}

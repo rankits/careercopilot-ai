@@ -202,10 +202,15 @@ export const resumeService = {
     }
   },
 
-  async confirmProfile({ resumeId, userId }: ConfirmProfileInput): Promise<{ message: string }> {
+  async confirmProfile({
+    resumeId,
+    userId,
+    ...profile
+  }: ConfirmProfileInput): Promise<{ message: string }> {
     try {
       const response = await httpClient.post<{ message?: string }>(`/resumes/profile/${userId}`, {
         resumeId,
+        ...profile,
       });
       return {
         message:

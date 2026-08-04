@@ -26,24 +26,28 @@ export const applicationSummaryMetrics = [
     icon: BusinessCenterOutlinedIcon,
     key: 'total',
     label: 'Total applications',
+    tone: 'primary' as const,
   },
   {
     helper: 'Not archived',
     icon: InsightsOutlinedIcon,
     key: 'active',
     label: 'Active applications',
+    tone: 'success' as const,
   },
   {
     helper: 'In progress',
     icon: EventOutlinedIcon,
     key: 'interview',
     label: 'Interview stage',
+    tone: 'warning' as const,
   },
   {
     helper: 'Great job! 🎉',
     icon: CheckCircleOutlineIcon,
     key: 'offer',
     label: 'Offers',
+    tone: 'primary' as const,
   },
 ] as const;
 
