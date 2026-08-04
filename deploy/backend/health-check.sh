@@ -3,7 +3,8 @@ set -Eeuo pipefail
 
 # Verifies localhost health endpoint of the backend application on port 5001.
 # Confirms HTTP 200 and JSON response containing "status":"ok".
-# RabbitMQ is not currently included in the application /health probe.
+# RabbitMQ is included in /health when ENABLE_EMAIL_WORKER=true or
+# HEALTH_CHECK_RABBITMQ=true.
 
 HEALTH_URL="http://127.0.0.1:5001/health"
 MAX_ATTEMPTS=24

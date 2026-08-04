@@ -1,13 +1,16 @@
 import { Redis, Cluster, RedisOptions, ClusterNode } from 'ioredis';
 import { ICacheDriver } from '@/infrastructure/cache/cache.interface.js';
+import { logger } from '@/shared/logger/logger.js';
 
 type RedisClientType = Redis | Cluster;
 
 export class RedisCacheDriver implements ICacheDriver {
   private client: RedisClientType;
+  private readonly log = logger.child({ component: 'redis' });
 
   constructor() {
     this.client = this.createClient();
+    this.attachConnectionListeners();
   }
 
   private createClient(): RedisClientType {
@@ -29,6 +32,7 @@ export class RedisCacheDriver implements ICacheDriver {
         return { host, port: Number(port) || 6379 };
       });
 
+      this.log.info({ mode, nodes: nodesEnv }, 'Connecting to Redis cluster');
       return new Cluster(clusterNodes, {
         redisOptions: commonOptions,
       });
@@ -40,11 +44,16 @@ export class RedisCacheDriver implements ICacheDriver {
         const [host, port] = s.trim().split(':');
         return { host, port: Number(port) || 26379 };
       });
+      const masterName = process.env.REDIS_SENTINEL_MASTER || 'mymaster';
 
+      this.log.info(
+        { mode, sentinels: sentinelsEnv, masterName },
+        'Connecting to Redis via Sentinel',
+      );
       return new Redis({
         ...commonOptions,
         sentinels,
-        name: process.env.REDIS_SENTINEL_MASTER || 'mymaster',
+        name: masterName,
       });
     }
 
@@ -52,10 +61,37 @@ export class RedisCacheDriver implements ICacheDriver {
     const host = process.env.REDIS_HOST || '127.0.0.1';
     const port = Number(process.env.REDIS_PORT) || 6379;
 
+    this.log.info({ mode: 'standalone', host, port }, 'Connecting to Redis');
     return new Redis({
       ...commonOptions,
       host,
       port,
+    });
+  }
+
+  private attachConnectionListeners(): void {
+    this.client.on('connect', () => {
+      this.log.info('Redis TCP connection established');
+    });
+
+    this.client.on('ready', () => {
+      this.log.info('Redis connection ready');
+    });
+
+    this.client.on('error', (error: Error) => {
+      this.log.error({ err: error }, 'Redis connection error');
+    });
+
+    this.client.on('close', () => {
+      this.log.warn('Redis connection closed');
+    });
+
+    this.client.on('end', () => {
+      this.log.warn('Redis connection ended');
+    });
+
+    this.client.on('reconnecting', (delay: number) => {
+      this.log.warn({ delayMs: delay }, 'Redis reconnecting');
     });
   }
 
@@ -64,7 +100,8 @@ export class RedisCacheDriver implements ICacheDriver {
       const data = await this.client.get(key);
       if (!data) return null;
       return JSON.parse(data) as T;
-    } catch {
+    } catch (error) {
+      this.log.error({ err: error, key }, 'Redis get failed');
       return null;
     }
   }
@@ -124,13 +161,21 @@ export class RedisCacheDriver implements ICacheDriver {
     try {
       const res = await this.client.ping();
       return res === 'PONG';
-    } catch {
+    } catch (error) {
+      this.log.error({ err: error }, 'Redis ping failed');
       return false;
     }
   }
 
   async disconnect(): Promise<void> {
-    this.client.disconnect();
+    this.log.info('Disconnecting Redis client');
+    try {
+      this.client.disconnect();
+      this.log.info('Redis client disconnected');
+    } catch (error) {
+      this.log.error({ err: error }, 'Redis disconnect failed');
+      throw error;
+    }
   }
 
   async tryAcquireLock(key: string, ttlSeconds: number): Promise<boolean> {
