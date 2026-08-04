@@ -7,7 +7,25 @@ import {
   IJobApplicationAdapterRegistry,
   SubmissionResult,
 } from '@/modules/auto-apply/contracts/adapter.contract.js';
+import { IAutoApplyEventService } from '@/modules/auto-apply/contracts/audit-event.contract.js';
+import { AutoApplyEventType } from '@/modules/auto-apply/types/audit-event.types.js';
 import { logger } from '@/shared/logger/logger.js';
+import { withTimeout } from '@/shared/utils/withTimeout.js';
+
+// AJA-PERF-001 latency budgets. `ExternalRedirectAdapter` is local/synchronous
+// today so these are currently inert, but every future channel adapter
+// (email send, ATS API) runs through this same wrapper — the budget lives
+// here once rather than being re-invented per adapter. Tune per-channel if a
+// real integration's SLA warrants it; these are deliberately generous
+// defaults, not a performance target.
+const VALIDATE_TIMEOUT_MS = 10_000;
+const SUBMIT_TIMEOUT_MS = 30_000;
+
+function eventTypeFor(result: SubmissionResult): AutoApplyEventType {
+  if (result.outcome === 'SUCCEEDED') return 'SUBMISSION_SUCCEEDED';
+  if (result.outcome === 'SUBMISSION_OUTCOME_UNKNOWN') return 'SUBMISSION_OUTCOME_UNKNOWN';
+  return 'SUBMISSION_FAILED';
+}
 
 export interface SubmissionJobPayload {
   jobApplicationId: string;
@@ -43,6 +61,7 @@ export class SubmissionProcessingService {
     private readonly submissionAttemptRepository: ISubmissionAttemptRepository,
     private readonly jobLookup: IChannelDetectionJobLookup,
     private readonly adapterRegistry: IJobApplicationAdapterRegistry,
+    private readonly eventService: IAutoApplyEventService,
   ) {}
 
   async processJob(payload: SubmissionJobPayload): Promise<void> {
@@ -118,7 +137,26 @@ export class SubmissionProcessingService {
       externalApplyUrl: job.applyUrl ?? undefined,
     };
 
-    const validation = await adapter.validate(prepared);
+    let validation;
+    try {
+      validation = await withTimeout(
+        adapter.validate(prepared),
+        VALIDATE_TIMEOUT_MS,
+        'adapter.validate',
+      );
+    } catch (error) {
+      // A hung validate() call never reaches the remote side — safe to
+      // treat as a definite (not uncertain) failure, unlike a submit timeout.
+      await this.fail(
+        userId,
+        jobApplicationId,
+        1,
+        'FAILED_DO_NOT_RETRY',
+        'VALIDATION_FAILED',
+        error instanceof Error ? error.message : 'Validation failed',
+      );
+      return;
+    }
     if (!validation.valid) {
       await this.fail(
         userId,
@@ -133,10 +171,11 @@ export class SubmissionProcessingService {
 
     let result: SubmissionResult;
     try {
-      result = await adapter.submit(prepared);
+      result = await withTimeout(adapter.submit(prepared), SUBMIT_TIMEOUT_MS, 'adapter.submit');
     } catch (error) {
-      // An exception during submit is exactly the "we don't know if it
-      // went through" case — never assume failure and never auto-retry it.
+      // An exception (including a timeout) during submit is exactly the
+      // "we don't know if it went through" case — never assume failure and
+      // never auto-retry it.
       result = {
         outcome: 'SUBMISSION_OUTCOME_UNKNOWN',
         errorMessage: error instanceof Error ? error.message : 'Unknown error during submission',
@@ -162,6 +201,13 @@ export class SubmissionProcessingService {
       failureMessage: result.outcome !== 'SUCCEEDED' ? result.errorMessage : undefined,
       markSubmittedNow: result.outcome === 'SUCCEEDED' && !result.requiresUserAction,
     });
+
+    await this.eventService.record({
+      userId,
+      eventType: eventTypeFor(result),
+      jobApplicationId,
+      metadata: { attemptNumber, channel: claimed.channel },
+    });
   }
 
   private async fail(
@@ -183,6 +229,12 @@ export class SubmissionProcessingService {
       status: 'SUBMISSION_FAILED',
       failureCode: errorCode,
       failureMessage: errorMessage,
+    });
+    await this.eventService.record({
+      userId,
+      eventType: 'SUBMISSION_FAILED',
+      jobApplicationId,
+      metadata: { attemptNumber, errorCode },
     });
   }
 }
