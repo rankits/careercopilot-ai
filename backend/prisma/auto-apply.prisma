@@ -249,3 +249,38 @@ model ApplicationSubmissionAttempt {
   @@index([jobApplicationId])
   @@map("application_submission_attempts")
 }
+
+// ─── Audit / observability event trail (AJA-OBS-001) ─────────────────────────
+// Deliberately a separate, purpose-built event log rather than reusing the
+// existing generic `AuditLog`/`AuditAction` (auth.prisma) — this pass keeps
+// that domain untouched, consistent with every other model added this
+// session. Auto Apply's event vocabulary is also materially different
+// (plan/eligibility/submission lifecycle, not auth events).
+enum AutoApplyEventType {
+  PLAN_CREATED
+  ELIGIBILITY_EVALUATED
+  CONSENT_GRANTED
+  CONSENT_REVOKED
+  SUBMISSION_INITIATED
+  SUBMISSION_APPROVED
+  SUBMISSION_QUEUED
+  SUBMISSION_SUCCEEDED
+  SUBMISSION_FAILED
+  SUBMISSION_OUTCOME_UNKNOWN
+  SUBMISSION_CONFIRMED
+  SUBMISSION_WITHDRAWN
+}
+
+model AutoApplyAuditEvent {
+  id               String              @id @default(uuid())
+  userId           String              @map("user_id")
+  jobApplicationId String?             @map("job_application_id")
+  eventType        AutoApplyEventType  @map("event_type")
+  metadata         Json                @default("{}")
+  createdAt        DateTime            @default(now()) @map("created_at")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([jobApplicationId, createdAt(sort: Desc)])
+  @@index([eventType, createdAt])
+  @@map("auto_apply_audit_events")
+}

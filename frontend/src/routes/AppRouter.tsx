@@ -16,6 +16,7 @@ import {
 } from '@/routes/guards/AuthGuards';
 import {
   LazyAiMatchPage,
+  LazyApplicationDetailPage,
   LazyApplicationsPage,
   LazyAutoApplyPage,
   LazyEditProfilePage,
@@ -127,6 +128,14 @@ export const appRouteObjects: RouteObject[] = [
             element: (
               <LazyRoute>
                 <LazyApplicationsPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.APPLICATION_DETAIL,
+            element: (
+              <LazyRoute>
+                <LazyApplicationDetailPage />
               </LazyRoute>
             ),
           },

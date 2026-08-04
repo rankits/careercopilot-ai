@@ -16,6 +16,8 @@ import { PrismaSubmissionAttemptRepository } from '@/modules/auto-apply/reposito
 import { PrismaChannelDetectionJobLookup } from '@/modules/auto-apply/repositories/prisma-channel-detection.lookup.js';
 import { JobApplicationAdapterRegistry } from '@/modules/auto-apply/adapters/adapter-registry.js';
 import { ExternalRedirectAdapter } from '@/modules/auto-apply/adapters/external-redirect.adapter.js';
+import { AutoApplyEventService } from '@/modules/auto-apply/services/audit-event.service.js';
+import { PrismaAutoApplyEventRepository } from '@/modules/auto-apply/repositories/prisma-audit-event.repository.js';
 
 const adapterRegistry = new JobApplicationAdapterRegistry();
 adapterRegistry.register(new ExternalRedirectAdapter());
@@ -28,6 +30,7 @@ const submissionProcessingService = new SubmissionProcessingService(
   new PrismaSubmissionAttemptRepository(),
   new PrismaChannelDetectionJobLookup(),
   adapterRegistry,
+  new AutoApplyEventService(new PrismaAutoApplyEventRepository()),
 );
 
 /**

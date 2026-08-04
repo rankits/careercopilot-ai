@@ -9,6 +9,8 @@ import plannerRoutes from '@/modules/auto-apply/routes/planner.route.js';
 import applicationConsentRoutes from '@/modules/auto-apply/routes/application-consent.route.js';
 import jobApplicationRoutes from '@/modules/auto-apply/routes/job-application.route.js';
 import vacancyEmailRoutes from '@/modules/auto-apply/routes/vacancy-email.route.js';
+import auditEventRoutes from '@/modules/auto-apply/routes/audit-event.route.js';
+import adminDiagnosticsRoutes from '@/modules/auto-apply/routes/admin-diagnostics.route.js';
 
 const router = express.Router();
 
@@ -22,5 +24,7 @@ router.use('/plan', plannerRoutes);
 router.use('/consents', applicationConsentRoutes);
 router.use('/submissions', jobApplicationRoutes);
 router.use('/vacancy-email', vacancyEmailRoutes);
+router.use('/events', auditEventRoutes);
+router.use('/admin', adminDiagnosticsRoutes);
 
 export default router;
