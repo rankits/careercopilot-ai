@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { SavedResumeVersion } from '@/services/resumeBuilder.service';
 
-import { SavedResumesPage, fileBase, truncate } from './SavedResumesPage';
+import { SavedResumesPage } from './SavedResumesPage';
 
 const { listSavedVersionsMock, parseResumeContentMock, downloadResumePdfMock } = vi.hoisted(() => ({
   listSavedVersionsMock: vi.fn(),
@@ -26,6 +26,8 @@ vi.mock('@/pages/ResumeBuilderPage/utils', () => ({
 vi.mock('@/pages/ResumeBuilderPage/exportResume', () => ({
   downloadResumePdf: downloadResumePdfMock,
 }));
+
+let alertSpy: ReturnType<typeof vi.spyOn>;
 
 const version = (overrides: Partial<SavedResumeVersion> = {}): SavedResumeVersion => ({
   id: 1,
@@ -51,8 +53,6 @@ function renderPage(initialPath = '/resume-builder/saved') {
   );
 }
 
-
-
 describe('SavedResumesPage', () => {
   beforeEach(() => {
     listSavedVersionsMock.mockReset();
@@ -60,7 +60,7 @@ describe('SavedResumesPage', () => {
     downloadResumePdfMock.mockReset();
     parseResumeContentMock.mockReturnValue({ fullName: 'Ada', originalText: 'Resume body' });
     downloadResumePdfMock.mockResolvedValue(undefined);
-    vi.spyOn(window, 'alert').mockImplementation(() => undefined);
+    alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -160,7 +160,7 @@ describe('SavedResumesPage', () => {
     const click = vi.fn();
     let downloadName = '';
     const originalCreateElement = document.createElement.bind(document);
-    vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
+    const revokeObjectURLSpy = vi.spyOn(URL, 'revokeObjectURL').mockImplementation(() => undefined);
     vi.spyOn(URL, 'createObjectURL').mockReturnValue('blob:mock');
     vi.spyOn(document, 'createElement').mockImplementation((tag: string) => {
       if (tag === 'a') {
@@ -188,7 +188,7 @@ describe('SavedResumesPage', () => {
     await waitFor(() => {
       expect(click).toHaveBeenCalled();
       expect(downloadName).toBe('Java_Developer_v1.txt');
-      expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock');
+      expect(revokeObjectURLSpy).toHaveBeenCalledWith('blob:mock');
     });
   });
 
@@ -204,7 +204,7 @@ describe('SavedResumesPage', () => {
     await user.click(screen.getByRole('button', { name: /download pdf/i }));
 
     await waitFor(() => {
-      expect(window.alert).toHaveBeenCalledWith('Download failed. Please try again.');
+      expect(alertSpy).toHaveBeenCalledWith('Download failed. Please try again.');
     });
   });
 

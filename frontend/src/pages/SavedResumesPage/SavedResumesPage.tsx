@@ -4,16 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/atoms';
 
 import { ROUTES } from '@/constants/routes';
-import {
-  Box,
-  DescriptionOutlinedIcon,
-  DownloadIcon,
-  Typography,
-} from '@/lib/material';
-import {
-  resumeBuilderService,
-  type SavedResumeVersion,
-} from '@/services/resumeBuilder.service';
+import { Box, DescriptionOutlinedIcon, DownloadIcon, Typography } from '@/lib/material';
+import { resumeBuilderService, type SavedResumeVersion } from '@/services/resumeBuilder.service';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 import {
@@ -26,13 +18,13 @@ import {
   VersionsGrid,
 } from './styles';
 
-export function truncate(text: string | null | undefined, max = 220): string {
+function truncate(text: string | null | undefined, max = 220): string {
   if (!text?.trim()) return 'No job description saved for this version.';
   const cleaned = text.replace(/\s+/g, ' ').trim();
   return cleaned.length > max ? `${cleaned.slice(0, max)}…` : cleaned;
 }
 
-export function fileBase(version: SavedResumeVersion): string {
+function fileBase(version: SavedResumeVersion): string {
   const role = (version.targetRole || 'resume').replace(/[^\w\- ]+/g, '').trim();
   return `${role || 'resume'}_v${version.id}`.replace(/\s+/g, '_');
 }
@@ -97,7 +89,11 @@ export function SavedResumesPage() {
           <Typography component="h1" fontWeight={fontWeight.extraBold} fontSize={fontSize['2xl']}>
             Saved resumes
           </Typography>
-          <Typography color={colorTokens.textSecondary} fontSize={fontSize.sm} sx={{ mt: spacing[1] }}>
+          <Typography
+            color={colorTokens.textSecondary}
+            fontSize={fontSize.sm}
+            sx={{ mt: spacing[1] }}
+          >
             Finished versions from Resume Builder — with the role and job description they were
             optimized for.
           </Typography>
@@ -129,7 +125,11 @@ export function SavedResumesPage() {
                   <Typography fontWeight={fontWeight.bold} fontSize={fontSize.lg}>
                     {version.targetRole || 'Untitled role'}
                   </Typography>
-                  <Typography color={colorTokens.textSecondary} fontSize={fontSize.xs} sx={{ mt: 0.5 }}>
+                  <Typography
+                    color={colorTokens.textSecondary}
+                    fontSize={fontSize.xs}
+                    sx={{ mt: 0.5 }}
+                  >
                     {version.label}
                     {version.resumeFileName ? ` · ${version.resumeFileName}` : ''}
                     {' · '}
