@@ -45,6 +45,7 @@ export { default as NavigateNextIcon } from '@mui/icons-material/NavigateNext';
 export { default as NotificationsOutlinedIcon } from '@mui/icons-material/NotificationsOutlined';
 export { default as PersonOutlineIcon } from '@mui/icons-material/PersonOutline';
 export { default as PhoneOutlinedIcon } from '@mui/icons-material/PhoneOutlined';
+export { default as PictureAsPdfOutlinedIcon } from '@mui/icons-material/PictureAsPdfOutlined';
 export { default as RefreshIcon } from '@mui/icons-material/Refresh';
 export { default as SchoolOutlinedIcon } from '@mui/icons-material/SchoolOutlined';
 export { default as SearchOutlinedIcon } from '@mui/icons-material/SearchOutlined';
