@@ -28,7 +28,7 @@ export const MessageBubbleSurface = styled(Box, {
   borderRadius: isUser
     ? `${borderRadius.xl} ${borderRadius.xl} ${borderRadius.sm} ${borderRadius.xl}`
     : `${borderRadius.xl} ${borderRadius.xl} ${borderRadius.xl} ${borderRadius.sm}`,
-  boxShadow: isUser ? '0 8px 20px rgba(130, 48, 240, 0.18)' : 'none',
+  boxShadow: isUser ? '0 8px 20px rgba(37, 99, 235, 0.18)' : 'none',
   color: isUser
     ? colorTokens.textInverse
     : isError

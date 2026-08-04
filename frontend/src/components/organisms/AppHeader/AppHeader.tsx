@@ -1,6 +1,6 @@
 import { HeaderNotification, HeaderSearch, HeaderUserMenu } from '@/components/molecules';
 
-import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.svg';
+import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.png';
 
 import { HeaderActions, HeaderRoot, MobileLogo, SearchWrap } from './styles';
 
