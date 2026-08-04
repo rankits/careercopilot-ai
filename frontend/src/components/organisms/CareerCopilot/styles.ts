@@ -26,7 +26,7 @@ export const CopilotFab = styled('button')({
   border: 'none',
   borderRadius: borderRadius.full,
   bottom: '6.5rem',
-  boxShadow: '0 16px 40px rgba(130, 48, 240, 0.35)',
+  boxShadow: '0 16px 40px rgba(37, 99, 235, 0.35)',
   color: colorTokens.textInverse,
   cursor: 'pointer',
   display: 'inline-flex',
@@ -39,7 +39,7 @@ export const CopilotFab = styled('button')({
   zIndex: 1300,
 
   '&:hover': {
-    boxShadow: '0 18px 44px rgba(130, 48, 240, 0.42)',
+    boxShadow: '0 18px 44px rgba(37, 99, 235, 0.42)',
     transform: 'translateY(-2px) scale(1.03)',
   },
 
