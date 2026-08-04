@@ -1,0 +1,251 @@
+// Auto Job Apply — Foundation domain (Wave 2).
+//
+// Deliberately a SEPARATE file/domain from `applications.prisma` (the
+// manual recruitment tracker) and `resumes.prisma` (onboarding profile +
+// resume builder). Per AJA-PROD-006, the submission lifecycle here is
+// independent of the tracker's `Application`/`ApplicationStatus` — no
+// existing model in those files is modified by this domain.
+
+enum AutoApplyChannel {
+  EMAIL
+  EXTERNAL_MANUAL
+  ATS_API
+  BROWSER_ASSISTED
+  UNSUPPORTED
+}
+
+enum JobApplicationStatus {
+  DISCOVERED
+  MATCHED
+  NOT_ELIGIBLE
+  APPLICATION_PLANNING
+  INFORMATION_REQUIRED
+  READY_FOR_REVIEW
+  READY_FOR_AUTOPILOT
+  APPROVED
+  QUEUED
+  SUBMITTING
+  SUBMITTED
+  CONFIRMATION_RECEIVED
+  SUBMISSION_FAILED
+  ACTION_REQUIRED
+  WITHDRAWN
+}
+
+enum ApprovalMode {
+  PER_APPLICATION
+  BULK_APPROVED
+  AUTOPILOT
+}
+
+enum SubmissionAttemptOutcome {
+  SUCCEEDED
+  FAILED_SAFE_TO_RETRY
+  FAILED_DO_NOT_RETRY
+  SUBMISSION_OUTCOME_UNKNOWN
+}
+
+// Every verified answer must trace back to the user confirming it
+// themselves — AI-generated content is never a valid source for this
+// table (AJA-PROD-005 / AJA-AI-002).
+enum AnswerSource {
+  USER_VERIFIED
+}
+
+enum ConsentType {
+  RESUME_USAGE
+  CONTENT_GENERATION
+  EMAIL_SUBMISSION
+  AUTOPILOT_SUBMISSION
+}
+
+// ─── Candidate Application Profile (AJA-PROFILE-001) ─────────────────────────
+// Deliberately a separate 1:1-by-userId model rather than modifying the
+// existing `CandidateProfile` (resumes.prisma) — keeps the onboarding/resume
+// -parse profile untouched while adding apply-specific data on top of it.
+model CandidateApplicationProfile {
+  id                    String    @id @default(uuid())
+  userId                String    @unique @map("user_id")
+
+  // ApplicationPreferences — desiredRoles/preferredLocations/remotePreference/
+  // expectedSalary/noticePeriodDays/willingToRelocate/requiresSponsorship.
+  preferences           Json      @default("{}")
+  // { linkedin?, github?, portfolio? }
+  links                 Json      @default("{}")
+  // Per-field verification metadata: { [fieldName]: { source, lastVerifiedAt, confidence } }
+  verification          Json      @default("{}")
+
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
+
+  @@map("candidate_application_profiles")
+}
+
+// ─── Verified Application Answers Library (AJA-PROFILE-002) ─────────────────
+model ApplicationAnswerProfile {
+  id                String        @id @default(uuid())
+  userId            String        @map("user_id")
+  questionKey       String        @map("question_key")
+  answer            String        @db.Text
+  source            AnswerSource  @default(USER_VERIFIED)
+  // Demographic / disability / veteran-status questions must be `sensitive:
+  // true` and can never carry `autoSubmitAllowed: true` — enforced in
+  // ApplicationAnswerService, not just here (AJA-PROD-005).
+  sensitive         Boolean       @default(false)
+  autoSubmitAllowed Boolean       @default(false) @map("auto_submit_allowed")
+  lastVerifiedAt    DateTime      @map("last_verified_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+
+  @@unique([userId, questionKey])
+  @@index([userId])
+  @@map("application_answer_profiles")
+}
+
+// ─── Approved Resume Versions (AJA-PROFILE-003) ──────────────────────────────
+// Named `ApprovedResumeVersion`, NOT `ResumeVersion` — that name is already
+// taken in `resumes.prisma` by the unrelated resume-builder tailoring
+// history (tied to `ResumeAnalysis.id`). This model instead links a
+// `Resume` (resumes.prisma) to a job-category label for apply-time
+// selection, following the same "plain string id, no cross-file relation"
+// convention `Application.jobId` already uses for cross-domain references.
+model ApprovedResumeVersion {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  resumeId   String   @map("resume_id")
+  label      String   @db.VarChar(120)
+  category   String   @db.VarChar(60)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, isActive])
+  @@map("approved_resume_versions")
+}
+
+// ─── Eligibility / Autopilot Rule Configuration (AJA-RULE-001 policy half) ───
+// One row per user. Candidate *preferences* (remote pref, expected salary,
+// etc.) live on CandidateApplicationProfile; this model is purely the
+// operational automation policy (limits, blacklist, pause) — implements the
+// AJA-PROD-003 defaults (≤5/day, min match score 0.85).
+model ApplicationRule {
+  id                      String    @id @default(uuid())
+  userId                  String    @unique @map("user_id")
+
+  minMatchScore           Float     @default(0.85) @map("min_match_score")
+  dailyApplicationLimit   Int       @default(5) @map("daily_application_limit")
+  weeklyApplicationLimit  Int?      @map("weekly_application_limit")
+
+  blacklistedCompanySlugs String[]  @default([]) @map("blacklisted_company_slugs")
+  excludedTitleKeywords   String[]  @default([]) @map("excluded_title_keywords")
+  excludedSources         String[]  @default([]) @map("excluded_sources")
+
+  // Full Autopilot (Mode C) stays disabled until Wave 6 (AJA-RULE-002) wires
+  // real enforcement end-to-end; the flag exists now so the schema doesn't
+  // need another migration to add it later.
+  autopilotEnabled        Boolean   @default(false) @map("autopilot_enabled")
+  autopilotPausedAt       DateTime? @map("autopilot_paused_at")
+
+  createdAt               DateTime  @default(now()) @map("created_at")
+  updatedAt               DateTime  @updatedAt @map("updated_at")
+
+  @@map("application_rules")
+}
+
+// ─── Application Consent (AJA-SEC-001) ───────────────────────────────────────
+model ApplicationConsent {
+  id          String      @id @default(uuid())
+  userId      String      @map("user_id")
+  consentType ConsentType @map("consent_type")
+  version     Int         @default(1)
+  grantedAt   DateTime    @default(now()) @map("granted_at")
+  revokedAt   DateTime?   @map("revoked_at")
+
+  @@index([userId, consentType, revokedAt])
+  @@map("application_consents")
+}
+
+// ─── Job Application submission entity (AJA-DATA-001 / AJA-PROD-006) ────────
+// Separate from the recruitment tracker's `Application` model
+// (applications.prisma) by explicit product decision — this is the
+// automation-facing submission record; the tracker remains the
+// user-facing recruitment history and is never written to by this domain
+// in this wave.
+model JobApplication {
+  id                     String                @id @default(uuid())
+  userId                 String                @map("user_id")
+  jobId                  String?                @map("job_id")
+  normalisedJobUrl       String?               @map("normalised_job_url")
+  // Reuses `Job.canonicalHash` (jobs.prisma) — the ingestion pipeline's own
+  // cross-source dedup hash — rather than inventing a second canonicalization
+  // scheme (AJA-DATA-003).
+  canonicalJobId         String?               @map("canonical_job_id")
+  // Lightweight snapshot captured at creation time, used only for the
+  // fuzzy company+title duplicate warning (never a hard block) — not a
+  // source of truth, so no cascading update needed if the job listing changes.
+  companySlug            String?               @map("company_slug")
+  jobTitle               String?               @map("job_title")
+
+  channel                AutoApplyChannel      @default(UNSUPPORTED)
+  status                 JobApplicationStatus  @default(DISCOVERED)
+  approvalMode           ApprovalMode          @default(PER_APPLICATION) @map("approval_mode")
+
+  matchScore             Float?                @map("match_score")
+  eligibilityResult      Json?                 @map("eligibility_result")
+
+  resumeVersionId        String?               @map("resume_version_id")
+  coverLetterContent     String?               @db.Text @map("cover_letter_content")
+
+  consentId              String?               @map("consent_id")
+  approvedAt             DateTime?             @map("approved_at")
+  queuedAt               DateTime?             @map("queued_at")
+  submittedAt            DateTime?             @map("submitted_at")
+
+  externalApplicationId  String?               @map("external_application_id")
+  externalConfirmationUrl String?              @map("external_confirmation_url")
+
+  failureCode            String?               @map("failure_code")
+  failureMessage         String?               @db.Text @map("failure_message")
+
+  // Idempotency: a hash of the planner inputs (profile+rules+job+resume)
+  // this plan was generated from (AJA-PLAN-001, Wave 3). Null until the
+  // planner exists; present so createPlan() can detect "nothing changed"
+  // without another migration.
+  planInputsHash         String?               @map("plan_inputs_hash")
+  planVersion            Int                   @default(1) @map("plan_version")
+
+  createdAt              DateTime              @default(now()) @map("created_at")
+  updatedAt              DateTime              @updatedAt @map("updated_at")
+
+  attempts               ApplicationSubmissionAttempt[]
+
+  // Hard duplicate-prevention (AJA-PROD-007 / AJA-DATA-002), enforced at the
+  // database layer for this new entity from day one — the existing tracker's
+  // equivalent constraint is a separate, not-yet-done ticket
+  // (`AJA-DATA-002` as written against `Application`) intentionally left
+  // untouched by this additive-only pass.
+  @@unique([userId, jobId])
+  @@unique([userId, normalisedJobUrl])
+  @@index([userId, status])
+  @@index([userId, canonicalJobId])
+  @@map("job_applications")
+}
+
+// ─── Submission attempt log (AJA-DATA-001 / AJA-QUEUE-002) ──────────────────
+model ApplicationSubmissionAttempt {
+  id                    String                    @id @default(uuid())
+  jobApplicationId      String                    @map("job_application_id")
+  attemptNumber         Int                       @map("attempt_number")
+  outcome               SubmissionAttemptOutcome?
+  rawResponseSanitized  Json?                     @map("raw_response_sanitized")
+  errorCode             String?                   @map("error_code")
+  errorMessage          String?                   @db.Text @map("error_message")
+  startedAt             DateTime                  @default(now()) @map("started_at")
+  completedAt           DateTime?                 @map("completed_at")
+
+  jobApplication        JobApplication            @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+
+  @@unique([jobApplicationId, attemptNumber])
+  @@index([jobApplicationId])
+  @@map("application_submission_attempts")
+}
