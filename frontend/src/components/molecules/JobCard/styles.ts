@@ -49,6 +49,7 @@ export const CompanyLogo = styled('div')({
   background: jobFeedTokens.companyLogoSurface,
   border: `0.0625rem solid ${colorTokens.borderSubtle}`,
   borderRadius: borderRadius.lg,
+  color: colorTokens.textPrimary,
   display: 'grid',
   fontSize: fontSize['2xl'],
   fontWeight: fontWeight.extraBold,
@@ -60,7 +61,8 @@ export const CompanyLogo = styled('div')({
   '& img': {
     display: 'block',
     height: '100%',
-    objectFit: 'cover',
+    objectFit: 'contain',
+    padding: spacing[1],
     width: '100%',
   },
 
@@ -173,17 +175,16 @@ export const JobActions = styled('div')({
   gap: spacing[3],
   gridTemplateColumns: 'auto auto',
   justifyItems: 'end',
-  minWidth: '13rem',
+  minWidth: 0,
 
   '@media (max-width: 64rem)': {
     gridColumn: '2 / -1',
     gridTemplateColumns: '1fr auto auto',
     justifyItems: 'stretch',
-    minWidth: 0,
     width: '100%',
   },
 
-  '@media (max-width: 36rem)': {
+  '@media (max-width: 47.5rem)': {
     gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 8.5rem), 1fr))',
   },
 
@@ -194,7 +195,7 @@ export const JobActions = styled('div')({
   '& > button:last-child': {
     minWidth: '7.5rem',
 
-    '@media (max-width: 36rem)': {
+    '@media (max-width: 47.5rem)': {
       width: '100%',
     },
   },
@@ -260,7 +261,7 @@ export const RecommendationDetails = styled('div')({
 export const RecommendationDetailsGrid = styled('div')({
   display: 'grid',
   gap: spacing[2],
-  gridTemplateColumns: 'repeat(auto-fit, minmax(12rem, 1fr))',
+  gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 12rem), 1fr))',
 
   '& h3': {
     color: colorTokens.textPrimary,
