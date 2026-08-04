@@ -27,7 +27,7 @@ export const DashboardPanel = styled(Box)({
 
 export const BestMatchPanel = styled(DashboardPanel)({
   alignContent: 'center',
-  background: 'linear-gradient(180deg, #ffffff 0%, #f8faff 100%)',
+  background: 'linear-gradient(180deg, #ffffff 0%, #F8FAFC 100%)',
   display: 'grid',
   paddingBottom: 'calc(0.75rem + 0.25rem)',
 });

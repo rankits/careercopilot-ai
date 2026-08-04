@@ -2,7 +2,11 @@ import { describe, expect, it } from 'vitest';
 
 import type { SuggestionItem } from '@/services/resumeBuilder.service';
 
-import { buildFallbackSuggestions, isLocalSuggestionId, mergeSuggestionLists } from './buildSuggestions';
+import {
+  buildFallbackSuggestions,
+  isLocalSuggestionId,
+  mergeSuggestionLists,
+} from './buildSuggestions';
 import { createEmptyDraft } from './draft';
 
 describe('buildFallbackSuggestions', () => {

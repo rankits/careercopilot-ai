@@ -6,14 +6,16 @@ import {
   colorTokens,
   fontSize,
   fontWeight,
+  iconToneTokens,
   resumeBuilderTokens as t,
   spacing,
+  type IconTone,
 } from '@/tokens';
 
 export { t, borderRadius, colorTokens, fontSize, fontWeight, spacing };
 
 export const border = `1px solid ${t.border}`;
-export const primaryGradient = `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryHover} 100%)`;
+export const primaryGradient = t.primary;
 
 export const panel = {
   background: t.background,
@@ -46,16 +48,22 @@ export const pill = {
   whiteSpace: 'nowrap' as const,
 };
 
-export const iconBox = (size = '2.5rem') => ({
-  alignItems: 'center',
-  background: t.primarySoft,
-  borderRadius: borderRadius.xl,
-  color: t.primary,
-  display: 'flex',
-  height: size,
-  justifyContent: 'center',
-  width: size,
-});
+export const iconBox = (size = '2.5rem', tone: IconTone = 'primary') => {
+  const iconTone = iconToneTokens[tone];
+  return {
+    alignItems: 'center',
+    background: iconTone.background,
+    borderRadius: borderRadius.full,
+    color: iconTone.color,
+    display: 'flex',
+    height: size,
+    justifyContent: 'center',
+    width: size,
+    '& .MuiSvgIcon-root': {
+      color: 'inherit',
+    },
+  };
+};
 
 export const tone = {
   error: { background: t.redBadgeBg, border: t.redBadgeBorder, color: t.redBadgeText },
@@ -93,6 +101,7 @@ export const FileTile = styled(Box, {
     background,
     border,
     borderRadius: borderRadius.xl,
+    boxShadow: 'none',
     color,
     display: 'grid',
     fontSize: '0.63rem',

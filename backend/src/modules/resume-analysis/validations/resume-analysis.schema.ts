@@ -12,9 +12,7 @@ export const analyzeResumeSchema = z.object({
   }),
   body: z.object({
     targetRole: z.string().min(1, 'Target role is required'),
-    experienceLevel: z
-      .enum(['entry', 'mid', 'senior', 'lead', 'executive'])
-      .default('mid'),
+    experienceLevel: z.enum(['entry', 'mid', 'senior', 'lead', 'executive']).default('mid'),
     jobDescription: z.string().optional(),
   }),
 });

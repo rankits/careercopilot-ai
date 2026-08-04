@@ -50,11 +50,9 @@ export const registerSchema = withEnvelope(
 export const resendOtpSchema = withEnvelope(
   z.object({
     email: emailSchema,
-    purpose: z
-      .nativeEnum(OtpPurpose)
-      .refine((purpose) => purpose !== OtpPurpose.Registration, {
-        message: 'Registration no longer requires a verification code',
-      }),
+    purpose: z.nativeEnum(OtpPurpose).refine((purpose) => purpose !== OtpPurpose.Registration, {
+      message: 'Registration no longer requires a verification code',
+    }),
   }),
 );
 

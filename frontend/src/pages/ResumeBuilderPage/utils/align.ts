@@ -50,7 +50,10 @@ function alignSkills(draft: ResumeDraft, context: JobAlignContext): ResumeDraft 
 
   // Recommended: only surface if already evidenced (user still clicks +chip to add missing ones).
   for (const skill of recommended) {
-    if (evidencedIn(resumeBlob, skill) || preferred.some((p) => p.toLowerCase() === skill.toLowerCase())) {
+    if (
+      evidencedIn(resumeBlob, skill) ||
+      preferred.some((p) => p.toLowerCase() === skill.toLowerCase())
+    ) {
       rebuilt.set(skill.toLowerCase(), skill);
     }
   }

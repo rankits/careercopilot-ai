@@ -7,12 +7,14 @@ const {
   findCandidateProfileByUserIdMock,
   updateCandidateProfileMock,
   upsertCandidateProfileMock,
+  listResumesMock,
 } = vi.hoisted(() => ({
   findResumeByIdMock: vi.fn(),
   findLatestExtractionMock: vi.fn(),
   findCandidateProfileByUserIdMock: vi.fn(),
   updateCandidateProfileMock: vi.fn(),
   upsertCandidateProfileMock: vi.fn(),
+  listResumesMock: vi.fn(),
 }));
 
 vi.mock('@/modules/resumes/repositories/resume.repository.js', () => ({
@@ -24,6 +26,7 @@ vi.mock('@/modules/resumes/repositories/resume.repository.js', () => ({
     findCandidateProfileByUserId: findCandidateProfileByUserIdMock,
     updateCandidateProfile: updateCandidateProfileMock,
     upsertCandidateProfile: upsertCandidateProfileMock,
+    listResumes: listResumesMock,
   },
 }));
 
@@ -316,5 +319,17 @@ describe('resumeService recommendation invalidation hooks (JRE-LIFE-001)', () =>
       skills: ['Node.js', 'AWS'],
     });
     expect(invalidateUserRecommendationStateMock).toHaveBeenCalledWith(ownerId);
+  });
+});
+
+describe('resumeService.listResumes', () => {
+  it('delegates to resumeRepository.listResumes with the provided userId', async () => {
+    const mockResumes = [{ id: 'res-1', userId: ownerId }];
+    listResumesMock.mockResolvedValue(mockResumes);
+
+    const result = await resumeService.listResumes({ userId: ownerId });
+
+    expect(listResumesMock).toHaveBeenCalledWith(ownerId);
+    expect(result).toBe(mockResumes);
   });
 });

@@ -1,5 +1,5 @@
-import { z } from "zod";
-import { ProviderTier } from "@/modules/jobs/types/job.types.js";
+import { z } from 'zod';
+import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 
 export const triggerJobsSchema = z.object({
   body: z.object({
@@ -11,5 +11,3 @@ export const triggerJobsSchema = z.object({
   query: z.object({}).optional(),
   params: z.object({}).optional(),
 });
-
-

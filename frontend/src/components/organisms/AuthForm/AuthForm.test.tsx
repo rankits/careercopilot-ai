@@ -91,9 +91,9 @@ describe('AuthForm', () => {
     render(<AuthForm mode="register" />);
     const phoneInput = screen.getByRole('textbox', { name: /phone number/i });
 
-    await user.type(phoneInput, 'call +91 98765@43210');
+    await user.type(phoneInput, '+91 98765@43210');
 
-    expect(phoneInput).toHaveValue('+91 9876543210');
+    expect(phoneInput).toHaveValue('9198765432');
   });
 
   it('disables submit action while submitting', () => {

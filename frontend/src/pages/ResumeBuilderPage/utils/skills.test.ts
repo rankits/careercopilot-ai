@@ -29,9 +29,7 @@ describe('skills utils', () => {
   });
 
   it('parses skill chips and merges lists without duplicates', () => {
-    expect(parseSkillChips('Python, Docker')).toEqual(
-      expect.arrayContaining(['Python', 'Docker']),
-    );
+    expect(parseSkillChips('Python, Docker')).toEqual(expect.arrayContaining(['Python', 'Docker']));
     expect(mergeSkillLists(['Java'], ['java', 'React'], ['Custom Tool'])).toEqual(
       expect.arrayContaining(['Java', 'React', 'Custom Tool']),
     );

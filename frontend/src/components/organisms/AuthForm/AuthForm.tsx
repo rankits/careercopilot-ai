@@ -35,7 +35,14 @@ const fieldIcons: AuthFieldIconMap = {
 };
 
 const PASSWORD_FIELDS = new Set(['password', 'confirmPassword']);
-
+const FIELD_MAX_LENGTHS: Record<string, number> = {
+  firstName: 80,
+  lastName: 80,
+  email: 300,
+  phone: 10,
+  password: 128,
+  confirmPassword: 128,
+};
 function renderIcon(icon?: AuthFieldIcon) {
   if (!icon) {
     return undefined;
@@ -47,7 +54,7 @@ function renderIcon(icon?: AuthFieldIcon) {
 }
 
 function sanitizePhoneNumber(value: string) {
-  return value.replace(/[^\d+()\s-]/g, '').replace(/^\s+/, '');
+  return value.replace(/\D/g, '').slice(0, 10);
 }
 
 export function AuthForm<TFormValues extends FieldValues = FieldValues>({
@@ -114,7 +121,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           const inputMode = isPhoneField ? 'tel' : undefined;
           const isVisible = Boolean(visibleFields[field.name]);
           const resolvedType = isPasswordField && isVisible ? 'text' : (field.type ?? 'text');
-          const registeredField = register(field.name as Path<TFormValues>);
+          const maxLength = FIELD_MAX_LENGTHS[field.name];
 
           return (
             <Input
@@ -124,9 +131,12 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               inputMode={inputMode}
               key={field.name}
               label={field.label}
-              {...registeredField}
-              onBlur={(event) => {
-                void registeredField.onBlur(event);
+              slotProps={{
+                htmlInput: {
+                  maxLength,
+                },
+              }}
+              onBlur={() => {
                 void trigger(field.name as Path<TFormValues>);
               }}
               onInput={
