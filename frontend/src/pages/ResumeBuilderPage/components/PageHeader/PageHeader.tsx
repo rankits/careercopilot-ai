@@ -11,12 +11,7 @@ import {
 
 import { WORKFLOW_STEPS, type ResumeBuilderStep } from '../../constants';
 
-import {
-  HeaderPrimaryButtonSx,
-  HeaderSecondaryButtonSx,
-  HeroHeader,
-  ProgressBar,
-} from './styles';
+import { HeaderPrimaryButtonSx, HeaderSecondaryButtonSx, HeroHeader, ProgressBar } from './styles';
 
 interface PageHeaderProps {
   canContinue: boolean;

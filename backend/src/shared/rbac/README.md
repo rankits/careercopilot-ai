@@ -28,7 +28,7 @@ permission.catalog.ts                    seeded from the catalog
 Two separate concerns, don't conflate them:
 
 - **`requirePrincipalType('ADMIN' | 'USER')`** - is the caller even the right
-  *kind* of principal (Admin table vs User table)? A table-level guard,
+  _kind_ of principal (Admin table vs User table)? A table-level guard,
   independent of what permissions their role carries.
 - **`requirePermission('key')`** - does the caller's specific role carry the
   specific attribute this action needs? The actual authorization decision.
@@ -39,11 +39,11 @@ see "Don't" below.
 
 ## Files
 
-| File | Purpose |
-|---|---|
-| `permission.catalog.ts` | Single source of truth: every permission `key` that exists, and `ROLE_PERMISSION_MAP` (which roles get which keys). |
-| `permission-cache.service.ts` | Cache-first (`PermissionCache.getPermissionsForRole`), Postgres-fallback resolver. Call `invalidateRole` after editing a role's permissions at runtime. |
-| `../middlewares/rbac.middleware.ts` | `requirePermission`, `requireRole`, `requirePrincipalType` - the Express guards routes actually import. |
+| File                                                           | Purpose                                                                                                                                                                |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `permission.catalog.ts`                                        | Single source of truth: every permission `key` that exists, and `ROLE_PERMISSION_MAP` (which roles get which keys).                                                    |
+| `permission-cache.service.ts`                                  | Cache-first (`PermissionCache.getPermissionsForRole`), Postgres-fallback resolver. Call `invalidateRole` after editing a role's permissions at runtime.                |
+| `../middlewares/rbac.middleware.ts`                            | `requirePermission`, `requireRole`, `requirePrincipalType` - the Express guards routes actually import.                                                                |
 | `prisma/seed/permissions.seed.ts`, `prisma/seed/roles.seed.ts` | Upsert the catalog into `Permission` / `RolePermission` (wholesale replace on `roles.seed.ts`, so re-running the seed after editing the catalog keeps the DB in sync). |
 
 ## Adding a new permission attribute
@@ -126,7 +126,7 @@ Guidelines:
 `src/test-utils/fake-prisma.ts` seeds `FakeDb.roles` from the real
 `ROLE_PERMISSION_MAP`, so specs exercise the actual production catalog by
 default - a role's permission set in tests is the same one `prisma:seed`
-would produce. To assert the *denied* path, strip a role's permissions for
+would produce. To assert the _denied_ path, strip a role's permissions for
 that one test:
 
 ```ts

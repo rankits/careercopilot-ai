@@ -141,11 +141,9 @@ const OPENAI_DEFAULT_MODELS = ['gpt-4o-mini', 'gpt-4o'];
 
 const getModelCandidates = (provider: ResumeAnalysisAiProvider): string[] => {
   if (provider === 'openrouter') {
-    const primary =
-      process.env.AI_RESUME_ANALYSIS_MODEL || OPENROUTER_DEFAULT_MODELS[0];
+    const primary = process.env.AI_RESUME_ANALYSIS_MODEL || OPENROUTER_DEFAULT_MODELS[0];
     const fallbacks = (
-      process.env.AI_RESUME_ANALYSIS_FALLBACK_MODELS ||
-      OPENROUTER_DEFAULT_MODELS.slice(1).join(',')
+      process.env.AI_RESUME_ANALYSIS_FALLBACK_MODELS || OPENROUTER_DEFAULT_MODELS.slice(1).join(',')
     )
       .split(',')
       .map((model) => model.trim())
@@ -154,8 +152,7 @@ const getModelCandidates = (provider: ResumeAnalysisAiProvider): string[] => {
 
     // openrouter/free often returns empty / safety text — skip unless explicitly allowed.
     const allowAutoFree =
-      String(process.env.AI_RESUME_ANALYSIS_ALLOW_OPENROUTER_FREE || '').toLowerCase() ===
-      'true';
+      String(process.env.AI_RESUME_ANALYSIS_ALLOW_OPENROUTER_FREE || '').toLowerCase() === 'true';
 
     const models = Array.from(new Set([primary, ...fallbacks])).filter(
       (model) => allowAutoFree || !isOpenRouterFreeAutoRouter(model),
@@ -175,12 +172,9 @@ const getModelCandidates = (provider: ResumeAnalysisAiProvider): string[] => {
 
   if (provider === 'groq') {
     // Prefer smaller/faster models first when daily token budget is tight.
-    const primary =
-      process.env.AI_RESUME_ANALYSIS_GROQ_MODEL || 'llama-3.1-8b-instant';
+    const primary = process.env.AI_RESUME_ANALYSIS_GROQ_MODEL || 'llama-3.1-8b-instant';
     const groqSafe = primary.includes('/') ? 'llama-3.1-8b-instant' : primary;
-    return Array.from(
-      new Set([groqSafe, 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile']),
-    );
+    return Array.from(new Set([groqSafe, 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile']));
   }
 
   const configuredModel =
@@ -298,10 +292,7 @@ const extractJson = (raw: unknown): string => {
 const createGoogleClient = (model: string): ChatGoogleGenerativeAI => {
   const apiKey = getGoogleApiKey();
   if (!apiKey) {
-    throw new AppError(
-      'AI provider not configured. Set GOOGLE_API_KEY or GEMINI_API_KEY.',
-      500,
-    );
+    throw new AppError('AI provider not configured. Set GOOGLE_API_KEY or GEMINI_API_KEY.', 500);
   }
   return new ChatGoogleGenerativeAI({
     apiKey,
@@ -324,11 +315,7 @@ const invokeGoogleModel = async (
   return extractJson((response as { content?: unknown }).content ?? response);
 };
 
-const getMaxOutputTokens = (
-  providerLabel: string,
-  model?: string,
-  override?: number,
-): number => {
+const getMaxOutputTokens = (providerLabel: string, model?: string, override?: number): number => {
   if (typeof override === 'number' && override > 0) {
     return Math.min(override, 8000);
   }
@@ -390,7 +377,12 @@ const extractJsonObject = (raw: string): string => {
 
 /** Best-effort repair when the model truncates JSON mid-string. */
 const tryRepairJson = (raw: string): string => {
-  let text = extractJsonObject(raw.replace(/^```json\s*/i, '').replace(/```$/i, '').trim());
+  let text = extractJsonObject(
+    raw
+      .replace(/^```json\s*/i, '')
+      .replace(/```$/i, '')
+      .trim(),
+  );
   if (!text) return text;
   try {
     JSON.parse(text);
@@ -500,10 +492,7 @@ const invokeOpenAiCompatibleChat = async (input: {
         const detail =
           body.error?.message ??
           `${input.providerLabel} resume analysis request failed with ${response.status}`;
-        const err = new AppError(
-          `${detail} [${input.providerLabel} HTTP ${response.status}]`,
-          500,
-        );
+        const err = new AppError(`${detail} [${input.providerLabel} HTTP ${response.status}]`, 500);
 
         if (attempt === 0 && isMaxTokensAffordabilityError(err)) {
           const affordable = parseAffordableMaxTokens(err);
@@ -692,7 +681,9 @@ const sanitizeAiSkillOutput = (aiResult: AiAnalysisOutput): AiAnalysisOutput => 
   skillAnalysis: {
     matchedSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.matchedSkills ?? []),
     missingSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.missingSkills ?? []),
-    transferableSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.transferableSkills ?? []),
+    transferableSkills: normalizeProfessionalSkills(
+      aiResult.skillAnalysis?.transferableSkills ?? [],
+    ),
     recommendedSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.recommendedSkills ?? []),
   },
   suggestions: (aiResult.suggestions ?? [])
@@ -701,7 +692,9 @@ const sanitizeAiSkillOutput = (aiResult: AiAnalysisOutput): AiAnalysisOutput => 
         ? { ...suggestion, suggestedText: normalizeSkillText(suggestion.suggestedText) }
         : suggestion,
     )
-    .filter((suggestion) => suggestion.category !== 'skills' || suggestion.suggestedText.length > 0),
+    .filter(
+      (suggestion) => suggestion.category !== 'skills' || suggestion.suggestedText.length > 0,
+    ),
   optimizedSections: {
     ...aiResult.optimizedSections,
     skills: normalizeProfessionalSkills(aiResult.optimizedSections?.skills ?? []),
@@ -735,7 +728,9 @@ const enrichAnalysisWithJdSkills = (
   const skillAnalysis = {
     matchedSkills: normalizeProfessionalSkills(matchedFromJd),
     missingSkills: normalizeProfessionalSkills(missingFromJd),
-    transferableSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.transferableSkills ?? []),
+    transferableSkills: normalizeProfessionalSkills(
+      aiResult.skillAnalysis?.transferableSkills ?? [],
+    ),
     recommendedSkills: normalizeProfessionalSkills(missingFromJd),
   };
 
@@ -845,9 +840,7 @@ export const resumeAnalysisAiClient = {
             : Number(process.env.AI_RESUME_ANALYSIS_MAX_JD_CHARS || 5000);
 
         let safeResume = truncateForAi(resumeText, resumeLimit);
-        let safeJd = jobDescription
-          ? truncateForAi(jobDescription, jdLimit)
-          : jobDescription;
+        let safeJd = jobDescription ? truncateForAi(jobDescription, jdLimit) : jobDescription;
 
         const runOnce = async (resume: string, jd: string | undefined, useCompact: boolean) => {
           const { systemPrompt, userMessage } = buildResumeAnalysisPrompt(
@@ -874,7 +867,10 @@ export const resumeAnalysisAiClient = {
             );
           }
           let jsonText = extractJsonObject(
-            rawText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim(),
+            rawText
+              .replace(/^```json\s*/i, '')
+              .replace(/```$/i, '')
+              .trim(),
           );
           try {
             JSON.parse(jsonText);
@@ -950,7 +946,10 @@ export const resumeAnalysisAiClient = {
                 { err, provider, model },
                 'Compact JSON still truncated; retrying once with smaller input',
               );
-              safeResume = truncateForAi(safeResume, Math.max(1200, Math.floor(safeResume.length * 0.5)));
+              safeResume = truncateForAi(
+                safeResume,
+                Math.max(1200, Math.floor(safeResume.length * 0.5)),
+              );
               safeJd = safeJd
                 ? truncateForAi(safeJd, Math.max(600, Math.floor(safeJd.length * 0.5)))
                 : safeJd;
@@ -977,10 +976,7 @@ export const resumeAnalysisAiClient = {
             message.includes('non-json') ||
             err instanceof SyntaxError
           ) {
-            logger.error(
-              { err, model, provider },
-              'Invalid resume analysis response',
-            );
+            logger.error({ err, model, provider }, 'Invalid resume analysis response');
             // Paid Gemini truncation: skip remaining OpenRouter free models → Groq.
             if (provider === 'openrouter' && !isFreeOpenRouterModel(model)) {
               logger.warn(

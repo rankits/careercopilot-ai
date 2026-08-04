@@ -24,7 +24,12 @@ import type {
 } from '@/services/resumeBuilder.service';
 
 import type { ResumeBuilderStep as Step } from '../../constants';
-import { formatFileSize, formatResumeDate, getResumeExtension, type ResumeTemplateId } from '../../utils';
+import {
+  formatFileSize,
+  formatResumeDate,
+  getResumeExtension,
+  type ResumeTemplateId,
+} from '../../utils';
 import { DefineRoleStep } from '../DefineRoleStep';
 import { ExportStep } from '../ExportStep';
 import { OptimizeStep } from '../OptimizeStep';
@@ -142,7 +147,11 @@ function AnalysisDashboard({
               formatting issues.
             </CardSubtitle>
           </Box>
-          <Button size="small" startIcon={<LightbulbOutlinedIcon fontSize="small" />} variant="ghost">
+          <Button
+            size="small"
+            startIcon={<LightbulbOutlinedIcon fontSize="small" />}
+            variant="ghost"
+          >
             How does analysis work?
           </Button>
         </Box>
@@ -386,7 +395,9 @@ function AnalysisDashboard({
                   </Typography>
                 ))}
               {atsIssues.length === 0 && weaknesses.length === 0 && (
-                <EmptyText>{isComplete ? 'No ATS issues found.' : 'Issues are being checked.'}</EmptyText>
+                <EmptyText>
+                  {isComplete ? 'No ATS issues found.' : 'Issues are being checked.'}
+                </EmptyText>
               )}
             </Box>
           </Box>

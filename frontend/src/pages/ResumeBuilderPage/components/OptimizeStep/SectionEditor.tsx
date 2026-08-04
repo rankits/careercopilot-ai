@@ -54,11 +54,7 @@ export function SectionEditor({
       <ContactEditor draft={draft} onChange={onChange} />
 
       {section === 'skills' ? (
-        <SkillsChipEditor
-          draft={draft}
-          recommendedSkills={recommendedSkills}
-          onChange={onChange}
-        />
+        <SkillsChipEditor draft={draft} recommendedSkills={recommendedSkills} onChange={onChange} />
       ) : section === 'experience' ? (
         <ExperienceEditor draft={draft} onChange={onChange} />
       ) : section === 'projects' ? (

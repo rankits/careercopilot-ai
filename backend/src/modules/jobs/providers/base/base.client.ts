@@ -2,11 +2,11 @@ import {
   ProviderHealth,
   ProviderHealthStatus,
   ProviderRateLimitStatus,
-} from "@/modules/jobs/types/provider.types.js";
-import { ProviderFetchError } from "@/modules/jobs/errors/ProviderFetchError.js";
-import { RateLimitError } from "@/modules/jobs/errors/RateLimitError.js";
-import { calculateJitteredBackoff, sleep } from "@/modules/jobs/utils/backoff.js";
-import { jobsLogger } from "@/shared/utils/logger.js";
+} from '@/modules/jobs/types/provider.types.js';
+import { ProviderFetchError } from '@/modules/jobs/errors/ProviderFetchError.js';
+import { RateLimitError } from '@/modules/jobs/errors/RateLimitError.js';
+import { calculateJitteredBackoff, sleep } from '@/modules/jobs/utils/backoff.js';
+import { jobsLogger } from '@/shared/utils/logger.js';
 
 export interface BaseClientOptions {
   readonly providerName: string;
@@ -40,13 +40,11 @@ export abstract class BaseProviderClient {
     };
   }
 
-  protected async executeWithRetry<T>(
-    operation: () => Promise<T>
-  ): Promise<T> {
+  protected async executeWithRetry<T>(operation: () => Promise<T>): Promise<T> {
     if (this.circuitStatus === ProviderHealthStatus.CIRCUIT_OPEN) {
       throw new ProviderFetchError(
         this.options.providerName,
-        "Circuit breaker is OPEN due to consecutive failures"
+        'Circuit breaker is OPEN due to consecutive failures',
       );
     }
 
@@ -70,7 +68,7 @@ export abstract class BaseProviderClient {
             maxRetries,
             error: errorMessage,
           },
-          "Provider fetch attempt failed",
+          'Provider fetch attempt failed',
         );
 
         if (error instanceof RateLimitError) {
@@ -81,7 +79,7 @@ export abstract class BaseProviderClient {
               attempt,
               waitMs,
             },
-            "Provider rate limited, delaying retry",
+            'Provider rate limited, delaying retry',
           );
           await sleep(waitMs);
           continue;
@@ -95,7 +93,7 @@ export abstract class BaseProviderClient {
               attempt,
               backoffMs,
             },
-            "Scheduling provider retry",
+            'Scheduling provider retry',
           );
           await sleep(backoffMs);
         }
@@ -109,8 +107,7 @@ export abstract class BaseProviderClient {
       this.circuitStatus = ProviderHealthStatus.DEGRADED;
     }
 
-    const finalErrorMessage =
-      lastError instanceof Error ? lastError.message : String(lastError);
+    const finalErrorMessage = lastError instanceof Error ? lastError.message : String(lastError);
 
     jobsLogger.error(
       {
@@ -120,14 +117,13 @@ export abstract class BaseProviderClient {
         circuitStatus: this.circuitStatus,
         error: finalErrorMessage,
       },
-      "Provider fetch exhausted all retries",
+      'Provider fetch exhausted all retries',
     );
 
     throw new ProviderFetchError(
       this.options.providerName,
       `Failed to fetch after ${maxRetries} attempts`,
-      lastError
+      lastError,
     );
   }
 }
-
