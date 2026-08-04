@@ -270,39 +270,46 @@ export function EditProfilePage() {
           </Box>
         </OnboardingPageHeader>
 
+        {/* Only render the editable profile form after the profile has finished loading.
+            This ensures the form fields are populated via `reset(...)` before they are
+            mounted, avoiding timing issues in tests that assert on the field values. */}
         <ProfileReviewColumn>
-          <Box
-            component="form"
-            display="grid"
-            gap={spacing[3]}
-            id="profile-review-form"
-            noValidate
-            onSubmit={(event) => {
-              void handleSubmit(
-                (profile) => setPendingProfile(profile),
-                (validationErrors) => {
-                  const firstInvalid = SECTIONS.find((section) =>
-                    section.fields.some(({ name }) => Boolean(validationErrors[name])),
-                  );
-                  if (firstInvalid) setExpandedSection(firstInvalid.title);
-                },
-              )(event);
-            }}
-          >
-            {SECTIONS.map((section) => (
-              <ProfileReviewSection
-                {...section}
-                errors={errors}
-                expanded={expandedSection === section.title}
-                key={section.title}
-                onToggle={() =>
-                  setExpandedSection((current) => (current === section.title ? '' : section.title))
-                }
-                register={register}
-                status={sectionStatus(section.fields)}
-              />
-            ))}
-          </Box>
+          {!isLoadingProfile && !profileMissing ? (
+            <Box
+              component="form"
+              display="grid"
+              gap={spacing[3]}
+              id="profile-review-form"
+              noValidate
+              onSubmit={(event) => {
+                void handleSubmit(
+                  (profile) => setPendingProfile(profile),
+                  (validationErrors) => {
+                    const firstInvalid = SECTIONS.find((section) =>
+                      section.fields.some(({ name }) => Boolean(validationErrors[name])),
+                    );
+                    if (firstInvalid) setExpandedSection(firstInvalid.title);
+                  },
+                )(event);
+              }}
+            >
+              {SECTIONS.map((section) => (
+                <ProfileReviewSection
+                  {...section}
+                  errors={errors}
+                  expanded={expandedSection === section.title}
+                  key={section.title}
+                  onToggle={() =>
+                    setExpandedSection((current) =>
+                      current === section.title ? '' : section.title,
+                    )
+                  }
+                  register={register}
+                  status={sectionStatus(section.fields)}
+                />
+              ))}
+            </Box>
+          ) : null}
         </ProfileReviewColumn>
       </OnboardingPage>
 
