@@ -2,13 +2,16 @@ import { useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 
+import { useCachedCompanyLogo } from '@/features/jobs/hooks/useCachedCompanyLogo';
+
 import {
-  AccessTimeOutlinedIcon,
   BookmarkBorderOutlinedIcon,
   BookmarkOutlinedIcon,
   BusinessCenterOutlinedIcon,
   ExpandMoreIcon,
+  HistoryOutlinedIcon,
   LocationOnOutlinedIcon,
+  PersonOutlineIcon,
   SmartToyOutlinedIcon,
   Typography,
   WorkOutlineOutlinedIcon,
@@ -77,6 +80,8 @@ export interface JobCardData {
   tags: string[];
   title: string;
   type: string;
+  /** When true, show the verified badge beside the title. */
+  verified?: boolean;
 }
 
 export interface JobCardProps {
@@ -111,9 +116,9 @@ export function JobCard({
     onApply || onSave || onDismiss || onMoreLikeThis || onLessLikeThis || onNotRelevant,
   );
   const canApply = Boolean(job.applyUrl);
-  const [logoFailed, setLogoFailed] = useState(false);
+  const { src: logoSrc, failed: logoFailed, onLogoError } = useCachedCompanyLogo(job.logoUrl);
   const [detailsOpen, setDetailsOpen] = useState(false);
-  const showLogoImage = Boolean(job.logoUrl) && !logoFailed;
+  const showLogoImage = Boolean(logoSrc) && !logoFailed;
   const details = job.recommendationDetails;
   const detailsId = `${toDomId(job.recommendationId ?? job.id ?? `${job.company}-${job.title}`)}-recommendation-details`;
   const hasSkillGap = details?.skillGap
@@ -123,6 +128,8 @@ export function JobCard({
     details && (details.summary || details.bullets.length > 0 || hasSkillGap),
   );
   const showActions = showWiredActions || hasDetails;
+  const hasExperience = Boolean(job.experience.trim());
+  const hasLocation = Boolean(job.location.trim());
 
   return (
     <JobCardRoot
@@ -132,7 +139,7 @@ export function JobCard({
       <Accent tone={job.accent} />
       <CompanyLogo aria-label={`${job.company} logo`}>
         {showLogoImage ? (
-          <img alt="" loading="lazy" onError={() => setLogoFailed(true)} src={job.logoUrl} />
+          <img alt="" loading="lazy" onError={onLogoError} src={logoSrc} />
         ) : (
           job.logo || '?'
         )}
@@ -164,33 +171,31 @@ export function JobCard({
                 job.title
               )}
             </Typography>
-            <Typography component="p">
-              {job.company} <span>-</span> {job.location}
-            </Typography>
-            {job.matchSubtitle ? (
-              <Typography
-                component="p"
-                sx={{ fontSize: '0.75rem', color: 'text.secondary', mt: 0.5 }}
-              >
-                {job.matchSubtitle}
-              </Typography>
-            ) : null}
+            <Typography component="p">{job.company}</Typography>
+            {job.matchSubtitle ? <Typography component="p">{job.matchSubtitle}</Typography> : null}
           </div>
-          <VerifiedIcon fontSize="small" aria-hidden="true" />
+          {job.verified ? <VerifiedIcon fontSize="small" aria-label="Verified company" /> : null}
         </TitleRow>
 
         <JobMeta>
           <span>
             <BusinessCenterOutlinedIcon fontSize="small" /> {job.salary}
           </span>
-          <span>
-            <AccessTimeOutlinedIcon fontSize="small" /> {job.experience}
-          </span>
+          {hasExperience ? (
+            <span>
+              <PersonOutlineIcon fontSize="small" /> {job.experience}
+            </span>
+          ) : null}
           <span>
             <WorkOutlineOutlinedIcon fontSize="small" /> {job.type}
           </span>
+          {hasLocation ? (
+            <span>
+              <LocationOnOutlinedIcon fontSize="small" /> {job.location}
+            </span>
+          ) : null}
           <span>
-            <LocationOnOutlinedIcon fontSize="small" /> {job.postedAt}
+            <HistoryOutlinedIcon fontSize="small" /> {job.postedAt}
           </span>
         </JobMeta>
 
