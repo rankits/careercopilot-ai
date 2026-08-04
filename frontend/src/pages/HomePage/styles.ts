@@ -104,5 +104,5 @@ export const DashboardMetricsGrid = styled(Box)({
 
 export const RecommendationList = styled(Box)({
   display: 'grid',
-  gap: spacing[1],
+  gap: spacing[2],
 });
