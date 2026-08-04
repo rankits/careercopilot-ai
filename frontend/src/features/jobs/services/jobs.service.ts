@@ -19,7 +19,7 @@ const unwrapListPayload = (response: unknown): JobListResult => {
   const payload = response.data.data;
   const items = Array.isArray(payload.items) ? (payload.items as JobListDto[]) : [];
   const pagination = isRecord(payload.pagination)
-    ? (payload.pagination as JobListResult['pagination'])
+    ? (payload.pagination as unknown as JobListResult['pagination'])
     : {
         page: 1,
         limit: items.length,
@@ -121,7 +121,7 @@ export const jobsService = {
       if (!isRecord(response) || !isRecord(response.data) || !isRecord(response.data.data)) {
         throw new Error('Unexpected job detail response shape');
       }
-      return response.data.data as JobDetailDto;
+      return response.data.data as unknown as JobDetailDto;
     } catch (error) {
       throw normalizeJobsError(error);
     }

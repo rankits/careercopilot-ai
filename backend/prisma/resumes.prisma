@@ -41,6 +41,7 @@ model Resume {
 
   extractions    ResumeExtraction[]
   parseRuns      ResumeParseRun[]
+  analyses       ResumeAnalysis[]
 
   @@index([userId, uploadedAt(sort: Desc)])
   @@index([status, uploadedAt])
@@ -111,4 +112,111 @@ model CandidateProfile {
 
   @@index([sourceResumeId])
   @@map("candidate_profiles")
+}
+
+// ─── Resume Builder / Analysis Domain ────────────────────────────────────────
+
+enum AnalysisStatus {
+  PENDING
+  ANALYZING
+  COMPLETED
+  FAILED
+}
+
+enum KeywordStatus {
+  MATCHED
+  MISSING
+  PARTIAL
+}
+
+enum SuggestionImpact {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum SuggestionStatus {
+  PENDING
+  APPLIED
+  IGNORED
+}
+
+model ResumeAnalysis {
+  id              Int                @id @default(autoincrement())
+  resumeId        String             @map("resume_id")
+  targetRole      String             @map("target_role")
+  experienceLevel String             @default("mid") @map("experience_level")
+  jobDescription  String?            @map("job_description")
+  atsScore        Int                @default(0) @map("ats_score")
+  keywordMatch    Int                @default(0) @map("keyword_match")
+  skillMatch      Int                @default(0) @map("skill_match")
+  contentQuality  Int                @default(0) @map("content_quality")
+  readability     Int                @default(0)
+  formattingScore Int                @default(0) @map("formatting_score")
+  strengths       String[]
+  weaknesses      String[]
+  analysisDetails Json?              @map("analysis_details")
+  editedContent   String?            @map("edited_content")
+  currentStep     Int                @default(2) @map("current_step")
+  status          AnalysisStatus     @default(PENDING)
+  createdAt       DateTime           @default(now()) @map("created_at")
+  updatedAt       DateTime           @updatedAt @map("updated_at")
+
+  resume          Resume             @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+  keywords        ResumeKeyword[]
+  suggestions     ResumeSuggestion[]
+  versions        ResumeVersion[]
+
+  @@index([resumeId])
+  @@map("resume_analyses")
+}
+
+model ResumeKeyword {
+  id         Int            @id @default(autoincrement())
+  analysisId Int            @map("analysis_id")
+  term       String
+  status     KeywordStatus  @default(MISSING)
+  importance String         @default("medium")
+  createdAt  DateTime       @default(now()) @map("created_at")
+
+  analysis   ResumeAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@map("resume_keywords")
+}
+
+model ResumeSuggestion {
+  id             Int              @id @default(autoincrement())
+  analysisId     Int              @map("analysis_id")
+  title          String
+  category       String
+  originalText   String           @map("original_text")
+  suggestedText  String           @map("suggested_text")
+  reason         String           @default("")
+  impact         SuggestionImpact @default(MEDIUM)
+  status         SuggestionStatus @default(PENDING)
+  createdAt      DateTime         @default(now()) @map("created_at")
+  updatedAt      DateTime         @updatedAt @map("updated_at")
+
+  analysis       ResumeAnalysis   @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@map("resume_suggestions")
+}
+
+model ResumeVersion {
+  id              Int            @id @default(autoincrement())
+  analysisId      Int            @map("analysis_id")
+  label           String
+  content         String
+  atsScore        Int            @default(0) @map("ats_score")
+  targetRole      String?        @map("target_role")
+  jobDescription  String?        @map("job_description")
+  resumeFileName  String?        @map("resume_file_name")
+  createdAt       DateTime       @default(now()) @map("created_at")
+
+  analysis        ResumeAnalysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@index([analysisId])
+  @@map("resume_versions")
 }

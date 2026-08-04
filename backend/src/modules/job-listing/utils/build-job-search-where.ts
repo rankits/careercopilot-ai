@@ -3,9 +3,7 @@ import type { JobSearchFilters } from '@/modules/job-listing/types/job-listing.t
 
 const toList = (value?: string | string[]): string[] => {
   if (!value) return [];
-  return (Array.isArray(value) ? value : [value])
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return (Array.isArray(value) ? value : [value]).map((item) => item.trim()).filter(Boolean);
 };
 
 const remoteTypesFromLocationQuery = (location: string): string[] => {
@@ -77,6 +75,9 @@ export function buildJobSearchWhere(filters: JobSearchFilters): Prisma.JobWhereI
     }),
     ...(filters.maxSalary !== undefined && {
       salaryMin: { lte: filters.maxSalary },
+    }),
+    ...(filters.postedSince !== undefined && {
+      effectivePostedAt: { gte: filters.postedSince },
     }),
     ...(locationClauses.length && { OR: locationClauses }),
   };

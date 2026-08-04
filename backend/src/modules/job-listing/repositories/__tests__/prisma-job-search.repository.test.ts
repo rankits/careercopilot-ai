@@ -29,3 +29,22 @@ describe('PrismaJobSearchRepository.findById', () => {
     await expect(repo.findById('expired-job')).resolves.toBeNull();
   });
 });
+
+describe('PrismaJobSearchRepository.findByIds', () => {
+  it('hydrates only ACTIVE jobs for recommendation retrieval', async () => {
+    const findMany = vi.spyOn(prisma.job, 'findMany').mockResolvedValue([]);
+
+    const repo = new PrismaJobSearchRepository();
+    const result = await repo.findByIds(['active-job', 'expired-job']);
+
+    expect(result).toEqual([]);
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          id: { in: ['active-job', 'expired-job'] },
+          status: 'ACTIVE',
+        },
+      }),
+    );
+  });
+});

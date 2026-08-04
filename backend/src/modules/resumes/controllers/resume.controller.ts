@@ -18,6 +18,18 @@ export const resumeUploadMiddleware = multer({
   },
 }).single('resume');
 
+export const listResumesController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const resumes = await resumeService.listResumes({
+      userId: typeof req.query.userId === 'string' ? req.query.userId : undefined,
+    });
+
+    return res.status(200).json(successResponse('Resumes retrieved successfully', resumes));
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const uploadResumeController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const resume = await resumeService.uploadResume({
@@ -30,7 +42,10 @@ export const uploadResumeController = async (req: Request, res: Response, next: 
         id: resume.id,
         status: resume.status,
         fileName: resume.fileName,
+        originalName: resume.originalName,
+        sizeBytes: resume.sizeBytes,
         storageDriver: resume.storageDriver,
+        createdAt: resume.uploadedAt,
         uploadedAt: resume.uploadedAt,
       }),
     );
@@ -132,6 +147,11 @@ export const confirmProfileController = async (req: Request, res: Response, next
     await resumeService.confirmProfile({
       userId: principalId,
       resumeId: req.body.resumeId,
+      personalDetails: req.body.personalDetails,
+      experience: req.body.experience,
+      education: req.body.education,
+      skills: req.body.skills,
+      certifications: req.body.certifications,
     });
     return res.status(200).json(successResponse('Profile created successfully'));
   } catch (error) {
@@ -158,7 +178,8 @@ export const updateMyCandidateProfileController = async (
   next: NextFunction,
 ) => {
   try {
-    const profile = await resumeService.updateCandidateProfile(requirePrincipalId(req), req.body);
+    const userId = requirePrincipalId(req);
+    const profile = await resumeService.updateCandidateProfile(userId, req.body);
     return res.status(200).json(successResponse('Candidate profile updated', profile));
   } catch (error) {
     return next(error);

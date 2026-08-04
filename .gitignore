@@ -10,7 +10,6 @@ frontend/coverage
 *.local
 .vscode/*
 !.vscode/extensions.json
-docs
 backend/docs/
 backend/storage/
 # Playwright
@@ -19,3 +18,8 @@ frontend/test-results/
 frontend/blob-report/
 
 flow-diagrames
+docs/
+# Local manual deploy config (never commit secrets)
+deploy/manual-deploy.env
+deploy/frontend-manual-deploy.env
+manual-deploy.env

@@ -14,6 +14,7 @@ export const applyRecommendationFilters = (
     employmentTypes: filters.employmentTypes ?? context.employmentTypes,
     industries: filters.industries ?? context.industries,
     seniority: filters.experienceLevels?.[0] ?? context.seniority,
+    filterMode: filters.filterMode ?? context.filterMode,
     salaryExpectation: {
       ...context.salaryExpectation,
       minimum: filters.minimumSalary ?? context.salaryExpectation.minimum,

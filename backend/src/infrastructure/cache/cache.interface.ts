@@ -12,8 +12,12 @@ export interface ICacheDriver {
   increment(key: string, ttlSeconds?: number): Promise<number>;
   ping(): Promise<boolean>;
   disconnect(): Promise<void>;
+  tryAcquireLock(key: string, ttlSeconds: number): Promise<boolean>;
+  releaseLock(key: string): Promise<void>;
 }
 
 export interface ICacheService extends ICacheDriver {
   getOrSet<T>(key: string, fetcher: () => Promise<T>, ttlSeconds?: number): Promise<T>;
+  tryAcquireLock(key: string, ttlSeconds: number): Promise<boolean>;
+  releaseLock(key: string): Promise<void>;
 }

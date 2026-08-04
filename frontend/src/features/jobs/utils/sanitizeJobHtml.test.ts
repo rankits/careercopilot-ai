@@ -20,7 +20,9 @@ describe('sanitizeJobHtml', () => {
   });
 
   it('removes iframe and object embeds', () => {
-    const clean = sanitizeJobHtml('<p>Ok</p><iframe src="https://evil.test"></iframe><object data="x"></object>');
+    const clean = sanitizeJobHtml(
+      '<p>Ok</p><iframe src="https://evil.test"></iframe><object data="x"></object>',
+    );
     expect(clean).not.toMatch(/iframe|object/i);
     expect(clean).toMatch(/Ok/);
   });

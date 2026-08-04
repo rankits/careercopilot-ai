@@ -5,8 +5,9 @@ import { ROUTES } from '@/constants/routes';
 import { authService } from '@/features/auth/services/auth.service';
 import type { RegisterPayload } from '@/features/auth/types/auth.types';
 
-export interface RegisterFormValues extends RegisterPayload {
+export interface RegisterFormValues extends Omit<RegisterPayload, 'phone'> {
   confirmPassword: string;
+  phone: string;
 }
 
 export function useRegister() {
@@ -28,12 +29,13 @@ export function useRegister() {
     }
 
     try {
+      const phone = values.phone.replace(/[^\d+]/g, '');
       await registerMutation.mutateAsync({
         email: values.email.trim().toLowerCase(),
         firstName: values.firstName.trim(),
         lastName: values.lastName.trim(),
         password: values.password,
-        phone: values.phone.replace(/[^\d+]/g, ''),
+        ...(phone ? { phone } : {}),
       });
 
       return true;

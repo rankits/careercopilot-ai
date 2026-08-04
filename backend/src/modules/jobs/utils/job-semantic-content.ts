@@ -17,11 +17,21 @@ const normalizeStringArray = (value: unknown): string[] =>
         .sort()
     : [];
 
+export const stripHtmlNoise = (text: string): string =>
+  text
+    .replace(/<[^>]*>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+
 export const normalizeJobSemanticContent = (content: JobSemanticContent) => ({
   companySlug: content.companySlug.trim().toLowerCase(),
   companyName: content.companyName.trim().toLowerCase(),
   title: content.title.trim().toLowerCase(),
-  descriptionText: content.descriptionText.trim(),
+  descriptionText: stripHtmlNoise(content.descriptionText),
   remoteType: content.remoteType,
   skills: normalizeStringArray(content.skills),
   tags: normalizeStringArray(content.tags),

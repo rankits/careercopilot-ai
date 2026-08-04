@@ -6,8 +6,9 @@ import type { SidebarVariant } from '@/components/organisms/Sidebar/interfaces';
 import { useLogout } from '@/features/auth/hooks/useLogout';
 import { useAppSelector } from '@/hooks/redux';
 
-import { AppHeader, Sidebar } from '@/components';
+import { AppHeader, CareerCopilot, Sidebar } from '@/components';
 import { ROUTES } from '@/constants/routes';
+import { CopilotSessionProvider } from '@/features/copilot';
 import { useMediaQuery } from '@/lib/material';
 
 export function AppLayout() {
@@ -24,36 +25,44 @@ export function AppLayout() {
           ? 'applications'
           : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
             ? 'jobs-feed'
-            : 'dashboard';
+            : pathname === ROUTES.SAVED_RESUMES || pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
+              ? 'saved-resumes'
+              : pathname.startsWith(ROUTES.RESUME_BUILDER)
+                ? 'resume-builder'
+                : 'dashboard';
+
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);
   const userName = user?.name ?? user?.email ?? 'User';
   const userRoleLabel = user?.role === 'admin' || user?.role === 'ADMIN' ? 'Admin' : undefined;
-
   return (
-    <div className="app-shell">
-      <Sidebar
-        activeItemId={activeItemId}
-        mobileMode={isMobile ? 'bottomNav' : undefined}
-        onVariantChange={setSidebarVariant}
-        variant={sidebarVariant}
-      />
-      <div className="content-shell">
-        <AppHeader
-          onLogoutClick={() => {
-            if (!isLoggingOut) {
-              void logout();
-            }
-          }}
-          onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
-          userAvatarUrl={user?.profileImage ?? undefined}
-          userName={userName}
-          userRoleLabel={userRoleLabel}
+    <CopilotSessionProvider>
+      <div className="app-shell">
+        <Sidebar
+          activeItemId={activeItemId}
+          mobileMode={isMobile ? 'bottomNav' : undefined}
+          onVariantChange={setSidebarVariant}
+          variant={sidebarVariant}
         />
-        <main className="main-content">
-          <Outlet />
-        </main>
+        <div className="content-shell">
+          <AppHeader
+            onLogoutClick={() => {
+              if (!isLoggingOut) {
+                void logout();
+              }
+            }}
+            onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
+            onUploadResumeClick={() => void navigate(ROUTES.PROFILE)}
+            userAvatarUrl={user?.profileImage ?? undefined}
+            userName={userName}
+            userRoleLabel={userRoleLabel}
+          />
+          <main className="main-content">
+            <Outlet />
+          </main>
+        </div>
+        <CareerCopilot />
       </div>
-    </div>
+    </CopilotSessionProvider>
   );
 }

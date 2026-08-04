@@ -1,13 +1,21 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
-const { findResumeByIdMock, findLatestExtractionMock, upsertCandidateProfileMock } = vi.hoisted(
-  () => ({
-    findResumeByIdMock: vi.fn(),
-    findLatestExtractionMock: vi.fn(),
-    upsertCandidateProfileMock: vi.fn(),
-  }),
-);
+const {
+  findResumeByIdMock,
+  findLatestExtractionMock,
+  findCandidateProfileByUserIdMock,
+  updateCandidateProfileMock,
+  upsertCandidateProfileMock,
+  listResumesMock,
+} = vi.hoisted(() => ({
+  findResumeByIdMock: vi.fn(),
+  findLatestExtractionMock: vi.fn(),
+  findCandidateProfileByUserIdMock: vi.fn(),
+  updateCandidateProfileMock: vi.fn(),
+  upsertCandidateProfileMock: vi.fn(),
+  listResumesMock: vi.fn(),
+}));
 
 vi.mock('@/modules/resumes/repositories/resume.repository.js', () => ({
   resumeRepository: {
@@ -15,9 +23,10 @@ vi.mock('@/modules/resumes/repositories/resume.repository.js', () => ({
     findResumeById: findResumeByIdMock,
     findLatestExtraction: findLatestExtractionMock,
     findLatestParseRun: vi.fn(),
-    findCandidateProfileByUserId: vi.fn(),
-    updateCandidateProfile: vi.fn(),
+    findCandidateProfileByUserId: findCandidateProfileByUserIdMock,
+    updateCandidateProfile: updateCandidateProfileMock,
     upsertCandidateProfile: upsertCandidateProfileMock,
+    listResumes: listResumesMock,
   },
 }));
 
@@ -35,6 +44,14 @@ const { parseExistingResumeMock } = vi.hoisted(() => ({
 
 vi.mock('@/modules/resumes/services/resume-parsing.orchestrator.js', () => ({
   resumeParsingOrchestrator: { parseExistingResume: parseExistingResumeMock },
+}));
+
+const { invalidateUserRecommendationStateMock } = vi.hoisted(() => ({
+  invalidateUserRecommendationStateMock: vi.fn(),
+}));
+
+vi.mock('@/modules/recommendations/services/recommendation-lifecycle.service.js', () => ({
+  invalidateUserRecommendationState: invalidateUserRecommendationStateMock,
 }));
 
 vi.mock('@/modules/resumes/services/resume-processing.service.js', () => ({
@@ -123,6 +140,11 @@ describe('resumeService ownership guards (AUTH-BE-003)', () => {
         expect(parseExistingResumeMock).toHaveBeenCalledWith(
           expect.objectContaining({ resumeId: 'resume-1', userId: ownerId, reason: 'bad parse' }),
         );
+        expect(invalidateUserRecommendationStateMock).toHaveBeenCalledWith({
+          userId: ownerId,
+          sourceType: 'RESUME',
+          sourceId: 'resume-1',
+        });
       });
     });
   });
@@ -170,19 +192,144 @@ describe('resumeService.confirmProfile ownership (AUTH-BE-002 / AUTH-BE-003)', (
   });
 
   describe('Given the resumeId belongs to the confirming principal', () => {
-    describe('When confirmProfile is called', () => {
-      it('Then the profile is upserted and markProfileCreated is called with the numeric principal id', async () => {
+    describe('When confirmProfile is called without reviewed form values', () => {
+      it('Then it falls back to fields derived from the raw extraction', async () => {
         findResumeByIdMock.mockResolvedValue({ ...baseResume, userId: '42' });
-        findLatestExtractionMock.mockResolvedValue({ extractedData: { skills: ['Go'] } });
+        findLatestExtractionMock.mockResolvedValue({
+          extractedData: {
+            skills: ['Go'],
+            experience: [{ company: 'Acme', title: 'Staff Engineer' }],
+            professionalProfile: { summary: 'Builds reliable systems.' },
+            totalExperienceYears: 6,
+          },
+        });
         upsertCandidateProfileMock.mockResolvedValue({ userId: '42' });
 
         await resumeService.confirmProfile({ userId: '42', resumeId: 'resume-1' });
 
         expect(upsertCandidateProfileMock).toHaveBeenCalledWith(
-          expect.objectContaining({ userId: '42', sourceResumeId: 'resume-1' }),
+          expect.objectContaining({
+            userId: '42',
+            sourceResumeId: 'resume-1',
+            personalDetails: expect.objectContaining({
+              summary: 'Builds reliable systems.',
+              designation: 'Staff Engineer',
+              currentCompany: 'Acme',
+              totalExperience: 6,
+            }),
+          }),
         );
         expect(markProfileCreatedMock).toHaveBeenCalledWith(42);
+        expect(invalidateUserRecommendationStateMock).toHaveBeenCalledWith('42');
       });
     });
+
+    describe('When confirmProfile is called with reviewed form values (AUTH-BE-002 gap fix)', () => {
+      it('Then the caller-submitted values are stored verbatim instead of the raw extraction', async () => {
+        findResumeByIdMock.mockResolvedValue({ ...baseResume, userId: '42' });
+        // The raw extraction would produce a different summary - proves the
+        // submitted review-form values win, not silently discarded.
+        findLatestExtractionMock.mockResolvedValue({
+          extractedData: { professionalProfile: { summary: 'Stale parsed summary' } },
+        });
+        upsertCandidateProfileMock.mockResolvedValue({ userId: '42' });
+
+        await resumeService.confirmProfile({
+          userId: '42',
+          resumeId: 'resume-1',
+          personalDetails: { fullName: 'Ada Lovelace', summary: 'Edited by the user.' },
+          skills: ['TypeScript'],
+        });
+
+        expect(upsertCandidateProfileMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            userId: '42',
+            sourceResumeId: 'resume-1',
+            personalDetails: { fullName: 'Ada Lovelace', summary: 'Edited by the user.' },
+            skills: ['TypeScript'],
+          }),
+        );
+      });
+    });
+  });
+});
+
+describe('resumeService.updateCandidateProfile personalDetails merge', () => {
+  describe('Given an existing profile with personalDetails already set', () => {
+    describe('When a partial update only sends some personalDetails keys', () => {
+      it('Then the untouched keys (e.g. summary) survive instead of being wiped out', async () => {
+        const existing = {
+          userId: ownerId,
+          personalDetails: {
+            designation: 'Engineer',
+            email: 'ada@example.com',
+            fullName: 'Ada Lovelace',
+            summary: 'Computing pioneer',
+          },
+          experience: [],
+          education: [],
+          skills: ['TypeScript'],
+          certifications: [],
+          sourceResumeId: 'resume-1',
+          confirmedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        findCandidateProfileByUserIdMock.mockResolvedValue(existing);
+        updateCandidateProfileMock.mockResolvedValue(existing);
+
+        await resumeService.updateCandidateProfile(ownerId, {
+          personalDetails: { phone: '+44 1234' },
+        });
+
+        expect(updateCandidateProfileMock).toHaveBeenCalledWith(ownerId, {
+          personalDetails: {
+            designation: 'Engineer',
+            email: 'ada@example.com',
+            fullName: 'Ada Lovelace',
+            summary: 'Computing pioneer',
+            phone: '+44 1234',
+          },
+        });
+      });
+    });
+  });
+});
+
+describe('resumeService recommendation invalidation hooks (JRE-LIFE-001)', () => {
+  it('invalidates recommendation state after a material candidate profile update', async () => {
+    const existing = {
+      userId: ownerId,
+      personalDetails: {},
+      experience: [],
+      education: [],
+      skills: ['Node.js'],
+      certifications: [],
+      sourceResumeId: 'resume-1',
+      confirmedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    };
+    findCandidateProfileByUserIdMock.mockResolvedValue(existing);
+    updateCandidateProfileMock.mockResolvedValue({ ...existing, skills: ['Node.js', 'AWS'] });
+
+    await resumeService.updateCandidateProfile(ownerId, { skills: ['Node.js', 'AWS'] });
+
+    expect(updateCandidateProfileMock).toHaveBeenCalledWith(ownerId, {
+      skills: ['Node.js', 'AWS'],
+    });
+    expect(invalidateUserRecommendationStateMock).toHaveBeenCalledWith(ownerId);
+  });
+});
+
+describe('resumeService.listResumes', () => {
+  it('delegates to resumeRepository.listResumes with the provided userId', async () => {
+    const mockResumes = [{ id: 'res-1', userId: ownerId }];
+    listResumesMock.mockResolvedValue(mockResumes);
+
+    const result = await resumeService.listResumes({ userId: ownerId });
+
+    expect(listResumesMock).toHaveBeenCalledWith(ownerId);
+    expect(result).toBe(mockResumes);
   });
 });
