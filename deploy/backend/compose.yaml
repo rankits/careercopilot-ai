@@ -49,7 +49,6 @@ services:
       PORT: 5001
       RUN_MIGRATIONS: 'true'
       RUN_SEEDS_ON_STARTUP: 'false'
-      JOB_INGESTION_ON_STARTUP_ENABLED: 'false'
       # Private Compose DNS — overrides shared .env for this stack.
       AI_EMBEDDING_PROVIDER: local-http
       AI_EMBEDDING_BASE_URL: http://embedding-service:8080/v1
