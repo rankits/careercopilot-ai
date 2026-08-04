@@ -65,7 +65,7 @@ describe('useJobFeed', () => {
       company: 'Acme',
       applyUrl: 'https://acme.test/1',
     });
-    expect(result.current.data?.cards[0].match).toBeUndefined();
+    expect(result.current.data?.cards[0]?.match).toBeUndefined();
   });
 
   it('surfaces service errors to the hook consumer', async () => {
