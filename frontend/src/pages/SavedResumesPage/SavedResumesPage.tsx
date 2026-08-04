@@ -4,16 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/atoms';
 
 import { ROUTES } from '@/constants/routes';
-import {
-  Box,
-  DescriptionOutlinedIcon,
-  DownloadIcon,
-  Typography,
-} from '@/lib/material';
-import {
-  resumeBuilderService,
-  type SavedResumeVersion,
-} from '@/services/resumeBuilder.service';
+import { Box, DescriptionOutlinedIcon, DownloadIcon, Typography } from '@/lib/material';
+import { resumeBuilderService, type SavedResumeVersion } from '@/services/resumeBuilder.service';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 import {
@@ -97,7 +89,11 @@ export function SavedResumesPage() {
           <Typography component="h1" fontWeight={fontWeight.extraBold} fontSize={fontSize['2xl']}>
             Saved resumes
           </Typography>
-          <Typography color={colorTokens.textSecondary} fontSize={fontSize.sm} sx={{ mt: spacing[1] }}>
+          <Typography
+            color={colorTokens.textSecondary}
+            fontSize={fontSize.sm}
+            sx={{ mt: spacing[1] }}
+          >
             Finished versions from Resume Builder — with the role and job description they were
             optimized for.
           </Typography>
@@ -129,7 +125,11 @@ export function SavedResumesPage() {
                   <Typography fontWeight={fontWeight.bold} fontSize={fontSize.lg}>
                     {version.targetRole || 'Untitled role'}
                   </Typography>
-                  <Typography color={colorTokens.textSecondary} fontSize={fontSize.xs} sx={{ mt: 0.5 }}>
+                  <Typography
+                    color={colorTokens.textSecondary}
+                    fontSize={fontSize.xs}
+                    sx={{ mt: 0.5 }}
+                  >
                     {version.label}
                     {version.resumeFileName ? ` · ${version.resumeFileName}` : ''}
                     {' · '}
