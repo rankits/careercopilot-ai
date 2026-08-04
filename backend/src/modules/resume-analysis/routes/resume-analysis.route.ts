@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   applySuggestionController,
+  deleteSavedVersionController,
   exportResumeController,
   getAnalysisController,
   getKeywordsController,
@@ -35,6 +36,11 @@ router.get(
   '/saved-versions/:versionId',
   validateResource(savedVersionIdParamsSchema),
   getSavedVersionController,
+);
+router.delete(
+  '/saved-versions/:versionId',
+  validateResource(savedVersionIdParamsSchema),
+  deleteSavedVersionController,
 );
 
 router.post('/:resumeId/analyze', validateResource(analyzeResumeSchema), startAnalysisController);

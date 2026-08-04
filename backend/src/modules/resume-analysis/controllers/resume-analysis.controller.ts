@@ -78,9 +78,13 @@ export const applySuggestionController = async (
   next: NextFunction,
 ) => {
   try {
+    const preserveContent = Boolean(
+      (req.body as { preserveContent?: boolean } | undefined)?.preserveContent,
+    );
     const result = await resumeAnalysisService.applySuggestion(
       String(req.params.resumeId),
       Number(req.params.suggestionId),
+      { preserveContent },
     );
     return res.status(200).json(successResponse('Suggestion applied', result));
   } catch (error) {
@@ -169,6 +173,19 @@ export const getSavedVersionController = async (
   try {
     const version = await resumeAnalysisService.getSavedVersion(Number(req.params.versionId));
     return res.status(200).json(successResponse('Saved resume retrieved', version));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const deleteSavedVersionController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await resumeAnalysisService.deleteSavedVersion(Number(req.params.versionId));
+    return res.status(200).json(successResponse('Saved resume deleted', result));
   } catch (error) {
     return next(error);
   }
