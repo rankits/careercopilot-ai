@@ -23,6 +23,13 @@ export default defineConfig({
       reportsDirectory: './coverage',
     },
     environment: 'jsdom',
+    // Provide Vite env vars for unit tests (production builds must set these explicitly).
+    env: {
+      VITE_API_BASE_URL: 'http://localhost:5001/api/v1',
+      VITE_APP_NAME: 'CareerCopilot',
+      VITE_APP_ENV: 'test',
+      VITE_PUBLIC_APP_URL: 'http://localhost:3000',
+    },
     // Playwright specs live under e2e/ and must not be collected by Vitest.
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     // fileParallelism: false,
