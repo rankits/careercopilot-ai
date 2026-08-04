@@ -23,6 +23,6 @@ const start = async (): Promise<void> => {
 };
 
 start().catch((error: unknown) => {
-  logger.error({ error }, 'Job embedding worker failed to start');
+  logger.error({ err: error }, 'Job embedding worker failed to start');
   process.exitCode = 1;
 });
