@@ -141,6 +141,9 @@ const buildEmbeddingConfig = (openrouter: OpenRouterEmbeddingSettings) =>
       apiKey: optional(process.env.GROQ_API_KEY),
       baseUrl: optional(process.env.GROQ_EMBEDDING_BASE_URL) ?? 'https://api.groq.com/openai/v1',
     },
+    localHttp: {
+      baseUrl: optional(process.env.AI_EMBEDDING_BASE_URL) ?? 'http://embedding-service:8080/v1',
+    },
     openrouter,
   }) as const;
 

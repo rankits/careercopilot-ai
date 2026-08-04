@@ -6,10 +6,16 @@ set -Eeuo pipefail
 
 IMAGE_TAG="${1:-}"
 RELEASE_SHA="${2:-}"
+EMBEDDING_IMAGE_TAG="${3:-${EMBEDDING_IMAGE:-}}"
 
 if [[ -z "$IMAGE_TAG" || -z "$RELEASE_SHA" ]]; then
   echo "Error: Missing required arguments." >&2
-  echo "Usage: $0 <full-image-tag> <release-sha>" >&2
+  echo "Usage: $0 <backend-image-tag> <release-sha> <embedding-image-tag>" >&2
+  exit 1
+fi
+
+if [[ -z "$EMBEDDING_IMAGE_TAG" ]]; then
+  echo "Error: Missing embedding image tag (arg 3 or EMBEDDING_IMAGE)." >&2
   exit 1
 fi
 
@@ -67,6 +73,8 @@ fi
 # Load current state to allow rollback on failure
 CURRENT_IMAGE=""
 PREVIOUS_IMAGE=""
+CURRENT_EMBEDDING_IMAGE=""
+PREVIOUS_EMBEDDING_IMAGE=""
 CURRENT_RELEASE=""
 PREVIOUS_RELEASE=""
 
@@ -75,6 +83,12 @@ if [[ -f "$STATE_DIR/CURRENT_IMAGE" ]]; then
 fi
 if [[ -f "$STATE_DIR/PREVIOUS_IMAGE" ]]; then
   PREVIOUS_IMAGE="$(cat "$STATE_DIR/PREVIOUS_IMAGE")"
+fi
+if [[ -f "$STATE_DIR/CURRENT_EMBEDDING_IMAGE" ]]; then
+  CURRENT_EMBEDDING_IMAGE="$(cat "$STATE_DIR/CURRENT_EMBEDDING_IMAGE")"
+fi
+if [[ -f "$STATE_DIR/PREVIOUS_EMBEDDING_IMAGE" ]]; then
+  PREVIOUS_EMBEDDING_IMAGE="$(cat "$STATE_DIR/PREVIOUS_EMBEDDING_IMAGE")"
 fi
 if [[ -f "$STATE_DIR/CURRENT_RELEASE" ]]; then
   CURRENT_RELEASE="$(cat "$STATE_DIR/CURRENT_RELEASE")"
@@ -98,20 +112,25 @@ FAILURE_REASON=""
 
 compose_in() {
   local release_dir="$1"
-  local image_tag="$2"
-  shift 2
+  local backend_image="$2"
+  local embedding_image="$3"
+  shift 3
   (
     cd "$release_dir"
-    export BACKEND_IMAGE="$image_tag"
+    export BACKEND_IMAGE="$backend_image"
+    export EMBEDDING_IMAGE="$embedding_image"
+    # Never pass -v: model-cache volume must survive deploy/rollback.
     docker compose -p "$COMPOSE_PROJECT" -f compose.yaml "$@"
   )
 }
 
 # Tear down a release stack. Also clears legacy project names that used the
 # release directory basename (those left 127.0.0.1:5001 allocated across deploys).
+# Intentionally does NOT use `docker compose down -v` (preserves embedding-model-cache).
 stop_release_stack() {
   local release_dir="$1"
-  local image_tag="${2:-$IMAGE_TAG}"
+  local backend_image="${2:-$IMAGE_TAG}"
+  local embedding_image="${3:-$EMBEDDING_IMAGE_TAG}"
   if [[ -z "$release_dir" || ! -d "$release_dir" || ! -f "$release_dir/compose.yaml" ]]; then
     return 0
   fi
@@ -119,7 +138,8 @@ stop_release_stack() {
   legacy_project="$(basename "$release_dir")"
   (
     cd "$release_dir"
-    export BACKEND_IMAGE="${image_tag:-placeholder}"
+    export BACKEND_IMAGE="${backend_image:-placeholder}"
+    export EMBEDDING_IMAGE="${embedding_image:-placeholder}"
     docker compose -p "$COMPOSE_PROJECT" -f compose.yaml down --remove-orphans || true
     if [[ "$legacy_project" != "$COMPOSE_PROJECT" ]]; then
       docker compose -p "$legacy_project" -f compose.yaml down --remove-orphans || true
@@ -140,24 +160,28 @@ print_failure_diagnostics() {
   echo "!!! -------------------- DEPLOYMENT FAILURE DETAILS --------------------" >&2
   echo "!!! Reason: ${FAILURE_REASON:-unknown failure (script exited before success)}" >&2
   echo "!!! Failed step: ${CURRENT_STEP}" >&2
-  echo "!!! Target image: ${IMAGE_TAG}" >&2
+  echo "!!! Target backend image: ${IMAGE_TAG}" >&2
+  echo "!!! Target embedding image: ${EMBEDDING_IMAGE_TAG}" >&2
   echo "!!! Target release: ${RELEASE_SHA}" >&2
   echo "!!! Release dir: ${RELEASE_DIR}" >&2
   if [[ -n "${CURRENT_IMAGE}" ]]; then
-    echo "!!! Rolling back toward: release=${CURRENT_RELEASE} image=${CURRENT_IMAGE}" >&2
+    echo "!!! Rolling back toward: release=${CURRENT_RELEASE} backend=${CURRENT_IMAGE} embedding=${CURRENT_EMBEDDING_IMAGE:-n/a}" >&2
   else
     echo "!!! No previous stable release recorded — rollback may be limited." >&2
   fi
   echo "!!! -------------------------------------------------------------------" >&2
 
   echo ">>> Container status at failure:" >&2
-  compose_in "$RELEASE_DIR" "$IMAGE_TAG" ps -a >&2 || true
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" "$EMBEDDING_IMAGE_TAG" ps -a >&2 || true
 
   echo ">>> Recent api logs:" >&2
-  compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=80 api >&2 || true
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" "$EMBEDDING_IMAGE_TAG" logs --tail=80 api >&2 || true
+
+  echo ">>> Recent embedding-service logs:" >&2
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" "$EMBEDDING_IMAGE_TAG" logs --tail=80 embedding-service >&2 || true
 
   echo ">>> Recent outbox-relay logs:" >&2
-  compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=40 outbox-relay >&2 || true
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" "$EMBEDDING_IMAGE_TAG" logs --tail=40 outbox-relay >&2 || true
 
   echo ">>> Local health probe:" >&2
   curl -sS -m 5 "http://127.0.0.1:5001/health" >&2 || echo "(health endpoint unreachable)" >&2
@@ -169,12 +193,13 @@ rollback() {
   print_failure_diagnostics
 
   echo ">>> Stopping failed release stack ($RELEASE_SHA) to free host ports..." >&2
-  stop_release_stack "$RELEASE_DIR" "$IMAGE_TAG"
+  stop_release_stack "$RELEASE_DIR" "$IMAGE_TAG" "$EMBEDDING_IMAGE_TAG"
 
   if [[ -n "$CURRENT_IMAGE" && -n "$CURRENT_RELEASE" && -d "$RELEASES_DIR/$CURRENT_RELEASE" ]]; then
-    echo ">>> Rolling back to previous stable release ($CURRENT_RELEASE) with image $CURRENT_IMAGE..." >&2
-    stop_release_stack "$RELEASES_DIR/$CURRENT_RELEASE" "$CURRENT_IMAGE"
-    compose_in "$RELEASES_DIR/$CURRENT_RELEASE" "$CURRENT_IMAGE" up -d --remove-orphans || true
+    local rollback_embedding="${CURRENT_EMBEDDING_IMAGE:-$EMBEDDING_IMAGE_TAG}"
+    echo ">>> Rolling back to previous stable release ($CURRENT_RELEASE)..." >&2
+    stop_release_stack "$RELEASES_DIR/$CURRENT_RELEASE" "$CURRENT_IMAGE" "$rollback_embedding"
+    compose_in "$RELEASES_DIR/$CURRENT_RELEASE" "$CURRENT_IMAGE" "$rollback_embedding" up -d --remove-orphans || true
     echo ">>> Rollback containers restarted for release ${CURRENT_RELEASE}." >&2
   else
     echo "!!! Unable to roll back automatically: missing previous release/image state." >&2
@@ -191,14 +216,18 @@ rollback() {
 trap on_error ERR
 trap 'if [[ "$DEPLOY_SUCCESS" != "true" ]]; then rollback; fi' EXIT
 
+export BACKEND_IMAGE="$IMAGE_TAG"
+export EMBEDDING_IMAGE="$EMBEDDING_IMAGE_TAG"
+
 CURRENT_STEP="validate-compose"
 echo ">>> Validating Docker Compose configuration..."
-export BACKEND_IMAGE="$IMAGE_TAG"
 docker compose -p "$COMPOSE_PROJECT" -f compose.yaml config >/dev/null
 
 CURRENT_STEP="pull-image"
-echo ">>> Pulling exact SHA-tagged Docker image: $IMAGE_TAG..."
+echo ">>> Pulling backend image: $IMAGE_TAG..."
 docker pull "$IMAGE_TAG"
+echo ">>> Pulling embedding image: $EMBEDDING_IMAGE_TAG..."
+docker pull "$EMBEDDING_IMAGE_TAG"
 
 CURRENT_STEP="prisma-migrate"
 echo ">>> Running Prisma migrations once before replacing healthy services..."
@@ -214,14 +243,15 @@ CURRENT_STEP="compose-up"
 # Previous releases used the directory name as the compose project, so both
 # stacks tried to bind 127.0.0.1:5001. Stop the live stack (and any half-created
 # target stack) before bringing the new release up under a fixed project name.
+# down without -v keeps career-copilot-embedding-model-cache intact.
 if [[ -n "$CURRENT_RELEASE" && "$CURRENT_RELEASE" != "$RELEASE_SHA" ]]; then
   echo ">>> Stopping current release ($CURRENT_RELEASE) to free 127.0.0.1:5001..."
-  stop_release_stack "$RELEASES_DIR/$CURRENT_RELEASE" "${CURRENT_IMAGE:-$IMAGE_TAG}"
+  stop_release_stack "$RELEASES_DIR/$CURRENT_RELEASE" "${CURRENT_IMAGE:-$IMAGE_TAG}" "${CURRENT_EMBEDDING_IMAGE:-$EMBEDDING_IMAGE_TAG}"
 fi
 echo ">>> Clearing any leftover containers for project ${COMPOSE_PROJECT}..."
-stop_release_stack "$RELEASE_DIR" "$IMAGE_TAG"
+stop_release_stack "$RELEASE_DIR" "$IMAGE_TAG" "$EMBEDDING_IMAGE_TAG"
 
-echo ">>> Starting backend services with Docker Compose (project=${COMPOSE_PROJECT})..."
+echo ">>> Starting backend + embedding services (project=${COMPOSE_PROJECT})..."
 docker compose -p "$COMPOSE_PROJECT" -f compose.yaml up -d --remove-orphans
 
 CURRENT_STEP="health-check"
@@ -258,12 +288,16 @@ echo ">>> Recording successful deployment state..."
 if [[ -n "$CURRENT_IMAGE" ]]; then
   echo "$CURRENT_IMAGE" > "$STATE_DIR/PREVIOUS_IMAGE"
 fi
+if [[ -n "$CURRENT_EMBEDDING_IMAGE" ]]; then
+  echo "$CURRENT_EMBEDDING_IMAGE" > "$STATE_DIR/PREVIOUS_EMBEDDING_IMAGE"
+fi
 if [[ -n "$CURRENT_RELEASE" ]]; then
   echo "$CURRENT_RELEASE" > "$STATE_DIR/PREVIOUS_RELEASE"
   ln -sfn "$RELEASES_DIR/$CURRENT_RELEASE" "$BASE_DIR/previous"
 fi
 
 echo "$IMAGE_TAG" > "$STATE_DIR/CURRENT_IMAGE"
+echo "$EMBEDDING_IMAGE_TAG" > "$STATE_DIR/CURRENT_EMBEDDING_IMAGE"
 echo "$RELEASE_SHA" > "$STATE_DIR/CURRENT_RELEASE"
 ln -sfn "$RELEASE_DIR" "$BASE_DIR/current"
 

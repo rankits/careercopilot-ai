@@ -1,5 +1,5 @@
 # Production Docker Compose for Career Copilot Backend
-# Only includes API container and required Outbox Relay worker.
+# Runs API, outbox-relay, and private embedding-service on one EC2 host.
 # Redis, RabbitMQ, and PostgreSQL run externally via private networking.
 #
 # Fixed project name so release-directory deploys replace the same stack
@@ -7,6 +7,38 @@
 name: career-copilot-backend
 
 services:
+  embedding-service:
+    image: ${EMBEDDING_IMAGE}
+    container_name: career-copilot-embedding
+    restart: unless-stopped
+    expose:
+      - '8080'
+    environment:
+      NODE_ENV: production
+      EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-mpnet-base-v2}
+      EMBEDDING_DIMENSIONS: ${EMBEDDING_DIMENSIONS:-768}
+      EMBEDDING_SERVICE_PORT: '8080'
+      EMBEDDING_MODEL_CACHE: /models
+      EMBEDDING_MAX_BATCH_SIZE: ${EMBEDDING_MAX_BATCH_SIZE:-16}
+      EMBEDDING_LOG_LEVEL: ${EMBEDDING_LOG_LEVEL:-info}
+    volumes:
+      - embedding-model-cache:/models
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://127.0.0.1:8080/health']
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 180s
+    mem_limit: ${EMBEDDING_MEMORY_LIMIT:-1536m}
+    cpus: ${EMBEDDING_CPU_LIMIT:-1.0}
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '20m'
+        max-file: '3'
+    networks:
+      - career-copilot-network
+
   api:
     image: ${BACKEND_IMAGE}
     command: ['node', 'dist/server.js']
@@ -18,10 +50,20 @@ services:
       RUN_MIGRATIONS: 'true'
       RUN_SEEDS_ON_STARTUP: 'false'
       JOB_INGESTION_ON_STARTUP_ENABLED: 'false'
+      # Private Compose DNS — overrides shared .env for this stack.
+      AI_EMBEDDING_PROVIDER: local-http
+      AI_EMBEDDING_BASE_URL: http://embedding-service:8080/v1
+      AI_EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-mpnet-base-v2}
+      AI_EMBEDDING_DIMENSIONS: '768'
+      AI_EMBEDDING_TIMEOUT_MS: ${AI_EMBEDDING_TIMEOUT_MS:-60000}
+      AI_EMBEDDING_BATCH_SIZE: ${AI_EMBEDDING_BATCH_SIZE:-16}
     ports:
       - '127.0.0.1:5001:5001'
     restart: unless-stopped
     mem_limit: 384m
+    depends_on:
+      embedding-service:
+        condition: service_healthy
     healthcheck:
       test: ['CMD-SHELL', 'curl -f http://localhost:5001/health || exit 1']
       interval: 30s
@@ -33,6 +75,8 @@ services:
       options:
         max-size: '10m'
         max-file: '3'
+    networks:
+      - career-copilot-network
 
   outbox-relay:
     image: ${BACKEND_IMAGE}
@@ -53,3 +97,13 @@ services:
       options:
         max-size: '10m'
         max-file: '3'
+    networks:
+      - career-copilot-network
+
+networks:
+  career-copilot-network:
+    driver: bridge
+
+volumes:
+  embedding-model-cache:
+    name: career-copilot-embedding-model-cache
