@@ -1,11 +1,8 @@
-import { JobModuleError } from "@/modules/jobs/errors/JobModuleError.js";
+import { JobModuleError } from '@/modules/jobs/errors/JobModuleError.js';
 
 export class DuplicateProviderRegistrationError extends JobModuleError {
   constructor(providerName: string) {
-    super(
-      `Job provider with name '${providerName}' is already registered`,
-      409
-    );
-    this.name = "DuplicateProviderRegistrationError";
+    super(`Job provider with name '${providerName}' is already registered`, 409);
+    this.name = 'DuplicateProviderRegistrationError';
   }
 }

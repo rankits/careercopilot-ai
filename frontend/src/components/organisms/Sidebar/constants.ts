@@ -26,8 +26,18 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     id: 'applications',
     label: 'Applications',
   },
-  { href: ROUTES.RESUME_BUILDER, icon: DescriptionOutlinedIcon, id: 'resume-builder', label: 'Resume Builder' },
-  { href: ROUTES.SAVED_RESUMES, icon: BookmarkBorderOutlinedIcon, id: 'saved-resumes', label: 'Saved Resumes' },
+  {
+    href: ROUTES.RESUME_BUILDER,
+    icon: DescriptionOutlinedIcon,
+    id: 'resume-builder',
+    label: 'Resume Builder',
+  },
+  {
+    href: ROUTES.SAVED_RESUMES,
+    icon: BookmarkBorderOutlinedIcon,
+    id: 'saved-resumes',
+    label: 'Saved Resumes',
+  },
   { icon: TuneOutlinedIcon, id: 'ai-match', label: 'AI Match' },
   { icon: BusinessCenterOutlinedIcon, id: 'applications', label: 'Applications' },
 ];

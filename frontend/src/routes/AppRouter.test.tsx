@@ -106,16 +106,15 @@ describe('AppRouter routing flow', () => {
     expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
   });
 
-  it.each([
-    ['/resume-builder'],
-    ['/resume-builder/saved'],
-    ['/resume-builder/resume-1'],
-  ])('blocks unauthenticated access to %s and redirects to Login', async (path) => {
-    renderRoute(path);
+  it.each([['/resume-builder'], ['/resume-builder/saved'], ['/resume-builder/resume-1']])(
+    'blocks unauthenticated access to %s and redirects to Login',
+    async (path) => {
+      renderRoute(path);
 
-    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: /resume/i })).not.toBeInTheDocument();
-  });
+      expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /resume/i })).not.toBeInTheDocument();
+    },
+  );
 
   it('sends incomplete profiles from Resume Builder to onboarding', async () => {
     renderRoute(

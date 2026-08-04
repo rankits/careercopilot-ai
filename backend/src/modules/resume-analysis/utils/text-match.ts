@@ -1,5 +1,4 @@
-export const escapeRegExp = (value: string): string =>
-  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+export const escapeRegExp = (value: string): string => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const uniqSkills = (items: string[]): string[] => {
   const seen = new Set<string>();
@@ -34,5 +33,4 @@ export const termAppearsIn = (content: string, term: string): boolean => {
   }
 };
 
-export const clampScore = (score: number): number =>
-  Math.min(100, Math.max(0, Math.round(score)));
+export const clampScore = (score: number): number => Math.min(100, Math.max(0, Math.round(score)));

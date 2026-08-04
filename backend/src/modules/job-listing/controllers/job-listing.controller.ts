@@ -12,14 +12,14 @@ import {
 const hasActiveFilters = (filters: JobSearchFilters, sortBy: JobSortBy): boolean =>
   Boolean(
     filters.query ||
-      filters.companySlug ||
-      filters.location ||
-      filters.remoteTypes?.length ||
-      filters.employmentTypes?.length ||
-      filters.skills?.length ||
-      filters.minSalary !== undefined ||
-      filters.maxSalary !== undefined ||
-      (sortBy && sortBy !== 'newest'),
+    filters.companySlug ||
+    filters.location ||
+    filters.remoteTypes?.length ||
+    filters.employmentTypes?.length ||
+    filters.skills?.length ||
+    filters.minSalary !== undefined ||
+    filters.maxSalary !== undefined ||
+    (sortBy && sortBy !== 'newest'),
   );
 
 export const searchJobsController = async (req: Request, res: Response, next: NextFunction) => {

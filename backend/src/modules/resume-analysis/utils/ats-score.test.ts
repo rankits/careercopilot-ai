@@ -104,8 +104,7 @@ B.Tech Computer Science
         {
           category: 'summary',
           originalText: 'Full-stack engineer with React experience.',
-          suggestedText:
-            'Java developer with Spring Boot and Hibernate experience plus React.',
+          suggestedText: 'Java developer with Spring Boot and Hibernate experience plus React.',
           impact: 'HIGH',
         },
       ],

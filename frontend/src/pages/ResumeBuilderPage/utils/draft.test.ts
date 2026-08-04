@@ -88,12 +88,12 @@ describe('draft utils', () => {
       ],
     };
 
-    expect(applyTextReplaceToDraft(draft, 'summary', 'React developer', 'Java developer').summary).toBe(
-      'Java developer',
-    );
     expect(
-      applyTextReplaceToDraft(draft, 'skills', '', 'Java, Spring Boot').skillsList,
-    ).toEqual(expect.arrayContaining(['React', 'Java', 'Spring Boot']));
+      applyTextReplaceToDraft(draft, 'summary', 'React developer', 'Java developer').summary,
+    ).toBe('Java developer');
+    expect(applyTextReplaceToDraft(draft, 'skills', '', 'Java, Spring Boot').skillsList).toEqual(
+      expect.arrayContaining(['React', 'Java', 'Spring Boot']),
+    );
     expect(
       applyTextReplaceToDraft(draft, 'experience', 'Built UI components', 'Built REST APIs')
         .experiences[0].details,
