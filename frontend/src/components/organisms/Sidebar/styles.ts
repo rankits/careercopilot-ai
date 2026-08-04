@@ -156,12 +156,6 @@ export const SidebarPanel = styled(Box)({
   padding: spacing[3],
 });
 
-export const SidebarGoal = styled(Box)({
-  display: 'grid',
-  gap: spacing[2],
-  marginTop: spacing[4],
-});
-
 export const BottomNav = styled('nav')({
   alignItems: 'center',
   background: colorTokens.backgroundCard,

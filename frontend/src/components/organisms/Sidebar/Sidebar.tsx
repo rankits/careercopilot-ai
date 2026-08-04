@@ -4,21 +4,13 @@ import { Button } from '@/components/atoms/Button';
 
 import fullLogoUrl from '@/assets/logo/career-copilot-full-logo.svg';
 import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.svg';
-import {
-  Box,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  LinearProgress,
-  StarIcon,
-  Typography,
-} from '@/lib/material';
+import { ChevronLeftIcon, ChevronRightIcon, Typography } from '@/lib/material';
 
 import { DEFAULT_SIDEBAR_ITEMS } from './constants';
 import type { SidebarNavItem, SidebarProps } from './interfaces';
 import {
   BottomNav,
   NavButton,
-  SidebarGoal,
   SidebarHeader,
   SidebarLogoImage,
   SidebarNav,
@@ -136,18 +128,6 @@ export function Sidebar({
             Upload Now
           </Button>
         </SidebarPanel>
-      )}
-
-      {collapsed ? (
-        <Box sx={{ display: 'grid', justifyItems: 'center' }}>
-          <StarIcon color="warning" fontSize="small" />
-        </Box>
-      ) : (
-        <SidebarGoal>
-          <Typography sx={sidebarTextSx.title}>Daily Goal</Typography>
-          <Typography sx={sidebarTextSx.muted}>3 / 5 applications today</Typography>
-          <LinearProgress value={60} variant="determinate" />
-        </SidebarGoal>
       )}
     </SidebarRoot>
   );

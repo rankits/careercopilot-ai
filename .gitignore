@@ -18,4 +18,5 @@ frontend/test-results/
 frontend/blob-report/
 
 flow-diagrames
-docs/
+docs/*
+!docs/auto-apply/
