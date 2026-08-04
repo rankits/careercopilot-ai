@@ -59,6 +59,45 @@ export const APPLICATIONS_PERMISSIONS = {
   DELETE_OWN: 'applications.delete.own',
 } as const;
 
+/** Auto Job Apply foundation (Wave 2) — deliberately its own permission
+ * group, separate from APPLICATIONS_PERMISSIONS (the manual tracker), since
+ * it guards a distinct set of resources (profile, verified answers, rule
+ * config, consent, submission entities) with independent grants. */
+export const AUTO_APPLY_PERMISSIONS = {
+  PROFILE_READ_OWN: 'applications.autoapply.profile.read.own',
+  PROFILE_UPDATE_OWN: 'applications.autoapply.profile.update.own',
+
+  ANSWERS_CREATE_OWN: 'applications.autoapply.answers.create.own',
+  ANSWERS_READ_OWN: 'applications.autoapply.answers.read.own',
+  ANSWERS_UPDATE_OWN: 'applications.autoapply.answers.update.own',
+  ANSWERS_DELETE_OWN: 'applications.autoapply.answers.delete.own',
+
+  RESUME_VERSIONS_CREATE_OWN: 'applications.autoapply.resume-versions.create.own',
+  RESUME_VERSIONS_READ_OWN: 'applications.autoapply.resume-versions.read.own',
+  RESUME_VERSIONS_UPDATE_OWN: 'applications.autoapply.resume-versions.update.own',
+  RESUME_VERSIONS_DELETE_OWN: 'applications.autoapply.resume-versions.delete.own',
+
+  RULES_READ_OWN: 'applications.autoapply.rules.read.own',
+  RULES_UPDATE_OWN: 'applications.autoapply.rules.update.own',
+
+  ELIGIBILITY_READ_OWN: 'applications.autoapply.eligibility.read.own',
+  CHANNEL_READ_OWN: 'applications.autoapply.channel.read.own',
+  VACANCY_EMAIL_READ_OWN: 'applications.autoapply.vacancy-email.read.own',
+  EVENTS_READ_OWN: 'applications.autoapply.events.read.own',
+  DIAGNOSTICS_READ_ANY: 'applications.autoapply.diagnostics.read.any',
+  PLAN_CREATE_OWN: 'applications.autoapply.plan.create.own',
+  PLAN_READ_OWN: 'applications.autoapply.plan.read.own',
+
+  CONSENT_CREATE_OWN: 'applications.autoapply.consent.create.own',
+  CONSENT_READ_OWN: 'applications.autoapply.consent.read.own',
+  CONSENT_DELETE_OWN: 'applications.autoapply.consent.delete.own',
+
+  SUBMISSIONS_CREATE_OWN: 'applications.autoapply.submissions.create.own',
+  SUBMISSIONS_READ_OWN: 'applications.autoapply.submissions.read.own',
+  SUBMISSIONS_UPDATE_OWN: 'applications.autoapply.submissions.update.own',
+  SUBMISSIONS_DELETE_OWN: 'applications.autoapply.submissions.delete.own',
+} as const;
+
 export const INTERVIEWS_PERMISSIONS = {
   CREATE_OWN: 'interviews.create.own',
   READ_OWN: 'interviews.read.own',
@@ -266,6 +305,165 @@ export const PERMISSIONS: PermissionDefinition[] = [
     resource: 'applications',
     action: 'delete.own',
     description: 'Delete own job applications',
+  },
+
+  // Auto Job Apply foundation
+  {
+    key: AUTO_APPLY_PERMISSIONS.PROFILE_READ_OWN,
+    resource: 'applications.autoapply.profile',
+    action: 'read.own',
+    description: 'Read own candidate application profile',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.PROFILE_UPDATE_OWN,
+    resource: 'applications.autoapply.profile',
+    action: 'update.own',
+    description: 'Update own candidate application profile',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.ANSWERS_CREATE_OWN,
+    resource: 'applications.autoapply.answers',
+    action: 'create.own',
+    description: 'Create own verified application answers',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.ANSWERS_READ_OWN,
+    resource: 'applications.autoapply.answers',
+    action: 'read.own',
+    description: 'Read own verified application answers',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.ANSWERS_UPDATE_OWN,
+    resource: 'applications.autoapply.answers',
+    action: 'update.own',
+    description: 'Update own verified application answers',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.ANSWERS_DELETE_OWN,
+    resource: 'applications.autoapply.answers',
+    action: 'delete.own',
+    description: 'Delete own verified application answers',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.RESUME_VERSIONS_CREATE_OWN,
+    resource: 'applications.autoapply.resume-versions',
+    action: 'create.own',
+    description: 'Create own approved resume versions',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.RESUME_VERSIONS_READ_OWN,
+    resource: 'applications.autoapply.resume-versions',
+    action: 'read.own',
+    description: 'Read own approved resume versions',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.RESUME_VERSIONS_UPDATE_OWN,
+    resource: 'applications.autoapply.resume-versions',
+    action: 'update.own',
+    description: 'Update own approved resume versions',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.RESUME_VERSIONS_DELETE_OWN,
+    resource: 'applications.autoapply.resume-versions',
+    action: 'delete.own',
+    description: 'Delete own approved resume versions',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.RULES_READ_OWN,
+    resource: 'applications.autoapply.rules',
+    action: 'read.own',
+    description: 'Read own autopilot/eligibility rule configuration',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.RULES_UPDATE_OWN,
+    resource: 'applications.autoapply.rules',
+    action: 'update.own',
+    description: 'Update own autopilot/eligibility rule configuration',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.ELIGIBILITY_READ_OWN,
+    resource: 'applications.autoapply.eligibility',
+    action: 'read.own',
+    description: 'Run an eligibility check for a job against own profile and rules',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.CHANNEL_READ_OWN,
+    resource: 'applications.autoapply.channel',
+    action: 'read.own',
+    description: 'Detect the application channel for a job',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.VACANCY_EMAIL_READ_OWN,
+    resource: 'applications.autoapply.vacancy-email',
+    action: 'read.own',
+    description: "Discover a vacancy's published contact email from its job description",
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.EVENTS_READ_OWN,
+    resource: 'applications.autoapply.events',
+    action: 'read.own',
+    description: 'Read own auto-apply audit event history',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.DIAGNOSTICS_READ_ANY,
+    resource: 'applications.autoapply.diagnostics',
+    action: 'read.any',
+    description:
+      'Read cross-user diagnostics for stuck/unknown-outcome auto-apply submissions (admin only)',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.PLAN_CREATE_OWN,
+    resource: 'applications.autoapply.plan',
+    action: 'create.own',
+    description: 'Generate or regenerate an own application plan for a job',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.PLAN_READ_OWN,
+    resource: 'applications.autoapply.plan',
+    action: 'read.own',
+    description: 'Read an own application plan',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.CONSENT_CREATE_OWN,
+    resource: 'applications.autoapply.consent',
+    action: 'create.own',
+    description: 'Grant own auto-apply consent',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.CONSENT_READ_OWN,
+    resource: 'applications.autoapply.consent',
+    action: 'read.own',
+    description: 'Read own auto-apply consent grants',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.CONSENT_DELETE_OWN,
+    resource: 'applications.autoapply.consent',
+    action: 'delete.own',
+    description: 'Revoke own auto-apply consent grants',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.SUBMISSIONS_CREATE_OWN,
+    resource: 'applications.autoapply.submissions',
+    action: 'create.own',
+    description: 'Create own auto-apply submission entities',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.SUBMISSIONS_READ_OWN,
+    resource: 'applications.autoapply.submissions',
+    action: 'read.own',
+    description: 'Read own auto-apply submission entities',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN,
+    resource: 'applications.autoapply.submissions',
+    action: 'update.own',
+    description: 'Update own auto-apply submission entities (status transitions)',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.SUBMISSIONS_DELETE_OWN,
+    resource: 'applications.autoapply.submissions',
+    action: 'delete.own',
+    description: 'Withdraw own auto-apply submission entities',
   },
 
   // Interviews
