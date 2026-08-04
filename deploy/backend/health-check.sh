@@ -41,8 +41,8 @@ echo "Error: Last response body: ${BODY:-<empty>}" >&2
 echo "Error: Expected HTTP 200 and JSON containing \"status\":\"ok\"." >&2
 if command -v docker >/dev/null 2>&1 && [[ -f compose.yaml ]]; then
   echo ">>> docker compose ps -a:" >&2
-  docker compose -f compose.yaml ps -a >&2 || true
+  docker compose -p career-copilot-backend -f compose.yaml ps -a >&2 || true
   echo ">>> Recent api logs:" >&2
-  docker compose -f compose.yaml logs --tail=60 api >&2 || true
+  docker compose -p career-copilot-backend -f compose.yaml logs --tail=60 api >&2 || true
 fi
 exit 1

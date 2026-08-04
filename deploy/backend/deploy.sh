@@ -28,6 +28,8 @@ STATE_DIR="$BASE_DIR/state"
 LOGS_DIR="$BASE_DIR/logs"
 RELEASE_DIR="$RELEASES_DIR/$RELEASE_SHA"
 ENV_FILE="$SHARED_DIR/.env"
+# Keep one compose project across release dirs so host port 5001 is not contended.
+COMPOSE_PROJECT="career-copilot-backend"
 
 # Ensure required state and log directories exist
 mkdir -p "$STATE_DIR" "$LOGS_DIR" "$RELEASES_DIR"
@@ -94,6 +96,37 @@ FAILURE_LINE=""
 FAILURE_COMMAND=""
 FAILURE_REASON=""
 
+compose_in() {
+  local release_dir="$1"
+  local image_tag="$2"
+  shift 2
+  (
+    cd "$release_dir"
+    export BACKEND_IMAGE="$image_tag"
+    docker compose -p "$COMPOSE_PROJECT" -f compose.yaml "$@"
+  )
+}
+
+# Tear down a release stack. Also clears legacy project names that used the
+# release directory basename (those left 127.0.0.1:5001 allocated across deploys).
+stop_release_stack() {
+  local release_dir="$1"
+  local image_tag="${2:-$IMAGE_TAG}"
+  if [[ -z "$release_dir" || ! -d "$release_dir" || ! -f "$release_dir/compose.yaml" ]]; then
+    return 0
+  fi
+  local legacy_project
+  legacy_project="$(basename "$release_dir")"
+  (
+    cd "$release_dir"
+    export BACKEND_IMAGE="${image_tag:-placeholder}"
+    docker compose -p "$COMPOSE_PROJECT" -f compose.yaml down --remove-orphans || true
+    if [[ "$legacy_project" != "$COMPOSE_PROJECT" ]]; then
+      docker compose -p "$legacy_project" -f compose.yaml down --remove-orphans || true
+    fi
+  ) || true
+}
+
 on_error() {
   local exit_code=$?
   FAILURE_EXIT_CODE="$exit_code"
@@ -118,22 +151,13 @@ print_failure_diagnostics() {
   echo "!!! -------------------------------------------------------------------" >&2
 
   echo ">>> Container status at failure:" >&2
-  (
-    export BACKEND_IMAGE="${IMAGE_TAG}"
-    docker compose -f compose.yaml ps -a || true
-  ) >&2 || true
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" ps -a >&2 || true
 
   echo ">>> Recent api logs:" >&2
-  (
-    export BACKEND_IMAGE="${IMAGE_TAG}"
-    docker compose -f compose.yaml logs --tail=80 api || true
-  ) >&2 || true
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=80 api >&2 || true
 
   echo ">>> Recent outbox-relay logs:" >&2
-  (
-    export BACKEND_IMAGE="${IMAGE_TAG}"
-    docker compose -f compose.yaml logs --tail=40 outbox-relay || true
-  ) >&2 || true
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=40 outbox-relay >&2 || true
 
   echo ">>> Local health probe:" >&2
   curl -sS -m 5 "http://127.0.0.1:5001/health" >&2 || echo "(health endpoint unreachable)" >&2
@@ -144,14 +168,13 @@ rollback() {
   echo "!!! Deployment failed! Initiating automatic rollback..." >&2
   print_failure_diagnostics
 
+  echo ">>> Stopping failed release stack ($RELEASE_SHA) to free host ports..." >&2
+  stop_release_stack "$RELEASE_DIR" "$IMAGE_TAG"
+
   if [[ -n "$CURRENT_IMAGE" && -n "$CURRENT_RELEASE" && -d "$RELEASES_DIR/$CURRENT_RELEASE" ]]; then
     echo ">>> Rolling back to previous stable release ($CURRENT_RELEASE) with image $CURRENT_IMAGE..." >&2
-    (
-      cd "$RELEASES_DIR/$CURRENT_RELEASE"
-      export BACKEND_IMAGE="$CURRENT_IMAGE"
-      docker compose -f compose.yaml down --remove-orphans || true
-      docker compose -f compose.yaml up -d --remove-orphans || true
-    ) || true
+    stop_release_stack "$RELEASES_DIR/$CURRENT_RELEASE" "$CURRENT_IMAGE"
+    compose_in "$RELEASES_DIR/$CURRENT_RELEASE" "$CURRENT_IMAGE" up -d --remove-orphans || true
     echo ">>> Rollback containers restarted for release ${CURRENT_RELEASE}." >&2
   else
     echo "!!! Unable to roll back automatically: missing previous release/image state." >&2
@@ -171,7 +194,7 @@ trap 'if [[ "$DEPLOY_SUCCESS" != "true" ]]; then rollback; fi' EXIT
 CURRENT_STEP="validate-compose"
 echo ">>> Validating Docker Compose configuration..."
 export BACKEND_IMAGE="$IMAGE_TAG"
-docker compose -f compose.yaml config >/dev/null
+docker compose -p "$COMPOSE_PROJECT" -f compose.yaml config >/dev/null
 
 CURRENT_STEP="pull-image"
 echo ">>> Pulling exact SHA-tagged Docker image: $IMAGE_TAG..."
@@ -188,8 +211,18 @@ docker run --rm \
 echo ">>> Prisma migrations completed successfully."
 
 CURRENT_STEP="compose-up"
-echo ">>> Starting backend services with Docker Compose..."
-docker compose -f compose.yaml up -d --remove-orphans
+# Previous releases used the directory name as the compose project, so both
+# stacks tried to bind 127.0.0.1:5001. Stop the live stack (and any half-created
+# target stack) before bringing the new release up under a fixed project name.
+if [[ -n "$CURRENT_RELEASE" && "$CURRENT_RELEASE" != "$RELEASE_SHA" ]]; then
+  echo ">>> Stopping current release ($CURRENT_RELEASE) to free 127.0.0.1:5001..."
+  stop_release_stack "$RELEASES_DIR/$CURRENT_RELEASE" "${CURRENT_IMAGE:-$IMAGE_TAG}"
+fi
+echo ">>> Clearing any leftover containers for project ${COMPOSE_PROJECT}..."
+stop_release_stack "$RELEASE_DIR" "$IMAGE_TAG"
+
+echo ">>> Starting backend services with Docker Compose (project=${COMPOSE_PROJECT})..."
+docker compose -p "$COMPOSE_PROJECT" -f compose.yaml up -d --remove-orphans
 
 CURRENT_STEP="health-check"
 echo ">>> Verifying container-local health endpoint..."
