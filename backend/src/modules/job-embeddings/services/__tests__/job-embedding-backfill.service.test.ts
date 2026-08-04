@@ -26,6 +26,7 @@ const candidate = (
   currentContentHash: null,
   currentJobVersion: null,
   currentDimensions: null,
+  effectivePostedAt: new Date(),
   ...overrides,
 });
 
@@ -81,8 +82,8 @@ describe('JobEmbeddingBackfillService', () => {
 
     expect(summary).toMatchObject({
       scanned: 2,
-      enqueued: 1,
-      skippedCurrent: 1,
+      queued: 1,
+      alreadyCurrent: 1,
       failed: 0,
       dryRun: false,
     });
@@ -115,7 +116,7 @@ describe('JobEmbeddingBackfillService', () => {
     const service = new JobEmbeddingBackfillService(repository, silentLogger);
     const summary = await service.run({ ...options, force: true });
 
-    expect(summary.enqueued).toBe(1);
+    expect(summary.queued).toBe(1);
     expect(repository.enqueued[0]).toMatchObject({
       jobId: 'job-1',
       outcome: 'SEMANTIC_CHANGED',
@@ -145,7 +146,7 @@ describe('JobEmbeddingBackfillService', () => {
 
     expect(summary).toMatchObject({
       scanned: 3,
-      enqueued: 3,
+      queued: 3,
       dryRun: true,
       cursorJobId: 'job-c',
     });
@@ -169,9 +170,39 @@ describe('JobEmbeddingBackfillService', () => {
 
     expect(summary).toMatchObject({
       scanned: 2,
-      enqueued: 1,
+      queued: 1,
       failed: 1,
     });
     expect(repository.enqueued.map((event) => event.jobId)).toEqual(['job-ok']);
+  });
+
+  it('counts storage and embedding age ineligibility without failing', async () => {
+    const repository = new MemoryBackfillRepository();
+    repository.batches = [
+      {
+        candidates: [
+          candidate({
+            jobId: 'job-old-storage',
+            effectivePostedAt: new Date('2020-01-01T00:00:00.000Z'),
+          }),
+          candidate({
+            jobId: 'job-old-embedding',
+            effectivePostedAt: new Date(Date.now() - 75 * 24 * 60 * 60 * 1000),
+          }),
+          candidate({ jobId: 'job-fresh' }),
+        ],
+      },
+    ];
+
+    const service = new JobEmbeddingBackfillService(repository, silentLogger);
+    const summary = await service.run(options);
+
+    expect(summary.scanned).toBe(3);
+    expect(summary.storageIneligible).toBeGreaterThanOrEqual(1);
+    expect(summary.embeddingIneligible + summary.queued + summary.alreadyCurrent).toBe(
+      summary.storageEligible,
+    );
+    expect(summary.failed).toBe(0);
+    expect(repository.enqueued.some((event) => event.jobId === 'job-fresh')).toBe(true);
   });
 });

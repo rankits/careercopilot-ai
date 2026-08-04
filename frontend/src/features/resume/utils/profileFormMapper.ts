@@ -9,11 +9,19 @@ const isRecord = (value: unknown): value is Record<string, unknown> =>
 
 const text = (value: unknown) => (typeof value === 'string' ? value : '');
 
-const formatRecord = (record: Record<string, unknown>, keys: string[]) =>
-  keys
+/** Prefers the named structured fields, but falls back to `record.raw` -
+ * some parses (e.g. the RULE_BASED fallback parser, which can't reliably
+ * split a section into discrete fields without an LLM) persist an entry as
+ * a single unstructured line under `raw` instead. Without this fallback
+ * those entries silently vanish from the edit form even though the data is
+ * present in the profile. */
+const formatRecord = (record: Record<string, unknown>, keys: string[]) => {
+  const structured = keys
     .map((key) => text(record[key]).trim())
     .filter(Boolean)
     .join(' — ');
+  return structured || text(record.raw).trim();
+};
 
 const linesToRecords = (value: string): Record<string, unknown>[] =>
   value

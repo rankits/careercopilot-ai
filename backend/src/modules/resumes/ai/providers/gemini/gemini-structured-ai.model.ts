@@ -3,21 +3,8 @@ import type {
   StructuredAiExtractionRequest,
   StructuredAiModel,
 } from '@/modules/resumes/ai/ai-model.contract.js';
-
-const extractJsonPayload = (value: unknown): string => {
-  if (typeof value === 'string') {
-    return value;
-  }
-
-  if (Array.isArray(value)) {
-    return value
-      .map((part) => (typeof part === 'string' ? part : ''))
-      .join('')
-      .trim();
-  }
-
-  return '';
-};
+import { extractTextContent, parseProviderJson } from '@/modules/resumes/ai/json.js';
+import { buildResumeParserUserPrompt } from '@/modules/resumes/ai/prompts/resume-parser.prompt.js';
 
 export class GeminiStructuredAiModel implements StructuredAiModel {
   constructor(
@@ -25,6 +12,7 @@ export class GeminiStructuredAiModel implements StructuredAiModel {
       apiKey: string;
       model: string;
       temperature: number;
+      /** LangChain-level retries; keep 0 when the outer fallback layer owns retries. */
       maxRetries: number;
     },
   ) {}
@@ -44,30 +32,12 @@ export class GeminiStructuredAiModel implements StructuredAiModel {
       },
       {
         role: 'user',
-        content: `
-Extract the resume information from the content below.
-
-<resume_content>
-${request.documentText}
-</resume_content>
-Return only a valid JSON object that matches the requested schema.
-        `.trim(),
+        content: buildResumeParserUserPrompt(request.documentText),
       },
     ]);
 
-    const rawText = extractJsonPayload((response as { content?: unknown }).content ?? response);
-    const jsonText = rawText
-      .replace(/^```json\s*/i, '')
-      .replace(/```$/i, '')
-      .trim();
-
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(jsonText);
-    } catch {
-      throw new Error('Gemini did not return valid JSON for the resume parser');
-    }
-
+    const rawText = extractTextContent((response as { content?: unknown }).content ?? response);
+    const parsed = parseProviderJson(rawText, 'Gemini');
     return request.schema.parse(parsed);
   }
 }

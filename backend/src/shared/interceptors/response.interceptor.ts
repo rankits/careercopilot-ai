@@ -1,5 +1,5 @@
-import { NextFunction, Request, Response } from "express";
-import { appLogger } from "@/shared/utils/logger.js";
+import { NextFunction, Request, Response } from 'express';
+import { appLogger } from '@/shared/utils/logger.js';
 
 export const responseInterceptor = (req: Request, res: Response, next: NextFunction) => {
   const originalSend = res.send;
@@ -9,7 +9,7 @@ export const responseInterceptor = (req: Request, res: Response, next: NextFunct
     return originalSend.call(this, body);
   };
 
-  res.on("finish", () => {
+  res.on('finish', () => {
     const duration = req.startTime ? Date.now() - req.startTime : 0;
     const statusCode = res.statusCode;
     const method = req.method;
@@ -22,7 +22,7 @@ export const responseInterceptor = (req: Request, res: Response, next: NextFunct
         statusCode,
         durationMs: duration,
       },
-      "API request completed",
+      'API request completed',
     );
   });
 

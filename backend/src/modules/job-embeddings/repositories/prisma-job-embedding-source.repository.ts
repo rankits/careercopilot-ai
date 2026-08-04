@@ -18,6 +18,7 @@ export class PrismaJobEmbeddingSourceRepository implements JobEmbeddingSourceRep
         skills: true,
         tags: true,
         providerMetadata: true,
+        effectivePostedAt: true,
         company: { select: { name: true } },
       },
     });
@@ -41,6 +42,7 @@ export class PrismaJobEmbeddingSourceRepository implements JobEmbeddingSourceRep
       employmentType: job.employmentType,
       skills: job.skills,
       tags: job.tags,
+      effectivePostedAt: job.effectivePostedAt,
     };
   }
 }

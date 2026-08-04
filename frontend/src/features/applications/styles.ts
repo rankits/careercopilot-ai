@@ -533,7 +533,7 @@ export const ApplicationCard = styled('article', {
   background: colorTokens.backgroundCard,
   border: `0.0625rem solid ${selected ? colorTokens.actionPrimary : colorTokens.borderDefault}`,
   borderRadius: borderRadius.xl,
-  boxShadow: selected ? '0 0 0 0.1875rem rgba(130, 48, 240, 0.12)' : 'none',
+  boxShadow: selected ? '0 0 0 0.1875rem rgba(37, 99, 235, 0.12)' : 'none',
   display: 'grid',
   gap: spacing[3],
   minWidth: 0,

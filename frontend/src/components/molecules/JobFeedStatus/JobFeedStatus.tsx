@@ -44,10 +44,10 @@ export function JobFeedStatus({
     <Box
       sx={{
         display: 'grid',
-        gap: spacing[3],
+        gap: spacing[2],
         justifyItems: 'start',
-        minHeight: '12rem',
-        padding: `${spacing[4]} 0`,
+        minHeight: 0,
+        padding: `${spacing[2]} 0`,
       }}
     >
       <Alert

@@ -8,6 +8,7 @@ import {
   RECOMMENDATION_ERROR_CODES,
   RecommendationError,
 } from '@/modules/recommendations/errors/recommendation.error.js';
+import { normalizeRecommendationSkillBuckets } from '@/modules/recommendations/skills/recommendation-skill-buckets.js';
 import type {
   RecommendationContext,
   RecommendationMatchType,
@@ -26,7 +27,9 @@ export interface RecommendationScoreCalculator {
     score: number;
     reasons: RecommendationReason[];
     matchedSkills?: string[];
+    aliasSkills?: string[];
     relatedSkills?: string[];
+    transferableSkills?: string[];
     missingSkills?: string[];
   }>;
 }
@@ -40,6 +43,7 @@ export interface MatchTypeClassifier {
 }
 
 export class RecommendationScoringEngine {
+  /** Heuristic calculator `reasons` are the persisted explanation source of truth. */
   private readonly calculators: ReadonlyMap<
     RecommendationScoreComponentName,
     RecommendationScoreCalculator
@@ -97,12 +101,17 @@ export class RecommendationScoringEngine {
       (total, component) => total + component.result.score * this.weights[component.componentName],
       0,
     );
+    const skillBuckets = normalizeRecommendationSkillBuckets({
+      matchedSkills: calculated.flatMap(({ result }) => result.matchedSkills ?? []),
+      aliasSkills: calculated.flatMap(({ result }) => result.aliasSkills ?? []),
+      relatedSkills: calculated.flatMap(({ result }) => result.relatedSkills ?? []),
+      transferableSkills: calculated.flatMap(({ result }) => result.transferableSkills ?? []),
+      missingSkills: calculated.flatMap(({ result }) => result.missingSkills ?? []),
+    });
     const scoreResult: RecommendationScoreResult = {
       overallScore,
       components,
-      matchedSkills: calculated.flatMap(({ result }) => result.matchedSkills ?? []),
-      relatedSkills: calculated.flatMap(({ result }) => result.relatedSkills ?? []),
-      missingSkills: calculated.flatMap(({ result }) => result.missingSkills ?? []),
+      ...skillBuckets,
       reasons: calculated.flatMap(({ result }) => result.reasons),
     };
     return {

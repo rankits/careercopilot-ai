@@ -34,11 +34,24 @@ const vector = (value = 1): number[] => Array(JOB_EMBEDDING_DIMENSIONS).fill(val
 const base = {
   model: 'configured-model',
   dimensions: JOB_EMBEDDING_DIMENSIONS,
+  requestDimensions: undefined,
   batchSize: 32,
+  maxRetries: 3,
   documentPrefix: '',
   queryPrefix: '',
   apiKey: 'secret',
   timeoutMs: 12_000,
+};
+
+const mockOpenRouterConfig = {
+  apiKey: 'openrouter-key',
+  apiKeyEnvName: 'OPENROUTER_API_KEY',
+  baseUrl: 'https://openrouter.example',
+  httpReferer: undefined,
+  appTitle: 'Career Copilot',
+  allowFallbacks: undefined,
+  providerOrder: undefined,
+  dataCollectionPolicy: undefined,
 };
 
 describe('embedding providers', () => {
@@ -47,12 +60,16 @@ describe('embedding providers', () => {
       provider: 'groq',
       model: 'env-selected-model',
       dimensions: JOB_EMBEDDING_DIMENSIONS,
+      requestDimensions: undefined,
       timeoutMs: 10_000,
       batchSize: 16,
+      batchMaxCharacters: 200_000,
+      maxRetries: 3,
       documentPrefix: 'doc: ',
       queryPrefix: 'query: ',
       google: { apiKey: undefined, baseUrl: 'https://google.example' },
       groq: { apiKey: 'groq-key', baseUrl: 'https://groq.example' },
+      openrouter: mockOpenRouterConfig,
     };
 
     const provider = createEmbeddingProvider(
@@ -62,6 +79,31 @@ describe('embedding providers', () => {
 
     expect(provider.provider).toBe('groq');
     expect(provider.model).toBe('env-selected-model');
+  });
+
+  it('rejects configured dimensions that do not match the job embedding index', () => {
+    const config: EmbeddingConfig = {
+      provider: 'groq',
+      model: 'env-selected-model',
+      dimensions: JOB_EMBEDDING_DIMENSIONS + 1,
+      requestDimensions: undefined,
+      timeoutMs: 10_000,
+      batchSize: 16,
+      batchMaxCharacters: 200_000,
+      maxRetries: 3,
+      documentPrefix: 'doc: ',
+      queryPrefix: 'query: ',
+      google: { apiKey: undefined, baseUrl: 'https://google.example' },
+      groq: { apiKey: 'groq-key', baseUrl: 'https://groq.example' },
+      openrouter: mockOpenRouterConfig,
+    };
+
+    expect(() =>
+      createEmbeddingProvider(
+        config,
+        new RecordingHttpClient({ data: [{ index: 0, embedding: vector() }] }),
+      ),
+    ).toThrowError(expect.objectContaining({ code: 'EMBEDDING_PROVIDER_CONFIG_INVALID' }));
   });
 
   it('requests configurable Gemini embeddings with retrieval purpose and dimensions', async () => {

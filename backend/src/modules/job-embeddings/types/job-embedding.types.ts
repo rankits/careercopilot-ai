@@ -27,6 +27,7 @@ export interface JobEmbeddingSearchFilters {
   readonly minSalary?: number;
   readonly maxSalary?: number;
   readonly currency?: string;
+  readonly embeddingCutoff?: Date;
 }
 
 export interface SearchJobEmbeddingsInput {
@@ -54,4 +55,5 @@ export interface JobEmbeddingSource {
   readonly employmentType: string | null;
   readonly skills: unknown;
   readonly tags: unknown;
+  readonly effectivePostedAt: Date | null;
 }

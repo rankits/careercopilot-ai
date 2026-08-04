@@ -6,14 +6,69 @@ import {
 } from '@/modules/recommendations/constants/recommendation.constants.js';
 import { assertRecommendationOwnership } from '@/modules/recommendations/matching/recommendation-access.js';
 import {
+  createSavedSearchSchema,
+  createCareerTargetSchema,
   createRecommendationSchema,
+  generateSavedSearchSchema,
+  listCareerTargetsSchema,
+  listRecommendationsSchema,
+  listSavedSearchesSchema,
   recommendationFeedbackSchema,
+  recommendationRunDetailsSchema,
+  refreshRecommendationSchema,
   similarJobParamsSchema,
   targetTextBodySchema,
+  updateSavedSearchSchema,
+  careerTargetDetailsSchema,
 } from '@/modules/recommendations/validations/recommendation.schema.js';
-import { RECOMMENDATION_FEEDBACK_ACTION_VALUES } from '@/modules/recommendations/types/recommendations.types.js';
+import {
+  RECOMMENDATION_FEEDBACK_ACTION_VALUES,
+  type ScoredJobRecommendation,
+} from '@/modules/recommendations/types/recommendations.types.js';
+import { sortRecommendationsForRanking } from '@/modules/recommendations/utils/recommendation-ranking.js';
+import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 
 const uuid = '4ea7733c-51ca-4df2-9201-72f08786d215';
+
+const scored = (
+  id: string,
+  overallScore: number,
+  matchType: ScoredJobRecommendation['matchType'],
+): ScoredJobRecommendation => ({
+  job: {
+    id,
+    title: 'Engineer',
+    company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
+    location: { formatted: 'Remote', remoteType: 'REMOTE' },
+    employmentType: 'FULL_TIME',
+    salary: { minimum: null, maximum: null, currency: null },
+    skills: [],
+    publishedAt: null,
+    applyUrl: null,
+  },
+  scoreResult: {
+    overallScore,
+    components: {
+      requiredSkills: overallScore,
+      title: overallScore,
+      experience: overallScore,
+      responsibilities: overallScore,
+      preferredSkills: overallScore,
+      location: overallScore,
+      industry: overallScore,
+      salary: overallScore,
+      qualifications: overallScore,
+    },
+    matchedSkills: [],
+    aliasSkills: [],
+    relatedSkills: [],
+    transferableSkills: [],
+    missingSkills: [],
+    reasons: [],
+  },
+  category: 'GOOD_MATCH',
+  matchType,
+});
 
 describe('recommendation module invariants', () => {
   it('keeps all nine default weights totaling one', () => {
@@ -55,6 +110,103 @@ describe('recommendation module invariants', () => {
     );
   });
 
+  it('sorts recommendations by score, match quality, then job id', () => {
+    const ranked = sortRecommendationsForRanking([
+      scored('job-c', 0.8, 'RELATED'),
+      scored('job-b', 0.8, 'EXACT'),
+      scored('job-a', 0.9, 'MISSING'),
+      scored('job-d', 0.8, 'EXACT'),
+    ]);
+
+    expect(ranked.map((item) => item.job.id)).toEqual(['job-a', 'job-b', 'job-d', 'job-c']);
+  });
+
+  it.each([
+    [
+      {
+        matchedSkills: ['React'],
+        aliasSkills: [],
+        relatedSkills: [],
+        transferableSkills: [],
+        missingSkills: [],
+      },
+      'EXACT',
+    ],
+    [
+      {
+        matchedSkills: [],
+        aliasSkills: ['React'],
+        relatedSkills: [],
+        transferableSkills: [],
+        missingSkills: [],
+      },
+      'ALIAS',
+    ],
+    [
+      {
+        matchedSkills: [],
+        aliasSkills: [],
+        relatedSkills: ['Next.js'],
+        transferableSkills: [],
+        missingSkills: [],
+      },
+      'RELATED',
+    ],
+    [
+      {
+        matchedSkills: [],
+        aliasSkills: [],
+        relatedSkills: [],
+        transferableSkills: ['JavaScript'],
+        missingSkills: [],
+      },
+      'TRANSFERABLE',
+    ],
+    [
+      {
+        matchedSkills: [],
+        aliasSkills: [],
+        relatedSkills: [],
+        transferableSkills: [],
+        missingSkills: ['React'],
+      },
+      'MISSING',
+    ],
+  ] satisfies Array<
+    [
+      Pick<
+        ScoredJobRecommendation['scoreResult'],
+        'matchedSkills' | 'aliasSkills' | 'relatedSkills' | 'transferableSkills' | 'missingSkills'
+      >,
+      ScoredJobRecommendation['matchType'],
+    ]
+  >)('classifies graph skill buckets as %s -> %s', (skills, matchType) => {
+    const item = scored('job-match-type', 0.95, 'MISSING');
+    expect(
+      defaultMatchTypeClassifier.classify(
+        {
+          userId: 'user-1',
+          sourceType: 'PROFILE',
+          contextSchemaVersion: '1.1.0',
+          targetTitles: [],
+          relatedTitles: [],
+          requiredSkills: [],
+          preferredSkills: [],
+          industries: [],
+          locations: [],
+          employmentTypes: [],
+          salaryExpectation: {},
+          education: [],
+          certifications: [],
+          excludedCompanies: [],
+          excludedSkills: [],
+        },
+        item.job,
+        { ...item.scoreResult, ...skills },
+      ),
+    ).toBe(matchType);
+  });
+
   it('validates trimmed target text and shared filters', () => {
     expect(targetTextBodySchema.parse({ targetText: '  Backend engineer  ' }).targetText).toBe(
       'Backend engineer',
@@ -69,9 +221,20 @@ describe('recommendation module invariants', () => {
     expect(
       targetTextBodySchema.safeParse({
         targetText: 'Engineer',
-        filters: { minimumSalary: 5, maximumSalary: 10, workModes: ['REMOTE'] },
+        filters: {
+          minimumSalary: 5,
+          maximumSalary: 10,
+          workModes: ['REMOTE'],
+          filterMode: 'FLEXIBLE',
+        },
       }).success,
     ).toBe(true);
+    expect(
+      targetTextBodySchema.safeParse({
+        targetText: 'Engineer',
+        filters: { filterMode: 'RELAXED' },
+      }).success,
+    ).toBe(false);
   });
 
   it('enforces sourceType and sourceId rules', () => {
@@ -91,6 +254,104 @@ describe('recommendation module invariants', () => {
         body: { sourceType: 'TARGET_TEXT', sourceId: uuid },
       }).success,
     ).toBe(false);
+    expect(
+      createRecommendationSchema.safeParse({
+        body: { sourceType: 'CAREER_GOAL', sourceId: uuid },
+      }).success,
+    ).toBe(true);
+    expect(
+      createRecommendationSchema.safeParse({
+        body: { sourceType: 'CAREER_GOAL' },
+      }).success,
+    ).toBe(false);
+    expect(
+      createRecommendationSchema.safeParse({
+        body: { sourceType: 'SAVED_SEARCH', sourceId: uuid },
+      }).success,
+    ).toBe(true);
+    expect(
+      createRecommendationSchema.safeParse({
+        body: { sourceType: 'SAVED_SEARCH' },
+      }).success,
+    ).toBe(false);
+  });
+
+  it('defaults refresh to PROFILE and enforces run list query semantics', () => {
+    expect(refreshRecommendationSchema.parse({ body: {} }).body).toEqual({
+      sourceType: 'PROFILE',
+    });
+    expect(
+      listRecommendationsSchema.parse({ query: { latestOnly: 'true', page: '2' } }).query,
+    ).toMatchObject({ latestOnly: true, page: 2, limit: 20 });
+    expect(
+      listRecommendationsSchema.safeParse({
+        query: { runId: uuid, latestOnly: 'true' },
+      }).success,
+    ).toBe(false);
+    expect(
+      recommendationRunDetailsSchema.safeParse({
+        params: { runId: uuid },
+        query: { page: '1', limit: '20' },
+      }).success,
+    ).toBe(true);
+  });
+
+  it('validates saved-search CRUD and generate payloads', () => {
+    expect(
+      listSavedSearchesSchema.parse({ query: { page: '2', limit: '10' } }).query,
+    ).toMatchObject({ page: 2, limit: 10 });
+    expect(
+      createSavedSearchSchema.parse({
+        body: {
+          name: '  Remote TypeScript roles  ',
+          query: '  Backend engineer  ',
+          filters: { locations: ['Remote'] },
+        },
+      }).body,
+    ).toMatchObject({
+      name: 'Remote TypeScript roles',
+      query: 'Backend engineer',
+      filters: { locations: ['Remote'] },
+    });
+    expect(createSavedSearchSchema.safeParse({ body: { name: '' } }).success).toBe(false);
+    expect(
+      updateSavedSearchSchema.safeParse({ params: { savedSearchId: uuid }, body: {} }).success,
+    ).toBe(false);
+    expect(
+      updateSavedSearchSchema.safeParse({
+        params: { savedSearchId: uuid },
+        body: { filters: { workModes: ['REMOTE'] } },
+      }).success,
+    ).toBe(true);
+    expect(
+      generateSavedSearchSchema.safeParse({
+        params: { savedSearchId: uuid },
+        body: { filters: { filterMode: 'STRICT' } },
+      }).success,
+    ).toBe(true);
+  });
+
+  it('validates career-target CRUD payloads', () => {
+    expect(
+      listCareerTargetsSchema.parse({ query: { page: '2', limit: '10' } }).query,
+    ).toMatchObject({ page: 2, limit: 10 });
+    expect(
+      createCareerTargetSchema.parse({
+        body: {
+          goalText: '  Move into automation QA  ',
+          structured: { targetRole: 'Automation QA Engineer' },
+        },
+      }).body,
+    ).toMatchObject({
+      goalText: 'Move into automation QA',
+      structured: { targetRole: 'Automation QA Engineer' },
+    });
+    expect(createCareerTargetSchema.safeParse({ body: { goalText: '' } }).success).toBe(false);
+    expect(
+      careerTargetDetailsSchema.safeParse({
+        params: { careerTargetId: uuid },
+      }).success,
+    ).toBe(true);
   });
 
   it('accepts every feedback action and rejects values outside the enum', () => {

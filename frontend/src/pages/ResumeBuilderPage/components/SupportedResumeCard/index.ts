@@ -1,0 +1,1 @@
+export { SupportedResumeCard } from './SupportedResumeCard';

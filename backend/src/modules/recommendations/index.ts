@@ -15,18 +15,35 @@ import { RecommendationScoringService } from '@/modules/recommendations/services
 import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
 import { SimilarJobsService } from '@/modules/recommendations/services/similar-jobs.service.js';
 import { CandidateRetrievalRegistry } from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
+import { recommendationRerankConfig } from '@/modules/recommendations/config/recommendation-rerank.config.js';
+import { OpenAICompatibleRecommendationReranker } from '@/modules/recommendations/providers/openai-compatible-recommendation-reranker.js';
 import { PgVectorCandidateRetrievalProvider } from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
+import { PrismaCandidateEmbeddingRepository } from '@/modules/recommendations/repositories/prisma-candidate-embedding.repository.js';
 import { RecommendationScoringEngine } from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
 import { HEURISTIC_SCORE_CALCULATORS } from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
 import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 import { PrismaRecommendationUnitOfWork } from '@/modules/recommendations/repositories/prisma-recommendation.unit-of-work.js';
+import { CandidateEmbeddingService } from '@/modules/recommendations/services/candidate-embedding.service.js';
+import { CareerTargetService } from '@/modules/recommendations/services/career-target.service.js';
 import { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
+import { SavedSearchService } from '@/modules/recommendations/services/saved-search.service.js';
 import { createResumeRecommendationSourceLoader } from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
+import { profileUpdatedAfter } from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
+import {
+  createEmbeddingProvider,
+  recommendationEmbeddingConfig,
+} from '@/modules/ai-embeddings/index.js';
 import { jobEmbeddingRepository } from '@/modules/job-embeddings/index.js';
 import { prismaJobSearchRepository } from '@/modules/job-listing/index.js';
+import { prismaCareerTargetRepository } from '@/modules/recommendations/repositories/prisma-career-target.repository.js';
+import { prismaSavedSearchRepository } from '@/modules/recommendations/repositories/prisma-saved-search.repository.js';
 import { createChildLogger } from '@/shared/logger/logger.js';
 
 export const recommendationsLogger = createChildLogger({ scope: 'job-recommendations' });
+export const candidateEmbeddingRepository = new PrismaCandidateEmbeddingRepository();
+export const candidateEmbeddingService = new CandidateEmbeddingService(
+  candidateEmbeddingRepository,
+);
 export const recommendationStrategyResolver = new RecommendationStrategyResolver([
   new ProfileSourceStrategy(),
   new ResumeSourceStrategy(),
@@ -38,6 +55,8 @@ export const recommendationStrategyResolver = new RecommendationStrategyResolver
 export const pgVectorCandidateRetrievalProvider = new PgVectorCandidateRetrievalProvider(
   jobEmbeddingRepository,
   prismaJobSearchRepository,
+  () => createEmbeddingProvider(recommendationEmbeddingConfig),
+  candidateEmbeddingService,
 );
 export const candidateRetrievalRegistry = new CandidateRetrievalRegistry([
   pgVectorCandidateRetrievalProvider,
@@ -55,6 +74,9 @@ export const recommendationScoringEngine = new RecommendationScoringEngine(
 export const recommendationScoringService = new RecommendationScoringService(
   recommendationScoringEngine,
 );
+export const recommendationReranker = recommendationRerankConfig.enabled
+  ? new OpenAICompatibleRecommendationReranker(recommendationRerankConfig)
+  : undefined;
 export const recommendationSourceLoader = createResumeRecommendationSourceLoader();
 export const recommendationSourceAuthorizationService =
   new RecommendationSourceAuthorizationService(
@@ -70,6 +92,8 @@ export const recommendationsService = new RecommendationsService(recommendations
   scoringService: recommendationScoringService,
   unitOfWork: recommendationUnitOfWork,
   sourceAuthorization: recommendationSourceAuthorizationService,
+  reranker: recommendationReranker,
+  profileUpdatedAfter,
 });
 export const recommendationFeedbackService = new RecommendationFeedbackService({
   upsert: (input) => recommendationUnitOfWork.execute(({ feedback }) => feedback.upsert(input)),
@@ -79,6 +103,12 @@ export const recommendationFeedbackService = new RecommendationFeedbackService({
     ),
   listByJob: (userId, jobId) =>
     recommendationUnitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+  listByAction: (userId, action, options) =>
+    recommendationUnitOfWork.execute(({ feedback }) =>
+      feedback.listByAction(userId, action, options),
+    ),
+  listExcludedJobIds: (userId) =>
+    recommendationUnitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
 });
 export const similarJobsService = new SimilarJobsService(
   recommendationSourceAuthorizationService,
@@ -86,41 +116,67 @@ export const similarJobsService = new SimilarJobsService(
   recommendationRetrievalService,
   recommendationScoringService,
 );
+export const savedSearchService = new SavedSearchService(prismaSavedSearchRepository);
+export const careerTargetService = new CareerTargetService(prismaCareerTargetRepository);
 export const recommendationsRoutes = createRecommendationsRouter(
   recommendationsService,
   similarJobsService,
   recommendationFeedbackService,
+  savedSearchService,
+  careerTargetService,
 );
 
 export * from '@/modules/recommendations/types/recommendations.types.js';
+export * from '@/modules/recommendations/types/candidate-embedding.types.js';
 export * from '@/modules/recommendations/constants/recommendation.constants.js';
+export * from '@/modules/recommendations/config/recommendation-rerank.config.js';
+export * from '@/modules/recommendations/contracts/candidate-embedding.repository.js';
 export * from '@/modules/recommendations/contracts/recommendation-provider.contracts.js';
 export * from '@/modules/recommendations/contracts/recommendation.repository.js';
 export * from '@/modules/recommendations/errors/recommendation.error.js';
 export * from '@/modules/recommendations/adapters/resume-recommendation-source.loader.js';
 export * from '@/modules/recommendations/contracts/recommendation-source-loader.js';
 export * from '@/modules/recommendations/mappers/candidate-profile-source.mapper.js';
+export * from '@/modules/recommendations/mappers/career-target-source.mapper.js';
 export * from '@/modules/recommendations/mappers/recommendation.mapper.js';
+export * from '@/modules/recommendations/mappers/saved-search-source.mapper.js';
 export * from '@/modules/recommendations/matching/recommendation-access.js';
 export * from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
+export * from '@/modules/recommendations/providers/heuristic-target-text-extraction.provider.js';
+export * from '@/modules/recommendations/providers/openai-compatible-recommendation-reranker.js';
 export * from '@/modules/recommendations/providers/pgvector-candidate-retrieval.provider.js';
 export * from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
+export * from '@/modules/recommendations/repositories/prisma-career-target.repository.js';
+export * from '@/modules/recommendations/repositories/prisma-candidate-embedding.repository.js';
 export * from '@/modules/recommendations/repositories/prisma-recommendation.unit-of-work.js';
+export * from '@/modules/recommendations/repositories/prisma-saved-search.repository.js';
 export * from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
 export * from '@/modules/recommendations/scoring/default-match-type.classifier.js';
 export * from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
+export * from '@/modules/recommendations/services/candidate-embedding.service.js';
+export * from '@/modules/recommendations/services/career-target.service.js';
 export * from '@/modules/recommendations/services/recommendation-context.service.js';
 export * from '@/modules/recommendations/services/recommendation-explanation.service.js';
 export * from '@/modules/recommendations/services/recommendation-feedback.service.js';
+export * from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
 export * from '@/modules/recommendations/services/recommendation-retrieval.service.js';
 export * from '@/modules/recommendations/services/recommendation-scoring.service.js';
 export * from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
 export * from '@/modules/recommendations/services/recommendations.service.js';
+export * from '@/modules/recommendations/services/saved-search.service.js';
 export * from '@/modules/recommendations/services/similar-jobs.service.js';
 export * from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
 export * from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
+export * from '@/modules/recommendations/skills/skill-alias.catalog.js';
+export * from '@/modules/recommendations/skills/skill-canonicalization.service.js';
+export * from '@/modules/recommendations/skills/recommendation-skill-buckets.js';
+export * from '@/modules/recommendations/skills/skill-relationship.catalog.js';
+export * from '@/modules/recommendations/skills/skill-relationship.service.js';
 export * from '@/modules/recommendations/swagger/index.js';
 export * from '@/modules/recommendations/utils/apply-recommendation-filters.js';
 export * from '@/modules/recommendations/utils/candidate-job-filters.js';
+export * from '@/modules/recommendations/utils/career-goal-category.js';
+export * from '@/modules/recommendations/utils/deduplicate-retrieved-jobs.js';
 export * from '@/modules/recommendations/utils/recommendation-query-text.js';
+export * from '@/modules/recommendations/utils/recommendation-ranking.js';
 export * from '@/modules/recommendations/validations/recommendation.schema.js';

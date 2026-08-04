@@ -1,4 +1,5 @@
 import { ParsedResumeData } from '@/modules/resumes/types/resume.types.js';
+import { normalizeProfessionalSkills } from '@/modules/resumes/utils/skill-normalizer.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -171,7 +172,7 @@ export const resumeNormaliserService = {
         ? normalizeRecordArray(parsedData.projects)
         : undefined,
       education: normalizeRecordArray(parsedData.education),
-      skills: normalizeStringArray(parsedData.skills),
+      skills: normalizeProfessionalSkills(normalizeStringArray(parsedData.skills)),
       certifications: normalizeRecordArray(parsedData.certifications),
       languages: Array.isArray(parsedData.languages)
         ? normalizeRecordArray(parsedData.languages)

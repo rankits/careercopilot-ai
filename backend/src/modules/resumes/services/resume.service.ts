@@ -7,7 +7,7 @@ import {
   allowedResumeExtensions,
   allowedResumeMimeTypes,
 } from '@/modules/resumes/config/resume.config.js';
-import type { CandidateProfile } from '@prisma/client';
+import type { CandidateProfile, Resume } from '@prisma/client';
 import { resumeRepository } from '@/modules/resumes/repositories/resume.repository.js';
 import { createResumeStorage } from '@/modules/resumes/storage/resume-storage.factory.js';
 import {
@@ -18,18 +18,49 @@ import {
 import { resumeProcessingService } from '@/modules/resumes/services/resume-processing.service.js';
 import { resumeParsingOrchestrator } from '@/modules/resumes/services/resume-parsing.orchestrator.js';
 import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
+import { invalidateUserRecommendationState } from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 const toParsedResumeData = (value: unknown): ParsedResumeData => {
   const data = isRecord(value) ? value : {};
+  const personalDetails = isRecord(data.personalDetails) ? { ...data.personalDetails } : {};
+  const professionalProfile = isRecord(data.professionalProfile) ? data.professionalProfile : {};
+  const experience = Array.isArray(data.experience)
+    ? (data.experience as Array<Record<string, unknown>>)
+    : [];
+  const firstExperience = isRecord(experience[0]) ? experience[0] : {};
+
+  // The raw extraction doesn't always carry these under `personalDetails`
+  // (the AI parser writes them to `professionalProfile`/top-level instead;
+  // the RULE_BASED fallback parser - the default - doesn't extract them at
+  // all). Backfill from wherever the parser actually put them so a
+  // first-time confirm still produces a reasonably complete profile even
+  // when the caller didn't submit reviewed form values (see `confirmProfile`).
+  if (typeof personalDetails.summary !== 'string') {
+    const summary = professionalProfile.summary ?? data.professionalSummary;
+    if (typeof summary === 'string') personalDetails.summary = summary;
+  }
+  if (typeof personalDetails.designation !== 'string') {
+    const designation =
+      firstExperience.title ?? professionalProfile.currentTitle ?? personalDetails.currentTitle;
+    if (typeof designation === 'string') personalDetails.designation = designation;
+  }
+  if (typeof personalDetails.currentCompany !== 'string') {
+    const currentCompany = firstExperience.company ?? firstExperience.companyName;
+    if (typeof currentCompany === 'string') personalDetails.currentCompany = currentCompany;
+  }
+  if (
+    personalDetails.totalExperience === undefined &&
+    typeof data.totalExperienceYears === 'number'
+  ) {
+    personalDetails.totalExperience = data.totalExperienceYears;
+  }
 
   return {
-    personalDetails: isRecord(data.personalDetails) ? data.personalDetails : {},
-    experience: Array.isArray(data.experience)
-      ? (data.experience as Array<Record<string, unknown>>)
-      : [],
+    personalDetails,
+    experience,
     education: Array.isArray(data.education)
       ? (data.education as Array<Record<string, unknown>>)
       : [],
@@ -136,6 +167,10 @@ export const resumeService = {
     };
   },
 
+  async listResumes(input?: { userId?: string }): Promise<Resume[]> {
+    return resumeRepository.listResumes(input?.userId);
+  },
+
   async getParsedData(resumeId: string, principalId: string) {
     const resume = await assertOwnedResume(resumeId, principalId);
 
@@ -210,6 +245,12 @@ export const resumeService = {
       throw new AppError('Resume parsed data is not available yet', 404);
     }
 
+    await invalidateUserRecommendationState({
+      userId: principalId,
+      sourceType: 'RESUME',
+      sourceId: resumeId,
+    });
+
     const fileName = resume.fileName;
     const mimeType = resume.mimeType;
 
@@ -236,6 +277,12 @@ export const resumeService = {
     if (!extraction?.extractedText) {
       throw new AppError('Resume parsed data is not available yet', 404);
     }
+
+    await invalidateUserRecommendationState({
+      userId: principalId,
+      sourceType: 'RESUME',
+      sourceId: resumeId,
+    });
 
     setImmediate(() => {
       void resumeParsingOrchestrator.parseExistingResume({
@@ -279,11 +326,34 @@ export const resumeService = {
       );
     }
 
-    const updated = await resumeRepository.updateCandidateProfile(userId, input);
+    // `personalDetails` is a single JSON column - Prisma/Postgres replace it
+    // wholesale on write, so a caller updating just `phone` would otherwise
+    // silently blank out summary/designation/etc. Merge onto what's already
+    // stored so a partial edit only touches the keys it actually sent.
+    const personalDetails = input.personalDetails
+      ? {
+          ...(isRecord(existing.personalDetails) ? existing.personalDetails : {}),
+          ...input.personalDetails,
+        }
+      : undefined;
+
+    const updated = await resumeRepository.updateCandidateProfile(userId, {
+      ...input,
+      personalDetails,
+    });
+    await invalidateUserRecommendationState(userId);
     return toCandidateProfileResponse(updated);
   },
 
-  async confirmProfile(input: { userId: string; resumeId: string }) {
+  async confirmProfile(input: {
+    userId: string;
+    resumeId: string;
+    personalDetails?: Record<string, unknown>;
+    experience?: Array<Record<string, unknown>>;
+    education?: Array<Record<string, unknown>>;
+    skills?: string[];
+    certifications?: Array<Record<string, unknown>>;
+  }) {
     // Ownership must be re-asserted here, not just at the route layer: this
     // is what stops caller A from confirming their own profile using
     // caller B's resumeId (the path param alone only proves A owns `userId`).
@@ -294,13 +364,23 @@ export const resumeService = {
       throw new AppError('Resume parsed data is not available yet', 404);
     }
 
+    // Prefer what the caller actually reviewed and confirmed (the FE always
+    // sends this - see the frontend's resume.service.ts#confirmProfile) so
+    // edits made in the review form aren't silently discarded; fall back to
+    // the raw extraction for any field a direct API caller didn't send.
+    const fallback = toParsedResumeData(extraction.extractedData);
     const profile = await resumeRepository.upsertCandidateProfile({
       userId: input.userId,
       sourceResumeId: input.resumeId,
-      ...toParsedResumeData(extraction.extractedData),
+      personalDetails: input.personalDetails ?? fallback.personalDetails,
+      experience: input.experience ?? fallback.experience,
+      education: input.education ?? fallback.education,
+      skills: input.skills ?? fallback.skills,
+      certifications: input.certifications ?? fallback.certifications,
     });
 
     await authRepository.markProfileCreated(Number(input.userId));
+    await invalidateUserRecommendationState(input.userId);
 
     return profile;
   },

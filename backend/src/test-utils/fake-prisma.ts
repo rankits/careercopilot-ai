@@ -927,6 +927,7 @@ export class FakeDb {
       },
 
       $queryRaw: async () => [{ '?column?': 1 }],
+      $executeRaw: async () => 0,
     };
   }
 }

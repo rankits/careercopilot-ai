@@ -13,6 +13,12 @@ COPY package*.json ./
 COPY prisma.config.ts ./
 COPY prisma ./prisma
 RUN npm ci && npx prisma generate
+COPY prisma.config.ts ./prisma.config.ts
+# COPY ENTRY POINT SCRIPT
+COPY docker/entrypoint.sh ./docker/entrypoint.sh
+
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi \
+  && npx prisma generate
 
 # --- Stage 3: Development Runtime ---
 FROM base AS development

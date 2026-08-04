@@ -1,4 +1,4 @@
-import { JobModuleError } from "@/modules/jobs/errors/JobModuleError.js";
+import { JobModuleError } from '@/modules/jobs/errors/JobModuleError.js';
 
 export class RateLimitError extends JobModuleError {
   readonly providerName: string;

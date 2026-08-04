@@ -6,6 +6,7 @@ import {
   getParseStatusController,
   getParsedDataController,
   getResumeStatusController,
+  listResumesController,
   resumeUploadMiddleware,
   reparseResumeController,
   startParseController,
@@ -61,6 +62,7 @@ router.get(
   validateResource(resumeIdParamsSchema),
   getResumeStatusController,
 );
+router.get('/', listResumesController);
 router.get(
   '/:resumeId/parsed-data',
   authMiddleware,

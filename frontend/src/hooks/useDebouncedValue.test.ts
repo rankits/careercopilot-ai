@@ -13,10 +13,9 @@ describe('useDebouncedValue', () => {
   });
 
   it('emits only the final value after rapid updates settle', () => {
-    const { result, rerender } = renderHook(
-      ({ value }) => useDebouncedValue(value, 300),
-      { initialProps: { value: '' } },
-    );
+    const { result, rerender } = renderHook(({ value }) => useDebouncedValue(value, 300), {
+      initialProps: { value: '' },
+    });
 
     expect(result.current).toBe('');
 
