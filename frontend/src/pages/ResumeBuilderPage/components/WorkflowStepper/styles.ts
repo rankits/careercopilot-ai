@@ -34,7 +34,12 @@ export const Stepper = styled(Box)({
   '& .step-wrap': { alignItems: 'center', display: 'flex', gap: spacing[3], minWidth: 0 },
   '& .step-copy': { display: 'grid', gap: spacing[1], minWidth: 0 },
   '& .step-label': { ...title, fontSize: fontSize.xs, lineHeight: 1.2, whiteSpace: 'nowrap' },
-  '& .step-description': { ...muted, fontSize: fontSize.xs, lineHeight: 1.45, whiteSpace: 'nowrap' },
+  '& .step-description': {
+    ...muted,
+    fontSize: fontSize.xs,
+    lineHeight: 1.45,
+    whiteSpace: 'nowrap',
+  },
   '& .step-connector': {
     borderTop: '2px dashed #DCE1EA',
     flex: '1 0 4rem',

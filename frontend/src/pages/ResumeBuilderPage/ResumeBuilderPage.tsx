@@ -35,7 +35,9 @@ export function ResumeBuilderPage() {
 
   const [targetRole, setTargetRole] = useState('');
   const [industry, setIndustry] = useState('');
-  const [experienceLevel, setExperienceLevel] = useState<'entry' | 'mid' | 'senior' | 'lead' | 'executive'>('mid');
+  const [experienceLevel, setExperienceLevel] = useState<
+    'entry' | 'mid' | 'senior' | 'lead' | 'executive'
+  >('mid');
   const [employmentType, setEmploymentType] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [jobDescription, setJobDescription] = useState('');
@@ -58,7 +60,10 @@ export function ResumeBuilderPage() {
   const [savingVersion, setSavingVersion] = useState(false);
 
   useEffect(() => {
-    resumeBuilderService.listResumes().then(setExistingResumes).catch(() => {});
+    resumeBuilderService
+      .listResumes()
+      .then(setExistingResumes)
+      .catch(() => {});
   }, []);
 
   const hydrateFromExistingAnalysis = useCallback(async (id: string) => {
@@ -73,7 +78,7 @@ export function ResumeBuilderPage() {
         setTargetRole((prev) => (prev.trim() ? prev : result.targetRole));
       }
       if (result.jobDescription?.trim()) {
-        setJobDescription((prev) => (prev.trim() ? prev : result.jobDescription ?? ''));
+        setJobDescription((prev) => (prev.trim() ? prev : (result.jobDescription ?? '')));
       }
       if (result.editedContent && !editedContentRef.current.trim()) {
         setEditedContent(result.editedContent);
@@ -88,7 +93,10 @@ export function ResumeBuilderPage() {
     // Avoid duplicate status fetches while the analyze poller is already running.
     if (step === 3) return;
     void hydrateFromExistingAnalysis(resumeId);
-    resumeBuilderService.getVersions(resumeId).then(setVersions).catch(() => setVersions([]));
+    resumeBuilderService
+      .getVersions(resumeId)
+      .then(setVersions)
+      .catch(() => setVersions([]));
   }, [resumeId, step, hydrateFromExistingAnalysis]);
 
   useEffect(() => {
@@ -207,7 +215,10 @@ export function ResumeBuilderPage() {
 
   useEffect(() => {
     if (step !== 5 || !resumeId) return;
-    resumeBuilderService.getKeywords(resumeId).then(setKeywords).catch(() => {});
+    resumeBuilderService
+      .getKeywords(resumeId)
+      .then(setKeywords)
+      .catch(() => {});
     resumeBuilderService
       .getSuggestions(resumeId)
       .then((items) => {
@@ -276,7 +287,10 @@ export function ResumeBuilderPage() {
 
   useEffect(() => {
     if (step !== 10 || !resumeId) return;
-    resumeBuilderService.getVersions(resumeId).then(setVersions).catch(() => {});
+    resumeBuilderService
+      .getVersions(resumeId)
+      .then(setVersions)
+      .catch(() => {});
   }, [step, resumeId]);
 
   const goTo = useCallback(
@@ -458,9 +472,8 @@ export function ResumeBuilderPage() {
   const handleExport = async (format: 'pdf' | 'docx' | 'txt') => {
     setExporting(true);
     try {
-      const { alignDraftSkillsToJob, parseResumeContent, serializeResumeDraft } = await import(
-        './utils'
-      );
+      const { alignDraftSkillsToJob, parseResumeContent, serializeResumeDraft } =
+        await import('./utils');
       const draft = alignDraftSkillsToJob(
         parseResumeContent(
           editedContent || analysis?.editedContent || '',

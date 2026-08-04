@@ -1,10 +1,7 @@
-import { ProviderTier, JobSearchFilters } from "@/modules/jobs/types/job.types.js";
-import {
-  ProviderHealth,
-  ProviderRateLimitStatus,
-} from "@/modules/jobs/types/provider.types.js";
-import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
-import { IProviderManifest } from "@/modules/jobs/interfaces/IProviderManifest.js";
+import { ProviderTier, JobSearchFilters } from '@/modules/jobs/types/job.types.js';
+import { ProviderHealth, ProviderRateLimitStatus } from '@/modules/jobs/types/provider.types.js';
+import { NormalizedJob } from '@/modules/jobs/models/NormalizedJob.js';
+import { IProviderManifest } from '@/modules/jobs/interfaces/IProviderManifest.js';
 
 export interface IJobProvider {
   readonly name: string;
@@ -16,4 +13,3 @@ export interface IJobProvider {
   healthCheck(): Promise<ProviderHealth>;
   getRateLimitStatus(): ProviderRateLimitStatus;
 }
-

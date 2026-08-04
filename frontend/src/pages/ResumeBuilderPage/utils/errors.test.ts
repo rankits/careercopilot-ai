@@ -26,9 +26,9 @@ describe('errors utils', () => {
   });
 
   it('builds analysis failure messages', () => {
-    expect(
-      getAnalysisFailureMessage({ failureReason: 'Analysis failed: Out of credits' }),
-    ).toBe('Out of credits');
+    expect(getAnalysisFailureMessage({ failureReason: 'Analysis failed: Out of credits' })).toBe(
+      'Out of credits',
+    );
     expect(
       getAnalysisFailureMessage({
         failureReason: null,

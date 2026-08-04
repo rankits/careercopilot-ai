@@ -233,7 +233,10 @@ export function splitSkillTokens(raw: string): string[] {
   }
 
   // Comma / pipe lists are trusted skill lines — use loose matching so "java, python" survive.
-  const parts = text.split(/[,|/;]+|\n+/).map((p) => p.trim()).filter(Boolean);
+  const parts = text
+    .split(/[,|/;]+|\n+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
   const listLike = parts.length >= 2 || text.length < 120;
 
   for (const part of parts) {

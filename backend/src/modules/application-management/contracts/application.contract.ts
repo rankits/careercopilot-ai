@@ -24,18 +24,41 @@ export interface IApplicationManagementService {
   ): Promise<{ application: ApplicationDto; created: boolean }>;
   /** Idempotent remove of a SAVED platform application for jobId. */
   unsavePlatformJob(userId: string, jobId: string): Promise<void>;
-  getApplications(options: ApplicationListOptions): Promise<PaginatedApplicationResult<ApplicationDto>>;
+  getApplications(
+    options: ApplicationListOptions,
+  ): Promise<PaginatedApplicationResult<ApplicationDto>>;
   getApplicationById(userId: string, applicationId: string): Promise<ApplicationDetailDto | null>;
-  updateApplication(userId: string, applicationId: string, input: UpdateApplicationInput): Promise<ApplicationDto>;
-  transitionStatus(userId: string, applicationId: string, input: StatusTransitionInput): Promise<ApplicationDto>;
+  updateApplication(
+    userId: string,
+    applicationId: string,
+    input: UpdateApplicationInput,
+  ): Promise<ApplicationDto>;
+  transitionStatus(
+    userId: string,
+    applicationId: string,
+    input: StatusTransitionInput,
+  ): Promise<ApplicationDto>;
   archiveApplication(userId: string, applicationId: string): Promise<ApplicationDto>;
   unarchiveApplication(userId: string, applicationId: string): Promise<ApplicationDto>;
   deleteApplication(userId: string, applicationId: string): Promise<boolean>;
 
   // Child resource management
-  addNote(userId: string, applicationId: string, input: CreateNoteInput): Promise<ApplicationNoteDto>;
+  addNote(
+    userId: string,
+    applicationId: string,
+    input: CreateNoteInput,
+  ): Promise<ApplicationNoteDto>;
   deleteNote(userId: string, applicationId: string, noteId: string): Promise<boolean>;
-  addTask(userId: string, applicationId: string, input: CreateTaskInput): Promise<ApplicationTaskDto>;
-  updateTask(userId: string, applicationId: string, taskId: string, input: UpdateTaskInput): Promise<ApplicationTaskDto>;
+  addTask(
+    userId: string,
+    applicationId: string,
+    input: CreateTaskInput,
+  ): Promise<ApplicationTaskDto>;
+  updateTask(
+    userId: string,
+    applicationId: string,
+    taskId: string,
+    input: UpdateTaskInput,
+  ): Promise<ApplicationTaskDto>;
   deleteTask(userId: string, applicationId: string, taskId: string): Promise<boolean>;
 }

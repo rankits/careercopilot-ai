@@ -20,6 +20,8 @@ ALLOW_DIRTY="false"
 SKIP_TESTS="false"
 
 AWS_BIN="aws"
+NODE_BIN="node"
+NPM_BIN="npm"
 INVALIDATION_ID=""
 ROLLBACK_STATUS="not-required"
 PREVIOUS_VERSION=""
@@ -168,8 +170,67 @@ resolve_aws() {
   fi
 }
 
+# Prefer Unix node/npm; on WSL/Git Bash also accept Windows node.exe / npm.cmd.
+resolve_node_npm() {
+  if command -v node >/dev/null 2>&1; then
+    NODE_BIN="node"
+  elif command -v node.exe >/dev/null 2>&1; then
+    NODE_BIN="node.exe"
+  elif [[ -x /mnt/c/nvm4w/nodejs/node.exe ]]; then
+    NODE_BIN="/mnt/c/nvm4w/nodejs/node.exe"
+  elif [[ -x "/mnt/c/Program Files/nodejs/node.exe" ]]; then
+    NODE_BIN="/mnt/c/Program Files/nodejs/node.exe"
+  else
+    die "Required command not found: node (install Node.js 20+ and ensure it is on PATH)"
+  fi
+
+  local node_dir
+  if [[ "${NODE_BIN}" == /* || "${NODE_BIN}" == [A-Za-z]:* ]]; then
+    node_dir="$(dirname "${NODE_BIN}")"
+  else
+    node_dir="$(dirname "$(command -v "${NODE_BIN}")")"
+  fi
+  # When using a Windows node.exe path, ensure its directory is searchable for npm.cmd.
+  if [[ -d "${node_dir}" ]]; then
+    case ":${PATH}:" in
+      *":${node_dir}:"*) ;;
+      *) export PATH="${node_dir}:${PATH}" ;;
+    esac
+  fi
+
+  if command -v npm >/dev/null 2>&1; then
+    NPM_BIN="npm"
+  elif command -v npm.cmd >/dev/null 2>&1; then
+    NPM_BIN="npm.cmd"
+  elif command -v npm.exe >/dev/null 2>&1; then
+    NPM_BIN="npm.exe"
+  elif [[ -f "${node_dir}/npm.cmd" ]]; then
+    NPM_BIN="${node_dir}/npm.cmd"
+  elif [[ -f "${node_dir}/npm" ]]; then
+    NPM_BIN="${node_dir}/npm"
+  else
+    die "Required command not found: npm (install Node.js/npm and ensure it is on PATH)"
+  fi
+
+  local node_major node_ver
+  node_ver="$("${NODE_BIN}" -v 2>/dev/null | tr -d 'v' || true)"
+  node_major="${node_ver%%.*}"
+  if [[ -z "${node_major}" ]]; then
+    die "Unable to execute ${NODE_BIN}. Check your Node.js install."
+  fi
+  if [[ "${node_major}" -lt 18 ]]; then
+    die "Node.js ${node_ver} detected via ${NODE_BIN}; Node.js 18+ is required."
+  fi
+
+  info "Using NODE_BIN=${NODE_BIN} NPM_BIN=${NPM_BIN} (node v${node_ver})"
+}
+
 aws_cli() {
   "${AWS_BIN}" "$@"
+}
+
+npm_cli() {
+  "${NPM_BIN}" "$@"
 }
 
 # ---------------------------------------------------------------------------
@@ -225,9 +286,10 @@ load_config() {
 validate_tooling() {
   stage "Validate local tooling and authentication"
   local cmd
-  for cmd in git node npm curl; do
+  for cmd in git curl; do
     require_cmd "${cmd}"
   done
+  resolve_node_npm
   resolve_aws
 
   aws_cli sts get-caller-identity --profile "${AWS_PROFILE}" --region "${AWS_REGION}" >/dev/null \
@@ -296,30 +358,30 @@ run_frontend_validation() {
   fi
 
   info "npm ci"
-  npm ci
+  npm_cli ci
 
-  if npm run | grep -q 'format:check'; then
+  if npm_cli run 2>/dev/null | grep -q 'format:check'; then
     info "npm run format:check"
-    npm run format:check
+    npm_cli run format:check
   else
     warn "format:check script not found; skipping"
   fi
 
   info "npm run lint"
-  npm run lint
+  npm_cli run lint
 
   info "npm run typecheck"
-  npm run typecheck
+  npm_cli run typecheck
 
   if [[ "${SKIP_TESTS}" == "true" ]]; then
     warn "Skipping npm test"
   else
     info "npm test"
-    npm test
+    npm_cli test
   fi
 
   info "npm run build (VITE_API_BASE_URL set; value not printed)"
-  npm run build
+  npm_cli run build
 
   ok "Frontend validation and build passed"
 }

@@ -1,8 +1,8 @@
-import { IJobProviderRegistry } from "@/modules/jobs/registry/job-provider.registry.js";
-import { DeduplicationEngine } from "@/modules/jobs/services/aggregation/deduplication.engine.js";
-import { JobSearchFilters } from "@/modules/jobs/types/job.types.js";
-import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
-import { jobsLogger } from "@/shared/utils/logger.js";
+import { IJobProviderRegistry } from '@/modules/jobs/registry/job-provider.registry.js';
+import { DeduplicationEngine } from '@/modules/jobs/services/aggregation/deduplication.engine.js';
+import { JobSearchFilters } from '@/modules/jobs/types/job.types.js';
+import { NormalizedJob } from '@/modules/jobs/models/NormalizedJob.js';
+import { jobsLogger } from '@/shared/utils/logger.js';
 
 export interface ProviderExecutionStats {
   readonly fetched: number;
@@ -20,7 +20,7 @@ export interface AggregationResult {
 export class AggregationService {
   constructor(
     private readonly registry: IJobProviderRegistry,
-    private readonly dedupEngine: DeduplicationEngine
+    private readonly dedupEngine: DeduplicationEngine,
   ) {}
 
   async aggregateJobs(filters: JobSearchFilters): Promise<AggregationResult> {
@@ -34,7 +34,7 @@ export class AggregationService {
         filters,
         activeProviders: activeProviders.map((provider) => provider.name),
       },
-      "Starting job aggregation",
+      'Starting job aggregation',
     );
 
     const providerStats: Record<string, ProviderExecutionStats> = {};
@@ -47,7 +47,7 @@ export class AggregationService {
             provider: provider.name,
             tier: provider.tier,
           },
-          "Fetching jobs from provider",
+          'Fetching jobs from provider',
         );
         const jobs = await provider.fetchJobs(filters);
         const durationMs = Date.now() - providerStartTime;
@@ -61,17 +61,14 @@ export class AggregationService {
             fetched: jobs.length,
             durationMs,
           },
-          "Provider fetch completed",
+          'Provider fetch completed',
         );
         return jobs;
       } catch (error) {
         const durationMs = Date.now() - providerStartTime;
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         const errorCause =
-          error instanceof Error &&
-          "originalError" in error &&
-          error.originalError instanceof Error
+          error instanceof Error && 'originalError' in error && error.originalError instanceof Error
             ? {
                 name: error.originalError.name,
                 message: error.originalError.message,
@@ -85,7 +82,7 @@ export class AggregationService {
             error: errorMessage,
             cause: errorCause,
           },
-          "Provider fetch failed",
+          'Provider fetch failed',
         );
         providerStats[provider.name] = {
           fetched: 0,
@@ -101,13 +98,12 @@ export class AggregationService {
     const rawJobs: NormalizedJob[] = [];
 
     for (const result of settledResults) {
-      if (result.status === "fulfilled") {
+      if (result.status === 'fulfilled') {
         rawJobs.push(...result.value);
       }
     }
 
-    const { uniqueJobs, duplicatesRemoved } =
-      this.dedupEngine.deduplicate(rawJobs);
+    const { uniqueJobs, duplicatesRemoved } = this.dedupEngine.deduplicate(rawJobs);
 
     jobsLogger.info(
       {
@@ -115,7 +111,7 @@ export class AggregationService {
         totalUnique: uniqueJobs.length,
         duplicatesRemoved,
       },
-      "Job aggregation completed",
+      'Job aggregation completed',
     );
 
     return {
@@ -126,4 +122,3 @@ export class AggregationService {
     };
   }
 }
-

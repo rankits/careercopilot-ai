@@ -38,7 +38,9 @@ function toBullets(text: string): string[] {
         .trim(),
     )
     .filter(Boolean)
-    .filter((line) => !/^responsibilities:?$/i.test(line) && !/^tech\s*(used|stack):?$/i.test(line));
+    .filter(
+      (line) => !/^responsibilities:?$/i.test(line) && !/^tech\s*(used|stack):?$/i.test(line),
+    );
 }
 
 function ContactRow({ contact }: { contact: string[] }) {
@@ -323,7 +325,8 @@ export const ResumeTemplatePreview = forwardRef<HTMLDivElement, ResumeTemplatePr
             textAlign: 'center',
           }}
         >
-          {pageCount} page{pageCount === 1 ? '' : 's'} · A4 guides · entries/sections avoid mid-split
+          {pageCount} page{pageCount === 1 ? '' : 's'} · A4 guides · entries/sections avoid
+          mid-split
         </Typography>
       </PreviewFrame>
     );

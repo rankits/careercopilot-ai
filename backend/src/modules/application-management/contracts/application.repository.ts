@@ -20,7 +20,7 @@ export interface IApplicationRepository {
   create(
     data: Prisma.ApplicationUncheckedCreateInput,
     source?: Prisma.ApplicationSourceUncheckedCreateWithoutApplicationInput,
-    initialHistoryNote?: string
+    initialHistoryNote?: string,
   ): Promise<ApplicationDto>;
 
   findById(userId: string, applicationId: string): Promise<ApplicationDetailDto | null>;
@@ -32,7 +32,7 @@ export interface IApplicationRepository {
   update(
     userId: string,
     applicationId: string,
-    data: Prisma.ApplicationUncheckedUpdateInput
+    data: Prisma.ApplicationUncheckedUpdateInput,
   ): Promise<ApplicationDto>;
 
   delete(userId: string, applicationId: string): Promise<boolean>;
@@ -46,11 +46,16 @@ export interface IApplicationRepository {
       toStatus: ApplicationStatus;
       changedBy: StatusChangedBy;
       note?: string;
-    }
+    },
   ): Promise<ApplicationStatusHistoryDto>;
 
   // Notes
-  addNote(userId: string, applicationId: string, type: NoteType, content: string): Promise<ApplicationNoteDto>;
+  addNote(
+    userId: string,
+    applicationId: string,
+    type: NoteType,
+    content: string,
+  ): Promise<ApplicationNoteDto>;
   deleteNote(userId: string, applicationId: string, noteId: string): Promise<boolean>;
 
   // Tasks
@@ -62,7 +67,7 @@ export interface IApplicationRepository {
       description?: string;
       type: TaskType;
       dueAt?: Date;
-    }
+    },
   ): Promise<ApplicationTaskDto>;
 
   updateTask(
@@ -76,7 +81,7 @@ export interface IApplicationRepository {
       dueAt: Date | null;
       status: TaskStatus;
       completedAt: Date | null;
-    }>
+    }>,
   ): Promise<ApplicationTaskDto>;
 
   deleteTask(userId: string, applicationId: string, taskId: string): Promise<boolean>;

@@ -1,8 +1,8 @@
 export enum ProviderHealthStatus {
-  HEALTHY = "HEALTHY",
-  DEGRADED = "DEGRADED",
-  UNREACHABLE = "UNREACHABLE",
-  CIRCUIT_OPEN = "CIRCUIT_OPEN",
+  HEALTHY = 'HEALTHY',
+  DEGRADED = 'DEGRADED',
+  UNREACHABLE = 'UNREACHABLE',
+  CIRCUIT_OPEN = 'CIRCUIT_OPEN',
 }
 
 export interface ProviderHealth {

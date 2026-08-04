@@ -124,7 +124,11 @@ export const AnalysisShell = styled(Box)({
     lineHeight: 1.2,
     '& span': { color: t.primary },
   },
-  '& .tip-title': { color: t.primaryHover, fontSize: fontSize.sm, fontWeight: fontWeight.extraBold },
+  '& .tip-title': {
+    color: t.primaryHover,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.extraBold,
+  },
   '& .tip-text': { ...muted, fontSize: fontSize.xs, lineHeight: 1.55 },
 });
 
@@ -612,7 +616,11 @@ export const ReviewPanel = styled(Box)({
     '@media (max-width: 48rem)': { gridTemplateColumns: 'auto minmax(0, 1fr)' },
   },
   '& .ai-icon': iconBox('3rem'),
-  '& .tip-title': { color: t.primaryHover, fontSize: fontSize.sm, fontWeight: fontWeight.extraBold },
+  '& .tip-title': {
+    color: t.primaryHover,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.extraBold,
+  },
   '& .tip-text': { ...muted, fontSize: fontSize.xs, lineHeight: 1.55 },
   '& .issues-card': {
     border,

@@ -10,7 +10,12 @@ import {
 } from '@/lib/material';
 import type { UploadedResume } from '@/services/resumeBuilder.service';
 
-import { formatFileSize, formatResumeDate, getResumeExtension, getResumeVersion } from '../../utils';
+import {
+  formatFileSize,
+  formatResumeDate,
+  getResumeExtension,
+  getResumeVersion,
+} from '../../utils';
 
 import {
   CardSubtitle,
@@ -35,7 +40,11 @@ export function UploadedResumeList({ resumes, onUseResume }: UploadedResumeListP
           <CardTitle>Your Uploaded Resumes</CardTitle>
           <CardSubtitle mt={1}>Manage and select a resume to continue.</CardSubtitle>
         </Box>
-        <Button size="small" startIcon={<InsightsOutlinedIcon fontSize="small" />} variant="outline">
+        <Button
+          size="small"
+          startIcon={<InsightsOutlinedIcon fontSize="small" />}
+          variant="outline"
+        >
           Newest First
         </Button>
       </Box>

@@ -189,7 +189,10 @@ export function parseResumeContent(content: string, targetRole = ''): ResumeDraf
     .map((line) => line.trim())
     .filter((line) => line && !/full professional proficiency/i.test(line))
     .join(', ');
-  const interests = (buckets.interests ?? []).map((line) => line.trim()).filter(Boolean).join(', ');
+  const interests = (buckets.interests ?? [])
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(', ');
 
   if (languages) draft.customFields.push({ id: newId(), label: 'Languages', value: languages });
   if (interests) draft.customFields.push({ id: newId(), label: 'Interests', value: interests });
