@@ -91,7 +91,7 @@ Local setup:
 
 Required env file keys:
   AWS_REGION, AWS_PROFILE, BACKEND_DEPLOYMENT_BUCKET, EC2_INSTANCE_ID,
-  DOCKER_IMAGE_NAME, DOCKER_EMBEDDING_IMAGE_NAME, PUBLIC_HEALTH_URL
+  DOCKER_IMAGE_NAME, PUBLIC_HEALTH_URL
 
 Never store AWS keys, Docker Hub tokens, DB credentials, or app secrets
 in deploy/manual-deploy.env.
@@ -224,7 +224,6 @@ load_config() {
     BACKEND_DEPLOYMENT_BUCKET
     EC2_INSTANCE_ID
     DOCKER_IMAGE_NAME
-    DOCKER_EMBEDDING_IMAGE_NAME
     PUBLIC_HEALTH_URL
   )
   local key
@@ -237,8 +236,6 @@ load_config() {
 
   [[ "${DOCKER_IMAGE_NAME}" != *":latest" ]] || die "DOCKER_IMAGE_NAME must not include :latest"
   [[ "${DOCKER_IMAGE_NAME}" != *":" ]] || die "DOCKER_IMAGE_NAME must be repository only (no tag)."
-  [[ "${DOCKER_EMBEDDING_IMAGE_NAME}" != *":latest" ]] || die "DOCKER_EMBEDDING_IMAGE_NAME must not include :latest"
-  [[ "${DOCKER_EMBEDDING_IMAGE_NAME}" != *":" ]] || die "DOCKER_EMBEDDING_IMAGE_NAME must be repository only (no tag)."
 
   ok "Loaded ${ENV_FILE} (profile=${AWS_PROFILE}, region=${AWS_REGION})"
 }
@@ -281,13 +278,11 @@ determine_version() {
   [[ "${VERSION}" =~ ^[A-Za-z0-9._-]+$ ]] || die "VERSION contains invalid characters: ${VERSION}"
 
   IMAGE="${DOCKER_IMAGE_NAME}:${VERSION}"
-  EMBEDDING_IMAGE="${DOCKER_EMBEDDING_IMAGE_NAME}:${VERSION}"
   BUNDLE="career-copilot-backend-${VERSION}.tar.gz"
   S3_URI="s3://${BACKEND_DEPLOYMENT_BUCKET}/backend/${BUNDLE}"
 
   ok "Version=${VERSION}"
   ok "Image=${IMAGE}"
-  ok "EmbeddingImage=${EMBEDDING_IMAGE}"
   ok "Bundle=${BUNDLE}"
 }
 
@@ -332,12 +327,11 @@ run_backend_validation() {
 }
 
 build_and_push_image() {
-  stage "Build and push Docker images (${IMAGE}, ${EMBEDDING_IMAGE})"
+  stage "Build and push Docker image (${IMAGE})"
   cd "${REPO_ROOT}"
 
   if [[ "${DRY_RUN}" == "true" ]]; then
     info "[dry-run] Would run: docker buildx build --platform linux/amd64 -f backend/docker/Dockerfile.prod -t ${IMAGE} --push backend"
-    info "[dry-run] Would run: docker buildx build --platform linux/amd64 -f embedding-service/Dockerfile -t ${EMBEDDING_IMAGE} --push embedding-service"
     return 0
   fi
 
@@ -349,15 +343,6 @@ build_and_push_image() {
     backend
 
   ok "Pushed ${IMAGE}"
-
-  docker buildx build \
-    --platform linux/amd64 \
-    -f embedding-service/Dockerfile \
-    -t "${EMBEDDING_IMAGE}" \
-    --push \
-    embedding-service
-
-  ok "Pushed ${EMBEDDING_IMAGE}"
 }
 
 package_bundle() {
@@ -432,7 +417,6 @@ set -Eeuo pipefail
 
 VERSION="${VERSION}"
 IMAGE="${IMAGE}"
-EMBEDDING_IMAGE="${EMBEDDING_IMAGE}"
 S3_URI="${S3_URI}"
 AWS_REGION="${AWS_REGION}"
 BUNDLE="${BUNDLE}"
@@ -442,8 +426,7 @@ ENV_FILE="\${BASE_DIR}/shared/.env"
 TMP_BUNDLE="/tmp/\${BUNDLE}"
 
 echo ">>> [remote] Starting Career Copilot backend deploy for \${VERSION}"
-echo ">>> [remote] Backend image: \${IMAGE}"
-echo ">>> [remote] Embedding image: \${EMBEDDING_IMAGE}"
+echo ">>> [remote] Image: \${IMAGE}"
 echo ">>> [remote] Bundle: \${S3_URI}"
 
 test -f "\${ENV_FILE}" || { echo "Error: production env missing at \${ENV_FILE}" >&2; exit 1; }
@@ -475,16 +458,15 @@ chmod +x deploy.sh install-release.sh health-check.sh
 
 echo ">>> [remote] Validating Docker Compose configuration..."
 export BACKEND_IMAGE="\${IMAGE}"
-export EMBEDDING_IMAGE="\${EMBEDDING_IMAGE}"
 export SHARED_ENV_FILE="\${ENV_FILE}"
 docker compose -f compose.yaml config >/dev/null
 
 # install-release.sh -> deploy.sh:
-# lock, pull exact images, prisma migrate deploy once, compose up (api +
-# embedding-service + outbox), local /health, nginx test+reload, state update,
-# auto-rollback on failure (without -v so model cache survives), retain 3 releases.
+# lock, pull exact image, prisma migrate deploy once, compose up
+# (api + outbox-relay + job-embedding-worker), local /health, nginx,
+# state update, auto-rollback on failure, retain 3 newest releases.
 echo ">>> [remote] Invoking install-release.sh..."
-exec ./install-release.sh "\${IMAGE}" "\${VERSION}" "\${EMBEDDING_IMAGE}"
+exec ./install-release.sh "\${IMAGE}" "\${VERSION}"
 EOF
 }
 deploy_via_ssm() {
@@ -650,7 +632,6 @@ print_summary() {
   cat <<EOF
 Version:     ${VERSION}
 Image:       ${IMAGE}
-Embedding:   ${EMBEDDING_IMAGE}
 S3 object:   ${S3_URI}
 EC2:         ${EC2_INSTANCE_ID}
 Health:      ${PUBLIC_HEALTH_URL}
@@ -666,13 +647,13 @@ print_plan() {
   [deploy-only] Skipping npm validate and docker build/push
   1. Validate tooling + AWS/Docker auth
   2. Use provided version → ${VERSION}
-     Backend:    ${IMAGE}
-     Embedding:  ${EMBEDDING_IMAGE}
+     Image: ${IMAGE}
   3. Package deploy/backend → ${BUNDLE}
   4. Upload ${S3_URI}
   5. SSM Run Command on ${EC2_INSTANCE_ID}:
-       download bundle → pull provided images → migrate → compose up
-       → /health → nginx → state (rollback on failure, keep model cache)
+       download bundle → pull image → migrate → compose up
+       (api + outbox-relay + job-embedding-worker)
+       → /health → nginx → state
   6. Poll SSM result
   7. curl --fail ${PUBLIC_HEALTH_URL}
 EOF
@@ -683,17 +664,16 @@ EOF
   2. Resolve version → ${VERSION}
   3. Backend: npm ci, prisma generate, lint, typecheck, test, build, prisma validate
   4. docker buildx build/push ${IMAGE} (linux/amd64)
-  5. docker buildx build/push ${EMBEDDING_IMAGE} (linux/amd64)
-  6. Package deploy/backend → ${BUNDLE}
-  7. Upload ${S3_URI}
-  8. SSM Run Command on ${EC2_INSTANCE_ID}:
+  5. Package deploy/backend → ${BUNDLE}
+  6. Upload ${S3_URI}
+  7. SSM Run Command on ${EC2_INSTANCE_ID}:
        download bundle → extract release → validate scripts/compose
-       → pull backend + embedding images → prisma migrate deploy
-       → compose up (embedding-service, api, outbox-relay)
+       → pull image → prisma migrate deploy
+       → compose up (api, outbox-relay, job-embedding-worker)
        → local /health → nginx -t/reload → update state
-       → auto-rollback on failure (no volume wipe) → retain 3 releases
-  9. Poll SSM result
- 10. curl --fail ${PUBLIC_HEALTH_URL}
+       → auto-rollback on failure → retain 3 releases
+  8. Poll SSM result
+  9. curl --fail ${PUBLIC_HEALTH_URL}
 EOF
 }
 
@@ -714,7 +694,7 @@ main() {
     run_backend_validation
     build_and_push_image
   else
-    warn "DEPLOY-ONLY: using existing images ${IMAGE} and ${EMBEDDING_IMAGE}"
+    warn "DEPLOY-ONLY: using existing image ${IMAGE}"
     warn "DEPLOY-ONLY: skipped npm validation and docker build/push"
   fi
 

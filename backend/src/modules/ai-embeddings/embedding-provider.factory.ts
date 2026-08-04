@@ -6,7 +6,6 @@ import type { EmbeddingProvider } from '@/modules/ai-embeddings/contracts/embedd
 import type { EmbeddingHttpClient } from '@/modules/ai-embeddings/providers/embedding-http.client.js';
 import { GoogleEmbeddingProvider } from '@/modules/ai-embeddings/providers/google-embedding.provider.js';
 import { GroqEmbeddingProvider } from '@/modules/ai-embeddings/providers/groq-embedding.provider.js';
-import { LocalHttpEmbeddingProvider } from '@/modules/ai-embeddings/providers/local-http-embedding.provider.js';
 import { OpenRouterEmbeddingProvider } from '@/modules/ai-embeddings/providers/openrouter-embedding.provider.js';
 import { JOB_EMBEDDING_DIMENSIONS } from '@/modules/job-embeddings/constants/job-embedding.constants.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
@@ -58,17 +57,6 @@ export const createEmbeddingProvider = (
         provider: 'groq',
         apiKey: required(config.groq.apiKey, 'GROQ_API_KEY'),
         baseUrl: config.groq.baseUrl,
-        timeoutMs: config.timeoutMs,
-      },
-      http,
-    );
-  }
-  if (provider === 'local-http' || provider === 'local_http' || provider === 'localhttp') {
-    return new LocalHttpEmbeddingProvider(
-      {
-        ...base,
-        provider: 'local-http',
-        baseUrl: required(config.localHttp.baseUrl, 'AI_EMBEDDING_BASE_URL'),
         timeoutMs: config.timeoutMs,
       },
       http,

@@ -52,7 +52,6 @@ const baseConfig: EmbeddingConfig = {
   queryPrefix: '',
   google: { apiKey: undefined, baseUrl: 'https://google.example' },
   groq: { apiKey: undefined, baseUrl: 'https://groq.example' },
-  localHttp: { baseUrl: 'http://embedding-service:8080/v1' },
   openrouter: {
     apiKey: 'openrouter-secret-key',
     apiKeyEnvName: 'OPENROUTER_API_KEY',
