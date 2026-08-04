@@ -45,7 +45,7 @@ export const DefineRoleShell = styled(Box)({
   '& .role-tip': {
     alignItems: 'center',
     background: `linear-gradient(135deg, ${t.primarySoft}, ${t.background})`,
-    border: '1px solid rgba(124,58,237,0.16)',
+    border: '1px solid rgba(37, 99, 235, 0.16)',
     borderRadius: borderRadius['2xl'],
     color: t.primary,
     display: 'grid',
@@ -83,7 +83,7 @@ export const DefineRoleShell = styled(Box)({
   '& .uploaded-resume': {
     alignItems: 'center',
     background: `linear-gradient(135deg, ${t.background}, ${t.primarySofter})`,
-    border: '1px solid rgba(124,58,237,0.16)',
+    border: '1px solid rgba(37, 99, 235, 0.16)',
     borderRadius: borderRadius.xl,
     display: 'grid',
     gap: spacing[3],

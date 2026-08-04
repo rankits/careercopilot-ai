@@ -7,6 +7,7 @@ import {
   fontWeight,
   sizing,
   spacing,
+  type IconTone,
 } from '@/tokens';
 
 import {
@@ -37,14 +38,15 @@ interface ModeProps {
 
 interface FeatureIconProps {
   size: 'large' | 'small';
+  tone?: IconTone;
 }
 
 const excludeModeProp = {
   shouldForwardProp: (prop: PropertyKey) => prop !== 'mode',
 };
 
-const excludeSizeProp = {
-  shouldForwardProp: (prop: PropertyKey) => prop !== 'size',
+const excludeFeatureIconProps = {
+  shouldForwardProp: (prop: PropertyKey) => prop !== 'size' && prop !== 'tone',
 };
 
 export const AuthRoot = styled(
@@ -245,9 +247,12 @@ export const LoginFeatureItem = createStyledBox({
 
 export const FeatureIcon = styled(
   Box,
-  excludeSizeProp,
-)<FeatureIconProps>(({ size }) =>
-  createIconSurface(size === 'large' ? spacing[14] : spacing[10], size === 'small'),
+  excludeFeatureIconProps,
+)<FeatureIconProps>(({ size, tone = 'primary' }) =>
+  createIconSurface(size === 'large' ? spacing[14] : spacing[10], {
+    shrink: size === 'small',
+    tone,
+  }),
 );
 
 export const FeatureTitle = createStyledText({
