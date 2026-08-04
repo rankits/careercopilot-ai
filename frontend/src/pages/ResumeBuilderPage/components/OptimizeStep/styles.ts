@@ -215,8 +215,7 @@ export const SuggestionReason = styled(Typography)({
 export const ImpactPill = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'impact',
 })<{ impact: 'HIGH' | 'MEDIUM' | 'LOW' }>(({ impact }) => {
-  const colors =
-    impact === 'HIGH' ? tone.error : impact === 'MEDIUM' ? tone.warning : tone.success;
+  const colors = impact === 'HIGH' ? tone.error : impact === 'MEDIUM' ? tone.warning : tone.success;
   return {
     ...pill,
     background: colors.background,

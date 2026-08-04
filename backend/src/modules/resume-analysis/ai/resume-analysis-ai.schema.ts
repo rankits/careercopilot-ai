@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-const percentageSchema = z.number().min(0).max(100).transform((value) => Math.round(value));
+const percentageSchema = z
+  .number()
+  .min(0)
+  .max(100)
+  .transform((value) => Math.round(value));
 
 const keywordSchema = z.object({
   term: z.string().min(1),

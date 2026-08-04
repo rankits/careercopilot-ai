@@ -1,6 +1,16 @@
 import { Box, LinearProgress, styled } from '@/lib/material';
 
-import { border, borderRadius, fontSize, fontWeight, iconBox, muted, spacing, t, title } from '../../styles/shared';
+import {
+  border,
+  borderRadius,
+  fontSize,
+  fontWeight,
+  iconBox,
+  muted,
+  spacing,
+  t,
+  title,
+} from '../../styles/shared';
 
 export const HeroHeader = styled(Box)({
   alignItems: 'center',

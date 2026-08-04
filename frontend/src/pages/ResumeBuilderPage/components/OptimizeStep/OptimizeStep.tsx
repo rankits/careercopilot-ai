@@ -127,7 +127,8 @@ export function OptimizeStep({
   useEffect(() => {
     const source = analysis?.editedContent || editedContent;
     if (!source) return;
-    const parseKey = analysis?.id != null ? `analysis:${analysis.id}:v10` : `local:${source.slice(0, 64)}`;
+    const parseKey =
+      analysis?.id != null ? `analysis:${analysis.id}:v10` : `local:${source.slice(0, 64)}`;
     if (lastParseKey.current === parseKey) return;
     lastParseKey.current = parseKey;
     const parsed = parseResumeContent(source, targetRole || analysis?.targetRole || '');
@@ -177,7 +178,9 @@ export function OptimizeStep({
     if (ocrCleaned.current) return;
     ocrCleaned.current = true;
     setDraft((current) => {
-      const cleanEntry = <T extends { details: string; title: string; company: string }>(entry: T): T => ({
+      const cleanEntry = <T extends { details: string; title: string; company: string }>(
+        entry: T,
+      ): T => ({
         ...entry,
         title: sanitizeExtractedText(entry.title),
         company: sanitizeExtractedText(entry.company),
@@ -252,10 +255,7 @@ export function OptimizeStep({
     const merged = mergeSuggestionLists(suggestions, fallback);
     if (localOverrides.length === 0) return merged;
     const overrideIds = new Set(localOverrides.map((item) => item.id));
-    return [
-      ...localOverrides,
-      ...merged.filter((item) => !overrideIds.has(item.id)),
-    ];
+    return [...localOverrides, ...merged.filter((item) => !overrideIds.has(item.id))];
   }, [analysis, draft, localOverrides, suggestions]);
 
   const pendingSuggestions = useMemo(
@@ -350,8 +350,8 @@ export function OptimizeStep({
           </Typography>
           <Typography className="subtitle">
             Edit fields on the left. Live preview keeps your uploaded resume design by default —
-            switch themes only if you want a new look. Open Skills to add AI JD suggestions
-            (e.g. Java).
+            switch themes only if you want a new look. Open Skills to add AI JD suggestions (e.g.
+            Java).
           </Typography>
         </OptimizeHeader>
 
@@ -368,18 +368,18 @@ export function OptimizeStep({
                 Use Apply Fix / Ignore on each card. Left badges show fixes per section.
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
-                {RESUME_SECTIONS.filter((section) => suggestionsBySection[section.id].length > 0).map(
-                  (section) => (
-                    <Button
-                      key={section.id}
-                      size="small"
-                      variant={activeSection === section.id ? 'solid' : 'outline'}
-                      onClick={() => setActiveSection(section.id)}
-                    >
-                      {section.label} ({suggestionsBySection[section.id].length})
-                    </Button>
-                  ),
-                )}
+                {RESUME_SECTIONS.filter(
+                  (section) => suggestionsBySection[section.id].length > 0,
+                ).map((section) => (
+                  <Button
+                    key={section.id}
+                    size="small"
+                    variant={activeSection === section.id ? 'solid' : 'outline'}
+                    onClick={() => setActiveSection(section.id)}
+                  >
+                    {section.label} ({suggestionsBySection[section.id].length})
+                  </Button>
+                ))}
                 {pendingSuggestions[0] ? (
                   <Button
                     size="small"

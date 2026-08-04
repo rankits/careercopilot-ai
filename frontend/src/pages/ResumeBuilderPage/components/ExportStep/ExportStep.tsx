@@ -2,12 +2,7 @@ import { useMemo, useRef } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import {
-  AutoAwesomeOutlinedIcon,
-  Box,
-  DownloadIcon,
-  Typography,
-} from '@/lib/material';
+import { AutoAwesomeOutlinedIcon, Box, DownloadIcon, Typography } from '@/lib/material';
 import type {
   AnalysisResult,
   RecheckResult,
@@ -98,10 +93,7 @@ export function ExportStep({
   ]);
 
   const previousScore =
-    recheckResult?.previousAtsScore ??
-    analysis?.baselineAtsScore ??
-    analysis?.atsScore ??
-    0;
+    recheckResult?.previousAtsScore ?? analysis?.baselineAtsScore ?? analysis?.atsScore ?? 0;
   const finalScore = recheckResult?.atsScore ?? previousScore;
   const improvement = recheckResult?.improvement ?? finalScore - previousScore;
   const scoreColor = (score: number) =>
@@ -152,11 +144,7 @@ export function ExportStep({
           <Box className="score-card">
             <Typography className="label">Improvement</Typography>
             <Typography className="value positive">
-              {rechecking
-                ? '…'
-                : improvement > 0
-                  ? `+${improvement}`
-                  : `${improvement}`}
+              {rechecking ? '…' : improvement > 0 ? `+${improvement}` : `${improvement}`}
             </Typography>
           </Box>
           <Box className="score-card">

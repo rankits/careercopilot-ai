@@ -11,7 +11,7 @@ services:
     environment:
       NODE_ENV: production
       PORT: 5001
-      RUN_MIGRATIONS: 'false'
+      RUN_MIGRATIONS: 'true'
       RUN_SEEDS_ON_STARTUP: 'false'
       JOB_INGESTION_ON_STARTUP_ENABLED: 'false'
     ports:

@@ -34,9 +34,7 @@ const draft: ResumeDraft = {
 
 describe('ResumeTemplatePreview', () => {
   it('renders classic template content', () => {
-    render(
-      <ResumeTemplatePreview draft={draft} template="classic" targetRole="Engineer" />,
-    );
+    render(<ResumeTemplatePreview draft={draft} template="classic" targetRole="Engineer" />);
 
     expect(screen.getByText('Ada Lovelace')).toBeInTheDocument();
     expect(screen.getByText('Software Engineer')).toBeInTheDocument();
@@ -54,9 +52,7 @@ describe('ResumeTemplatePreview', () => {
   });
 
   it('renders default/uploaded badge for original template', () => {
-    render(
-      <ResumeTemplatePreview draft={draft} template="original" targetRole="Engineer" />,
-    );
+    render(<ResumeTemplatePreview draft={draft} template="original" targetRole="Engineer" />);
     expect(screen.getByText(/Uploaded resume design/i)).toBeInTheDocument();
   });
 });

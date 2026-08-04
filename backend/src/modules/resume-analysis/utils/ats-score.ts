@@ -1,5 +1,12 @@
-import type { SectionScores, SkillAnalysis } from '@/modules/resume-analysis/types/resume-analysis.types.js';
-import { clampScore, termAppearsIn, uniqSkills } from '@/modules/resume-analysis/utils/text-match.js';
+import type {
+  SectionScores,
+  SkillAnalysis,
+} from '@/modules/resume-analysis/types/resume-analysis.types.js';
+import {
+  clampScore,
+  termAppearsIn,
+  uniqSkills,
+} from '@/modules/resume-analysis/utils/text-match.js';
 
 export type AtsKeyword = { term: string; status: string; importance: string };
 
@@ -106,7 +113,10 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
   const sectionCoverage =
     [hasSummary, hasExperience, hasSkills, hasEducation].filter(Boolean).length / 4;
 
-  const lines = content.split(/\n/).map((line) => line.trim()).filter(Boolean);
+  const lines = content
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
   const avgLineLen =
     lines.length > 0 ? lines.reduce((sum, line) => sum + line.length, 0) / lines.length : 0;
   const readability = clampScore(
@@ -133,9 +143,7 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
   });
 
   const appliedRatio =
-    input.appliedSuggestions.length > 0
-      ? appliedHits.length / input.appliedSuggestions.length
-      : 0;
+    input.appliedSuggestions.length > 0 ? appliedHits.length / input.appliedSuggestions.length : 0;
 
   const contentQuality = clampScore(
     40 +
@@ -173,10 +181,7 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
     0,
   );
   const skillRecoveryPoints = newlyMatchedSkills.length * 2.5;
-  const suggestionPoints = appliedHits.reduce(
-    (sum, item) => sum + impactWeight(item.impact),
-    0,
-  );
+  const suggestionPoints = appliedHits.reduce((sum, item) => sum + impactWeight(item.impact), 0);
   const retentionPenalty =
     matchedKeywords.length > 0
       ? Math.round((1 - retainedMatched.length / matchedKeywords.length) * 15)
@@ -195,7 +200,11 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
   } else {
     // No meaningful edits: stay near baseline unless matched keywords were removed.
     atsScore = clampScore(
-      Math.max(absoluteScore, baseline - retentionPenalty, Math.round(baseline * 0.85 + absoluteScore * 0.15)),
+      Math.max(
+        absoluteScore,
+        baseline - retentionPenalty,
+        Math.round(baseline * 0.85 + absoluteScore * 0.15),
+      ),
     );
   }
 

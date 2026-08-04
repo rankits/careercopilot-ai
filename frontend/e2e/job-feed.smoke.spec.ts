@@ -110,7 +110,12 @@ test.describe('Job feed happy path', () => {
     await expect(page.getByRole('heading', { name: /job feed/i })).toBeVisible();
     await expect(page.getByText(/microsoft/i)).toBeVisible();
     await expect(page.getByText(/2 jobs found/i)).toBeVisible();
-    expect(jobRequests.some((q) => q.includes('sortBy=newest') || q.includes('page=1') || q === '' || q.includes('limit=20'))).toBeTruthy();
+    expect(
+      jobRequests.some(
+        (q) =>
+          q.includes('sortBy=newest') || q.includes('page=1') || q === '' || q.includes('limit=20'),
+      ),
+    ).toBeTruthy();
 
     await page.getByRole('button', { name: /^remote$/i }).click();
     await expect(page.getByText(/1 job found/i)).toBeVisible();

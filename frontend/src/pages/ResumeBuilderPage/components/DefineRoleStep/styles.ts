@@ -57,7 +57,11 @@ export const DefineRoleShell = styled(Box)({
       gridTemplateColumns: 'auto minmax(0, 1fr)',
     },
   },
-  '& .tip-title': { color: t.primaryHover, fontSize: fontSize.sm, fontWeight: fontWeight.extraBold },
+  '& .tip-title': {
+    color: t.primaryHover,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.extraBold,
+  },
   '& .tip-text': { ...muted, fontSize: fontSize.xs, lineHeight: 1.55 },
   '& .tip-actions': {
     alignItems: 'center',

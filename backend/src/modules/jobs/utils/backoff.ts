@@ -5,10 +5,7 @@ export interface BackoffOptions {
   readonly backoffFactor?: number;
 }
 
-export function calculateJitteredBackoff(
-  attempt: number,
-  options?: BackoffOptions
-): number {
+export function calculateJitteredBackoff(attempt: number, options?: BackoffOptions): number {
   const initialDelay = options?.initialDelayMs ?? 500;
   const maxDelay = options?.maxDelayMs ?? 10000;
   const factor = options?.backoffFactor ?? 2;
