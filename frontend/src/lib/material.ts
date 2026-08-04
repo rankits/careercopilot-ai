@@ -11,7 +11,6 @@ export { default as BookmarkOutlinedIcon } from '@mui/icons-material/BookmarkOut
 export { default as BusinessCenterOutlinedIcon } from '@mui/icons-material/BusinessCenterOutlined';
 export { default as CheckIcon } from '@mui/icons-material/Check';
 export { default as CheckCircleIcon } from '@mui/icons-material/CheckCircle';
-export { default as CheckIcon } from '@mui/icons-material/Check';
 export { default as CloseOutlinedIcon } from '@mui/icons-material/CloseOutlined';
 export { default as ChevronLeftIcon } from '@mui/icons-material/ChevronLeft';
 export { default as ChevronRightIcon } from '@mui/icons-material/ChevronRight';
