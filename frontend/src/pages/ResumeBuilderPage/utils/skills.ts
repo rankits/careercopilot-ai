@@ -1,209 +1,298 @@
 /**
- * Dynamic skill/keyword extraction — no giant static allowlists.
- * Pulls tech-looking tokens from skills lines, JD text, or free text.
+ * Frontend skill extraction — catalog-validated tokens only.
+ * Mirrors backend skill-normalizer taxonomy for JD preview / Optimize.
  */
 
-const MULTI_WORD = [
-  'Spring Boot',
-  'REST APIs',
-  'REST API',
-  'CI/CD',
-  'Node.js',
-  'Next.js',
-  'Vue.js',
-  'React Native',
-  'Tailwind CSS',
-  'Material UI',
-  'Ruby on Rails',
-  'Unit Testing',
-];
-
-const ALIASES: Record<string, string> = {
-  'ci cd': 'CI/CD',
-  'rest api': 'REST APIs',
-  'rest apis': 'REST APIs',
-  reactjs: 'React',
-  'react.js': 'React',
-  nodejs: 'Node.js',
-  'node js': 'Node.js',
-  nextjs: 'Next.js',
-  vuejs: 'Vue.js',
-  springboot: 'Spring Boot',
-  postgres: 'PostgreSQL',
-  postgresql: 'PostgreSQL',
-  mongodb: 'MongoDB',
-  javascript: 'JavaScript',
-  typescript: 'TypeScript',
-  html: 'HTML',
-  css: 'CSS',
-  sql: 'SQL',
-  aws: 'AWS',
-  gcp: 'GCP',
-  junit: 'JUnit',
-  jpa: 'JPA',
-  jvm: 'JVM',
-};
-
-/** Common tech terms that are often all-lowercase in resumes / JDs. */
-const COMMON_TECH = new Set(
-  [
-    'java',
-    'python',
-    'kotlin',
-    'scala',
-    'ruby',
-    'php',
-    'go',
-    'golang',
-    'rust',
-    'swift',
-    'dart',
-    'react',
-    'angular',
-    'vue',
-    'svelte',
-    'django',
-    'flask',
-    'fastapi',
-    'express',
-    'nestjs',
-    'spring',
-    'hibernate',
-    'maven',
-    'gradle',
-    'docker',
-    'kubernetes',
-    'jenkins',
-    'git',
-    'github',
-    'gitlab',
-    'linux',
-    'unix',
-    'mysql',
-    'redis',
-    'kafka',
-    'rabbitmq',
-    'graphql',
-    'redux',
-    'zustand',
-    'webpack',
-    'vite',
-    'junit',
-    'mockito',
-    'selenium',
-    'cypress',
-    'jest',
-    'mocha',
-    'pytest',
-    'numpy',
-    'pandas',
-    'tensorflow',
-    'pytorch',
-    'bootstrap',
-    'tailwind',
-    'sass',
-    'less',
-    'jquery',
-    'ajax',
-    'json',
-    'xml',
-    'yaml',
-    'nginx',
-    'apache',
-    'tomcat',
-    'microservices',
-    'agile',
-    'scrum',
-    'kanban',
-    'jira',
-    'confluence',
-    'figma',
-    'postman',
-    'swagger',
-    'oauth',
-    'jwt',
-    'rest',
-    'soap',
-    'grpc',
-    'html',
-    'css',
-    'sql',
-    'nosql',
-    'mongodb',
-    'postgresql',
-    'postgres',
-    'typescript',
-    'javascript',
-    'nodejs',
-    'nextjs',
-    'aws',
-    'azure',
-    'gcp',
-  ].map((item) => item.toLowerCase()),
-);
-
-const STOP = new Set(
-  'a an and or the to of in on for with as by at from into used using such like etc developed created built implemented collaborated maintained optimized required preferred strong familiarity experience knowledge ability engineering industry key field proficiency write build develop troubleshoot working contribute bachelor degree responsibilities responsibility excellent good applications code achievement administration bde business client cloud component-based conduct description development educational es6 google hybrid information management performance present summary years'.split(
-    ' ',
+const SHORT_ALLOWED = new Set(
+  ['c', 'c++', 'c#', 'r', 'go', 'ai', 'ml', 'ui', 'ux', 'sql', 'aws', 'gcp', 'jvm', 'jpa', 'jwt'].map(
+    (item) => item.toLowerCase(),
   ),
 );
 
+const SKILL_CATALOG = [
+  'Java',
+  'JavaScript',
+  'TypeScript',
+  'Python',
+  'Kotlin',
+  'Scala',
+  'Ruby',
+  'PHP',
+  'Go',
+  'Rust',
+  'Swift',
+  'Dart',
+  'C',
+  'C++',
+  'C#',
+  'R',
+  'SQL',
+  'HTML5',
+  'CSS3',
+  'SCSS',
+  'Sass',
+  'Less',
+  'React',
+  'React.js',
+  'React Native',
+  'Angular',
+  'Vue',
+  'Vue.js',
+  'Svelte',
+  'Next.js',
+  'Nuxt.js',
+  'Redux',
+  'Redux Toolkit',
+  'Zustand',
+  'Material UI',
+  'Tailwind CSS',
+  'Bootstrap',
+  'jQuery',
+  'Vite',
+  'Webpack',
+  'Micro Frontend',
+  'Module Federation',
+  'Node.js',
+  'Express',
+  'Express.js',
+  'NestJS',
+  'Django',
+  'Flask',
+  'FastAPI',
+  'Spring',
+  'Spring Boot',
+  'Hibernate',
+  'Maven',
+  'Gradle',
+  '.NET',
+  'MongoDB',
+  'PostgreSQL',
+  'MySQL',
+  'Redis',
+  'Kafka',
+  'RabbitMQ',
+  'Docker',
+  'Kubernetes',
+  'AWS',
+  'Azure',
+  'GCP',
+  'Google Cloud',
+  'Git',
+  'GitHub',
+  'GitLab',
+  'Bitbucket',
+  'Jenkins',
+  'CI/CD',
+  'Linux',
+  'Unix',
+  'Jest',
+  'React Testing Library',
+  'Cypress',
+  'Playwright',
+  'JUnit',
+  'Mockito',
+  'Selenium',
+  'REST API',
+  'GraphQL',
+  'gRPC',
+  'OAuth',
+  'JWT',
+  'Swagger',
+  'Postman',
+  'NumPy',
+  'Pandas',
+  'TensorFlow',
+  'PyTorch',
+  'Machine Learning',
+  'AI',
+  'ML',
+  'Jira',
+  'Confluence',
+  'Figma',
+  'Agile',
+  'Scrum',
+  'Kanban',
+  'Microservices',
+  'JSON',
+  'XML',
+  'YAML',
+  'NoSQL',
+] as const;
+
+const ALIASES: Record<string, string> = {
+  'ci cd': 'CI/CD',
+  cicd: 'CI/CD',
+  'ci/cd': 'CI/CD',
+  'rest api': 'REST API',
+  'rest apis': 'REST API',
+  rest: 'REST API',
+  restful: 'REST API',
+  reactjs: 'React',
+  'react.js': 'React.js',
+  react: 'React',
+  nodejs: 'Node.js',
+  'node js': 'Node.js',
+  node: 'Node.js',
+  'node.js': 'Node.js',
+  nextjs: 'Next.js',
+  'next.js': 'Next.js',
+  vuejs: 'Vue.js',
+  'vue.js': 'Vue.js',
+  vue: 'Vue.js',
+  expressjs: 'Express.js',
+  'express.js': 'Express.js',
+  express: 'Express.js',
+  springboot: 'Spring Boot',
+  'spring boot': 'Spring Boot',
+  spring: 'Spring',
+  postgres: 'PostgreSQL',
+  postgresql: 'PostgreSQL',
+  mongodb: 'MongoDB',
+  mongo: 'MongoDB',
+  javascript: 'JavaScript',
+  js: 'JavaScript',
+  typescript: 'TypeScript',
+  ts: 'TypeScript',
+  html: 'HTML5',
+  html5: 'HTML5',
+  css: 'CSS3',
+  css3: 'CSS3',
+  scss: 'SCSS',
+  sass: 'Sass',
+  sql: 'SQL',
+  aws: 'AWS',
+  azure: 'Azure',
+  gcp: 'GCP',
+  'google cloud': 'Google Cloud',
+  k8s: 'Kubernetes',
+  kubernetes: 'Kubernetes',
+  docker: 'Docker',
+  git: 'Git',
+  github: 'GitHub',
+  gitlab: 'GitLab',
+  bitbucket: 'Bitbucket',
+  jenkins: 'Jenkins',
+  java: 'Java',
+  python: 'Python',
+  kotlin: 'Kotlin',
+  hibernate: 'Hibernate',
+  redux: 'Redux',
+  'redux toolkit': 'Redux Toolkit',
+  'tailwind css': 'Tailwind CSS',
+  tailwind: 'Tailwind CSS',
+  'material ui': 'Material UI',
+  mui: 'Material UI',
+  'react testing library': 'React Testing Library',
+  jest: 'Jest',
+  cypress: 'Cypress',
+  playwright: 'Playwright',
+  graphql: 'GraphQL',
+  vite: 'Vite',
+  webpack: 'Webpack',
+  'micro frontend': 'Micro Frontend',
+  'module federation': 'Module Federation',
+  golang: 'Go',
+  go: 'Go',
+  'c++': 'C++',
+  'c#': 'C#',
+  ai: 'AI',
+  ml: 'ML',
+  'machine learning': 'Machine Learning',
+  junit: 'JUnit',
+  kafka: 'Kafka',
+  redis: 'Redis',
+  mysql: 'MySQL',
+  linux: 'Linux',
+};
+
+const BLACKLIST = new Set(
+  [
+    'api',
+    'apis',
+    'cd',
+    'cs',
+    'in',
+    'on',
+    'to',
+    'for',
+    'with',
+    'and',
+    'or',
+    'the',
+    'a',
+    'an',
+    'control',
+    'design',
+    'context',
+    'context api',
+    'collaboration',
+    'automation',
+    'babel',
+    'restful',
+    'missing',
+    'recommended',
+    'missing / recommended',
+    'css deep',
+    'deep',
+    'ability',
+    'experience',
+    'familiarity',
+    'knowledge',
+    'proficiency',
+    'skills',
+    'technologies',
+    'technical skills',
+    'tools',
+    'others',
+    'frontend',
+    'backend',
+    'frameworks',
+    'libraries',
+    'languages',
+    'summary',
+    'development',
+    'management',
+    'performance',
+    'cloud',
+    'google',
+    'es6',
+  ].map((item) => item.toLowerCase()),
+);
+
 const LABEL_NOISE =
-  /^(frontend|backend|tools|others|other|build tools|tech used|technologies|technical skills|skills|api|libraries|frameworks|languages|soft skills|core competencies)[:\s-]*$/i;
+  /^(frontend|backend|tools|others|other|build tools|tech used|technologies|technical skills|skills|api|libraries|frameworks|languages|soft skills|core competencies|matched|missing|recommended)[:\s/-]*$/i;
+
+const catalogByKey = new Map(SKILL_CATALOG.map((skill) => [skill.toLowerCase(), skill] as const));
 
 const uniq = (items: string[]) =>
   Array.from(new Map(items.map((item) => [item.toLowerCase(), item])).values());
 
 const escapeRe = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
-function titleCaseSkill(token: string): string {
-  if (/^[A-Z0-9+#./-]+$/.test(token)) return token;
-  if (token.includes('.')) return token;
-  return token.charAt(0).toUpperCase() + token.slice(1);
-}
+const aliasKey = (value: string) =>
+  value
+    .toLowerCase()
+    .replace(/[._-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
 
-function looksLikeTech(token: string, loose = false): boolean {
-  if (!token || token.length < 2 || token.length > 40) return false;
-  const key = token.toLowerCase();
-  if (STOP.has(key)) return false;
-  if (/^\d+$/.test(token)) return false;
-  if (COMMON_TECH.has(key) || ALIASES[key]) return true;
-  if (MULTI_WORD.some((item) => item.toLowerCase() === key)) return true;
-
-  // Tech shapes: AWS, C#, .NET, Node.js, CI/CD. Plain Title Case must be known tech.
-  if (
-    /^[A-Z]{2,6}$/.test(token) ||
-    /^[A-Za-z]{2,}(?:\.[A-Za-z]+)+$/.test(token) ||
-    /^(c\+\+|c#|\.net|ci\/cd)$/i.test(token)
-  ) {
-    return true;
-  }
-
-  // Comma-list / user-added chips: allow only known lowercase tech aliases.
-  if (loose && (COMMON_TECH.has(key) || Boolean(ALIASES[key]))) {
-    return true;
-  }
-
-  return false;
-}
-
-function canonicalize(token: string, loose = false): string | null {
+/** Validate + canonicalize a skill against the catalog. */
+export function canonicalizeSkill(token: string): string | null {
   const cleaned = token
     .replace(/^[-*•●]+\s*/, '')
     .replace(/[:.,;|]+$/g, '')
     .replace(/\s+/g, ' ')
     .trim();
   if (!cleaned || LABEL_NOISE.test(cleaned)) return null;
+
   const key = cleaned.toLowerCase();
-  if (ALIASES[key]) return ALIASES[key];
-  if (STOP.has(key)) return null;
-  if (!looksLikeTech(cleaned, loose) && !MULTI_WORD.some((m) => m.toLowerCase() === key)) {
-    return null;
-  }
-  const multi = MULTI_WORD.find((m) => m.toLowerCase() === key);
-  if (multi) return multi;
-  if (COMMON_TECH.has(key)) return titleCaseSkill(cleaned);
-  return cleaned;
+  if (BLACKLIST.has(key)) return null;
+  if (key.length < 2 && !SHORT_ALLOWED.has(key)) return null;
+
+  const aliased = ALIASES[aliasKey(cleaned)] ?? ALIASES[key];
+  if (aliased) return aliased;
+
+  return catalogByKey.get(key) ?? null;
 }
 
 /** Extract skill chips from comma/pipe skills text (or free text). */
@@ -216,15 +305,15 @@ export function splitSkillTokens(raw: string): string[] {
   if (!text) return [];
 
   const found: string[] = [];
-  for (const skill of MULTI_WORD) {
+  for (const skill of SKILL_CATALOG) {
+    if (!skill.includes(' ') && !skill.includes('.') && !skill.includes('/')) continue;
     const pattern = new RegExp(`\\b${skill.split(/\s+/).map(escapeRe).join('\\s+')}\\b`, 'ig');
     if (pattern.test(text)) {
-      found.push(skill === 'REST API' ? 'REST APIs' : skill);
+      found.push(skill);
       text = text.replace(pattern, ' | ');
     }
   }
 
-  // Narrative blobs: only keep multi-word hits already collected
   if (
     text.length > 180 &&
     /\b(developed|created|collaborated|maintained|optimized|participated)\b/i.test(text)
@@ -232,23 +321,21 @@ export function splitSkillTokens(raw: string): string[] {
     return uniq(found);
   }
 
-  // Comma / pipe lists are trusted skill lines — use loose matching so "java, python" survive.
   const parts = text
     .split(/[,|/;]+|\n+/)
-    .map((p) => p.trim())
+    .map((part) => part.trim())
     .filter(Boolean);
-  const listLike = parts.length >= 2 || text.length < 120;
 
   for (const part of parts) {
     if (LABEL_NOISE.test(part)) continue;
-    const whole = canonicalize(part, listLike);
+    const whole = canonicalizeSkill(part);
     if (whole) {
       found.push(whole);
       continue;
     }
     if (part.split(/\s+/).length > 4) continue;
     for (const word of part.split(/\s+/)) {
-      const canonical = canonicalize(word, listLike);
+      const canonical = canonicalizeSkill(word);
       if (canonical) found.push(canonical);
     }
   }
@@ -257,36 +344,36 @@ export function splitSkillTokens(raw: string): string[] {
 }
 
 /**
- * Pull tech keywords dynamically from any text (JD, resume, target role).
- * Prefer comma lists + multi-word tech + Capitalized/acronym tokens.
+ * Pull catalog skills from any text (JD, resume, target role).
  */
 export function extractKeywordsFromText(text: string): string[] {
   if (!text?.trim()) return [];
   const fromLists = splitSkillTokens(text);
   const extras: string[] = [];
 
-  for (const skill of MULTI_WORD) {
+  for (const skill of SKILL_CATALOG) {
+    if (!skill.includes(' ') && !skill.includes('.') && !skill.includes('/')) continue;
     const pattern = new RegExp(`\\b${escapeRe(skill)}\\b`, 'i');
     if (pattern.test(text)) extras.push(skill);
   }
 
-  // Acronyms / dotted tech: AWS, JVM, JPA, GraphQL, Node.js
-  const matches = text.match(/\b(?:[A-Z]{2,6}|[A-Za-z]+(?:\.[A-Za-z]+)+|C\+\+|C#|\.NET)\b/g) ?? [];
+  const matches =
+    text.match(/\b(?:C\+\+|C#|\.NET|CI\/CD|Node\.js|Next\.js|Vue\.js|Express\.js|React\.js)\b/gi) ??
+    [];
   for (const match of matches) {
-    const canonical = canonicalize(match, true);
+    const canonical = canonicalizeSkill(match);
     if (canonical) extras.push(canonical);
   }
 
-  // Lowercase common tech anywhere in JD/resume text
-  for (const term of COMMON_TECH) {
+  for (const term of Object.keys(ALIASES)) {
+    if (term.length < 3) continue;
     const pattern = new RegExp(`\\b${escapeRe(term)}\\b`, 'i');
     if (pattern.test(text)) {
-      const canonical = canonicalize(term, true);
+      const canonical = canonicalizeSkill(term);
       if (canonical) extras.push(canonical);
     }
   }
 
-  // Title-case single tech words near "skills/requirements/experience with"
   const nearReq =
     text.match(
       /(?:skills?|technologies|experience with|proficient in|knowledge of)[:\s]+([A-Za-z0-9+.#/\s,-]{3,120})/gi,
@@ -306,15 +393,26 @@ export function parseSkillChips(value: string): string[] {
   return splitSkillTokens(value);
 }
 
-/** Keep user-entered chips even when they are not in the common-tech set. */
+/**
+ * Merge skill lists. Catalog skills are preferred; unknown user chips are kept
+ * only when they are not blacklisted noise (manual chip entry).
+ */
 export function mergeSkillLists(...lists: Array<string[] | undefined>): string[] {
   const out = new Map<string, string>();
   for (const list of lists) {
     for (const raw of list ?? []) {
       const value = raw.trim();
       if (!value || LABEL_NOISE.test(value)) continue;
-      const canonical = canonicalize(value, true) ?? value;
-      out.set(canonical.toLowerCase(), canonical);
+      if (BLACKLIST.has(value.toLowerCase())) continue;
+      const canonical = canonicalizeSkill(value);
+      if (canonical) {
+        out.set(canonical.toLowerCase(), canonical);
+        continue;
+      }
+      // Preserve intentional user chips that are not generic noise.
+      if (value.length >= 2 && value.length <= 40 && !/\s{2,}/.test(value)) {
+        out.set(value.toLowerCase(), value);
+      }
     }
   }
   return Array.from(out.values());

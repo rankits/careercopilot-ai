@@ -8,3 +8,4 @@ export * from './align';
 export * from './errors';
 export * from './estimateAts';
 export * from './buildSuggestions';
+export * from './analyzeGate';
