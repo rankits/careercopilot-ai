@@ -6,6 +6,7 @@ import { PrismaApprovedResumeVersionRepository } from '@/modules/auto-apply/repo
 import { PrismaApplicationAnswerRepository } from '@/modules/auto-apply/repositories/prisma-application-answer.repository.js';
 import { jobApplicationService } from '@/modules/auto-apply/controllers/job-application.controller.js';
 import { channelDetectionService } from '@/modules/auto-apply/controllers/channel-detection.controller.js';
+import { autoApplyEventService } from '@/modules/auto-apply/controllers/audit-event.controller.js';
 import { requireUserPrincipalId, getParam } from '@/modules/auto-apply/utils/require-user.util.js';
 
 export const applicationPlannerService = new ApplicationPlannerService(
@@ -20,6 +21,12 @@ export const createPlanController = async (req: Request, res: Response, next: Ne
   try {
     const userId = requireUserPrincipalId(req);
     const plan = await applicationPlannerService.createPlan(userId, req.body.jobId);
+    void autoApplyEventService.record({
+      userId,
+      eventType: 'PLAN_CREATED',
+      jobApplicationId: plan.application.id,
+      metadata: { decision: plan.decision, channel: plan.channel },
+    });
     return res.status(200).json(successResponse('Application plan generated successfully', plan));
   } catch (error) {
     return next(error);

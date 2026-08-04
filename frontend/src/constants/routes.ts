@@ -1,5 +1,6 @@
 export const ROUTES = {
   APPLICATIONS: '/applications',
+  APPLICATION_DETAIL: '/applications/:applicationId',
   HOME: '/',
   DASHBOARD: '/app',
   JOB_FEED: '/jobs-feed',
@@ -17,3 +18,4 @@ export const ROUTES = {
 } as const;
 
 export const jobDetailPath = (jobId: string) => `/jobs/${jobId}`;
+export const applicationDetailPath = (applicationId: string) => `/applications/${applicationId}`;

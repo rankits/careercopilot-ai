@@ -4,6 +4,7 @@ import { JobApplicationService } from '@/modules/auto-apply/services/job-applica
 import { PrismaJobApplicationRepository } from '@/modules/auto-apply/repositories/prisma-job-application.repository.js';
 import { PrismaJobEligibilityLookup } from '@/modules/auto-apply/repositories/prisma-job-eligibility.lookup.js';
 import { eligibilityService } from '@/modules/auto-apply/controllers/eligibility.controller.js';
+import { autoApplyEventService } from '@/modules/auto-apply/controllers/audit-event.controller.js';
 import { requireUserPrincipalId, getParam } from '@/modules/auto-apply/utils/require-user.util.js';
 
 const repository = new PrismaJobApplicationRepository();
@@ -54,6 +55,12 @@ export const initiateJobApplicationController = async (
   try {
     const userId = requireUserPrincipalId(req);
     const result = await jobApplicationService.initiate(userId, req.body.jobId);
+    void autoApplyEventService.record({
+      userId,
+      eventType: 'SUBMISSION_INITIATED',
+      jobApplicationId: result.application.id,
+      metadata: { possibleDuplicateCount: result.possibleDuplicates.length },
+    });
     const message =
       result.possibleDuplicates.length > 0
         ? 'Auto-apply submission created successfully (possible duplicate detected — review before proceeding)'
@@ -73,6 +80,15 @@ export const evaluateJobApplicationEligibilityController = async (
     const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const application = await jobApplicationService.evaluateEligibility(userId, id);
+    void autoApplyEventService.record({
+      userId,
+      eventType: 'ELIGIBILITY_EVALUATED',
+      jobApplicationId: application.id,
+      metadata: {
+        status: application.status,
+        eligible: application.eligibilityResult?.eligible ?? null,
+      },
+    });
     return res.status(200).json(successResponse('Eligibility evaluated successfully', application));
   } catch (error) {
     return next(error);
@@ -105,6 +121,11 @@ export const withdrawJobApplicationController = async (
     const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
     const application = await jobApplicationService.withdraw(userId, id);
+    void autoApplyEventService.record({
+      userId,
+      eventType: 'SUBMISSION_WITHDRAWN',
+      jobApplicationId: application.id,
+    });
     return res.status(200).json(successResponse('Auto-apply submission withdrawn', application));
   } catch (error) {
     return next(error);
