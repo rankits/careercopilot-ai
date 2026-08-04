@@ -26,6 +26,12 @@ const applicationStatusEnum = [
   'EXPIRED',
 ];
 
+// Full ApplicationSourceType domain (matches the Prisma enum) — used to
+// document what `primarySourceType` may contain on a *response*. Most of
+// these values are reserved for channels that don't exist yet (email/ATS
+// import, browser extension, CSV import, AI-assisted); see
+// `creatableApplicationSourceTypeEnum` below for what `POST /applications`
+// actually accepts today (AJA-ARCH-003).
 const applicationSourceTypeEnum = [
   'MANUAL',
   'PLATFORM_JOB',
@@ -37,6 +43,13 @@ const applicationSourceTypeEnum = [
   'CSV_IMPORT',
   'EXTERNAL_API',
   'AI_ASSISTED',
+];
+
+const creatableApplicationSourceTypeEnum = [
+  'MANUAL',
+  'PLATFORM_JOB',
+  'PLATFORM_APPLY',
+  'EXTERNAL_JOB_URL',
 ];
 
 const applicationPriorityEnum = ['LOW', 'MEDIUM', 'HIGH'];
@@ -241,8 +254,10 @@ export const applicationSwagger = {
             properties: {
               sourceType: {
                 type: 'string',
-                enum: applicationSourceTypeEnum,
+                enum: creatableApplicationSourceTypeEnum,
                 example: 'MANUAL',
+                description:
+                  'Only these 4 sources are accepted today. Other ApplicationSourceType values (EMAIL_IMPORT, ATS_IMPORT, BROWSER_EXTENSION, CSV_IMPORT, EXTERNAL_API, AI_ASSISTED) are reserved for channels not yet implemented and are rejected with a validation error.',
               },
               jobTitle: { type: 'string', example: 'Senior Full Stack Engineer' },
               companyName: { type: 'string', example: 'Acme Corp' },
@@ -369,6 +384,72 @@ export const applicationSwagger = {
         secure: true,
       },
     },
+    TAGS,
+  ),
+
+  ...createApiPost(
+    `${BASE_URL}/saved-jobs`,
+    {
+      summary: 'Save (bookmark) a platform job',
+      description:
+        'Idempotent: saving an already-saved job returns the existing SAVED application rather than creating a duplicate.',
+      body: {
+        required: ['jobId'],
+        properties: {
+          jobId: {
+            type: 'string',
+            format: 'uuid',
+            example: '3f6b1e2a-4b8e-4d2a-9c3a-2e6f1a2b3c4d',
+          },
+        },
+      },
+      responses: {
+        200: {
+          description: 'Job was already saved',
+          schema: successSchema('Job already saved', applicationDtoSchema),
+        },
+        201: {
+          description: 'Job saved successfully',
+          schema: successSchema('Job saved successfully', applicationDtoSchema),
+        },
+        ...commonSecureResponses,
+      },
+    },
+    true,
+    TAGS,
+  ),
+
+  ...createApiDelete(
+    `${BASE_URL}/saved-jobs/{jobId}`,
+    {
+      summary: 'Unsave a previously saved platform job',
+      description: 'Only valid while the application is still in the SAVED status.',
+      params: [
+        {
+          name: 'jobId',
+          in: 'path' as const,
+          required: true as const,
+          description: 'Job UUID',
+          schema: {
+            type: 'string',
+            format: 'uuid',
+            example: '3f6b1e2a-4b8e-4d2a-9c3a-2e6f1a2b3c4d',
+          },
+        },
+      ],
+      responses: {
+        200: {
+          description: 'Job unsaved successfully',
+          schema: successSchema('Job unsaved successfully'),
+        },
+        409: {
+          description: 'Application is not in SAVED status',
+          schema: errorSchema('Application is not saved', 'APPLICATION_NOT_SAVED'),
+        },
+        ...commonSecureResponses,
+      },
+    },
+    true,
     TAGS,
   ),
 
