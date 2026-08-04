@@ -4,6 +4,7 @@ import {
   BusinessCenterOutlinedIcon,
   HomeOutlinedIcon,
   SearchOutlinedIcon,
+  SmartToyOutlinedIcon,
   TuneOutlinedIcon,
   DescriptionOutlinedIcon,
 } from '@/lib/material';
@@ -26,8 +27,19 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     id: 'applications',
     label: 'Applications',
   },
-  { href: ROUTES.RESUME_BUILDER, icon: DescriptionOutlinedIcon, id: 'resume-builder', label: 'Resume Builder' },
-  { href: ROUTES.SAVED_RESUMES, icon: BookmarkBorderOutlinedIcon, id: 'saved-resumes', label: 'Saved Resumes' },
+  {
+    href: ROUTES.RESUME_BUILDER,
+    icon: DescriptionOutlinedIcon,
+    id: 'resume-builder',
+    label: 'Resume Builder',
+  },
+  {
+    href: ROUTES.SAVED_RESUMES,
+    icon: BookmarkBorderOutlinedIcon,
+    id: 'saved-resumes',
+    label: 'Saved Resumes',
+  },
+  { href: ROUTES.AUTO_APPLY, icon: SmartToyOutlinedIcon, id: 'auto-apply', label: 'Auto Apply' },
   { icon: TuneOutlinedIcon, id: 'ai-match', label: 'AI Match' },
   { icon: BusinessCenterOutlinedIcon, id: 'applications', label: 'Applications' },
 ];
