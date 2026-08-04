@@ -3,16 +3,29 @@ import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 import { borderRadius, muted, t } from '../../styles/shared';
 
-/** Approx A4 height at 96dpi — used for page-break guides in live preview. */
-export const A4_PAGE_HEIGHT_PX = 1122;
+/** A4 at 96dpi (210mm × 297mm) — preview page frame size. */
+export const A4_PAGE_WIDTH_PX = 794;
+export const A4_PAGE_HEIGHT_PX = 1123;
+/** Matches PDF page padding (36pt) for preview/PDF parity. */
+export const A4_PAGE_MARGIN_PX = 36;
+/** Usable content height inside each page after top+bottom margins. */
+export const A4_PAGE_CONTENT_HEIGHT_PX = A4_PAGE_HEIGHT_PX - A4_PAGE_MARGIN_PX * 2;
+/** @deprecated Use A4_PAGE_MARGIN_PX */
+export const A4_PAGE_TOP_PAD_PX = A4_PAGE_MARGIN_PX;
 
 export const PreviewFrame = styled(Box)({
   background: 'linear-gradient(180deg, #e2e8f0 0%, #eef2f7 100%)',
   borderRadius: borderRadius['2xl'],
   display: 'grid',
   gap: spacing[3],
+  maxWidth: '100%',
+  minWidth: 0,
+  overflowX: 'hidden',
   padding: spacing[3],
   width: '100%',
+  '@media (max-width: 40rem)': {
+    padding: spacing[2],
+  },
 });
 
 export const PageStack = styled(Box)({
@@ -31,32 +44,30 @@ export const PageBreakLabel = styled(Box)({
   gap: spacing[2],
   justifyContent: 'center',
   letterSpacing: '0.06em',
+  marginBottom: spacing[2],
+  marginTop: spacing[2],
   textTransform: 'uppercase',
   width: '100%',
-  '&::before, &::after': {
-    background: 'repeating-linear-gradient(90deg, #94a3b8 0 6px, transparent 6px 12px)',
-    content: '""',
-    flex: 1,
-    height: 1,
-    maxWidth: '8rem',
-  },
 });
 
 const pageSheetBase = {
   background: '#ffffff',
-  borderRadius: borderRadius.lg,
-  boxShadow: '0 14px 36px rgba(15, 23, 42, 0.12)',
   boxSizing: 'border-box' as const,
   color: '#0f172a',
   display: 'grid',
   gap: spacing[3],
-  maxWidth: '100%',
-  minHeight: `${A4_PAGE_HEIGHT_PX}px`,
-  padding: `${spacing[6]} ${spacing[5]}`,
+  // Continuous content sheet — page frames supply exact A4 size + margins.
+  minHeight: 0,
+  padding: 0,
   position: 'relative' as const,
-  width: 'min(100%, 50rem)',
+  width: '100%',
   // Keep blocks/entries together so preview/print don't split mid-item.
   '& .block, & .entry, & .skills, & .header, & .sidebar, & .main': {
+    breakInside: 'avoid',
+    pageBreakInside: 'avoid',
+    WebkitColumnBreakInside: 'avoid',
+  },
+  '& .bullets li, & .heading, & .entry-title, & .name, & .role': {
     breakInside: 'avoid',
     pageBreakInside: 'avoid',
     WebkitColumnBreakInside: 'avoid',
@@ -168,7 +179,6 @@ const pageSheetBase = {
 
 export const OriginalPaper = styled(Box)({
   ...pageSheetBase,
-  border: '1px solid #d7dee8',
   '& .badge': {
     ...muted,
     fontSize: '0.7rem',
@@ -191,7 +201,6 @@ export const OriginalPaper = styled(Box)({
 
 export const ClassicPaper = styled(Box)({
   ...pageSheetBase,
-  border: '1px solid #e2e8f0',
   fontFamily: '"Georgia", "Times New Roman", serif',
   '& .name': {
     fontFamily: '"Georgia", "Times New Roman", serif',
@@ -225,7 +234,6 @@ export const ClassicPaper = styled(Box)({
 
 export const ModernPaper = styled(Box)({
   ...pageSheetBase,
-  border: '1px solid #e2e8f0',
   gap: 0,
   overflow: 'hidden',
   padding: 0,
@@ -252,7 +260,6 @@ export const ModernPaper = styled(Box)({
 
 export const MinimalPaper = styled(Box)({
   ...pageSheetBase,
-  border: '1px solid #e5e7eb',
   fontFamily: '"IBM Plex Sans", "Segoe UI", sans-serif',
   gap: spacing[3],
   '& .name': { fontSize: fontSize['3xl'], letterSpacing: '-0.02em' },
@@ -270,17 +277,13 @@ export const MinimalPaper = styled(Box)({
 
 export const ExecutivePaper = styled(Box)({
   ...pageSheetBase,
-  border: '1px solid #e2e8f0',
   gap: 0,
   overflow: 'hidden',
   padding: 0,
   '& .exec-layout': {
     display: 'grid',
     gridTemplateColumns: '12rem minmax(0, 1fr)',
-    minHeight: `${A4_PAGE_HEIGHT_PX}px`,
-    '@media (max-width: 40rem)': {
-      gridTemplateColumns: '1fr',
-    },
+    minHeight: 0,
   },
   '& .sidebar': {
     alignContent: 'start',

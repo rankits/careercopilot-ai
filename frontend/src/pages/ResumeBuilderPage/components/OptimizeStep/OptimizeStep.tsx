@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/atoms';
+import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import {
   AutoAwesomeOutlinedIcon,
@@ -14,7 +15,7 @@ import type { AnalysisResult, SuggestionItem } from '@/services/resumeBuilder.se
 import {
   RESUME_SECTIONS,
   RESUME_TEMPLATES,
-  alignDraftSkillsToJob,
+  alignDraftToJob,
   applyTextReplaceToDraft,
   buildFallbackSuggestions,
   estimateImprovedAtsScore,
@@ -23,8 +24,10 @@ import {
   mergeSuggestionLists,
   normalizeSuggestionCategory,
   parseResumeContent,
+  refreshSkillAnalysisFromContent,
   sanitizeExtractedText,
   serializeResumeDraft,
+  skillFromSuggestion,
   type ResumeDraft,
   type ResumeSectionId,
   type ResumeTemplateId,
@@ -64,7 +67,8 @@ interface OptimizeStepProps {
   suggestions: SuggestionItem[];
   targetRole: string;
   template: ResumeTemplateId;
-  onApplySuggestion: (id: number) => void;
+  onApplySuggestion: (id: number, content?: string) => void;
+  onApplyAllSuggestions: (ids: number[], content: string) => void;
   onIgnoreSuggestion: (id: number) => void;
   onEditedContentChange: (value: string) => void;
   onExportStep: () => void;
@@ -83,12 +87,14 @@ export function OptimizeStep({
   targetRole,
   template,
   onApplySuggestion,
+  onApplyAllSuggestions,
   onIgnoreSuggestion,
   onEditedContentChange,
   onExportStep,
   onSaveContent,
   onTemplateChange,
 }: OptimizeStepProps) {
+  const { showToast } = useToast();
   const previewRef = useRef<HTMLDivElement>(null);
   const lastParseKey = useRef<string>('');
   const [activeSection, setActiveSection] = useState<ResumeSectionId>('summary');
@@ -99,6 +105,12 @@ export function OptimizeStep({
       targetRole || analysis?.targetRole || '',
     ),
   );
+  const draftRef = useRef(draft);
+  useEffect(() => {
+    draftRef.current = draft;
+  }, [draft]);
+
+  const [localOverrides, setLocalOverrides] = useState<SuggestionItem[]>([]);
 
   const handlePrint = () => {
     const node = previewRef.current;
@@ -132,8 +144,8 @@ export function OptimizeStep({
     if (lastParseKey.current === parseKey) return;
     lastParseKey.current = parseKey;
     const parsed = parseResumeContent(source, targetRole || analysis?.targetRole || '');
-    setDraft(
-      alignDraftSkillsToJob(parsed, {
+    setDraft((previous) => {
+      const aligned = alignDraftToJob(parsed, {
         preferredSkills,
         jobDescription,
         matchedSkills: analysis?.skillAnalysis?.matchedSkills,
@@ -142,35 +154,48 @@ export function OptimizeStep({
           ...(analysis?.skillAnalysis?.missingSkills ?? []),
         ],
         optimizedSummary: analysis?.optimizedSummary,
-      }),
-    );
+        targetRole: targetRole || analysis?.targetRole || '',
+      });
+      // Never blank identity / experience if AI text omitted the name or sections.
+      return {
+        ...aligned,
+        fullName: aligned.fullName || previous.fullName,
+        email: aligned.email || previous.email,
+        phone: aligned.phone || previous.phone,
+        location: aligned.location || previous.location,
+        linkedin: aligned.linkedin || previous.linkedin,
+        experiences:
+          aligned.experiences.some((item) => item.company || item.title || item.details)
+            ? aligned.experiences
+            : previous.experiences,
+        projectsList:
+          aligned.projectsList.some((item) => item.title || item.details)
+            ? aligned.projectsList
+            : previous.projectsList,
+        education: aligned.education || previous.education,
+        certifications: aligned.certifications || previous.certifications,
+        achievements: aligned.achievements || previous.achievements,
+        skillsList: aligned.skillsList.length > 0 ? aligned.skillsList : previous.skillsList,
+        summary: aligned.summary || previous.summary,
+        originalText: aligned.originalText || previous.originalText || source,
+      };
+    });
     // Intentionally omit editedContent / preferredSkills — user edits merge via separate effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [analysis?.id, analysis?.editedContent]);
 
   // Merge Define-Role preferred skills into the live draft without re-parsing.
+  // Do NOT depend on skillAnalysis — recheck after Apply must not reshuffle suggestions/skills.
   useEffect(() => {
     if (!preferredSkills.length) return;
     setDraft((current) =>
-      alignDraftSkillsToJob(current, {
+      alignDraftToJob(current, {
         preferredSkills,
         jobDescription,
-        matchedSkills: analysis?.skillAnalysis?.matchedSkills,
-        recommendedSkills: [
-          ...(analysis?.skillAnalysis?.recommendedSkills ?? []),
-          ...(analysis?.skillAnalysis?.missingSkills ?? []),
-        ],
-        optimizedSummary: analysis?.optimizedSummary,
+        targetRole: targetRole || analysis?.targetRole || '',
       }),
     );
-  }, [
-    preferredSkills,
-    jobDescription,
-    analysis?.skillAnalysis?.matchedSkills,
-    analysis?.skillAnalysis?.missingSkills,
-    analysis?.skillAnalysis?.recommendedSkills,
-    analysis?.optimizedSummary,
-  ]);
+  }, [preferredSkills, jobDescription, targetRole, analysis?.targetRole]);
 
   // One-pass OCR glyph cleanup (Σ/Θ etc.) so preview text is readable.
   const ocrCleaned = useRef(false);
@@ -229,17 +254,41 @@ export function OptimizeStep({
             suggestion.originalText,
             suggestion.suggestedText,
           ),
-          role: next.role || targetRole || analysis?.targetRole || '',
+          role: targetRole || analysis?.targetRole || next.role || '',
           originalText: next.originalText,
         };
+      }
+      draftRef.current = next;
+      const serialized = serializeResumeDraft(next);
+      if (serialized) onEditedContentChange(serialized);
+      const serverIds = spellingFixes
+        .map((suggestion) => suggestion.id)
+        .filter((id) => !isLocalSuggestionId(id));
+      if (serverIds.length > 0) {
+        onApplyAllSuggestions(serverIds, serialized);
       }
       return next;
     });
 
-    spellingFixes.forEach((suggestion) => {
-      onApplySuggestion(suggestion.id);
-    });
-  }, [analysis?.id, analysis?.targetRole, onApplySuggestion, suggestions, targetRole]);
+    const localSpelling = spellingFixes.filter((item) => isLocalSuggestionId(item.id));
+    if (localSpelling.length > 0) {
+      setLocalOverrides((prev) => {
+        const overrideIds = new Set(localSpelling.map((item) => item.id));
+        const rest = prev.filter((item) => !overrideIds.has(item.id));
+        return [
+          ...rest,
+          ...localSpelling.map((item) => ({ ...item, status: 'APPLIED' as const })),
+        ];
+      });
+    }
+  }, [
+    analysis?.id,
+    analysis?.targetRole,
+    onApplyAllSuggestions,
+    onEditedContentChange,
+    suggestions,
+    targetRole,
+  ]);
 
   useEffect(() => {
     const serialized = serializeResumeDraft(draft);
@@ -248,15 +297,38 @@ export function OptimizeStep({
     }
   }, [draft, editedContent, onEditedContentChange]);
 
-  const [localOverrides, setLocalOverrides] = useState<SuggestionItem[]>([]);
+  const fallbackKey = String(analysis?.id ?? 'none');
+  const frozenFallbacks = useMemo(() => {
+    if (!analysis) return [] as SuggestionItem[];
+    return buildFallbackSuggestions({ analysis, draft: draftRef.current });
+    // Intentionally freeze on analysis id only — Apply/recheck must not reshuffle cards.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fallbackKey]);
 
   const effectiveSuggestions = useMemo(() => {
-    const fallback = buildFallbackSuggestions({ analysis, draft });
-    const merged = mergeSuggestionLists(suggestions, fallback);
-    if (localOverrides.length === 0) return merged;
-    const overrideIds = new Set(localOverrides.map((item) => item.id));
-    return [...localOverrides, ...merged.filter((item) => !overrideIds.has(item.id))];
-  }, [analysis, draft, localOverrides, suggestions]);
+    const merged = mergeSuggestionLists(suggestions, frozenFallbacks);
+    const withOverrides =
+      localOverrides.length === 0
+        ? merged
+        : (() => {
+            const overrideIds = new Set(localOverrides.map((item) => item.id));
+            return [
+              ...localOverrides,
+              ...merged.filter((item) => !overrideIds.has(item.id)),
+            ];
+          })();
+
+    const haveSkills = new Set(draft.skillsList.map((skill) => skill.toLowerCase()));
+    return withOverrides.map((item) => {
+      if (normalizeSuggestionCategory(item.category) !== 'skills') return item;
+      if (item.status !== 'PENDING') return item;
+      const skill = skillFromSuggestion(item);
+      if (skill && haveSkills.has(skill.toLowerCase())) {
+        return { ...item, status: 'APPLIED' as const };
+      }
+      return item;
+    });
+  }, [draft.skillsList, frozenFallbacks, localOverrides, suggestions]);
 
   const pendingSuggestions = useMemo(
     () => effectiveSuggestions.filter((item) => item.status === 'PENDING'),
@@ -292,14 +364,20 @@ export function OptimizeStep({
 
   const currentScore = analysis?.baselineAtsScore ?? analysis?.atsScore ?? 0;
   const pendingCount = pendingSuggestions.length;
-  const appliedSuggestions = suggestions.filter((item) => item.status === 'APPLIED');
+  const appliedSuggestions = effectiveSuggestions.filter((item) => item.status === 'APPLIED');
   const appliedCount = appliedSuggestions.length;
   const highAppliedCount = appliedSuggestions.filter((item) => /high/i.test(item.impact)).length;
+  const draftContent = serializeResumeDraft(draft) || editedContent;
+  const liveSkillAnalysis = useMemo(
+    () => refreshSkillAnalysisFromContent(draftContent, analysis?.skillAnalysis),
+    [analysis?.skillAnalysis, draftContent],
+  );
   const missingKeywords =
     analysis?.keywords?.filter((item) => item.status === 'MISSING').map((item) => item.term) ?? [];
-  const improvedScore = estimateImprovedAtsScore({
+  const estimatedScore = estimateImprovedAtsScore({
     baseline: currentScore,
-    content: serializeResumeDraft(draft) || editedContent,
+    content: draftContent,
+    // Only the original gap pool — recovered items already in content raise the estimate.
     missingSkills: [
       ...(analysis?.skillAnalysis?.missingSkills ?? []),
       ...(analysis?.skillAnalysis?.recommendedSkills ?? []),
@@ -308,37 +386,142 @@ export function OptimizeStep({
     appliedCount,
     highAppliedCount,
   });
+  // Prefer server recheck score when it exceeds the local estimate (after Apply).
+  const improvedScore = Math.max(estimatedScore, analysis?.atsScore ?? 0);
   const scoreDelta = Math.max(0, improvedScore - currentScore);
   const activeMeta = RESUME_SECTIONS.find((section) => section.id === activeSection);
   const isSentenceSection = activeSection === 'experience' || activeSection === 'projects';
+  const applyingAll = applyingId === -1;
+
+  const commitAppliedDraft = (next: ResumeDraft) => {
+    const serialized =
+      serializeResumeDraft(next) ||
+      editedContent ||
+      analysis?.editedContent ||
+      '';
+    draftRef.current = next;
+    setDraft(next);
+    if (serialized) onEditedContentChange(serialized);
+    return serialized;
+  };
+
+  const markLocalApplied = (suggestion: SuggestionItem) => {
+    setLocalOverrides((prev) => {
+      const rest = prev.filter((item) => item.id !== suggestion.id);
+      return [...rest, { ...suggestion, status: 'APPLIED' }];
+    });
+  };
 
   const applySuggestion = (suggestion: SuggestionItem) => {
-    setDraft((current) => {
-      const sectionId = normalizeSuggestionCategory(suggestion.category);
-      const next = {
-        ...applyTextReplaceToDraft(
-          current,
-          sectionId,
-          suggestion.originalText,
-          suggestion.suggestedText,
-        ),
-        role: current.role || targetRole || analysis?.targetRole || '',
-        originalText: current.originalText,
-      };
-      const serialized = serializeResumeDraft(next);
-      if (serialized) onEditedContentChange(serialized);
-      return next;
-    });
+    const sectionId = normalizeSuggestionCategory(suggestion.category);
+    const current = draftRef.current;
+
+    if (sectionId === 'skills') {
+      const skill = skillFromSuggestion(suggestion);
+      const alreadyHave = current.skillsList.some(
+        (item) => item.toLowerCase() === skill.toLowerCase(),
+      );
+      if (alreadyHave || !skill) {
+        markLocalApplied(suggestion);
+        if (!isLocalSuggestionId(suggestion.id)) {
+          onApplySuggestion(suggestion.id, serializeResumeDraft(current) || editedContent);
+        }
+        setSelectedSuggestionId(null);
+        return;
+      }
+    }
+
+    const next = {
+      ...applyTextReplaceToDraft(
+        current,
+        sectionId,
+        sectionId === 'skills' ? '' : suggestion.originalText,
+        sectionId === 'skills' ? skillFromSuggestion(suggestion) : suggestion.suggestedText,
+      ),
+      role: targetRole || analysis?.targetRole || current.role || '',
+      originalText: current.originalText,
+    };
+    const serialized = commitAppliedDraft(next);
 
     if (isLocalSuggestionId(suggestion.id)) {
-      setLocalOverrides((prev) => {
-        const rest = prev.filter((item) => item.id !== suggestion.id);
-        return [...rest, { ...suggestion, status: 'APPLIED' }];
-      });
+      markLocalApplied(suggestion);
+      setSelectedSuggestionId(null);
+      // Persist + recheck so ATS / skill match refresh without a server suggestion id.
+      if (serialized) onApplyAllSuggestions([], serialized);
+      else {
+        showToast({
+          message: 'Improvement applied successfully',
+          severity: 'success',
+        });
+      }
       return;
     }
 
-    onApplySuggestion(suggestion.id);
+    onApplySuggestion(suggestion.id, serialized);
+    setSelectedSuggestionId(null);
+  };
+
+  const applyAllSuggestions = () => {
+    if (pendingSuggestions.length === 0 || applyingAll) return;
+
+    let next = draftRef.current;
+    const appliedLocals: SuggestionItem[] = [];
+    const serverIds: number[] = [];
+
+    for (const suggestion of pendingSuggestions) {
+      const sectionId = normalizeSuggestionCategory(suggestion.category);
+
+      if (sectionId === 'skills') {
+        const skill = skillFromSuggestion(suggestion);
+        if (
+          !skill ||
+          next.skillsList.some((item) => item.toLowerCase() === skill.toLowerCase())
+        ) {
+          if (isLocalSuggestionId(suggestion.id)) appliedLocals.push(suggestion);
+          else serverIds.push(suggestion.id);
+          continue;
+        }
+        next = {
+          ...applyTextReplaceToDraft(next, 'skills', '', skill),
+          role: targetRole || analysis?.targetRole || next.role || '',
+          originalText: next.originalText,
+        };
+      } else {
+        next = {
+          ...applyTextReplaceToDraft(
+            next,
+            sectionId,
+            suggestion.originalText,
+            suggestion.suggestedText,
+          ),
+          role: targetRole || analysis?.targetRole || next.role || '',
+          originalText: next.originalText,
+        };
+      }
+
+      if (isLocalSuggestionId(suggestion.id)) appliedLocals.push(suggestion);
+      else serverIds.push(suggestion.id);
+    }
+
+    const serialized = commitAppliedDraft(next);
+    setSelectedSuggestionId(null);
+
+    if (appliedLocals.length > 0) {
+      setLocalOverrides((prev) => {
+        const overrideIds = new Set(appliedLocals.map((item) => item.id));
+        const rest = prev.filter((item) => !overrideIds.has(item.id));
+        return [
+          ...rest,
+          ...appliedLocals.map((item) => ({ ...item, status: 'APPLIED' as const })),
+        ];
+      });
+    }
+
+    if (serverIds.length > 0 && serialized) {
+      onApplyAllSuggestions(serverIds, serialized);
+    } else if (serialized && appliedLocals.length > 0) {
+      onApplyAllSuggestions([], serialized);
+    }
   };
 
   return (
@@ -365,7 +548,7 @@ export function OptimizeStep({
                 {pendingCount} AI improvement{pendingCount === 1 ? '' : 's'} ready
               </Typography>
               <Typography className="text">
-                Use Apply Fix / Ignore on each card. Left badges show fixes per section.
+                Apply every pending fix in one click, or review cards one by one.
               </Typography>
               <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
                 {RESUME_SECTIONS.filter(
@@ -380,10 +563,21 @@ export function OptimizeStep({
                     {section.label} ({suggestionsBySection[section.id].length})
                   </Button>
                 ))}
+                <Button
+                  size="small"
+                  startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+                  isLoading={applyingAll}
+                  disabled={applyingId != null && !applyingAll}
+                  onClick={applyAllSuggestions}
+                >
+                  Apply All Fixes
+                </Button>
                 {pendingSuggestions[0] ? (
                   <Button
                     size="small"
+                    variant="outline"
                     startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+                    disabled={applyingId != null}
                     onClick={() => {
                       const first = pendingSuggestions[0]!;
                       const sectionId = normalizeSuggestionCategory(first.category);
@@ -438,7 +632,7 @@ export function OptimizeStep({
                 <Typography className="section-title">{activeMeta?.label}</Typography>
                 <Typography className="section-tip">{activeMeta?.tip}</Typography>
               </Box>
-              {selectedSuggestion && (
+              {selectedSuggestion && selectedSuggestion.status === 'PENDING' && (
                 <Button
                   size="small"
                   startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
@@ -478,7 +672,18 @@ export function OptimizeStep({
                   )}
                 </EmptyHint>
               ) : (
-                sectionSuggestions.map((suggestion) => (
+                sectionSuggestions.map((suggestion) => {
+                  const skillLabel =
+                    normalizeSuggestionCategory(suggestion.category) === 'skills'
+                      ? skillFromSuggestion(suggestion)
+                      : '';
+                  const alreadyAdded =
+                    Boolean(skillLabel) &&
+                    draft.skillsList.some(
+                      (item) => item.toLowerCase() === skillLabel.toLowerCase(),
+                    );
+
+                  return (
                   <SuggestionCard
                     key={suggestion.id}
                     selected={selectedSuggestion?.id === suggestion.id}
@@ -503,16 +708,26 @@ export function OptimizeStep({
                           {isSentenceSection ? 'Current sentence' : 'Before'}
                         </Typography>
                         <Typography className="body">
-                          {suggestion.originalText ||
-                            getSectionText(draft, activeSection) ||
-                            'No excerpt available'}
+                          {normalizeSuggestionCategory(suggestion.category) === 'skills'
+                            ? draft.skillsList.join(', ') || 'No skills yet'
+                            : suggestion.originalText ||
+                              getSectionText(draft, activeSection) ||
+                              'No excerpt available'}
                         </Typography>
                       </Box>
                       <Box className="pane after">
                         <Typography className="label">
-                          {isSentenceSection ? 'Improved sentence' : 'After (AI)'}
+                          {isSentenceSection
+                            ? 'Improved sentence'
+                            : normalizeSuggestionCategory(suggestion.category) === 'skills'
+                              ? 'Skill to add'
+                              : 'After (AI)'}
                         </Typography>
-                        <Typography className="body">{suggestion.suggestedText}</Typography>
+                        <Typography className="body">
+                          {normalizeSuggestionCategory(suggestion.category) === 'skills'
+                            ? skillFromSuggestion(suggestion)
+                            : suggestion.suggestedText}
+                        </Typography>
                       </Box>
                     </DiffBlock>
 
@@ -547,27 +762,27 @@ export function OptimizeStep({
                       <Button
                         size="small"
                         tone="success"
+                        disabled={alreadyAdded}
                         isLoading={applyingId === suggestion.id}
                         onClick={(event) => {
                           event.stopPropagation();
+                          if (alreadyAdded) return;
                           applySuggestion(suggestion);
                         }}
                       >
-                        Apply Fix
+                        {alreadyAdded ? 'Already Added' : 'Apply Fix'}
                       </Button>
                     </ActionBar>
                   </SuggestionCard>
-                ))
+                  );
+                })
               )}
             </SuggestionList>
 
             <SectionEditor
               section={activeSection}
               draft={draft}
-              recommendedSkills={[
-                ...(analysis?.skillAnalysis?.missingSkills ?? []),
-                ...(analysis?.skillAnalysis?.recommendedSkills ?? []),
-              ]}
+              recommendedSkills={liveSkillAnalysis.missingSkills}
               onChange={setDraft}
             />
 
@@ -592,12 +807,15 @@ export function OptimizeStep({
           </Box>
           <NavigateNextIcon color="primary" />
           <Box>
-            <Typography className="label">Estimated after edits</Typography>
+            <Typography className="label">Resume / ATS after edits</Typography>
             <Typography className="improved">{improvedScore}/100</Typography>
           </Box>
           <Box className="badge" component="span">
             {scoreDelta > 0 ? `+${scoreDelta} est.` : 'Apply fixes'} · {pendingCount} open ·{' '}
             {appliedCount} applied
+            {liveSkillAnalysis.missingSkills.length === 0 && appliedCount > 0
+              ? ' · skills synced'
+              : ''}
           </Box>
         </ScoreStrip>
 
