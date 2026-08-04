@@ -8,6 +8,7 @@ import {
   IJobApplicationAdapterRegistry,
   JobApplicationAdapter,
 } from '@/modules/auto-apply/contracts/adapter.contract.js';
+import { IAutoApplyEventService } from '@/modules/auto-apply/contracts/audit-event.contract.js';
 import { JobApplicationDto } from '@/modules/auto-apply/types/job-application.types.js';
 import { ApplicationConsentDto } from '@/modules/auto-apply/types/application-consent.types.js';
 
@@ -18,6 +19,7 @@ describe('SubmissionProcessingService', () => {
   let jobLookup: IChannelDetectionJobLookup;
   let adapterRegistry: IJobApplicationAdapterRegistry;
   let mockAdapter: JobApplicationAdapter;
+  let eventService: IAutoApplyEventService;
   let service: SubmissionProcessingService;
 
   const claimedApplication: JobApplicationDto = {
@@ -113,6 +115,7 @@ describe('SubmissionProcessingService', () => {
       }),
     };
     adapterRegistry = { get: vi.fn().mockReturnValue(mockAdapter) };
+    eventService = { record: vi.fn().mockResolvedValue(undefined), listForUser: vi.fn() };
 
     service = new SubmissionProcessingService(
       jobAppRepo,
@@ -120,6 +123,7 @@ describe('SubmissionProcessingService', () => {
       attemptRepo,
       jobLookup,
       adapterRegistry,
+      eventService,
     );
   });
 
@@ -130,6 +134,7 @@ describe('SubmissionProcessingService', () => {
 
     expect(jobLookup.findJobChannelSnapshot).not.toHaveBeenCalled();
     expect(jobAppRepo.finalizeSubmission).not.toHaveBeenCalled();
+    expect(eventService.record).not.toHaveBeenCalled();
   });
 
   it('finalizes as ACTION_REQUIRED for a successful hand-off that needs user action', async () => {
@@ -139,6 +144,13 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'ACTION_REQUIRED' }),
+    );
+    expect(eventService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userId: 'user-1',
+        jobApplicationId: 'jobapp-1',
+        eventType: 'SUBMISSION_SUCCEEDED',
+      }),
     );
   });
 
@@ -172,6 +184,9 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMISSION_FAILED', failureCode: 'JOB_NO_LONGER_ACTIVE' }),
+    );
+    expect(eventService.record).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'SUBMISSION_FAILED' }),
     );
   });
 
@@ -226,6 +241,33 @@ describe('SubmissionProcessingService', () => {
       'jobapp-1',
       expect.objectContaining({ status: 'ACTION_REQUIRED' }),
     );
+    expect(eventService.record).toHaveBeenCalledWith(
+      expect.objectContaining({ eventType: 'SUBMISSION_OUTCOME_UNKNOWN' }),
+    );
+  });
+
+  it('AJA-PERF-001: a hung submit() call past the latency budget is classified SUBMISSION_OUTCOME_UNKNOWN, never a false failure', async () => {
+    vi.useFakeTimers();
+    try {
+      vi.mocked(mockAdapter.submit).mockImplementation(
+        () => new Promise(() => undefined), // never resolves — simulates a hung network call
+      );
+
+      const processing = service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
+      await vi.advanceTimersByTimeAsync(30_000); // fast-forwards past SUBMIT_TIMEOUT_MS without a real wait
+      await processing;
+
+      expect(attemptRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({ outcome: 'SUBMISSION_OUTCOME_UNKNOWN' }),
+      );
+      expect(jobAppRepo.finalizeSubmission).toHaveBeenCalledWith(
+        'user-1',
+        'jobapp-1',
+        expect.objectContaining({ status: 'ACTION_REQUIRED' }),
+      );
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('records an incrementing attempt number based on prior attempts', async () => {
@@ -250,5 +292,40 @@ describe('SubmissionProcessingService', () => {
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
     );
+  });
+
+  describe('failure injection: concurrent / redelivered processing (AJA-QA-003)', () => {
+    it('processes a redelivered message exactly once — the second delivery is a safe no-op, never a duplicate submission', async () => {
+      // First delivery claims and processes normally.
+      await service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
+      expect(mockAdapter.submit).toHaveBeenCalledTimes(1);
+
+      // RabbitMQ redelivers the same message (e.g. after a slow ack) —
+      // the application is no longer QUEUED, so the atomic claim fails.
+      vi.mocked(jobAppRepo.claimForSubmission).mockResolvedValue(null);
+      await service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
+
+      // No second submit, no second attempt log, no second finalize.
+      expect(mockAdapter.submit).toHaveBeenCalledTimes(1);
+      expect(attemptRepo.create).toHaveBeenCalledTimes(1);
+      expect(jobAppRepo.finalizeSubmission).toHaveBeenCalledTimes(1);
+    });
+
+    it('two workers racing on the same message: only the one that wins the atomic claim submits', async () => {
+      // Simulates worker A and worker B both picking up the same job
+      // concurrently — the DB's conditional update means only one
+      // `claimForSubmission` call can ever return non-null for a given
+      // QUEUED row, regardless of which worker asks first.
+      vi.mocked(jobAppRepo.claimForSubmission)
+        .mockResolvedValueOnce(claimedApplication) // worker A wins
+        .mockResolvedValueOnce(null); // worker B loses
+
+      await Promise.all([
+        service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' }),
+        service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' }),
+      ]);
+
+      expect(mockAdapter.submit).toHaveBeenCalledTimes(1);
+    });
   });
 });

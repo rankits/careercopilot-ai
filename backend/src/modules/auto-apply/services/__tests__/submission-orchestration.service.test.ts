@@ -170,4 +170,40 @@ describe('SubmissionOrchestrationService', () => {
     expect(jobAppService.transitionStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', 'QUEUED');
     expect(queue.enqueue).toHaveBeenCalledWith({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
   });
+
+  it('failure injection (AJA-QA-003): re-evaluates retry eligibility fresh each cycle — a second FAILED_SAFE_TO_RETRY attempt is retryable again, but a DO_NOT_RETRY attempt immediately blocks further retries', async () => {
+    // Cycle 1: rate-limited, retryable.
+    vi.mocked(attemptRepo.findLatest).mockResolvedValue({
+      id: 'attempt-1',
+      jobApplicationId: 'jobapp-1',
+      attemptNumber: 1,
+      outcome: 'FAILED_SAFE_TO_RETRY',
+      errorCode: 'RATE_LIMITED',
+      errorMessage: 'too many requests',
+      startedAt: new Date(),
+      completedAt: new Date(),
+    });
+    await service.retry('user-1', 'jobapp-1');
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+
+    // Cycle 2: retried again, but this time the channel rejected it for
+    // good (e.g. validation failure) — must never be retryable again.
+    vi.mocked(attemptRepo.findLatest).mockResolvedValue({
+      id: 'attempt-2',
+      jobApplicationId: 'jobapp-1',
+      attemptNumber: 2,
+      outcome: 'FAILED_DO_NOT_RETRY',
+      errorCode: 'VALIDATION_FAILED',
+      errorMessage: 'no apply url',
+      startedAt: new Date(),
+      completedAt: new Date(),
+    });
+
+    await expect(service.retry('user-1', 'jobapp-1')).rejects.toThrow(
+      expect.objectContaining({ code: 'RETRY_NOT_ALLOWED' }),
+    );
+    // Still only the one successful enqueue from cycle 1 — the blocked
+    // cycle-2 attempt must not have queued anything.
+    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+  });
 });
