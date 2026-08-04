@@ -1,4 +1,5 @@
 import { applicationRoutes } from '@/modules/application-management/index.js';
+import { autoApplyRoutes } from '@/modules/auto-apply/index.js';
 import express from 'express';
 import { successResponse } from '@/shared/utils/response.js';
 import { authRoutes } from '@/modules/auth/index.js';
@@ -28,6 +29,7 @@ router.use('/resume-analysis', resumeAnalysisRoutes);
 router.use('/jobs', jobListingRoutes); // Public job discovery
 router.use('/jobs-ingestion', jobsRoutes); // Administrative ingestion endpoints
 router.use('/applications', applicationRoutes);
+router.use('/auto-apply', autoApplyRoutes);
 router.use('/interviews', interviewsRoutes);
 router.use('/job-recommendations', recommendationsRoutes);
 router.use('/notifications', notificationsRoutes);
