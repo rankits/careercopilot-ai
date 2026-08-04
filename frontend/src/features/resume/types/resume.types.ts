@@ -53,11 +53,6 @@ export interface ResumeParserMetadata {
   extractedData: Record<string, unknown>;
 }
 
-export interface ConfirmProfileInput {
-  resumeId: string;
-  userId: string;
-}
-
 export interface CandidateProfileData {
   certifications: Record<string, unknown>[];
   education: Record<string, unknown>[];
@@ -75,4 +70,12 @@ export interface UpdateCandidateProfilePayload {
   experience?: Record<string, unknown>[];
   personalDetails?: Record<string, unknown>;
   skills?: string[];
+}
+
+/** The reviewed/edited profile fields are included (not just `resumeId`) so
+ * the backend persists what the user actually confirmed on screen, rather
+ * than re-deriving from the raw parse (see `resumeService.confirmProfile`). */
+export interface ConfirmProfileInput extends UpdateCandidateProfilePayload {
+  resumeId: string;
+  userId: string;
 }

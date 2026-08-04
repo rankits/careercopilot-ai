@@ -6,7 +6,7 @@ export const SupportCard = styled(Box)({
   background: `linear-gradient(145deg, ${t.background}, ${t.primarySofter})`,
   border,
   borderRadius: borderRadius['2xl'],
-  boxShadow: '0 18px 48px rgba(124,58,237,0.08)',
+  boxShadow: '0 18px 48px rgba(37, 99, 235, 0.08)',
   display: 'grid',
   gap: spacing[4],
   padding: spacing[6],

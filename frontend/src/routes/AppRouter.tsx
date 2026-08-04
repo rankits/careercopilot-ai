@@ -3,6 +3,7 @@ import { Route, Routes } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
 import { ApplicationsPage } from '@/pages/ApplicationsPage';
+import { EditProfilePage } from '@/pages/EditProfilePage';
 import { ForYouPage } from '@/pages/ForYouPage';
 import { HomePage } from '@/pages/HomePage';
 import { JobDetailPage } from '@/pages/JobDetailPage';
@@ -46,7 +47,7 @@ export function AppRouter() {
           <Route path={ROUTES.SAVED_RESUMES} element={<SavedResumesPage />} />
           <Route path={ROUTES.RESUME_BUILDER} element={<ResumeBuilderPage />} />
           <Route path={`${ROUTES.RESUME_BUILDER}/:resumeId`} element={<ResumeBuilderPage />} />
-          <Route path={ROUTES.PROFILE_EDIT} element={<ProfilePage mode="edit" />} />
+          <Route path={ROUTES.PROFILE_EDIT} element={<EditProfilePage />} />
         </Route>
       </Route>
 

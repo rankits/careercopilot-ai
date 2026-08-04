@@ -9,18 +9,21 @@ export const dashboardMetrics = [
     helper: 'up 12% this week',
     icon: BusinessCenterOutlinedIcon,
     label: 'Applications',
+    tone: 'primary' as const,
     value: '152',
   },
   {
     helper: 'up 2% this week',
     icon: AccessTimeOutlinedIcon,
     label: 'Interviews',
+    tone: 'success' as const,
     value: '8',
   },
   {
     helper: 'Congrats!',
     icon: CheckCircleOutlineIcon,
     label: 'Offers',
+    tone: 'warning' as const,
     value: '2',
   },
 ] as const;
