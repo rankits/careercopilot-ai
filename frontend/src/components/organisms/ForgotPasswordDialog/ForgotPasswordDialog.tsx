@@ -59,13 +59,13 @@ export function ForgotPasswordDialog({
     register,
     watch,
     trigger,
-    handleSubmit,
+    // handleSubmit,
+    reset,
   } = useForm<ForgotPasswordFormValues>({
     resolver: yupResolver(
       AUTH_FORM_VALIDATION_SCHEMAS.forgotPassword,
     ) as Resolver<ForgotPasswordFormValues>,
   });
-
   const email = watch('email', '');
   const password = watch('password', '');
   const confirmPassword = watch('confirmPassword', '');
@@ -85,11 +85,12 @@ export function ForgotPasswordDialog({
     onClose();
   }
 
-  const submitHandler = async (data: ForgotPasswordFormValues) => {
+  // const submitHandler = async (data: ForgotPasswordFormValues) => {
+  const submitHandler = async () => {
     if (step === 1) {
       const isValid = await trigger('email');
       if (!isValid) return;
-      onSendResetLink?.(data.email);
+      onSendResetLink?.(email);
       setStep(2);
       return;
     }
@@ -99,6 +100,11 @@ export function ForgotPasswordDialog({
     }
     const isValid = await trigger(['password', 'confirmPassword']);
     if (!isValid) return;
+    reset({
+      email: '',
+      password: '',
+      confirmPassword: '',
+    });
     handleClose();
   };
 
@@ -210,12 +216,13 @@ export function ForgotPasswordDialog({
                 'Choose a strong password to secure your account.'
               )}
             </Typography>
-
             <Box
               component="form"
               id="forgot-password-form"
+              noValidate
               onSubmit={(e) => {
-                void handleSubmit(submitHandler)(e);
+                e.preventDefault();
+                void submitHandler();
               }}
               sx={forgotPasswordDialogSx.form}
             >
@@ -227,10 +234,11 @@ export function ForgotPasswordDialog({
                   label="Email Address"
                   placeholder="you@example.com"
                   startAdornment={<EmailOutlinedIcon />}
-                  type="email"
+                  type="text"
                   errorMessage={typeof emailError === 'string' ? emailError : undefined}
                   {...register('email')}
                   sx={{
+                    mt: 2,
                     '& .MuiInputBase-input': {
                       fontSize: {
                         xs: '18px',

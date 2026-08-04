@@ -126,9 +126,8 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
   forgotPassword: yup.object({
     email: yup
       .string()
-      .email('Enter a valid email address')
-      .matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/, 'Enter a valid email address')
-      .required('Email is required'),
+      .required('Email is required')
+      .matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/, 'Enter a valid email address'),
     confirmPassword: yup
       .string()
       .oneOf([yup.ref('password')], 'Passwords must match')
