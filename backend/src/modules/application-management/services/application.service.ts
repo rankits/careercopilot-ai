@@ -89,8 +89,12 @@ export class ApplicationManagementService implements IApplicationManagementServi
               : ApplicationSourceType.PLATFORM_JOB,
           externalId: job.id,
         },
+        // Neither PLATFORM_JOB nor PLATFORM_APPLY triggers any real
+        // submission — both are manual/self-reported tracking entries.
+        // The note deliberately never implies Career Copilot itself
+        // applied on the platform's behalf (AJA-API-003).
         input.sourceType === 'PLATFORM_APPLY'
-          ? 'Applied via platform'
+          ? 'User marked as applied via the platform (self-reported, not submitted by Career Copilot)'
           : 'Tracked from platform job catalog',
       );
     }
