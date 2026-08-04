@@ -280,6 +280,12 @@ load_config() {
   [[ -f "${FRONTEND_DIR}/package.json" ]] || die "package.json not found in ${FRONTEND_DIR}"
   [[ -f "${FRONTEND_DIR}/package-lock.json" ]] || die "package-lock.json not found; this pipeline expects npm ci."
 
+  case "${VITE_API_BASE_URL}" in
+    *localhost*|*127.0.0.1*)
+      die "VITE_API_BASE_URL must be your public backend API URL for production (got a localhost value)."
+      ;;
+  esac
+
   ok "Loaded ${ENV_FILE} (profile=${AWS_PROFILE}, region=${AWS_REGION})"
 }
 
@@ -380,8 +386,23 @@ run_frontend_validation() {
     npm_cli test
   fi
 
-  info "npm run build (VITE_API_BASE_URL set; value not printed)"
+  info "npm run build (writing temporary .env.production.local for Vite)"
+  # Vite may not see WSL-exported env vars when npm.cmd/node.exe runs on Windows.
+  # A production local env file is the reliable way to bake VITE_* into the bundle.
+  local vite_env_file="${FRONTEND_DIR}/.env.production.local"
+  cleanup_vite_env() {
+    rm -f "${vite_env_file}"
+  }
+  trap cleanup_vite_env RETURN
+
+  cat > "${vite_env_file}" <<EOF
+VITE_API_BASE_URL=${VITE_API_BASE_URL}
+VITE_APP_NAME=${VITE_APP_NAME}
+EOF
+
   npm_cli run build
+  cleanup_vite_env
+  trap - RETURN
 
   ok "Frontend validation and build passed"
 }
@@ -417,10 +438,19 @@ validate_build_output() {
     die "Possible secrets detected in build output. Aborting."
   fi
 
+  if grep -RIl --include='*.js' --include='*.mjs' --include='*.html' 'localhost:5001' "${BUILD_DIR}" >/dev/null 2>&1; then
+    die "Build still contains localhost:5001 — VITE_API_BASE_URL was not baked in. Aborting."
+  fi
+
+  if ! grep -RIl --include='*.js' --include='*.mjs' --fixed-strings "${VITE_API_BASE_URL}" "${BUILD_DIR}" >/dev/null 2>&1; then
+    die "Build does not contain VITE_API_BASE_URL value. Vite env injection failed. Aborting."
+  fi
+
   local file_count total_size
   file_count="$(find "${BUILD_DIR}" -type f | wc -l | tr -d ' ')"
   total_size="$(du -sh "${BUILD_DIR}" | cut -f1)"
   ok "Build OK (${file_count} files, ${total_size}); JS=${js_count} CSS=${css_count}"
+  ok "Confirmed API base URL is embedded in the bundle (value not printed)"
 }
 
 read_deployment_state() {
