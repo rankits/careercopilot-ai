@@ -5,5 +5,6 @@ export * from '@/modules/ai-embeddings/observability/embedding.metrics.js';
 export * from '@/modules/ai-embeddings/providers/embedding-http.client.js';
 export * from '@/modules/ai-embeddings/providers/google-embedding.provider.js';
 export * from '@/modules/ai-embeddings/providers/groq-embedding.provider.js';
+export * from '@/modules/ai-embeddings/providers/local-http-embedding.provider.js';
 export * from '@/modules/ai-embeddings/providers/openrouter-embedding.client.js';
 export * from '@/modules/ai-embeddings/providers/openrouter-embedding.provider.js';

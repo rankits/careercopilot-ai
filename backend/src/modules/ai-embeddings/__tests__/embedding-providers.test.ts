@@ -4,6 +4,7 @@ import { createEmbeddingProvider } from '@/modules/ai-embeddings/embedding-provi
 import type { EmbeddingHttpClient } from '@/modules/ai-embeddings/providers/embedding-http.client.js';
 import { GoogleEmbeddingProvider } from '@/modules/ai-embeddings/providers/google-embedding.provider.js';
 import { GroqEmbeddingProvider } from '@/modules/ai-embeddings/providers/groq-embedding.provider.js';
+import { LocalHttpEmbeddingProvider } from '@/modules/ai-embeddings/providers/local-http-embedding.provider.js';
 import { JOB_EMBEDDING_DIMENSIONS } from '@/modules/job-embeddings/constants/job-embedding.constants.js';
 
 class RecordingHttpClient implements EmbeddingHttpClient {
@@ -69,6 +70,7 @@ describe('embedding providers', () => {
       queryPrefix: 'query: ',
       google: { apiKey: undefined, baseUrl: 'https://google.example' },
       groq: { apiKey: 'groq-key', baseUrl: 'https://groq.example' },
+      localHttp: { baseUrl: 'http://embedding-service:8080/v1' },
       openrouter: mockOpenRouterConfig,
     };
 
@@ -95,6 +97,7 @@ describe('embedding providers', () => {
       queryPrefix: 'query: ',
       google: { apiKey: undefined, baseUrl: 'https://google.example' },
       groq: { apiKey: 'groq-key', baseUrl: 'https://groq.example' },
+      localHttp: { baseUrl: 'http://embedding-service:8080/v1' },
       openrouter: mockOpenRouterConfig,
     };
 
@@ -165,6 +168,46 @@ describe('embedding providers', () => {
         encoding_format: 'float',
       },
     });
+  });
+
+  it('uses local-http OpenAI-compatible embeddings without an API key', async () => {
+    const http = new RecordingHttpClient({
+      data: [{ index: 0, embedding: vector(1) }],
+    });
+    const provider = createEmbeddingProvider(
+      {
+        provider: 'local-http',
+        model: 'sentence-transformers/all-mpnet-base-v2',
+        dimensions: JOB_EMBEDDING_DIMENSIONS,
+        requestDimensions: undefined,
+        timeoutMs: 60_000,
+        batchSize: 16,
+        batchMaxCharacters: 200_000,
+        maxRetries: 3,
+        documentPrefix: '',
+        queryPrefix: '',
+        google: { apiKey: undefined, baseUrl: 'https://google.example' },
+        groq: { apiKey: undefined, baseUrl: 'https://groq.example' },
+        localHttp: { baseUrl: 'http://embedding-service:8080/v1/' },
+        openrouter: mockOpenRouterConfig,
+      },
+      http,
+    );
+
+    expect(provider).toBeInstanceOf(LocalHttpEmbeddingProvider);
+    const result = await provider.generateEmbedding('local query', 'QUERY');
+
+    expect(result).toHaveLength(JOB_EMBEDDING_DIMENSIONS);
+    expect(http.calls[0]).toMatchObject({
+      url: 'http://embedding-service:8080/v1/embeddings',
+      headers: { 'content-type': 'application/json' },
+      body: {
+        input: ['local query'],
+        model: 'sentence-transformers/all-mpnet-base-v2',
+        encoding_format: 'float',
+      },
+    });
+    expect(http.calls[0]?.headers).not.toHaveProperty('authorization');
   });
 
   it('rejects provider vectors that do not match the configured database dimensions', async () => {
