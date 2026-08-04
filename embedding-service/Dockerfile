@@ -16,8 +16,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     EMBEDDING_DIMENSIONS=768 \
     EMBEDDING_MODEL_CACHE=/models \
     EMBEDDING_MAX_BATCH_SIZE=32 \
-    HF_HOME=/models/huggingface \
     TRANSFORMERS_CACHE=/models/transformers \
+    HF_HOME=/models/huggingface \
     SENTENCE_TRANSFORMERS_HOME=/models/sentence-transformers
 
 COPY requirements.txt .

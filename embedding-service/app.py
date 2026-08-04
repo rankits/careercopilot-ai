@@ -8,7 +8,8 @@ from __future__ import annotations
 
 import os
 import threading
-from typing import Any
+from contextlib import asynccontextmanager
+from typing import Any, AsyncIterator
 
 import uvicorn
 from fastapi import FastAPI, HTTPException
@@ -23,8 +24,6 @@ EMBEDDING_SERVICE_PORT = int(os.environ.get("EMBEDDING_SERVICE_PORT", "8080"))
 EMBEDDING_MODEL_CACHE = os.environ.get("EMBEDDING_MODEL_CACHE", "/models")
 EMBEDDING_MAX_BATCH_SIZE = int(os.environ.get("EMBEDDING_MAX_BATCH_SIZE", "32"))
 HOST = os.environ.get("EMBEDDING_HOST", "0.0.0.0")
-
-app = FastAPI(title="Career Copilot Embedding Service", version="1.0.0")
 
 _model = None
 _model_dimensions: int | None = None
@@ -91,9 +90,17 @@ def load_model() -> None:
             raise
 
 
-@app.on_event("startup")
-def on_startup() -> None:
+@asynccontextmanager
+async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     load_model()
+    yield
+
+
+app = FastAPI(
+    title="Career Copilot Embedding Service",
+    version="1.0.0",
+    lifespan=lifespan,
+)
 
 
 @app.get("/health")
