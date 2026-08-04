@@ -22,6 +22,7 @@ export const loadJobDetailPage = () => import('@/pages/JobDetailPage');
 export const loadAiMatchPage = () => import('@/pages/AiMatchPage');
 export const loadSavedJobsPage = () => import('@/pages/SavedJobsPage');
 export const loadApplicationsPage = () => import('@/pages/ApplicationsPage');
+export const loadAutoApplyPage = () => import('@/pages/AutoApplyPage');
 export const loadSavedResumesPage = () => import('@/pages/SavedResumesPage');
 export const loadResumeBuilderPage = () => import('@/pages/ResumeBuilderPage');
 export const loadEditProfilePage = () => import('@/pages/EditProfilePage');
@@ -37,6 +38,7 @@ export const LazyJobDetailPage = lazyNamed(loadJobDetailPage, 'JobDetailPage');
 export const LazyAiMatchPage = lazyNamed(loadAiMatchPage, 'AiMatchPage');
 export const LazySavedJobsPage = lazyNamed(loadSavedJobsPage, 'SavedJobsPage');
 export const LazyApplicationsPage = lazyNamed(loadApplicationsPage, 'ApplicationsPage');
+export const LazyAutoApplyPage = lazyNamed(loadAutoApplyPage, 'AutoApplyPage');
 export const LazySavedResumesPage = lazyNamed(loadSavedResumesPage, 'SavedResumesPage');
 export const LazyResumeBuilderPage = lazyNamed(loadResumeBuilderPage, 'ResumeBuilderPage');
 export const LazyEditProfilePage = lazyNamed(loadEditProfilePage, 'EditProfilePage');
@@ -49,6 +51,7 @@ const routePrefetchers: Partial<Record<string, () => Promise<unknown>>> = {
   [ROUTES.AI_MATCH]: loadAiMatchPage,
   [ROUTES.SAVED_JOBS]: loadSavedJobsPage,
   [ROUTES.APPLICATIONS]: loadApplicationsPage,
+  [ROUTES.AUTO_APPLY]: loadAutoApplyPage,
   [ROUTES.RESUME_BUILDER]: loadResumeBuilderPage,
   [ROUTES.SAVED_RESUMES]: loadSavedResumesPage,
   [ROUTES.PROFILE_EDIT]: loadEditProfilePage,
