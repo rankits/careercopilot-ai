@@ -68,7 +68,7 @@ export const StepDot = styled(Box, {
 })<{ active?: boolean; completed?: boolean }>(({ active = false, completed = false }) => ({
   ...iconBox('2.4rem'),
   background: completed ? colorTokens.feedbackSuccess : active ? primaryGradient : '#F4F5F8',
-  border: active ? '1px solid rgba(124,58,237,0.22)' : '1px solid #ECEEF3',
+  border: active ? '1px solid rgba(37, 99, 235, 0.22)' : '1px solid #ECEEF3',
   borderRadius: borderRadius.full,
   boxShadow: active ? t.purpleShadow : 'none',
   color: completed || active ? t.background : t.textMuted,

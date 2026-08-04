@@ -84,6 +84,38 @@ describe('PATCH /resumes/profile/me', () => {
       });
     });
 
+    describe('When a partial personalDetails update omits mandatory fields already on file', () => {
+      it('Then the omitted fields (e.g. summary) are preserved, not wiped out', async () => {
+        const user = await seedVerifiedUser({ email: 'update-partial-personal@example.com' });
+        seedCandidateProfile({
+          userId: String(user.id),
+          personalDetails: {
+            designation: 'Engineer',
+            email: 'ada@example.com',
+            fullName: 'Ada Lovelace',
+            phone: '+14155550000',
+            summary: 'Computing pioneer',
+            totalExperience: '10',
+          },
+        });
+        const token = accessTokenForUser(user);
+
+        const res = await request(app)
+          .patch(`${API}/profile/me`)
+          .set(authHeader(token))
+          .send({ personalDetails: { phone: '+14155552671' } });
+
+        expect(res.status).toBe(200);
+        expect(res.body.data.personalDetails).toMatchObject({
+          designation: 'Engineer',
+          fullName: 'Ada Lovelace',
+          phone: '+14155552671',
+          summary: 'Computing pioneer',
+          totalExperience: '10',
+        });
+      });
+    });
+
     describe('When updating several fields at once', () => {
       it('Then all of them are applied and persisted', async () => {
         const user = await seedVerifiedUser({ email: 'update-many@example.com' });

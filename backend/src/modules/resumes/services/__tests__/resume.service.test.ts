@@ -192,19 +192,105 @@ describe('resumeService.confirmProfile ownership (AUTH-BE-002 / AUTH-BE-003)', (
   });
 
   describe('Given the resumeId belongs to the confirming principal', () => {
-    describe('When confirmProfile is called', () => {
-      it('Then the profile is upserted and markProfileCreated is called with the numeric principal id', async () => {
+    describe('When confirmProfile is called without reviewed form values', () => {
+      it('Then it falls back to fields derived from the raw extraction', async () => {
         findResumeByIdMock.mockResolvedValue({ ...baseResume, userId: '42' });
-        findLatestExtractionMock.mockResolvedValue({ extractedData: { skills: ['Go'] } });
+        findLatestExtractionMock.mockResolvedValue({
+          extractedData: {
+            skills: ['Go'],
+            experience: [{ company: 'Acme', title: 'Staff Engineer' }],
+            professionalProfile: { summary: 'Builds reliable systems.' },
+            totalExperienceYears: 6,
+          },
+        });
         upsertCandidateProfileMock.mockResolvedValue({ userId: '42' });
 
         await resumeService.confirmProfile({ userId: '42', resumeId: 'resume-1' });
 
         expect(upsertCandidateProfileMock).toHaveBeenCalledWith(
-          expect.objectContaining({ userId: '42', sourceResumeId: 'resume-1' }),
+          expect.objectContaining({
+            userId: '42',
+            sourceResumeId: 'resume-1',
+            personalDetails: expect.objectContaining({
+              summary: 'Builds reliable systems.',
+              designation: 'Staff Engineer',
+              currentCompany: 'Acme',
+              totalExperience: 6,
+            }),
+          }),
         );
         expect(markProfileCreatedMock).toHaveBeenCalledWith(42);
         expect(invalidateUserRecommendationStateMock).toHaveBeenCalledWith('42');
+      });
+    });
+
+    describe('When confirmProfile is called with reviewed form values (AUTH-BE-002 gap fix)', () => {
+      it('Then the caller-submitted values are stored verbatim instead of the raw extraction', async () => {
+        findResumeByIdMock.mockResolvedValue({ ...baseResume, userId: '42' });
+        // The raw extraction would produce a different summary - proves the
+        // submitted review-form values win, not silently discarded.
+        findLatestExtractionMock.mockResolvedValue({
+          extractedData: { professionalProfile: { summary: 'Stale parsed summary' } },
+        });
+        upsertCandidateProfileMock.mockResolvedValue({ userId: '42' });
+
+        await resumeService.confirmProfile({
+          userId: '42',
+          resumeId: 'resume-1',
+          personalDetails: { fullName: 'Ada Lovelace', summary: 'Edited by the user.' },
+          skills: ['TypeScript'],
+        });
+
+        expect(upsertCandidateProfileMock).toHaveBeenCalledWith(
+          expect.objectContaining({
+            userId: '42',
+            sourceResumeId: 'resume-1',
+            personalDetails: { fullName: 'Ada Lovelace', summary: 'Edited by the user.' },
+            skills: ['TypeScript'],
+          }),
+        );
+      });
+    });
+  });
+});
+
+describe('resumeService.updateCandidateProfile personalDetails merge', () => {
+  describe('Given an existing profile with personalDetails already set', () => {
+    describe('When a partial update only sends some personalDetails keys', () => {
+      it('Then the untouched keys (e.g. summary) survive instead of being wiped out', async () => {
+        const existing = {
+          userId: ownerId,
+          personalDetails: {
+            designation: 'Engineer',
+            email: 'ada@example.com',
+            fullName: 'Ada Lovelace',
+            summary: 'Computing pioneer',
+          },
+          experience: [],
+          education: [],
+          skills: ['TypeScript'],
+          certifications: [],
+          sourceResumeId: 'resume-1',
+          confirmedAt: new Date(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
+        findCandidateProfileByUserIdMock.mockResolvedValue(existing);
+        updateCandidateProfileMock.mockResolvedValue(existing);
+
+        await resumeService.updateCandidateProfile(ownerId, {
+          personalDetails: { phone: '+44 1234' },
+        });
+
+        expect(updateCandidateProfileMock).toHaveBeenCalledWith(ownerId, {
+          personalDetails: {
+            designation: 'Engineer',
+            email: 'ada@example.com',
+            fullName: 'Ada Lovelace',
+            summary: 'Computing pioneer',
+            phone: '+44 1234',
+          },
+        });
       });
     });
   });

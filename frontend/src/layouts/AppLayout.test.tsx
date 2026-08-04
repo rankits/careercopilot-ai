@@ -59,6 +59,7 @@ function renderLayout() {
                   <Route path="/app" element={<h1>Dashboard</h1>} />
                 </Route>
                 <Route path="/login" element={<h1>Login destination</h1>} />
+                <Route path="/profile" element={<h1>Upload resume destination</h1>} />
               </Routes>
             </MemoryRouter>
           </ToastProvider>
@@ -90,6 +91,18 @@ describe('AppLayout logout', () => {
     expect(store.getState().auth.isAuthenticated).toBe(false);
     expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
     expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
+  });
+
+  it('navigates to the upload-resume page when "Upload Resume" is clicked', async () => {
+    const user = userEvent.setup();
+    renderLayout();
+
+    await user.click(screen.getByRole('button', { name: /user menu/i }));
+    await user.click(screen.getByRole('menuitem', { name: /upload resume/i }));
+
+    expect(
+      await screen.findByRole('heading', { name: /upload resume destination/i }),
+    ).toBeInTheDocument();
   });
 
   it('still clears the session and shows an error toast when the logout API fails', async () => {
