@@ -244,10 +244,27 @@ describe('ProfilePage resume parsing', () => {
     await confirmDialog(user);
 
     await waitFor(() =>
-      expect(confirmProfileMock).toHaveBeenCalledWith({
-        resumeId: 'resume-1',
-        userId: 'user-1',
-      }),
+      expect(confirmProfileMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resumeId: 'resume-1',
+          userId: 'user-1',
+          certifications: [],
+          education: [],
+          experience: [],
+          personalDetails: expect.objectContaining({
+            currentCompany: 'Analytical Engines',
+            designation: 'Engineer',
+            email: 'ada@example.com',
+            fullName: 'Ada Lovelace',
+            location: 'London, UK',
+            phone: '+44 1234',
+            projects: [],
+            summary: 'Computing pioneer',
+            totalExperience: '8',
+          }),
+          skills: ['Algorithms'],
+        }),
+      ),
     );
     expect(onSave).toHaveBeenCalled();
     expect(await screen.findByText(/profile created successfully/i)).toBeInTheDocument();

@@ -290,4 +290,72 @@ describe('POST /resumes/profile/:userId confirm (AUTH-BE-002 / AUTH-BE-003)', ()
       });
     });
   });
+
+  describe('Given the caller submits the reviewed profile fields alongside resumeId', () => {
+    describe('When the raw extraction would have produced different data', () => {
+      it('Then the submitted (reviewed) values are stored, not the stale raw extraction', async () => {
+        const user = await seedVerifiedUser({ email: 'reviewed-summary@example.com' });
+        const resume = seedResume({ userId: String(user.id) });
+        seedResumeExtraction({
+          resumeId: resume.id,
+          extractedData: {
+            personalDetails: { fullName: 'A. User', summary: 'Stale parsed summary' },
+          },
+        });
+        const token = accessTokenForUser(user);
+
+        const res = await request(app)
+          .post(`${API}/profile/${user.id}`)
+          .set(authHeader(token))
+          .send({
+            resumeId: resume.id,
+            personalDetails: {
+              designation: 'Engineer',
+              email: user.email,
+              fullName: 'A. User',
+              phone: '+14155552671',
+              summary: 'Reviewed and edited by the user.',
+              totalExperience: '5',
+            },
+            skills: ['TypeScript'],
+          });
+
+        expect(res.status).toBe(200);
+        const profile = fakeDb.candidateProfiles.find((p) => p.userId === String(user.id));
+        expect((profile?.personalDetails as { summary?: string })?.summary).toBe(
+          'Reviewed and edited by the user.',
+        );
+        expect(profile?.skills).toEqual(['TypeScript']);
+      });
+    });
+  });
+
+  describe('Given the submitted personalDetails is missing a mandatory field', () => {
+    describe('When confirming', () => {
+      it('Then a 400 validation error is returned and no profile is created', async () => {
+        const user = await seedVerifiedUser({ email: 'incomplete-confirm@example.com' });
+        const resume = seedResume({ userId: String(user.id) });
+        seedResumeExtraction({ resumeId: resume.id });
+        const token = accessTokenForUser(user);
+
+        const res = await request(app)
+          .post(`${API}/profile/${user.id}`)
+          .set(authHeader(token))
+          .send({
+            resumeId: resume.id,
+            // summary is missing - should fail validation before anything is written.
+            personalDetails: {
+              designation: 'Engineer',
+              email: user.email,
+              fullName: 'A. User',
+              phone: '+14155552671',
+              totalExperience: '5',
+            },
+          });
+
+        expect(res.status).toBe(400);
+        expect(fakeDb.candidateProfiles.find((p) => p.userId === String(user.id))).toBeUndefined();
+      });
+    });
+  });
 });
