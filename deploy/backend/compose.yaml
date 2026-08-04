@@ -1,6 +1,10 @@
 # Production Docker Compose for Career Copilot Backend
 # Only includes API container and required Outbox Relay worker.
 # Redis, RabbitMQ, and PostgreSQL run externally via private networking.
+#
+# Fixed project name so release-directory deploys replace the same stack
+# instead of competing for 127.0.0.1:5001.
+name: career-copilot-backend
 
 services:
   api:
