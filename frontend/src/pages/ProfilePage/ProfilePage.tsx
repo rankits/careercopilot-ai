@@ -237,10 +237,12 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
         if (!currentUser) {
           throw new Error('You must be signed in to confirm your profile.');
         }
+        // Confirming a parsed resume should persist the reviewed profile values
+        // that the user saw and edited on-screen, not just the resume id.
         return resumeService.confirmProfile({
+          ...mapFormValuesToProfileUpdate(profile),
           resumeId: parser.resumeId,
           userId: currentUser.id,
-          ...mapFormValuesToProfileUpdate(profile),
         });
       }
       if (!onSave) {
