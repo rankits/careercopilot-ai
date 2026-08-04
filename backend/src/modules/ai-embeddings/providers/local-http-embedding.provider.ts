@@ -7,6 +7,7 @@ import {
   FetchEmbeddingHttpClient,
   type EmbeddingHttpClient,
 } from '@/modules/ai-embeddings/providers/embedding-http.client.js';
+import { logger } from '@/shared/logger/logger.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
 interface LocalHttpEmbeddingResponse {
@@ -29,6 +30,7 @@ export class LocalHttpEmbeddingProvider extends BaseEmbeddingProvider {
   private readonly baseUrl: string;
   private readonly timeoutMs: number;
   private readonly http: EmbeddingHttpClient;
+  private readonly log = logger.child({ component: 'local-http-embedding' });
 
   constructor(
     options: LocalHttpEmbeddingProviderOptions,
@@ -42,8 +44,13 @@ export class LocalHttpEmbeddingProvider extends BaseEmbeddingProvider {
 
   protected async requestBatch(
     texts: readonly string[],
-    _purpose: EmbeddingPurpose,
+    purpose: EmbeddingPurpose,
   ): Promise<number[][]> {
+    const startedAt = Date.now();
+    this.log.info(
+      { purpose, batchSize: texts.length, model: this.model, baseUrl: this.baseUrl },
+      'Requesting local-http embeddings',
+    );
     const response = await this.http.post<LocalHttpEmbeddingResponse>(
       `${this.baseUrl}/embeddings`,
       {
@@ -61,8 +68,19 @@ export class LocalHttpEmbeddingProvider extends BaseEmbeddingProvider {
         'INVALID_EMBEDDING_RESPONSE',
       );
     }
-    return [...response.data]
+    const vectors = [...response.data]
       .sort((left, right) => (left.index ?? 0) - (right.index ?? 0))
       .map((item) => (Array.isArray(item.embedding) ? item.embedding : []));
+    this.log.info(
+      {
+        purpose,
+        batchSize: texts.length,
+        vectorCount: vectors.length,
+        dimensions: vectors[0]?.length,
+        durationMs: Date.now() - startedAt,
+      },
+      'Local-http embeddings received',
+    );
+    return vectors;
   }
 }

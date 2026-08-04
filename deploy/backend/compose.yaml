@@ -99,6 +99,38 @@ services:
     networks:
       - career-copilot-network
 
+  # Consumes outbox → RabbitMQ job-embedding requests and writes pgvector rows.
+  # Without this worker, jobs exist but recommendations retrieve 0 candidates.
+  job-embedding-worker:
+    image: ${BACKEND_IMAGE}
+    command: ['node', 'dist/workers/run-job-embedding-worker.js']
+    env_file:
+      - ${SHARED_ENV_FILE:-/opt/career-copilot/backend/shared/.env}
+    environment:
+      NODE_ENV: production
+      RUN_MIGRATIONS: 'false'
+      RUN_SEEDS_ON_STARTUP: 'false'
+      AI_EMBEDDING_PROVIDER: local-http
+      AI_EMBEDDING_BASE_URL: http://embedding-service:8080/v1
+      AI_EMBEDDING_MODEL: ${EMBEDDING_MODEL:-sentence-transformers/all-mpnet-base-v2}
+      AI_EMBEDDING_DIMENSIONS: '768'
+      AI_EMBEDDING_TIMEOUT_MS: ${AI_EMBEDDING_TIMEOUT_MS:-60000}
+      AI_EMBEDDING_BATCH_SIZE: ${AI_EMBEDDING_BATCH_SIZE:-16}
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      embedding-service:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+    networks:
+      - career-copilot-network
+
 networks:
   career-copilot-network:
     driver: bridge
