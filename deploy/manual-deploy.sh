@@ -285,6 +285,9 @@ run_backend_validation() {
   info "npm ci"
   npm ci
 
+  info "npx prisma generate"
+  npx prisma generate
+
   info "npm run lint"
   npm run lint
 
@@ -609,7 +612,7 @@ print_plan() {
   cat <<EOF
   1. Validate tooling + AWS/Docker auth
   2. Resolve version → ${VERSION}
-  3. Backend: npm ci, lint, typecheck, test, build, prisma validate
+  3. Backend: npm ci, prisma generate, lint, typecheck, test, build, prisma validate
   4. docker buildx build/push ${IMAGE} (linux/amd64)
   5. Package deploy/backend → ${BUNDLE}
   6. Upload ${S3_URI}
