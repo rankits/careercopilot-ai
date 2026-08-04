@@ -545,28 +545,47 @@ poll_ssm() {
     sleep 5
   done
 
+  local stdout_content="" stderr_content=""
+  stdout_content="$(
+    aws_cli ssm get-command-invocation \
+      --command-id "${command_id}" \
+      --instance-id "${EC2_INSTANCE_ID}" \
+      --region "${AWS_REGION}" \
+      --profile "${AWS_PROFILE}" \
+      --query "StandardOutputContent" \
+      --output text 2>/dev/null || true
+  )"
+  stderr_content="$(
+    aws_cli ssm get-command-invocation \
+      --command-id "${command_id}" \
+      --instance-id "${EC2_INSTANCE_ID}" \
+      --region "${AWS_REGION}" \
+      --profile "${AWS_PROFILE}" \
+      --query "StandardErrorContent" \
+      --output text 2>/dev/null || true
+  )"
+
   echo
   info "--- SSM StandardOutputContent ---"
-  aws_cli ssm get-command-invocation \
-    --command-id "${command_id}" \
-    --instance-id "${EC2_INSTANCE_ID}" \
-    --region "${AWS_REGION}" \
-    --profile "${AWS_PROFILE}" \
-    --query "StandardOutputContent" \
-    --output text || true
-
+  printf '%s\n' "${stdout_content}"
   echo
   info "--- SSM StandardErrorContent ---"
-  aws_cli ssm get-command-invocation \
-    --command-id "${command_id}" \
-    --instance-id "${EC2_INSTANCE_ID}" \
-    --region "${AWS_REGION}" \
-    --profile "${AWS_PROFILE}" \
-    --query "StandardErrorContent" \
-    --output text || true
+  printf '%s\n' "${stderr_content}"
   echo
 
-  [[ "${status}" == "Success" ]] || die "SSM deployment failed with status: ${status}"
+  if [[ "${status}" != "Success" ]]; then
+    echo
+    err "SSM deployment failed with status: ${status}"
+    echo
+    info "--- Extracted failure reason (from EC2 deploy.sh) ---"
+    # Prefer explicit failure markers written by deploy/backend/deploy.sh
+    {
+      printf '%s\n%s\n' "${stderr_content}" "${stdout_content}"
+    } | grep -E 'FAILURE DETECTED|DEPLOYMENT FAILURE DETAILS|Reason:|Failed step:|Health check failed|Error:|Prisma|Nginx validation' \
+      || true
+    echo
+    die "Remote deploy failed (SSM ${status}). See failure reason / logs above. CommandId=${command_id}"
+  fi
   ok "SSM deployment succeeded"
 }
 

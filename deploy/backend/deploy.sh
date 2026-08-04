@@ -88,36 +88,96 @@ NGINX_BACKUP="$STATE_DIR/nginx.conf.bak"
 NGINX_CHANGED="false"
 
 DEPLOY_SUCCESS="false"
+CURRENT_STEP="startup"
+FAILURE_EXIT_CODE=""
+FAILURE_LINE=""
+FAILURE_COMMAND=""
+FAILURE_REASON=""
+
+on_error() {
+  local exit_code=$?
+  FAILURE_EXIT_CODE="$exit_code"
+  FAILURE_LINE="${BASH_LINENO[0]:-unknown}"
+  FAILURE_COMMAND="${BASH_COMMAND:-unknown}"
+  FAILURE_REASON="Step '${CURRENT_STEP}' failed (exit ${exit_code}) at line ${FAILURE_LINE}: ${FAILURE_COMMAND}"
+  echo "!!! FAILURE DETECTED: ${FAILURE_REASON}" >&2
+}
+
+print_failure_diagnostics() {
+  echo "!!! -------------------- DEPLOYMENT FAILURE DETAILS --------------------" >&2
+  echo "!!! Reason: ${FAILURE_REASON:-unknown failure (script exited before success)}" >&2
+  echo "!!! Failed step: ${CURRENT_STEP}" >&2
+  echo "!!! Target image: ${IMAGE_TAG}" >&2
+  echo "!!! Target release: ${RELEASE_SHA}" >&2
+  echo "!!! Release dir: ${RELEASE_DIR}" >&2
+  if [[ -n "${CURRENT_IMAGE}" ]]; then
+    echo "!!! Rolling back toward: release=${CURRENT_RELEASE} image=${CURRENT_IMAGE}" >&2
+  else
+    echo "!!! No previous stable release recorded — rollback may be limited." >&2
+  fi
+  echo "!!! -------------------------------------------------------------------" >&2
+
+  echo ">>> Container status at failure:" >&2
+  (
+    export BACKEND_IMAGE="${IMAGE_TAG}"
+    docker compose -f compose.yaml ps -a || true
+  ) >&2 || true
+
+  echo ">>> Recent api logs:" >&2
+  (
+    export BACKEND_IMAGE="${IMAGE_TAG}"
+    docker compose -f compose.yaml logs --tail=80 api || true
+  ) >&2 || true
+
+  echo ">>> Recent outbox-relay logs:" >&2
+  (
+    export BACKEND_IMAGE="${IMAGE_TAG}"
+    docker compose -f compose.yaml logs --tail=40 outbox-relay || true
+  ) >&2 || true
+
+  echo ">>> Local health probe:" >&2
+  curl -sS -m 5 "http://127.0.0.1:5001/health" >&2 || echo "(health endpoint unreachable)" >&2
+  echo >&2
+}
 
 rollback() {
   echo "!!! Deployment failed! Initiating automatic rollback..." >&2
+  print_failure_diagnostics
+
   if [[ -n "$CURRENT_IMAGE" && -n "$CURRENT_RELEASE" && -d "$RELEASES_DIR/$CURRENT_RELEASE" ]]; then
-    echo ">>> Rolling back to previous stable release ($CURRENT_RELEASE) with image $CURRENT_IMAGE..."
+    echo ">>> Rolling back to previous stable release ($CURRENT_RELEASE) with image $CURRENT_IMAGE..." >&2
     (
       cd "$RELEASES_DIR/$CURRENT_RELEASE"
       export BACKEND_IMAGE="$CURRENT_IMAGE"
       docker compose -f compose.yaml down --remove-orphans || true
       docker compose -f compose.yaml up -d --remove-orphans || true
     ) || true
+    echo ">>> Rollback containers restarted for release ${CURRENT_RELEASE}." >&2
+  else
+    echo "!!! Unable to roll back automatically: missing previous release/image state." >&2
   fi
 
   if [[ "$NGINX_CHANGED" == "true" && -f "$NGINX_BACKUP" ]]; then
-    echo ">>> Restoring previous Nginx configuration..."
+    echo ">>> Restoring previous Nginx configuration..." >&2
     sudo cp -f "$NGINX_BACKUP" "$NGINX_TARGET"
     sudo nginx -t && sudo systemctl reload nginx || true
   fi
-  echo "!!! Rollback completed." >&2
+  echo "!!! Rollback finished. See FAILURE DETAILS above for the root cause." >&2
 }
 
+trap on_error ERR
 trap 'if [[ "$DEPLOY_SUCCESS" != "true" ]]; then rollback; fi' EXIT
 
+CURRENT_STEP="validate-compose"
 echo ">>> Validating Docker Compose configuration..."
 export BACKEND_IMAGE="$IMAGE_TAG"
 docker compose -f compose.yaml config >/dev/null
 
+CURRENT_STEP="pull-image"
 echo ">>> Pulling exact SHA-tagged Docker image: $IMAGE_TAG..."
 docker pull "$IMAGE_TAG"
 
+CURRENT_STEP="prisma-migrate"
 echo ">>> Running Prisma migrations once before replacing healthy services..."
 docker run --rm \
   --env-file "$ENV_FILE" \
@@ -127,13 +187,16 @@ docker run --rm \
   "$IMAGE_TAG" npx prisma migrate deploy
 echo ">>> Prisma migrations completed successfully."
 
+CURRENT_STEP="compose-up"
 echo ">>> Starting backend services with Docker Compose..."
 docker compose -f compose.yaml up -d --remove-orphans
 
+CURRENT_STEP="health-check"
 echo ">>> Verifying container-local health endpoint..."
 ./health-check.sh
 
 # Synchronize Nginx configuration if changed
+CURRENT_STEP="nginx-sync"
 if [[ -f "$NGINX_TARGET" ]] && cmp -s "nginx.conf" "$NGINX_TARGET"; then
   echo ">>> Nginx configuration is unchanged. Skipping reload."
 else
@@ -151,11 +214,13 @@ else
     sudo systemctl reload nginx
     NGINX_CHANGED="true"
   else
-    echo "Error: Nginx validation failed! Aborting deployment." >&2
+    FAILURE_REASON="Nginx validation failed after copying nginx.conf (step=nginx-sync)"
+    echo "Error: ${FAILURE_REASON}" >&2
     exit 1
   fi
 fi
 
+CURRENT_STEP="record-state"
 echo ">>> Recording successful deployment state..."
 if [[ -n "$CURRENT_IMAGE" ]]; then
   echo "$CURRENT_IMAGE" > "$STATE_DIR/PREVIOUS_IMAGE"
@@ -172,6 +237,7 @@ ln -sfn "$RELEASE_DIR" "$BASE_DIR/current"
 DEPLOY_SUCCESS="true"
 echo ">>> Backend deployment completed successfully for release $RELEASE_SHA!"
 
+CURRENT_STEP="cleanup"
 echo ">>> Safely cleaning up old release directories (retaining 3 most recent)..."
 (
   cd "$RELEASES_DIR"

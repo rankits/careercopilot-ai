@@ -36,4 +36,13 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
 done
 
 echo "Error: Health check failed after $MAX_ATTEMPTS attempts (~2 minutes)." >&2
+echo "Error: Last HTTP status: ${HTTP_CODE:-unknown}" >&2
+echo "Error: Last response body: ${BODY:-<empty>}" >&2
+echo "Error: Expected HTTP 200 and JSON containing \"status\":\"ok\"." >&2
+if command -v docker >/dev/null 2>&1 && [[ -f compose.yaml ]]; then
+  echo ">>> docker compose ps -a:" >&2
+  docker compose -f compose.yaml ps -a >&2 || true
+  echo ">>> Recent api logs:" >&2
+  docker compose -f compose.yaml logs --tail=60 api >&2 || true
+fi
 exit 1
