@@ -100,7 +100,7 @@ export const AnalysisShell = styled(Box)({
   '& .uploaded-resume': {
     alignItems: 'center',
     background: `linear-gradient(135deg, ${t.background}, ${t.primarySofter})`,
-    border: '1px solid rgba(124,58,237,0.16)',
+    border: '1px solid rgba(37, 99, 235, 0.16)',
     borderRadius: borderRadius.xl,
     display: 'grid',
     gap: spacing[3],
@@ -124,7 +124,11 @@ export const AnalysisShell = styled(Box)({
     lineHeight: 1.2,
     '& span': { color: t.primary },
   },
-  '& .tip-title': { color: t.primaryHover, fontSize: fontSize.sm, fontWeight: fontWeight.extraBold },
+  '& .tip-title': {
+    color: t.primaryHover,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.extraBold,
+  },
   '& .tip-text': { ...muted, fontSize: fontSize.xs, lineHeight: 1.55 },
 });
 
@@ -388,7 +392,7 @@ export const AnalysisMain = styled(Box, {
   '& .progress-notice': {
     alignItems: 'center',
     background: `linear-gradient(135deg, ${t.primarySoft}, ${t.background})`,
-    border: '1px solid rgba(124,58,237,0.2)',
+    border: '1px solid rgba(37, 99, 235, 0.2)',
     borderRadius: borderRadius['2xl'],
     color: t.primary,
     display: 'grid',
@@ -406,7 +410,7 @@ export const AnalysisLoadingGlow = styled(Box)({
   },
   animation: 'analysisScan 1.8s ease-in-out infinite',
   background:
-    'linear-gradient(90deg, transparent, rgba(124,58,237,0.1), rgba(255,255,255,0.58), rgba(124,58,237,0.08), transparent)',
+    'linear-gradient(90deg, transparent, rgba(37, 99, 235, 0.1), rgba(255,255,255,0.58), rgba(37, 99, 235, 0.08), transparent)',
   inset: 0,
   pointerEvents: 'none',
   position: 'absolute',
@@ -414,11 +418,11 @@ export const AnalysisLoadingGlow = styled(Box)({
   zIndex: 1,
 });
 
-export const AnalysisScoreTrackSx = { color: '#E9D5FF', position: 'absolute' as const };
+export const AnalysisScoreTrackSx = { color: t.primarySofter, position: 'absolute' as const };
 
 export const analysisScoreProgressSx = (hasScore: boolean) => ({
-  color: hasScore ? t.primary : '#A78BFA',
-  filter: 'drop-shadow(0 10px 18px rgba(124,58,237,0.22))',
+  color: hasScore ? t.primary : '#60A5FA',
+  filter: 'drop-shadow(0 10px 18px rgba(37, 99, 235, 0.22))',
   transform: 'rotate(-90deg)',
   '& .MuiCircularProgress-circle': { strokeLinecap: 'round' as const },
 });
@@ -514,7 +518,7 @@ export const ReviewPanel = styled(Box)({
     },
     '& button.active': {
       background: t.primarySofter,
-      borderColor: 'rgba(124,58,237,0.35)',
+      borderColor: 'rgba(37, 99, 235, 0.35)',
       color: t.primary,
     },
   },
@@ -555,7 +559,7 @@ export const ReviewPanel = styled(Box)({
     display: 'grid',
     gap: spacing[3],
     '& textarea': {
-      borderColor: 'rgba(124,58,237,0.5)',
+      borderColor: 'rgba(37, 99, 235, 0.5)',
       fontSize: fontSize.lg,
       lineHeight: 1.55,
       minHeight: '15rem',
@@ -603,7 +607,7 @@ export const ReviewPanel = styled(Box)({
   '& .ai-card': {
     alignItems: 'center',
     background: `linear-gradient(135deg, ${t.primarySoft}, ${t.background})`,
-    border: '1px solid rgba(124,58,237,0.2)',
+    border: '1px solid rgba(37, 99, 235, 0.2)',
     borderRadius: borderRadius['2xl'],
     display: 'grid',
     gap: spacing[4],
@@ -612,7 +616,11 @@ export const ReviewPanel = styled(Box)({
     '@media (max-width: 48rem)': { gridTemplateColumns: 'auto minmax(0, 1fr)' },
   },
   '& .ai-icon': iconBox('3rem'),
-  '& .tip-title': { color: t.primaryHover, fontSize: fontSize.sm, fontWeight: fontWeight.extraBold },
+  '& .tip-title': {
+    color: t.primaryHover,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.extraBold,
+  },
   '& .tip-text': { ...muted, fontSize: fontSize.xs, lineHeight: 1.55 },
   '& .issues-card': {
     border,
@@ -629,7 +637,7 @@ export const ReviewPanel = styled(Box)({
     '& button': {
       alignItems: 'end',
       aspectRatio: '3 / 4',
-      background: 'linear-gradient(160deg, #FFFFFF 0%, #FFFFFF 60%, #F5F0FF 60%, #F5F0FF 100%)',
+      background: 'linear-gradient(160deg, #FFFFFF 0%, #FFFFFF 60%, #EFF6FF 60%, #EFF6FF 100%)',
       border,
       borderRadius: borderRadius.xl,
       color: t.text,

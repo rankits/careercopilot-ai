@@ -1,6 +1,16 @@
 import { Box, LinearProgress, styled } from '@/lib/material';
 
-import { border, borderRadius, fontSize, fontWeight, iconBox, muted, spacing, t, title } from '../../styles/shared';
+import {
+  border,
+  borderRadius,
+  fontSize,
+  fontWeight,
+  iconBox,
+  muted,
+  spacing,
+  t,
+  title,
+} from '../../styles/shared';
 
 export const HeroHeader = styled(Box)({
   alignItems: 'center',
@@ -25,7 +35,7 @@ export const HeroHeader = styled(Box)({
   '& .title-icon': {
     ...iconBox('3.25rem'),
     background: `linear-gradient(145deg, ${t.primarySoft}, ${t.background})`,
-    border: '1px solid rgba(124,58,237,0.22)',
+    border: '1px solid rgba(37, 99, 235, 0.22)',
     borderRadius: borderRadius['2xl'],
     boxShadow: t.purpleShadow,
     flex: '0 0 auto',
