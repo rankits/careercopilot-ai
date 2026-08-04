@@ -58,8 +58,8 @@ describe('ResumeBuilderPage constants', () => {
 
       expect(step1!.internalSteps).toEqual([1]);
       expect(step2!.internalSteps).toEqual([2]);
-      expect(step3!.internalSteps).toEqual([3, 4]);
-      expect(step4!.internalSteps).toEqual([5]);
+      expect(step3!.internalSteps).toEqual([3]);
+      expect(step4!.internalSteps).toEqual([4, 5]);
       expect(step5!.internalSteps).toEqual([10]);
     });
   });

@@ -2,13 +2,13 @@ import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
-import { MemoryRouter } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { authReducer } from '@/features/auth/authSlice';
 import type { AuthState, User } from '@/features/auth/types/auth.types';
 
-import { AppRouter } from './AppRouter';
+import { appRouteObjects } from './AppRouter';
 
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
@@ -77,13 +77,12 @@ function renderRoute(path: string, store = createStore()) {
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
+  const router = createMemoryRouter(appRouteObjects, { initialEntries: [path] });
 
   return render(
     <QueryClientProvider client={queryClient}>
       <Provider store={store}>
-        <MemoryRouter initialEntries={[path]}>
-          <AppRouter />
-        </MemoryRouter>
+        <RouterProvider router={router} />
       </Provider>
     </QueryClientProvider>,
   );
