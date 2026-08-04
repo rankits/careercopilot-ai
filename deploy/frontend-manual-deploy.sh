@@ -86,7 +86,7 @@ Local setup:
 Required env file keys:
   AWS_PROFILE, AWS_REGION, FRONTEND_S3_BUCKET, CLOUDFRONT_DISTRIBUTION_ID,
   FRONTEND_PUBLIC_URL, FRONTEND_DIRECTORY, FRONTEND_BUILD_DIRECTORY,
-  VITE_API_BASE_URL, VITE_APP_NAME
+  VITE_API_BASE_URL, VITE_APP_NAME, VITE_APP_ENV, VITE_PUBLIC_APP_URL
 
 Never store AWS access keys or application secrets in
 deploy/frontend-manual-deploy.env.
@@ -261,6 +261,8 @@ load_config() {
     FRONTEND_BUILD_DIRECTORY
     VITE_API_BASE_URL
     VITE_APP_NAME
+    VITE_APP_ENV
+    VITE_PUBLIC_APP_URL
   )
   local key
   for key in "${required[@]}"; do
@@ -269,7 +271,7 @@ load_config() {
 
   export AWS_PROFILE AWS_REGION
   export AWS_DEFAULT_REGION="${AWS_REGION}"
-  export VITE_API_BASE_URL VITE_APP_NAME
+  export VITE_API_BASE_URL VITE_APP_NAME VITE_APP_ENV VITE_PUBLIC_APP_URL
 
   FRONTEND_DIR="${REPO_ROOT}/${FRONTEND_DIRECTORY}"
   BUILD_DIR="${FRONTEND_DIR}/${FRONTEND_BUILD_DIRECTORY}"
@@ -280,13 +282,17 @@ load_config() {
   [[ -f "${FRONTEND_DIR}/package.json" ]] || die "package.json not found in ${FRONTEND_DIR}"
   [[ -f "${FRONTEND_DIR}/package-lock.json" ]] || die "package-lock.json not found; this pipeline expects npm ci."
 
-  case "${VITE_API_BASE_URL}" in
-    *localhost*|*127.0.0.1*)
-      die "VITE_API_BASE_URL must be your public backend API URL for production (got a localhost value)."
-      ;;
-  esac
+  if [[ -z "${VITE_API_BASE_URL:-}" ]]; then
+    die "VITE_API_BASE_URL is missing from ${ENV_FILE}"
+  fi
+
+  if [[ "${ENVIRONMENT}" == "production" ]] &&
+    [[ "${VITE_API_BASE_URL}" == *"localhost"* || "${VITE_API_BASE_URL}" == *"127.0.0.1"* ]]; then
+    die "Production VITE_API_BASE_URL cannot use localhost"
+  fi
 
   ok "Loaded ${ENV_FILE} (profile=${AWS_PROFILE}, region=${AWS_REGION})"
+  info "VITE_API_BASE_URL is set for production build (value printed at build stage)"
 }
 
 validate_tooling() {
@@ -386,9 +392,30 @@ run_frontend_validation() {
     npm_cli test
   fi
 
-  info "npm run build (writing temporary .env.production.local for Vite)"
-  # Vite may not see WSL-exported env vars when npm.cmd/node.exe runs on Windows.
-  # A production local env file is the reliable way to bake VITE_* into the bundle.
+  info "Build frontend for production"
+  # Re-export from the env file so npm/Vite definitely inherit VITE_* values.
+  local build_env_normalized
+  build_env_normalized="$(mktemp "${TMPDIR:-/tmp}/career-copilot-fe-build-env-XXXXXX")"
+  tr -d '\r' < "${ENV_FILE}" > "${build_env_normalized}"
+  set -a
+  # shellcheck disable=SC1090
+  source "${build_env_normalized}"
+  set +a
+  rm -f "${build_env_normalized}"
+
+  export VITE_API_BASE_URL VITE_APP_NAME VITE_APP_ENV VITE_PUBLIC_APP_URL
+
+  if [[ -z "${VITE_API_BASE_URL:-}" ]]; then
+    die "VITE_API_BASE_URL is missing from ${ENV_FILE}"
+  fi
+  if [[ "${ENVIRONMENT}" == "production" ]] &&
+    [[ "${VITE_API_BASE_URL}" == *"localhost"* || "${VITE_API_BASE_URL}" == *"127.0.0.1"* ]]; then
+    die "Production VITE_API_BASE_URL cannot use localhost"
+  fi
+
+  info "Building frontend with API URL: ${VITE_API_BASE_URL}"
+
+  # Also write .env.production.local so Windows npm.cmd/node.exe (via WSL) sees the values.
   local vite_env_file="${FRONTEND_DIR}/.env.production.local"
   cleanup_vite_env() {
     rm -f "${vite_env_file}"
@@ -398,6 +425,8 @@ run_frontend_validation() {
   cat > "${vite_env_file}" <<EOF
 VITE_API_BASE_URL=${VITE_API_BASE_URL}
 VITE_APP_NAME=${VITE_APP_NAME}
+VITE_APP_ENV=${VITE_APP_ENV}
+VITE_PUBLIC_APP_URL=${VITE_PUBLIC_APP_URL}
 EOF
 
   npm_cli run build
