@@ -101,8 +101,7 @@ const SECTION_LABELS =
 const ROLE_TITLE_ENDING =
   /\b(?:administrator|analyst|associate|consultant|developer|director|engineer|executive|lead|manager|officer|representative|specialist|trainee)$\b/i;
 
-const KNOWN_TECH_SHAPE =
-  /^(?:[A-Z]{2,8}|[A-Za-z]+(?:\.[A-Za-z]+)+|C\+\+|C#|\.NET|CI\/CD|UI\/UX)$/;
+const KNOWN_TECH_SHAPE = /^(?:[A-Z]{2,8}|[A-Za-z]+(?:\.[A-Za-z]+)+|C\+\+|C#|\.NET|CI\/CD|UI\/UX)$/;
 
 const PROFESSIONAL_NOUN_ENDING =
   /\b(?:accounting|acquisition|administration|analysis|analytics|architecture|automation|billing|budgeting|calling|care|coding|compliance|coordination|design|development|documentation|engagement|forecasting|generation|management|marketing|negotiation|operations|payable|payroll|planning|procurement|reconciliation|records|recruitment|reporting|research|sales|sourcing|strategy|support|testing|training)\b/i;
@@ -117,7 +116,11 @@ const cleanSkillText = (value: string): string =>
 
 const toTitleCase = (value: string): string =>
   value.replace(/\b[A-Za-z][A-Za-z/#.+-]*/g, (word) => {
-    if (/^(?:API|ATS|AWS|B2B|B2C|BSS|CRM|EHR|GST|HRMS|IFRS|KPI|LTE|OSS|RF|SAP|SEO|SQL|UI\/UX)$/i.test(word)) {
+    if (
+      /^(?:API|ATS|AWS|B2B|B2C|BSS|CRM|EHR|GST|HRMS|IFRS|KPI|LTE|OSS|RF|SAP|SEO|SQL|UI\/UX)$/i.test(
+        word,
+      )
+    ) {
       return word.toUpperCase();
     }
     if (/^(?:iOS|macOS)$/i.test(word)) return word;
@@ -148,7 +151,9 @@ const looksLikeProfessionalSkill = (value: string): boolean => {
     return false;
   }
 
-  return PROFESSIONAL_NOUN_ENDING.test(value) || /\b(?:API|CRM|EHR|ERP|HRMS|SAP|SQL)\b/i.test(value);
+  return (
+    PROFESSIONAL_NOUN_ENDING.test(value) || /\b(?:API|CRM|EHR|ERP|HRMS|SAP|SQL)\b/i.test(value)
+  );
 };
 
 export const normalizeProfessionalSkill = (value: unknown): string | null => {
@@ -160,11 +165,18 @@ export const normalizeProfessionalSkill = (value: unknown): string | null => {
   if (hasBlacklistedWord(cleaned)) return null;
   if (ACTION_STARTERS.test(cleaned)) return null;
   if (isSentenceFragment(cleaned)) return null;
-  if (cleaned.includes('.') && !/^(?:node|next|vue)\.js$/i.test(cleaned) && !/^\.net$/i.test(cleaned)) {
+  if (
+    cleaned.includes('.') &&
+    !/^(?:node|next|vue)\.js$/i.test(cleaned) &&
+    !/^\.net$/i.test(cleaned)
+  ) {
     return null;
   }
 
-  const aliasKey = cleaned.toLowerCase().replace(/[._-]+/g, ' ').trim();
+  const aliasKey = cleaned
+    .toLowerCase()
+    .replace(/[._-]+/g, ' ')
+    .trim();
   const alias = SKILL_ALIASES[aliasKey] ?? SKILL_ALIASES[cleaned.toLowerCase()];
   if (alias) return alias;
 
@@ -202,8 +214,9 @@ export const extractProfessionalSkillsFromText = (text: string): string[] => {
     .filter(Boolean);
 
   const knownShapeMatches =
-    text.match(/\b(?:[A-Z]{2,8}|[A-Z][A-Za-z0-9+#.-]{1,24}|[A-Za-z]+(?:\.[A-Za-z]+)+|C\+\+|C#|\.NET|CI\/CD|UI\/UX)\b/g) ??
-    [];
+    text.match(
+      /\b(?:[A-Z]{2,8}|[A-Z][A-Za-z0-9+#.-]{1,24}|[A-Za-z]+(?:\.[A-Za-z]+)+|C\+\+|C#|\.NET|CI\/CD|UI\/UX)\b/g,
+    ) ?? [];
 
   return normalizeProfessionalSkills([...candidates, ...knownShapeMatches]);
 };

@@ -28,9 +28,7 @@ export function buildFallbackSuggestions(input: {
   const missingSkills = mergeSkillLists(
     analysis?.skillAnalysis?.missingSkills,
     analysis?.skillAnalysis?.recommendedSkills,
-    analysis?.keywords
-      ?.filter((item) => item.status === 'MISSING')
-      .map((item) => item.term),
+    analysis?.keywords?.filter((item) => item.status === 'MISSING').map((item) => item.term),
   ).slice(0, 8);
 
   if (missingSkills.length > 0) {
@@ -69,11 +67,7 @@ export function buildFallbackSuggestions(input: {
     });
   }
 
-  const maybeOcrFix = (
-    category: 'experience' | 'projects',
-    title: string,
-    text: string,
-  ) => {
+  const maybeOcrFix = (category: 'experience' | 'projects', title: string, text: string) => {
     if (!text.trim() || !/[ΣΘσθŸÿﬁﬂﬀ]/.test(text)) return;
     const cleaned = sanitizeExtractedText(text);
     if (!cleaned || cleaned === text) return;
@@ -142,8 +136,7 @@ export function buildFallbackSuggestions(input: {
         category: 'skills',
         originalText: draft.skillsList.join(', '),
         suggestedText:
-          draft.skillsList.join(', ') ||
-          'Add role-relevant skills from the job description',
+          draft.skillsList.join(', ') || 'Add role-relevant skills from the job description',
         impact: 'MEDIUM',
         status: 'PENDING',
         reason:

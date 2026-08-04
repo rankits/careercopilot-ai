@@ -101,7 +101,8 @@ const toAnalysisDetails = (
     industryAlignment: clampScore(aiResult.industryAlignment ?? 0),
     recruiterReadability: clampScore(aiResult.recruiterReadability ?? aiResult.readability),
     interviewReadiness: clampScore(aiResult.interviewReadiness ?? 0),
-    improvedSummary: aiResult.improvedSummary ?? aiResult.optimizedSections?.professionalSummary ?? '',
+    improvedSummary:
+      aiResult.improvedSummary ?? aiResult.optimizedSections?.professionalSummary ?? '',
     improvedExperience: aiResult.improvedExperience ?? [],
     improvedProjects: aiResult.improvedProjects ?? [],
     improvedSkills: aiResult.improvedSkills ?? aiResult.optimizedSections?.skills ?? [],
@@ -187,7 +188,9 @@ const ensureFallbackSuggestions = (
   ]
     .map((item) => item.trim())
     .filter(Boolean)
-    .filter((item, index, arr) => arr.findIndex((x) => x.toLowerCase() === item.toLowerCase()) === index)
+    .filter(
+      (item, index, arr) => arr.findIndex((x) => x.toLowerCase() === item.toLowerCase()) === index,
+    )
     .slice(0, 8);
 
   if (missing.length > 0) {
@@ -199,7 +202,10 @@ const ensureFallbackSuggestions = (
         category: 'skills',
         originalText: currentSkills,
         suggestedText: [...(aiResult.optimizedSections?.skills ?? []), ...missing]
-          .filter((item, index, arr) => arr.findIndex((x) => x.toLowerCase() === item.toLowerCase()) === index)
+          .filter(
+            (item, index, arr) =>
+              arr.findIndex((x) => x.toLowerCase() === item.toLowerCase()) === index,
+          )
           .join(', '),
         impact: 'HIGH',
         reason:
@@ -273,10 +279,7 @@ const scoreLabel = (score: number): string => {
   return 'D';
 };
 
-const runAnalysisJob = async (
-  analysisId: number,
-  input: AnalysisInput,
-): Promise<void> => {
+const runAnalysisJob = async (analysisId: number, input: AnalysisInput): Promise<void> => {
   const { resumeId, targetRole, experienceLevel, jobDescription } = input;
 
   try {
@@ -293,8 +296,7 @@ const runAnalysisJob = async (
     const optimizedText = (aiResult.optimizedResumeText ?? '').trim();
     // Prefer AI-cleaned structured resume so any upload shows in our format;
     // fall back to original extracted text when optimization is empty.
-    const workingContent =
-      optimizedText.length > 80 ? optimizedText : resumeText;
+    const workingContent = optimizedText.length > 80 ? optimizedText : resumeText;
 
     await prisma.resumeKeyword.deleteMany({ where: { analysisId } });
     await prisma.resumeSuggestion.deleteMany({ where: { analysisId } });
@@ -340,10 +342,7 @@ const runAnalysisJob = async (
     );
   } catch (err) {
     const failureReason = getErrorMessage(err);
-    logger.error(
-      { err, resumeId, analysisId, failureReason },
-      'Resume analysis job failed',
-    );
+    logger.error({ err, resumeId, analysisId, failureReason }, 'Resume analysis job failed');
     await prisma.resumeAnalysis
       .update({
         where: { id: analysisId },
@@ -391,9 +390,7 @@ const shapeAnalysisResponse = <
     baselineAtsScore: details?.baselineAtsScore ?? analysis.atsScore,
     optimizedSummary: details?.optimizedSections?.professionalSummary ?? '',
     failureReason:
-      analysis.status === 'FAILED'
-        ? (analysis.weaknesses?.[0] ?? 'Analysis failed')
-        : undefined,
+      analysis.status === 'FAILED' ? (analysis.weaknesses?.[0] ?? 'Analysis failed') : undefined,
     keywords: analysis.keywords.map((keyword) => ({
       ...keyword,
       reason: reasons[keyword.term],
@@ -625,8 +622,7 @@ export const resumeAnalysisService = {
         ? clampScore(details.baselineAtsScore)
         : clampScore(analysis.atsScore);
 
-    const content =
-      (analysis.editedContent ?? '').trim() || (await getResumeText(resumeId));
+    const content = (analysis.editedContent ?? '').trim() || (await getResumeText(resumeId));
 
     const scored = scoreEditedResume({
       content,
@@ -699,11 +695,7 @@ export const resumeAnalysisService = {
     };
   },
 
-  async saveVersion(
-    resumeId: string,
-    label: string,
-    contentOverride?: string,
-  ) {
+  async saveVersion(resumeId: string, label: string, contentOverride?: string) {
     const analysis = await prisma.resumeAnalysis.findFirst({
       where: { resumeId },
       include: { resume: { select: { originalName: true } } },
@@ -839,8 +831,7 @@ export const resumeAnalysisService = {
     if (format === 'docx') {
       return {
         content: Buffer.from(content).toString('base64'),
-        mimeType:
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         fileName: `${baseName}_optimized.docx`,
       };
     }

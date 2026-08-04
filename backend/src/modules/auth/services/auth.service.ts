@@ -35,7 +35,7 @@ import type {
   RequestContext,
   SafeUser,
 } from '@/modules/auth/types/auth.types.js';
-import { isProduction } from '@/shared/config/env.conf.js';
+import { isDevelopment } from '@/shared/config/env.conf.js';
 
 const assertLoginable = (user: UserWithRole): void => {
   if (!user.isEmailVerified || user.status === Status.PendingVerification) {
@@ -66,7 +66,7 @@ const issueAndSendOtp = async (
 ): Promise<void> => {
   const code = await OtpService.issue(purpose, user.email);
 
-  if (isProduction) {
+  if (!isDevelopment) {
     await EmailQueue.sendOtpEmail({
       to: user.email,
       firstName: user.firstName,

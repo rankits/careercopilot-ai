@@ -19,3 +19,7 @@ frontend/blob-report/
 
 flow-diagrames
 docs/
+# Local manual deploy config (never commit secrets)
+deploy/manual-deploy.env
+deploy/frontend-manual-deploy.env
+manual-deploy.env

@@ -1,5 +1,5 @@
-import { NormalizedJob } from "@/modules/jobs/models/NormalizedJob.js";
-import { ProviderTier } from "@/modules/jobs/types/job.types.js";
+import { NormalizedJob } from '@/modules/jobs/models/NormalizedJob.js';
+import { ProviderTier } from '@/modules/jobs/types/job.types.js';
 
 const TIER_PRIORITY: Record<ProviderTier, number> = {
   [ProviderTier.PAID_AUTH]: 3,
@@ -40,9 +40,7 @@ export class DeduplicationEngine {
         if (rankA !== rankB) {
           return rankB - rankA;
         }
-        return (
-          new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime()
-        );
+        return new Date(b.postedAt).getTime() - new Date(a.postedAt).getTime();
       });
 
       const winner = group[0];
@@ -67,4 +65,3 @@ export class DeduplicationEngine {
     };
   }
 }
-

@@ -17,7 +17,11 @@ import {
   NavigateNextIcon,
   Typography,
 } from '@/lib/material';
-import type { AnalysisResult, ResumeVersion, UploadedResume } from '@/services/resumeBuilder.service';
+import type {
+  AnalysisResult,
+  ResumeVersion,
+  UploadedResume,
+} from '@/services/resumeBuilder.service';
 
 import { formatFileSize, formatResumeDate, getResumeExtension } from '../../utils';
 

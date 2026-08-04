@@ -1,5 +1,14 @@
 import { Box, Typography, styled } from '@/lib/material';
-import { borderRadius, colorTokens, fontSize, fontWeight, shadows, spacing } from '@/tokens';
+import {
+  borderRadius,
+  colorTokens,
+  fontSize,
+  fontWeight,
+  iconToneTokens,
+  shadows,
+  spacing,
+  type IconTone,
+} from '@/tokens';
 
 export const MetricCardRoot = styled(Box)({
   alignItems: 'center',
@@ -20,21 +29,30 @@ export const MetricCardRoot = styled(Box)({
   },
 });
 
-export const MetricIcon = styled(Box)({
-  alignItems: 'center',
-  background: colorTokens.actionPrimarySubtle,
-  borderRadius: borderRadius.full,
-  color: colorTokens.actionPrimary,
-  display: 'grid',
-  flexShrink: 0,
-  height: '3.25rem',
-  justifyItems: 'center',
-  width: '3.25rem',
+export const MetricIcon = styled(Box, {
+  shouldForwardProp: (prop) => prop !== 'tone',
+})<{ tone?: IconTone }>(({ tone = 'primary' }) => {
+  const iconTone = iconToneTokens[tone];
 
-  '@media (max-width: 48rem)': {
-    height: '2.75rem',
-    width: '2.75rem',
-  },
+  return {
+    alignItems: 'center',
+    background: iconTone.background,
+    borderRadius: borderRadius.full,
+    color: iconTone.color,
+    display: 'grid',
+    flexShrink: 0,
+    height: '3.25rem',
+    justifyItems: 'center',
+    width: '3.25rem',
+    '& .MuiSvgIcon-root': {
+      color: 'inherit',
+    },
+
+    '@media (max-width: 48rem)': {
+      height: '2.75rem',
+      width: '2.75rem',
+    },
+  };
 });
 
 export const MetricValue = styled(Typography)({

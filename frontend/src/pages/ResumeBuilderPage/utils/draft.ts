@@ -43,12 +43,12 @@ export function createEmptyDraft(targetRole = ''): ResumeDraft {
 export function hasPreviewContent(draft: ResumeDraft): boolean {
   return Boolean(
     draft.originalText.trim() ||
-      draft.fullName ||
-      draft.summary ||
-      draft.skillsList.length ||
-      draft.experiences.some((item) => item.company || item.title || item.details) ||
-      draft.projectsList.some((item) => item.title || item.company || item.details) ||
-      draft.education,
+    draft.fullName ||
+    draft.summary ||
+    draft.skillsList.length ||
+    draft.experiences.some((item) => item.company || item.title || item.details) ||
+    draft.projectsList.some((item) => item.title || item.company || item.details) ||
+    draft.education,
   );
 }
 

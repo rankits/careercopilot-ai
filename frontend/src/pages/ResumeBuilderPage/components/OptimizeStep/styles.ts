@@ -111,7 +111,7 @@ export const SectionNavButton = styled('button', {
 })<{ active?: boolean }>(({ active = false }) => ({
   alignItems: 'center',
   background: active ? t.primarySofter : colorTokens.backgroundCard,
-  border: active ? `1px solid rgba(124,58,237,0.35)` : border,
+  border: active ? `1px solid color-mix(in srgb, ${t.primary} 35%, transparent)` : border,
   borderRadius: borderRadius.lg,
   color: active ? t.primary : t.text,
   cursor: 'pointer',
@@ -127,7 +127,7 @@ export const SectionNavButton = styled('button', {
   transition: 'background 140ms ease, border-color 140ms ease, color 140ms ease',
   '&:hover': {
     background: t.primarySofter,
-    borderColor: 'rgba(124,58,237,0.28)',
+    borderColor: 'rgba(37, 99, 235, 0.28)',
   },
   '& .count': {
     ...pill,
@@ -215,8 +215,7 @@ export const SuggestionReason = styled(Typography)({
 export const ImpactPill = styled(Box, {
   shouldForwardProp: (prop) => prop !== 'impact',
 })<{ impact: 'HIGH' | 'MEDIUM' | 'LOW' }>(({ impact }) => {
-  const colors =
-    impact === 'HIGH' ? tone.error : impact === 'MEDIUM' ? tone.warning : tone.success;
+  const colors = impact === 'HIGH' ? tone.error : impact === 'MEDIUM' ? tone.warning : tone.success;
   return {
     ...pill,
     background: colors.background,
@@ -276,7 +275,7 @@ export const EditorArea = styled('textarea')({
   width: '100%',
   '&:focus': {
     borderColor: t.primary,
-    boxShadow: `0 0 0 3px rgba(124,58,237,0.12)`,
+    boxShadow: `0 0 0 3px color-mix(in srgb, ${t.primary} 12%, transparent)`,
     outline: 'none',
   },
 });
@@ -354,7 +353,7 @@ export const PreviewPaper = styled(Box)({
     gap: spacing[2],
   },
   '& .section-title': {
-    borderBottom: `1px solid rgba(124,58,237,0.18)`,
+    borderBottom: `1px solid color-mix(in srgb, ${t.primary} 18%, transparent)`,
     color: t.primary,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.extraBold,
@@ -393,7 +392,7 @@ export const EmptyHint = styled(Typography)({
 export const AiBanner = styled(Box)({
   alignItems: 'center',
   background: `linear-gradient(135deg, ${t.primarySoft}, ${colorTokens.backgroundCard})`,
-  border: '1px solid rgba(124,58,237,0.2)',
+  border: '1px solid rgba(37, 99, 235, 0.2)',
   borderRadius: borderRadius['2xl'],
   display: 'grid',
   gap: spacing[4],

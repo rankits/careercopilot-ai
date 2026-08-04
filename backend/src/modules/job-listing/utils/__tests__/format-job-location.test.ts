@@ -3,9 +3,9 @@ import { formatJobLocation } from '@/modules/job-listing/utils/format-job-locati
 
 describe('formatJobLocation', () => {
   it('prefers locationRaw from provider metadata', () => {
-    expect(
-      formatJobLocation('ONSITE', { locationRaw: 'San Francisco, CA' }),
-    ).toBe('San Francisco, CA');
+    expect(formatJobLocation('ONSITE', { locationRaw: 'San Francisco, CA' })).toBe(
+      'San Francisco, CA',
+    );
   });
 
   it('joins city and country when raw is missing', () => {
