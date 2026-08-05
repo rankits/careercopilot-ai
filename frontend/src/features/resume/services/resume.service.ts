@@ -8,6 +8,7 @@ import type {
   ResumeParseStatus,
   ResumeProcessingStatus,
   UpdateCandidateProfilePayload,
+  UploadedResumeVersion,
 } from '@/features/resume/types/resume.types';
 import { httpClient } from '@/services/httpClient';
 
@@ -248,6 +249,53 @@ export const resumeService = {
             : 'Profile updated successfully',
         profile: toCandidateProfileData(data),
       };
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  async listResumes(): Promise<UploadedResumeVersion[]> {
+    try {
+      const response = await httpClient.get('/resumes');
+      const data = isRecord(response.data) ? response.data.data : null;
+      if (!Array.isArray(data)) return [];
+
+      return data.flatMap((item, index, all) => {
+        if (!isRecord(item) || typeof item.id !== 'string') return [];
+        return [
+          {
+            id: item.id,
+            mimeType:
+              typeof item.mimeType === 'string' ? item.mimeType : 'application/octet-stream',
+            originalName: typeof item.originalName === 'string' ? item.originalName : 'resume.pdf',
+            processedAt: typeof item.processedAt === 'string' ? item.processedAt : null,
+            sizeBytes: typeof item.sizeBytes === 'number' ? item.sizeBytes : 0,
+            status: typeof item.status === 'string' ? item.status : 'UPLOADED',
+            uploadedAt:
+              typeof item.uploadedAt === 'string' ? item.uploadedAt : new Date(0).toISOString(),
+            version: typeof item.version === 'number' ? item.version : all.length - index,
+          },
+        ];
+      });
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  async downloadResume(resumeId: string, fileName: string): Promise<void> {
+    try {
+      const response = await httpClient.get<Blob>(`/resumes/${resumeId}/download`, {
+        responseType: 'blob',
+      });
+      const blob = response.data;
+      const url = window.URL.createObjectURL(blob);
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = fileName || 'resume.pdf';
+      document.body.appendChild(anchor);
+      anchor.click();
+      anchor.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       throw normalizeError(error);
     }

@@ -30,6 +30,7 @@ const start = async (): Promise<void> => {
 };
 
 start().catch((error: unknown) => {
-  logger.error({ error }, 'Outbox relay worker failed');
+  // Pino serializes Error instances only under the `err` key.
+  logger.error({ err: error }, 'Outbox relay worker failed');
   process.exitCode = 1;
 });

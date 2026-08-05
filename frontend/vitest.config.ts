@@ -57,7 +57,11 @@ export default defineConfig({
     },
     // Playwright specs live under e2e/ and must not be collected by Vitest.
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
-    // fileParallelism: false,
+    // Cap fork workers so Windows does not time out spawning jsdom pools
+    // under heavy parallel load ("Timeout waiting for worker to respond").
+    pool: 'forks',
+    maxWorkers: 2,
+    fileParallelism: true,
     globals: true,
     setupFiles: './src/test/setup.ts',
     // Page tests fill large forms under parallel suite load; default 5s is too tight on Windows CI.

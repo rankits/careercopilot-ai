@@ -58,7 +58,7 @@ const main = async (): Promise<void> => {
 };
 
 main().catch((error: unknown) => {
-  logger.error({ error }, 'Embedding age cleanup failed');
+  logger.error({ err: error }, 'Embedding age cleanup failed');
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });

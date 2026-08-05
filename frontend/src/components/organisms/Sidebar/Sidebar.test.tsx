@@ -31,17 +31,39 @@ describe('Sidebar', () => {
       'href',
       '/applications',
     );
-    expect(screen.getByRole('button', { name: /upload now/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download latest/i })).toBeInTheDocument();
+    expect(screen.getByText(/no resume uploaded yet/i)).toBeInTheDocument();
+  });
+
+  it('shows the latest resume download action when a resume is available', async () => {
+    const user = userEvent.setup();
+    const handleDownload = vi.fn();
+
+    renderSidebar(
+      <Sidebar
+        latestResumeName="sonal-resume.pdf"
+        onDownloadLatestResume={handleDownload}
+        onOpenResumeVersions={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/latest resume/i)).toBeInTheDocument();
+    expect(screen.getByText(/download your most recent uploaded resume/i)).toBeInTheDocument();
+    expect(screen.queryByText('sonal-resume.pdf')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /view all versions/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /download latest/i }));
+    expect(handleDownload).toHaveBeenCalledTimes(1);
   });
 
   it('collapses labels for icon-only mode', () => {
-    renderSidebar(<Sidebar variant="collapsed" />);
+    renderSidebar(<Sidebar latestResumeName="sonal-resume.pdf" variant="collapsed" />);
 
     expect(screen.getByRole('img', { name: /career copilot/i })).toHaveAttribute(
       'src',
       expect.stringContaining('penguin'),
     );
-    expect(screen.queryByText(/upload resume/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/latest resume/i)).not.toBeInTheDocument();
   });
 
   it('notifies when a navigation item is selected', async () => {
