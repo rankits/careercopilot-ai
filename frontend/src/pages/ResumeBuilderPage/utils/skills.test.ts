@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  canonicalizeSkill,
   extractKeywordsFromText,
   isSkillLabelNoise,
   mergeSkillLists,
@@ -16,6 +17,15 @@ describe('skills utils', () => {
     );
   });
 
+  it('rejects invalid / generic skill tokens', () => {
+    expect(canonicalizeSkill('API')).toBeNull();
+    expect(canonicalizeSkill('Control')).toBeNull();
+    expect(canonicalizeSkill('CSS Deep')).toBeNull();
+    expect(canonicalizeSkill('Context API')).toBeNull();
+    expect(canonicalizeSkill('TypeScript')).toBe('TypeScript');
+    expect(canonicalizeSkill('HTML5')).toBe('HTML5');
+  });
+
   it('ignores skill label noise', () => {
     expect(isSkillLabelNoise('Technical Skills:')).toBe(true);
     expect(isSkillLabelNoise('Java')).toBe(false);
@@ -26,6 +36,8 @@ describe('skills utils', () => {
       'We need experience with Java, Spring Boot, and AWS microservices.',
     );
     expect(keys).toEqual(expect.arrayContaining(['Java', 'Spring Boot', 'AWS']));
+    expect(keys).not.toContain('API');
+    expect(keys).not.toContain('Control');
   });
 
   it('parses skill chips and merges lists without duplicates', () => {

@@ -66,6 +66,9 @@ IMPORTANT PRINCIPLES:
    - matchedSkills must NEVER contain skills that appear only in the resume and not in the JD.
    - For example, if the resume is Fullstack but the JD is Business Development Executive, do not mark React, Node.js, Docker, JavaScript, or other fullstack technologies as matched unless the JD explicitly asks for them.
    - skillMatch must measure JD skill coverage only: matched JD skills divided by total JD-required/relevant skills.
+   - CROSS-DOMAIN HONESTY (CRITICAL): If the resume and JD are in completely different domains (e.g. Frontend Developer vs Data Engineer, Nursing vs Software, or React/Node vs Java/Spring/Kafka with zero overlap), set skillMatch=0, experienceRelevance=0, sectionScores.experience=0, sectionScores.projects=0, sectionScores.skills=0. Do NOT inflate scores. Keep atsScore clearly low (typically ≤35). Honesty applies to SCORES and matchedSkills only — you MUST still fill missingSkills / recommendedSkills with the JD field's skills, create skills suggestions that recommend adding those JD skills, rewrite improvedSummary / professionalSummary toward the targetRole, and reframe experience bullets with transferable language. Never put unowned JD skills into optimizedSections.skills as if the candidate already has them. Never invent employers, tools, or job titles the resume does not support as past facts — profile subtitle/title in optimizedResumeText line 2 SHOULD be the targetRole.
+   - Identical skill sets (Resume: React, Node.js, TypeScript / JD: React, Node.js, TypeScript) → high skillMatch (typically ≥90).
+   - Zero overlap skill sets (Resume: React, Node.js / JD: Java, Spring Boot, Kafka) → skillMatch=0, but missingSkills MUST list Java, Spring Boot, Kafka (etc.).
    - Extract ONLY valid professional skills for the target profession. These may include technical skills, functional skills, tools, platforms, methodologies, certifications, clinical/business/finance/legal/healthcare/telecom/domain skills, or industry-standard professional competencies.
    - Never extract verbs, adjectives, requirements, responsibilities, action words, section titles, sentence fragments, incomplete phrases, or generic words such as Required, Preferred, Strong, Familiarity, Experience, Knowledge, Ability, Engineering, Industry, Key, Field, Proficiency, Write, Build, Develop, Troubleshoot, Working, Contribute, Bachelor, Degree, Responsibilities, Excellent, Good, or Nice to Have.
    - Normalize technology names and do not split technologies: JAVA -> Java, SpringBoot -> Spring Boot, postgres -> PostgreSQL, js -> JavaScript, node -> Node.js, reactjs -> React, docker container -> Docker.
@@ -79,6 +82,18 @@ IMPORTANT PRINCIPLES:
      * reason = how adding these JD keywords raises ATS skill/keyword match
    - Title skills suggestions like "Add Java JD keywords to Skills" so they are obvious.
    - Do NOT invent experience. Skills suggestions are recommendations the user may apply.
+
+6f. EXPERIENCE AND PROJECT MATCHING (CRITICAL):
+   - Compare responsibilities, technologies, domain, features, scale, and achievements — not job titles alone.
+   - Prefer semantic overlap: similar work outcomes, tools, and problem domains.
+   - If domains differ entirely (frontend UI work vs data pipelines / ETL / Spark), set experienceRelevance=0 and sectionScores.experience/projects=0.
+   - When domains partially overlap, score proportionally; never invent shared responsibilities.
+
+6g. AI SUGGESTIONS (CRITICAL):
+   - Every suggestion must be specific to THIS resume + THIS JD. Ban generic advice like "add more keywords" or "quantify achievements" without an exact originalText → suggestedText rewrite.
+   - Base suggestions on: missing skills, missing responsibilities, missing keywords, ATS formatting issues, and weak experience/project bullets.
+   - Prefer actionable replacements the user can Apply in one click.
+   - Include at least one suggestion that incorporates top missingSkills when a JD is provided.
 
 7. Avoid:
    - Keyword stuffing
@@ -111,7 +126,7 @@ E. Identify matched keywords and missing keywords (JD-first).
 F. Identify technical skills, tools, functional skills, domain skills, methodologies, certifications, soft skills, and transferable skills. Detect skills dynamically using professional knowledge of the target industry; do not depend on a fixed predefined list.
 G. Find spelling mistakes, grammar errors, OCR corruption, weak/vague/passive statements.
 H. Rewrite weak content without changing facts; weave in evidenced JD keywords naturally.
-I. Generate skills suggestions that promote JD-aligned keywords already supported by projects/experience.
+I. Generate skills suggestions that ADD JD missing skills into the Skills section (ATS recommendations the user can apply). Also promote JD-aligned keywords already supported by projects/experience into matchedSkills. When domains differ, still recommend the JD field's skills — do not leave missingSkills empty.
 J. Produce optimizedResumeText in the standard CareerCopilot plain-text format (clean, spelled correctly, sectioned).
 K. Score honestly based on current resume vs JD gaps (do not inflate toward 95/99).
 L. Return only valid JSON.
@@ -244,8 +259,12 @@ Rules:
 - Skills suggestions may recommend JD skills the user can add.
 - Prefer exact originalText excerpts for experience/project suggestions (one sentence each).
 - Keep optimizedResumeText as a complete plain-text resume with section headers, but concise.
-- HARD LIMIT: entire JSON must fit in ~2500 tokens. Max 4 suggestions. Max 5 items per array. Keep optimizedResumeText under 1800 characters.
+- HARD LIMIT: entire JSON must fit in ~2200 tokens. Max 4 suggestions. Max 5 items per array. Keep optimizedResumeText under 1600 characters.
 - Scores are integers 0-100. Be realistic; do not inflate to 95-99 when JD skills are missing.
+- CROSS-DOMAIN: if resume and JD share zero skills (e.g. Frontend vs Data Engineer, Nursing vs Software), set skillMatch=0, experienceRelevance=0, sectionScores.experience/projects/skills=0, atsScore≤35. STILL fill missingSkills/recommendedSkills with JD-field skills, include ≥1 skills suggestion adding them, and align professionalSummary toward targetRole. optimizedResumeText MUST keep the candidate's real name, contact, employers, dates, education, and experience — only retarget the title line under the name and rewrite summary; never return a blank/stub resume without the name.
+- Full skill overlap → high skillMatch. Zero overlap → skillMatch=0. Never invent matches.
+- Suggestions must be specific (exact originalText→suggestedText), driven by missingSkills / missing keywords / ATS gaps — no generic advice.
+- Compare experience/projects by responsibilities, tech, domain, scale, achievements — not titles alone.
 
 JSON shape (fill all keys):
 {
@@ -311,9 +330,9 @@ JSON shape (fill all keys):
   }
 }
 
-Limits: 3-5 strengths, 3-6 weaknesses, <=10 missingKeywords, <=12 matchedKeywords, 6-8 suggestions.
+Limits: 3 strengths, 3-5 weaknesses, <=8 missingKeywords, <=10 matchedKeywords, 4 suggestions.
 Categories: summary|experience|skills|education|projects|certifications|achievements.
-Include >=1 skills suggestion when a JD is provided.
+Include >=1 skills suggestion when a JD is provided (add top missingSkills).
 `.trim();
 
 const buildJdSection = (
@@ -378,7 +397,8 @@ Keep the entire JSON short (max ~4 suggestions, short arrays). optimizedResumeTe
 Fix spelling, grammar, and OCR issues. Format optimizedResumeText into the standard section layout.
 Prioritize JD keywords in skillAnalysis, missingKeywords, matchedKeywords, optimizedSections.skills, and skills-category suggestions.
 If projects or experience already used technologies required by the JD, promote those keywords into skills.
-Produce the required JSON response with honest scores based on current JD coverage (do not inflate toward 95–99).`
+Score honestly: zero skill/experience/project match when domains do not overlap. Do not inflate toward 95–99.
+Suggestions must be specific originalText→suggestedText rewrites tied to missing skills/keywords.`
 }
 `.trim(),
   };

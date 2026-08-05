@@ -1,5 +1,7 @@
-import { Route, Routes } from 'react-router-dom';
+/* eslint-disable react-refresh/only-export-components -- router config and component share this module */
+import { createBrowserRouter, useRoutes, type RouteObject } from 'react-router-dom';
 
+import { App } from '@/app/App';
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
 import { ApplicationsPage } from '@/pages/ApplicationsPage';
@@ -22,36 +24,51 @@ import {
   RootRedirect,
 } from '@/routes/guards/AuthGuards';
 
+/** Shared route tree for the data router and for MemoryRouter-based tests. */
+export const appRouteObjects: RouteObject[] = [
+  { path: ROUTES.HOME, element: <RootRedirect /> },
+  {
+    element: <GuestRoute />,
+    children: [
+      { path: ROUTES.LOGIN, element: <LoginPage /> },
+      { path: ROUTES.REGISTER, element: <RegisterPage /> },
+    ],
+  },
+  {
+    element: <OnboardingRoute />,
+    children: [{ path: ROUTES.PROFILE, element: <ProfilePage /> }],
+  },
+  {
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <AppLayout />,
+        children: [
+          { path: ROUTES.DASHBOARD, element: <HomePage /> },
+          { path: ROUTES.JOB_FEED, element: <JobFeedPage /> },
+          { path: ROUTES.JOB_DETAIL, element: <JobDetailPage /> },
+          { path: ROUTES.FOR_YOU, element: <ForYouPage /> },
+          { path: ROUTES.SAVED_JOBS, element: <SavedJobsPage /> },
+          { path: ROUTES.APPLICATIONS, element: <ApplicationsPage /> },
+          { path: ROUTES.SAVED_RESUMES, element: <SavedResumesPage /> },
+          { path: ROUTES.RESUME_BUILDER, element: <ResumeBuilderPage /> },
+          { path: `${ROUTES.RESUME_BUILDER}/:resumeId`, element: <ResumeBuilderPage /> },
+          { path: ROUTES.PROFILE_EDIT, element: <EditProfilePage /> },
+        ],
+      },
+    ],
+  },
+  { path: '*', element: <NotFoundPage /> },
+];
+
+export const appRouter = createBrowserRouter([
+  {
+    element: <App />,
+    children: appRouteObjects,
+  },
+]);
+
+/** Test helper — must be rendered inside a MemoryRouter / Router. */
 export function AppRouter() {
-  return (
-    <Routes>
-      <Route path={ROUTES.HOME} element={<RootRedirect />} />
-
-      <Route element={<GuestRoute />}>
-        <Route path={ROUTES.LOGIN} element={<LoginPage />} />
-        <Route path={ROUTES.REGISTER} element={<RegisterPage />} />
-      </Route>
-
-      <Route element={<OnboardingRoute />}>
-        <Route path={ROUTES.PROFILE} element={<ProfilePage />} />
-      </Route>
-
-      <Route element={<ProtectedRoute />}>
-        <Route element={<AppLayout />}>
-          <Route path={ROUTES.DASHBOARD} element={<HomePage />} />
-          <Route path={ROUTES.JOB_FEED} element={<JobFeedPage />} />
-          <Route path={ROUTES.JOB_DETAIL} element={<JobDetailPage />} />
-          <Route path={ROUTES.FOR_YOU} element={<ForYouPage />} />
-          <Route path={ROUTES.SAVED_JOBS} element={<SavedJobsPage />} />
-          <Route path={ROUTES.APPLICATIONS} element={<ApplicationsPage />} />
-          <Route path={ROUTES.SAVED_RESUMES} element={<SavedResumesPage />} />
-          <Route path={ROUTES.RESUME_BUILDER} element={<ResumeBuilderPage />} />
-          <Route path={`${ROUTES.RESUME_BUILDER}/:resumeId`} element={<ResumeBuilderPage />} />
-          <Route path={ROUTES.PROFILE_EDIT} element={<EditProfilePage />} />
-        </Route>
-      </Route>
-
-      <Route path="*" element={<NotFoundPage />} />
-    </Routes>
-  );
+  return useRoutes(appRouteObjects);
 }

@@ -97,7 +97,7 @@ const baseProps = {
   saving: false,
   recheckResult: null,
   rechecking: false,
-  exporting: false,
+  exportingFormat: null,
   versions: [],
   savingVersion: false,
   selectedTemplate: 'original' as const,
@@ -116,12 +116,12 @@ const baseProps = {
   onReplaceResume: vi.fn(),
   onGoTo: vi.fn(),
   onApplySuggestion: vi.fn(),
+  onApplyAllSuggestions: vi.fn(),
   onIgnoreSuggestion: vi.fn(),
   onEditedContentChange: vi.fn(),
   onSaveContent: vi.fn(),
   onPreviewResume: vi.fn(),
   onExport: vi.fn(),
-  onSaveVersion: vi.fn(),
   onDone: vi.fn(),
   onTemplateChange: vi.fn(),
 };
@@ -161,7 +161,7 @@ describe('ResumeBuilderStepPanels', () => {
     render(
       <ResumeBuilderStepPanels
         {...baseProps}
-        step={4}
+        step={3}
         analysis={analysis as never}
         suggestions={analysis.suggestions as never}
         onGoTo={onGoTo}
@@ -204,7 +204,7 @@ describe('ResumeBuilderStepPanels', () => {
     render(
       <ResumeBuilderStepPanels
         {...baseProps}
-        step={4}
+        step={3}
         analysis={analysis as never}
         onStartAnalysis={onStartAnalysis}
       />,

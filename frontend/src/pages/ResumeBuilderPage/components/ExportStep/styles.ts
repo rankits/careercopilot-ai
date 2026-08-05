@@ -4,11 +4,18 @@ import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/toke
 export const ExportLayout = styled(Box)({
   display: 'grid',
   gap: spacing[5],
-  gridTemplateColumns: 'minmax(0, 1.05fr) minmax(320px, 0.95fr)',
+  gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 0.95fr)',
   alignItems: 'start',
+  minWidth: 0,
+  overflowX: 'hidden',
   padding: `${spacing[4]} ${spacing[6]} ${spacing[6]}`,
+  width: '100%',
   '@media (max-width: 1100px)': {
     gridTemplateColumns: '1fr',
+  },
+  '@media (max-width: 48rem)': {
+    gap: spacing[3],
+    padding: `${spacing[3]} ${spacing[3]} ${spacing[5]}`,
   },
 });
 
@@ -87,7 +94,14 @@ export const ExportPreviewCard = styled(Box)({
   border: `1px solid ${colorTokens.borderDefault}`,
   background: colorTokens.backgroundCard,
   maxHeight: 'calc(100vh - 120px)',
+  maxWidth: '100%',
+  minWidth: 0,
   overflow: 'auto',
+  '@media (max-width: 1100px)': {
+    maxHeight: 'none',
+    position: 'relative',
+    top: 0,
+  },
   '& .preview-title': {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semiBold,
