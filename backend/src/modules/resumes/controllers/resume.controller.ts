@@ -21,10 +21,41 @@ export const resumeUploadMiddleware = multer({
 export const listResumesController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const resumes = await resumeService.listResumes({
-      userId: typeof req.query.userId === 'string' ? req.query.userId : undefined,
+      userId: requirePrincipalId(req),
     });
 
-    return res.status(200).json(successResponse('Resumes retrieved successfully', resumes));
+    return res.status(200).json(
+      successResponse(
+        'Resumes retrieved successfully',
+        resumes.map((resume, index, all) => ({
+          id: resume.id,
+          status: resume.status,
+          fileName: resume.fileName,
+          originalName: resume.originalName,
+          mimeType: resume.mimeType,
+          sizeBytes: resume.sizeBytes,
+          uploadedAt: resume.uploadedAt,
+          processedAt: resume.processedAt,
+          version: all.length - index,
+        })),
+      ),
+    );
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const downloadResumeController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const file = await resumeService.downloadResume(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
+    const safeName = file.originalName.replace(/"/g, '');
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+    res.setHeader('Content-Length', String(file.buffer.length));
+    return res.status(200).send(file.buffer);
   } catch (error) {
     return next(error);
   }

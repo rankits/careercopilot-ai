@@ -14,4 +14,5 @@ export interface StoredResume {
 
 export interface ResumeStorage {
   store(input: StoreResumeInput): Promise<StoredResume>;
+  retrieve(key: string): Promise<Buffer>;
 }

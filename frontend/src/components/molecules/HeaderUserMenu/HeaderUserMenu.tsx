@@ -1,7 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 
 import {
-  CloudUploadOutlinedIcon,
   KeyboardArrowDownIcon,
   LogoutIcon,
   Menu,
@@ -18,7 +17,6 @@ export interface HeaderUserMenuProps {
   onLogoutClick?: () => void;
   onMenuClick?: () => void;
   onSettingsClick?: () => void;
-  onUploadResumeClick?: () => void;
   roleLabel?: string;
 }
 
@@ -28,7 +26,6 @@ export function HeaderUserMenu({
   onLogoutClick,
   onMenuClick,
   onSettingsClick,
-  onUploadResumeClick,
   roleLabel = 'Frontend Developer',
 }: HeaderUserMenuProps) {
   const [anchorElement, setAnchorElement] = useState<HTMLElement | null>(null);
@@ -46,11 +43,6 @@ export function HeaderUserMenu({
 
   function handleSettingsClick() {
     onSettingsClick?.();
-    handleClose();
-  }
-
-  function handleUploadResumeClick() {
-    onUploadResumeClick?.();
     handleClose();
   }
 
@@ -76,10 +68,6 @@ export function HeaderUserMenu({
         <MenuItem onClick={handleSettingsClick} sx={menuItemSx}>
           <SettingsOutlinedIcon fontSize="small" />
           Edit Profile
-        </MenuItem>
-        <MenuItem onClick={handleUploadResumeClick} sx={menuItemSx}>
-          <CloudUploadOutlinedIcon fontSize="small" />
-          Upload Resume
         </MenuItem>
         <MenuItem onClick={handleLogoutClick} sx={menuItemSx}>
           <LogoutIcon fontSize="small" />

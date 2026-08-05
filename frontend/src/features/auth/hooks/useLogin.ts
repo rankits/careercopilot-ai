@@ -39,7 +39,7 @@ export function useLogin() {
 
   const submit = async (values: LoginFormValues) => {
     if (loginMutation.isPending) {
-      return false;
+      return { ok: false as const, error: 'Login already in progress' };
     }
 
     try {
@@ -49,9 +49,15 @@ export function useLogin() {
         rememberMe: values.rememberMe,
       });
 
-      return true;
-    } catch {
-      return false;
+      return { ok: true as const };
+    } catch (error) {
+      return {
+        ok: false as const,
+        error:
+          error instanceof Error && error.message.trim()
+            ? error.message.trim()
+            : 'Unable to log in. Please try again.',
+      };
     }
   };
 

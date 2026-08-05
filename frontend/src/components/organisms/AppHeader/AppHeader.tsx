@@ -9,7 +9,6 @@ export interface AppHeaderProps {
   onLogoutClick?: () => void;
   onNotificationClick?: () => void;
   onSettingsClick?: () => void;
-  onUploadResumeClick?: () => void;
   onUserMenuClick?: () => void;
   searchPlaceholder?: string;
   userAvatarUrl?: string;
@@ -22,7 +21,6 @@ export function AppHeader({
   onLogoutClick,
   onNotificationClick,
   onSettingsClick,
-  onUploadResumeClick,
   onUserMenuClick,
   searchPlaceholder,
   userAvatarUrl,
@@ -45,7 +43,6 @@ export function AppHeader({
           onLogoutClick={onLogoutClick}
           onMenuClick={onUserMenuClick}
           onSettingsClick={onSettingsClick}
-          onUploadResumeClick={onUploadResumeClick}
           roleLabel={userRoleLabel}
         />
       </HeaderActions>
