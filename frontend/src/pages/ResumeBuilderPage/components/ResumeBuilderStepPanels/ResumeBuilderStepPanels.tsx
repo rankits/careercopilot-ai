@@ -27,6 +27,7 @@ import {
   formatFileSize,
   formatResumeDate,
   getResumeExtension,
+  type LiveSkillAnalysis,
   type ResumeTemplateId,
 } from '../../utils';
 import { DefineRoleStep } from '../DefineRoleStep';
@@ -53,6 +54,7 @@ import {
 
 interface AnalysisDashboardProps {
   analysis: AnalysisResult | null;
+  editedContent?: string;
   isComplete: boolean;
   selectedResume: UploadedResume | null;
   suggestions: SuggestionItem[];
@@ -72,6 +74,7 @@ function scoreBandLabel(score?: number): string {
 
 function AnalysisDashboard({
   analysis,
+  editedContent: _editedContent = '',
   isComplete,
   selectedResume,
   suggestions,
@@ -81,6 +84,7 @@ function AnalysisDashboard({
   onReanalyze,
   onReplaceResume,
 }: AnalysisDashboardProps) {
+  void _editedContent;
   const [selectedKeywordIds, setSelectedKeywordIds] = useState<Set<number>>(new Set());
   const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
 
@@ -93,10 +97,13 @@ function AnalysisDashboard({
     return () => window.clearInterval(timer);
   }, [isComplete, analysis?.id]);
 
-  const loadingMessage = ANALYSIS_LOADING_MESSAGES[loadingMessageIndex] ?? ANALYSIS_LOADING_MESSAGES[0];
+  const loadingMessage =
+    ANALYSIS_LOADING_MESSAGES[loadingMessageIndex] ?? ANALYSIS_LOADING_MESSAGES[0];
   const gate = getAnalyzeGateUi({ analysis, isComplete, targetRole, loadingMessage });
   const blockedFromOptimize = gate.kind != null;
 
+  // Step 3: trust AI semantic skillAnalysis from the server (no chip re-parse).
+  const skillAnalysis = analysis?.skillAnalysis;
   const missingKeywords = isComplete
     ? (analysis?.keywords.filter((keyword) => keyword.status === 'MISSING') ?? [])
     : [];
@@ -111,7 +118,6 @@ function AnalysisDashboard({
   const weaknesses = isComplete ? (analysis?.weaknesses ?? []) : [];
   const strengths = isComplete ? (analysis?.strengths ?? []) : [];
   const atsIssues = isComplete ? (analysis?.atsIssues ?? []) : [];
-  const skillAnalysis = analysis?.skillAnalysis;
   const score = isComplete ? analysis?.atsScore : undefined;
   const resumeExtension = getResumeExtension(selectedResume?.originalName ?? '');
   const resumeSize = formatFileSize(selectedResume?.sizeBytes);
@@ -350,13 +356,13 @@ function AnalysisDashboard({
           <Box className="insight-card">
             <Typography className="card-title">Skill Gap Analysis</Typography>
             <CardSubtitle>
-              Matched skills stay on your resume. Missing skills are recommendations only.
+              AI semantic match vs JD (synonyms count). Missing skills are recommendations only.
             </CardSubtitle>
             <Box className="skill-columns">
               <Box className="skill-group">
                 <Typography className="skill-group-title">Matched</Typography>
                 <Box className="keyword-wrap">
-                  {(skillAnalysis?.matchedSkills ?? []).slice(0, 8).map((skill) => (
+                  {(skillAnalysis?.matchedSkills ?? []).map((skill) => (
                     <KeywordChip key={skill} selected component="span">
                       {skill}
                     </KeywordChip>
@@ -374,17 +380,22 @@ function AnalysisDashboard({
                       skill,
                       kind: 'missing' as const,
                     })),
-                    ...(skillAnalysis?.recommendedSkills ?? []).map((skill) => ({
-                      skill,
-                      kind: 'recommended' as const,
-                    })),
-                  ]
-                    .slice(0, 8)
-                    .map(({ skill, kind }) => (
-                      <KeywordChip key={`${kind}-${skill}`} component="span">
-                        {skill}
-                      </KeywordChip>
-                    ))}
+                    ...(skillAnalysis?.recommendedSkills ?? [])
+                      .filter(
+                        (skill) =>
+                          !(skillAnalysis?.missingSkills ?? []).some(
+                            (missing) => missing.toLowerCase() === skill.toLowerCase(),
+                          ),
+                      )
+                      .map((skill) => ({
+                        skill,
+                        kind: 'recommended' as const,
+                      })),
+                  ].map(({ skill, kind }) => (
+                    <KeywordChip key={`${kind}-${skill}`} component="span">
+                      {skill}
+                    </KeywordChip>
+                  ))}
                   {isComplete &&
                     (skillAnalysis?.missingSkills?.length ?? 0) +
                       (skillAnalysis?.recommendedSkills?.length ?? 0) ===
@@ -392,6 +403,28 @@ function AnalysisDashboard({
                 </Box>
               </Box>
             </Box>
+            {((skillAnalysis?.additionalSkills?.length ?? 0) > 0 ||
+              (skillAnalysis?.transferableSkills?.length ?? 0) > 0) && (
+              <Box className="skill-group" sx={{ mt: 1.5 }}>
+                <Typography className="skill-group-title">Additional on resume</Typography>
+                <Box className="keyword-wrap">
+                  {[
+                    ...(skillAnalysis?.additionalSkills ?? []),
+                    ...(skillAnalysis?.transferableSkills ?? []),
+                  ]
+                    .filter(
+                      (skill, index, all) =>
+                        all.findIndex((item) => item.toLowerCase() === skill.toLowerCase()) ===
+                        index,
+                    )
+                    .map((skill) => (
+                      <KeywordChip key={`extra-${skill}`} component="span">
+                        {skill}
+                      </KeywordChip>
+                    ))}
+                </Box>
+              </Box>
+            )}
           </Box>
         </Box>
 
@@ -408,7 +441,7 @@ function AnalysisDashboard({
               {matchedKeywords.length} matched · add missing terms only where factual.
             </CardSubtitle>
             <Box className="keyword-wrap">
-              {missingKeywords.slice(0, 8).map((keyword) => (
+              {missingKeywords.map((keyword) => (
                 <KeywordChip
                   key={keyword.id}
                   component="button"
@@ -439,7 +472,7 @@ function AnalysisDashboard({
               </ToneCountBadge>
             </Box>
             <Box className="issue-list">
-              {atsIssues.slice(0, 4).map((issue) => (
+              {atsIssues.map((issue) => (
                 <Box key={`${issue.section}-${issue.issue}`} className="issue-item">
                   <Box className="issue-top">
                     <Typography className="issue-title">{issue.issue}</Typography>
@@ -456,7 +489,7 @@ function AnalysisDashboard({
                 </Box>
               ))}
               {atsIssues.length === 0 &&
-                weaknesses.slice(0, 4).map((issue) => (
+                weaknesses.map((issue) => (
                   <Typography key={issue} className="bullet">
                     <Box className="error" component="span">
                       x
@@ -478,16 +511,18 @@ function AnalysisDashboard({
                 <LightbulbOutlinedIcon fontSize="small" />
               </ToneIconBox>
               <Typography className="card-title">Strengths & Fixes</Typography>
-              <ToneCountBadge tone="success">{activeSuggestions.length}</ToneCountBadge>
+              <ToneCountBadge tone="success">
+                {strengths.length + activeSuggestions.length}
+              </ToneCountBadge>
             </Box>
             <Box className="bullet-list">
-              {strengths.slice(0, 3).map((item) => (
+              {strengths.map((item) => (
                 <Typography key={item} className="bullet">
                   <CheckIcon fontSize="small" />
                   {item}
                 </Typography>
               ))}
-              {activeSuggestions.slice(0, 4).map((suggestion) => (
+              {activeSuggestions.slice(0, 6).map((suggestion) => (
                 <Typography key={suggestion.id} className="bullet">
                   <AutoAwesomeOutlinedIcon fontSize="small" />
                   {suggestion.title}
@@ -520,7 +555,7 @@ function AnalysisDashboard({
         </Box>
       </AnalysisMain>
 
-        <Box className="aside">
+      <Box className="aside">
         <Box className="aside-card">
           <Typography className="aside-title">Uploaded Resume</Typography>
           {selectedResume && (
@@ -559,6 +594,7 @@ interface ResumeBuilderStepPanelsProps {
   isDragging: boolean;
   uploadError: string;
   uploading: boolean;
+  deletingResumeId?: string | null;
   fileInputRef: RefObject<HTMLInputElement | null>;
   targetRole: string;
   industry: string;
@@ -568,6 +604,8 @@ interface ResumeBuilderStepPanelsProps {
   jobDescription: string;
   startingAnalysis: boolean;
   analysis: AnalysisResult | null;
+  /** Frozen ATS result for Analyze / Define Role display (not updated by Review edits). */
+  originalAnalysis?: AnalysisResult | null;
   keywords: KeywordsResponse | null;
   suggestions: SuggestionItem[];
   applyingId: number | null;
@@ -583,6 +621,8 @@ interface ResumeBuilderStepPanelsProps {
   onDrop: (event: DragEvent) => void;
   onFileSelect: (file: File) => void;
   onUseResume: (resume: UploadedResume) => void;
+  onDeleteResume: (resume: UploadedResume) => void | Promise<void>;
+  onShowMoreResumes: () => void;
   onTargetRoleChange: (value: string) => void;
   onIndustryChange: (value: string) => void;
   onExperienceLevelChange: (value: 'entry' | 'mid' | 'senior' | 'lead' | 'executive') => void;
@@ -597,6 +637,7 @@ interface ResumeBuilderStepPanelsProps {
   onApplyAllSuggestions: (ids: number[], content: string) => void;
   onIgnoreSuggestion: (id: number) => void;
   onEditedContentChange: (value: string) => void;
+  onLiveAtsChange?: (score: number, skillAnalysis?: LiveSkillAnalysis) => void;
   onSaveContent: () => void;
   onPreviewResume: () => void;
   onExport: (format: 'pdf' | 'docx', previewRoot?: HTMLElement | null) => void;
@@ -611,6 +652,7 @@ export function ResumeBuilderStepPanels({
   isDragging,
   uploadError,
   uploading,
+  deletingResumeId = null,
   fileInputRef,
   targetRole,
   industry,
@@ -620,6 +662,7 @@ export function ResumeBuilderStepPanels({
   jobDescription,
   startingAnalysis,
   analysis,
+  originalAnalysis = null,
   keywords: _keywords,
   suggestions,
   applyingId,
@@ -635,6 +678,8 @@ export function ResumeBuilderStepPanels({
   onDrop,
   onFileSelect,
   onUseResume,
+  onDeleteResume,
+  onShowMoreResumes,
   onTargetRoleChange,
   onIndustryChange,
   onExperienceLevelChange,
@@ -649,12 +694,14 @@ export function ResumeBuilderStepPanels({
   onApplyAllSuggestions,
   onIgnoreSuggestion,
   onEditedContentChange,
+  onLiveAtsChange,
   onSaveContent,
   onPreviewResume: _onPreviewResume,
   onExport,
   onDone,
   onTemplateChange,
 }: ResumeBuilderStepPanelsProps) {
+  const atsAnalysis = originalAnalysis ?? analysis;
   void _keywords;
   void _onPreviewResume;
 
@@ -663,6 +710,7 @@ export function ResumeBuilderStepPanels({
       {step === 1 && (
         <UploadStep
           existingResumes={existingResumes}
+          deletingResumeId={deletingResumeId}
           fileInputRef={fileInputRef}
           isDragging={isDragging}
           uploadError={uploadError}
@@ -671,6 +719,8 @@ export function ResumeBuilderStepPanels({
           onDrop={onDrop}
           onFileSelect={onFileSelect}
           onUseResume={onUseResume}
+          onDeleteResume={onDeleteResume}
+          onShowMoreResumes={onShowMoreResumes}
         />
       )}
       {step === 2 && (
@@ -683,7 +733,7 @@ export function ResumeBuilderStepPanels({
           jobDescription={jobDescription}
           startingAnalysis={startingAnalysis}
           selectedResume={selectedResume}
-          analysis={analysis}
+          analysis={atsAnalysis}
           versions={versions}
           onBack={onBackFromDefineRole}
           onTargetRoleChange={onTargetRoleChange}
@@ -697,8 +747,9 @@ export function ResumeBuilderStepPanels({
       )}
       {step === 3 && (
         <AnalysisDashboard
-          analysis={analysis}
-          isComplete={String(analysis?.status || '').toUpperCase() === 'COMPLETED'}
+          analysis={atsAnalysis}
+          editedContent={editedContent}
+          isComplete={String(atsAnalysis?.status || '').toUpperCase() === 'COMPLETED'}
           selectedResume={selectedResume}
           suggestions={suggestions}
           targetRole={targetRole}
@@ -710,7 +761,20 @@ export function ResumeBuilderStepPanels({
       )}
       {(step === 4 || step === 5) && (
         <OptimizeStep
-          analysis={analysis}
+          key={selectedResume?.id || analysis?.resumeId || analysis?.id || 'optimize'}
+          analysis={
+            analysis && atsAnalysis
+              ? {
+                  ...analysis,
+                  baselineAtsScore: atsAnalysis.atsScore,
+                  // Seed Review "current" score from the frozen Analyze result.
+                  atsScore: atsAnalysis.atsScore,
+                  skillAnalysis: atsAnalysis.skillAnalysis ?? analysis.skillAnalysis,
+                  editedContent:
+                    analysis.editedContent || editedContent || atsAnalysis.editedContent,
+                }
+              : (analysis ?? atsAnalysis)
+          }
           applyingId={applyingId}
           editedContent={editedContent}
           jobDescription={jobDescription}
@@ -723,6 +787,7 @@ export function ResumeBuilderStepPanels({
           onApplyAllSuggestions={onApplyAllSuggestions}
           onIgnoreSuggestion={onIgnoreSuggestion}
           onEditedContentChange={onEditedContentChange}
+          onLiveAtsChange={onLiveAtsChange}
           onExportStep={() => onGoTo(10)}
           onSaveContent={onSaveContent}
           onTemplateChange={onTemplateChange}
@@ -731,7 +796,17 @@ export function ResumeBuilderStepPanels({
 
       {step === 10 && (
         <ExportStep
-          analysis={analysis}
+          analysis={
+            atsAnalysis
+              ? {
+                  ...(analysis ?? atsAnalysis),
+                  baselineAtsScore: atsAnalysis.atsScore,
+                  atsScore: atsAnalysis.atsScore,
+                  editedContent:
+                    editedContent || analysis?.editedContent || atsAnalysis.editedContent,
+                }
+              : analysis
+          }
           editedContent={editedContent}
           exportingFormat={exportingFormat}
           jobDescription={jobDescription}
