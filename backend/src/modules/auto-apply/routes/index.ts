@@ -15,6 +15,7 @@ import applicationReadinessRoutes from '@/modules/auto-apply/routes/application-
 import applicationAnalysisRoutes from '@/modules/auto-apply/routes/application-analysis.route.js';
 import setupStatusRoutes from '@/modules/auto-apply/routes/setup-status.route.js';
 import privacyAcknowledgementRoutes from '@/modules/auto-apply/routes/privacy-acknowledgement.route.js';
+import assistedApplyRolloutRoutes from '@/modules/auto-apply/routes/assisted-apply-rollout.route.js';
 
 const router = express.Router();
 
@@ -34,5 +35,6 @@ router.use('/events', auditEventRoutes);
 router.use('/admin', adminDiagnosticsRoutes);
 router.use('/setup-status', setupStatusRoutes);
 router.use('/privacy-acknowledgement', privacyAcknowledgementRoutes);
+router.use('/rollout-flags', assistedApplyRolloutRoutes);
 
 export default router;
