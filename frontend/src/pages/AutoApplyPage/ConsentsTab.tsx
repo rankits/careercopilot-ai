@@ -29,18 +29,9 @@ const CONSENT_TYPES: {
     description:
       'Lets us suggest cover letters and screening answers based on your profile and the job. You always review and can edit before anything is used. Turn this off if you only want to write everything yourself.',
   },
-  {
-    type: 'EMAIL_SUBMISSION',
-    label: 'Send applications from my connected email',
-    description:
-      'Only needed if a job is applied by email. We will never send mail without your approval for that application. You can leave this off for normal website apply links.',
-  },
-  {
-    type: 'AUTOPILOT_SUBMISSION',
-    label: 'Apply automatically under my rules',
-    description:
-      'Full hands-off applying. Not available yet — leave this off. When it ships, it will only run within the daily limits and rules you set, and you can pause it anytime.',
-  },
+  // EMAIL_SUBMISSION and AUTOPILOT_SUBMISSION are intentionally omitted (AA-002).
+  // Those types remain in the ConsentType enum for Later automation but are not
+  // grantable from the UI and are rejected by the grant API.
 ];
 
 export function ConsentsTab() {
