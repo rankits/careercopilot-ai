@@ -140,6 +140,11 @@ const envSchema = z
     ENABLE_AUTO_APPLY: booleanFromString(true),
     // AA-070: direct external handoff (no RabbitMQ). Default on; set false to kill-switch.
     ASSISTED_APPLY_DIRECT_HANDOFF: booleanFromString(true),
+    // AA-092: staged rollout — percent 0–100 (100 = all users when allowlist empty).
+    ASSISTED_APPLY_HANDOFF_ROLLOUT_PERCENT: z.coerce.number().int().min(0).max(100).default(100),
+    ASSISTED_APPLY_WORKSPACE_ROLLOUT_PERCENT: z.coerce.number().int().min(0).max(100).default(100),
+    // Comma-separated user ids always included in both Phase 1 cohorts.
+    ASSISTED_APPLY_ROLLOUT_ALLOWLIST: z.preprocess(emptyToUndefined, z.string().optional()),
     // Chromium snapshot for JS-heavy job pages (Ashby etc). Set false to skip.
     ENABLE_AUTO_APPLY_HEADLESS_SNAPSHOT: booleanFromString(true),
     // Optional path to system Chromium (Alpine docker: /usr/bin/chromium-browser).

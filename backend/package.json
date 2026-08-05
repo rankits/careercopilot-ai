@@ -22,6 +22,8 @@
     "job-embeddings:backfill:build": "node dist/modules/job-embeddings/cli/run-job-embedding-backfill.js",
     "jobs:cleanup:storage-retention": "tsx src/modules/jobs/cli/run-storage-retention-cleanup.ts",
     "jobs:cleanup:embedding-age": "tsx src/modules/jobs/cli/run-embedding-age-cleanup.ts",
+    "auto-apply:repair-legacy-status": "tsx src/modules/auto-apply/cli/legacy-status-repair.ts",
+    "auto-apply:handoff-queue-canary": "tsx src/modules/auto-apply/cli/handoff-queue-canary.ts",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
