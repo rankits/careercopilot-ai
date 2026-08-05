@@ -1,6 +1,8 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+
+import { resetCompanyLogoCache } from '@/features/jobs/utils/companyLogoCache';
 
 import { JobCard, type JobCardData } from './JobCard';
 
@@ -21,6 +23,11 @@ const baseJob: JobCardData = {
 };
 
 describe('JobCard', () => {
+  afterEach(() => {
+    resetCompanyLogoCache();
+    vi.unstubAllGlobals();
+  });
+
   it('hides match badge and actions when score and handlers are absent', () => {
     render(<JobCard job={baseJob} />);
 
@@ -84,6 +91,72 @@ describe('JobCard', () => {
     expect(screen.getByLabelText(/acme logo/i)).toHaveTextContent('A');
     expect(screen.queryByText('React')).not.toBeInTheDocument();
     expect(screen.getByText(/not disclosed/i)).toBeInTheDocument();
+  });
+
+  it('hides experience placeholders and only shows verified badge when verified', () => {
+    const { rerender } = render(
+      <JobCard
+        job={{
+          ...baseJob,
+          experience: '',
+          location: '',
+          verified: false,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+    expect(screen.queryByText(/experience not listed/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/verified company/i)).not.toBeInTheDocument();
+
+    rerender(
+      <JobCard
+        job={{
+          ...baseJob,
+          experience: '',
+          location: 'Berlin',
+          verified: true,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+    expect(screen.getByText('Berlin')).toBeInTheDocument();
+    expect(screen.getByLabelText(/verified company/i)).toBeInTheDocument();
+  });
+
+  it('falls back to the company initial when the logo image errors', async () => {
+    class OkImage {
+      onload: (() => void) | null = null;
+      onerror: (() => void) | null = null;
+      set src(_value: string) {
+        queueMicrotask(() => this.onload?.());
+      }
+    }
+    vi.stubGlobal('Image', OkImage);
+
+    render(
+      <JobCard
+        job={{
+          ...baseJob,
+          logo: 'A',
+          logoUrl: 'https://cdn.example/broken-logo.png',
+        }}
+      />,
+    );
+
+    const image = await waitFor(() => {
+      const node = screen.getByLabelText(/acme logo/i).querySelector('img');
+      expect(node).toBeTruthy();
+      return node as HTMLImageElement;
+    });
+
+    image.dispatchEvent(new Event('error'));
+
+    await waitFor(() => {
+      expect(screen.getByLabelText(/acme logo/i)).toHaveTextContent('A');
+      expect(screen.getByLabelText(/acme logo/i).querySelector('img')).toBeNull();
+    });
   });
 
   it('disables Apply when applyUrl is missing', () => {
