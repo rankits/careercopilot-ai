@@ -293,6 +293,128 @@ describe('SubmissionProcessingService', () => {
     expect(attemptRepo.create).toHaveBeenCalledWith(expect.objectContaining({ attemptNumber: 3 }));
   });
 
+  it('AA-005: early failure uses count+1 (not hardcoded 1) and finalizes SUBMISSION_FAILED', async () => {
+    vi.mocked(consentRepo.findActiveByType).mockResolvedValue(null);
+    vi.mocked(attemptRepo.countByJobApplicationId).mockResolvedValue(0);
+
+    await service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
+
+    expect(attemptRepo.countByJobApplicationId).toHaveBeenCalledWith('jobapp-1');
+    expect(attemptRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ attemptNumber: 1, errorCode: 'CONSENT_REVOKED' }),
+    );
+    expect(jobAppRepo.finalizeSubmission).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
+    );
+    expect(eventService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'SUBMISSION_FAILED',
+        metadata: expect.objectContaining({ attemptNumber: 1, errorCode: 'CONSENT_REVOKED' }),
+      }),
+    );
+  });
+
+  it('AA-005: fail early twice with a prior attempt row does not get stuck in SUBMITTING', async () => {
+    vi.mocked(consentRepo.findActiveByType).mockResolvedValue(null);
+
+    // First early failure — no prior attempts.
+    vi.mocked(attemptRepo.countByJobApplicationId).mockResolvedValueOnce(0);
+    await service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
+    expect(attemptRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ attemptNumber: 1, errorCode: 'CONSENT_REVOKED' }),
+    );
+    expect(jobAppRepo.finalizeSubmission).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
+    );
+
+    // Second early failure after re-claim — prior attempt #1 already exists.
+    vi.mocked(attemptRepo.countByJobApplicationId).mockResolvedValueOnce(1);
+    await service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
+
+    expect(attemptRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ attemptNumber: 2, errorCode: 'CONSENT_REVOKED' }),
+    );
+    expect(jobAppRepo.finalizeSubmission).toHaveBeenLastCalledWith(
+      'user-1',
+      'jobapp-1',
+      expect.objectContaining({ status: 'SUBMISSION_FAILED', failureCode: 'CONSENT_REVOKED' }),
+    );
+    expect(eventService.record).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        eventType: 'SUBMISSION_FAILED',
+        metadata: expect.objectContaining({ attemptNumber: 2 }),
+      }),
+    );
+    // Never left without finalize after the second failure.
+    expect(jobAppRepo.finalizeSubmission).toHaveBeenCalledTimes(2);
+  });
+
+  it('AA-005: third+ early failure inserts attemptNumber 3 and finalizes SUBMISSION_FAILED', async () => {
+    vi.mocked(jobLookup.findJobChannelSnapshot).mockResolvedValue({
+      id: 'job-1',
+      status: 'CLOSED',
+      applyUrl: 'https://acme.com/apply',
+    });
+    vi.mocked(attemptRepo.countByJobApplicationId).mockResolvedValue(2);
+
+    await service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
+
+    expect(attemptRepo.create).toHaveBeenCalledWith(
+      expect.objectContaining({ attemptNumber: 3, errorCode: 'JOB_NO_LONGER_ACTIVE' }),
+    );
+    expect(jobAppRepo.finalizeSubmission).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
+    );
+  });
+
+  it('AA-005: P2002 on attempt insert is retried once and succeeds', async () => {
+    vi.mocked(consentRepo.findActiveByType).mockResolvedValue(null);
+    vi.mocked(attemptRepo.countByJobApplicationId)
+      .mockResolvedValueOnce(1) // first count → attempt 2
+      .mockResolvedValueOnce(2); // recount after P2002 → attempt 3
+    vi.mocked(attemptRepo.create)
+      .mockRejectedValueOnce({ code: 'P2002' })
+      .mockResolvedValueOnce({
+        id: 'attempt-3',
+        jobApplicationId: 'jobapp-1',
+        attemptNumber: 3,
+        outcome: 'FAILED_DO_NOT_RETRY',
+        errorCode: 'CONSENT_REVOKED',
+        errorMessage: 'Required consent was revoked before submission could complete.',
+        startedAt: new Date(),
+        completedAt: new Date(),
+      });
+
+    await service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
+
+    expect(attemptRepo.create).toHaveBeenCalledTimes(2);
+    expect(attemptRepo.create).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ attemptNumber: 2 }),
+    );
+    expect(attemptRepo.create).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ attemptNumber: 3 }),
+    );
+    expect(jobAppRepo.finalizeSubmission).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
+    );
+    expect(eventService.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'SUBMISSION_FAILED',
+        metadata: expect.objectContaining({ attemptNumber: 3 }),
+      }),
+    );
+  });
+
   it('routes FAILED_SAFE_TO_RETRY and FAILED_DO_NOT_RETRY both to SUBMISSION_FAILED (retry is a separate explicit action)', async () => {
     vi.mocked(mockAdapter.submit).mockResolvedValue({
       outcome: 'FAILED_SAFE_TO_RETRY',
