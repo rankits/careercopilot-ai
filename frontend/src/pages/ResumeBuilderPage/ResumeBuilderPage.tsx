@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { useBlocker, useParams, useNavigate } from 'react-router-dom';
+import { useBlocker, useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/atoms';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { ROUTES } from '@/constants/routes';
+import { resolveSafeReturnTo, isSafeAssistedApplyReturnTo } from '@/features/auto-apply/utils/returnToNavigation';
 import {
   Dialog,
   DialogActions,
@@ -49,7 +50,21 @@ function skillsKeyOf(skills: string[]) {
 export function ResumeBuilderPage() {
   const { resumeId: paramResumeId } = useParams<{ resumeId?: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
+
+  const navigateAfterExit = (saved: boolean) => {
+    const rawReturnTo = searchParams.get('returnTo');
+    if (!isSafeAssistedApplyReturnTo(rawReturnTo)) return false;
+    let target = decodeURIComponent(rawReturnTo!);
+    if (saved) {
+      const url = new URL(target, window.location.origin);
+      url.searchParams.set('resumeReturned', 'saved');
+      target = `${url.pathname}${url.search}`;
+    }
+    void navigate(target);
+    return true;
+  };
 
   const [step, setStep] = useState<Step>(paramResumeId ? 2 : 1);
   const [resumeId, setResumeId] = useState<string>(paramResumeId ?? '');
@@ -567,7 +582,9 @@ export function ResumeBuilderPage() {
       skillsKey: '',
     });
     setStep(1);
-    void navigate(ROUTES.RESUME_BUILDER, { replace: true });
+    if (!navigateAfterExit(false)) {
+      void navigate(ROUTES.RESUME_BUILDER, { replace: true });
+    }
   };
 
   const mergeRecheckIntoAnalysis = (
@@ -832,7 +849,9 @@ export function ResumeBuilderPage() {
           message: 'Resume saved successfully',
           severity: 'success',
         });
-        void navigate(ROUTES.SAVED_RESUMES);
+        if (!navigateAfterExit(true)) {
+          void navigate(ROUTES.SAVED_RESUMES);
+        }
       }
     } catch (error) {
       alert(`Failed to save resume:\n${getApiErrorMessage(error)}`);

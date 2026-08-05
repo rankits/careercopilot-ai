@@ -11,7 +11,9 @@ export type AutoApplyEventType =
   | 'SUBMISSION_OUTCOME_UNKNOWN'
   | 'SUBMISSION_CONFIRMED'
   | 'SUBMISSION_WITHDRAWN'
-  | 'SUBMISSION_RECLAIMED';
+  | 'SUBMISSION_RECLAIMED'
+  | 'RESUME_CONFIRMED'
+  | 'HANDOFF_OPENED';
 
 export interface AutoApplyAuditEventDto {
   id: string;

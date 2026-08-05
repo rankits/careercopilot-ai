@@ -1,6 +1,7 @@
 import type { QueryClient } from '@tanstack/react-query';
 
 import { autoApplyQueryKeys } from '../queryKeys';
+
 import { isStatusConflictError, normalizeAutoApplyError } from './apiError';
 
 /**

@@ -33,6 +33,7 @@ const baseApp = {
   planVersion: 1,
   progressStep: null,
   reopenedAt: null,
+    handoffOpenedAt: null,
   createdAt: new Date(),
   updatedAt: new Date(),
 } as JobApplicationDto;
