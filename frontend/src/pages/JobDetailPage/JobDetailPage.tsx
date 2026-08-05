@@ -4,6 +4,7 @@ import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
 import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
 import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import Box from '@mui/material/Box';
+import Tooltip from '@mui/material/Tooltip';
 import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
@@ -34,6 +35,12 @@ import { JobDetailSectionHeader } from './JobDetailSectionHeader';
 import { jobDetailPageSx } from './styles';
 
 const SIMILAR_JOBS_ERROR_TOAST = 'Unable to load similar jobs. Please try again.';
+const ASSISTED_APPLY_TOOLTIP_ENABLED =
+  "We'll help you prepare and track this application. You still submit it on the employer's site.";
+const ASSISTED_APPLY_TOOLTIP_DISABLED = "This listing can't be tracked yet.";
+const ASSISTED_APPLY_ARIA_ENABLED =
+  "Assisted Apply. We'll help you prepare and track this application.";
+const ASSISTED_APPLY_ARIA_DISABLED = "Assisted Apply. This listing can't be tracked yet.";
 
 function DetailSection({ items, title }: { items: string[]; title: string }) {
   if (items.length === 0) return null;
@@ -225,37 +232,29 @@ export function JobDetailPage() {
               <Button disabled={!applyUrl} onClick={() => openExternalApply(applyUrl)} size="small">
                 Apply Now
               </Button>
-              <Button
-                disabled={!jobId}
-                isLoading={isTrackingApply}
-                onClick={() =>
-                  void trackAndOpenApply({
-                    jobId,
-                    applyUrl,
-                    openExternal: false,
-                    applyMode: 'PREPARE',
-                  })
-                }
-                size="small"
+              <Tooltip
+                title={jobId ? ASSISTED_APPLY_TOOLTIP_ENABLED : ASSISTED_APPLY_TOOLTIP_DISABLED}
               >
-                Prepare Application
-              </Button>
-              <Button
-                disabled={!jobId}
-                isLoading={isTrackingApply}
-                onClick={() =>
-                  void trackAndOpenApply({
-                    jobId,
-                    applyUrl,
-                    openExternal: false,
-                    applyMode: 'ASSISTED',
-                  })
-                }
-                size="small"
-                variant="outline"
-              >
-                Assisted Apply
-              </Button>
+                <Box component="span" sx={jobDetailPageSx.assistedApplyTooltipWrap}>
+                  <Button
+                    aria-label={jobId ? ASSISTED_APPLY_ARIA_ENABLED : ASSISTED_APPLY_ARIA_DISABLED}
+                    disabled={!jobId}
+                    isLoading={isTrackingApply}
+                    onClick={() =>
+                      void trackAndOpenApply({
+                        jobId,
+                        applyUrl,
+                        openExternal: false,
+                        applyMode: 'ASSISTED',
+                      })
+                    }
+                    size="small"
+                    variant="outline"
+                  >
+                    {isTrackingApply ? 'Starting…' : 'Assisted Apply'}
+                  </Button>
+                </Box>
+              </Tooltip>
               <Button
                 disabled={!jobId || similarJobs.isFetching}
                 onClick={handleFindSimilar}
