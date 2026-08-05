@@ -5,6 +5,7 @@ import { PrismaJobApplicationRepository } from '@/modules/auto-apply/repositorie
 import { AssistedApplyCompletionService } from '@/modules/auto-apply/services/assisted-apply-completion.service.js';
 
 const completionService = new AssistedApplyCompletionService(new PrismaJobApplicationRepository());
+export const assistedApplyCompletionService = completionService;
 
 export const markAppliedController = async (
   req: Request,

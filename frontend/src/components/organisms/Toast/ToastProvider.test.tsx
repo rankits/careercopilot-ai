@@ -27,5 +27,26 @@ describe('ToastProvider', () => {
     await user.click(screen.getByRole('button', { name: /show toast/i }));
 
     expect(await screen.findByText('Saved successfully')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'polite');
+  });
+
+  it('uses assertive aria-live for error toasts (AA-082)', async () => {
+    function ErrorHarness() {
+      const { showToast } = useToast();
+      return (
+        <button onClick={() => showToast({ message: 'Failed', severity: 'error' })}>
+          Show error
+        </button>
+      );
+    }
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <ErrorHarness />
+      </ToastProvider>,
+    );
+    await user.click(screen.getByRole('button', { name: /show error/i }));
+    expect(await screen.findByText('Failed')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAttribute('aria-live', 'assertive');
   });
 });

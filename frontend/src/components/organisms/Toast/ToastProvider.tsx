@@ -58,7 +58,9 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
               </Button>
             ) : undefined
           }
+          aria-live={toast?.severity === 'error' ? 'assertive' : 'polite'}
           onClose={() => setToast(null)}
+          role="status"
           severity={toast?.severity}
           sx={{ width: '100%' }}
         >
