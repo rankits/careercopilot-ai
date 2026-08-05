@@ -70,3 +70,66 @@ export function useHandoffApplication(jobApplicationId: string | undefined) {
     },
   });
 }
+
+export function useMarkApplied(jobApplicationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload?: { appliedAt?: string; notes?: string }) => {
+      try {
+        return await autoApplyService.markApplied(jobApplicationId!, payload);
+      } catch (error) {
+        throw normalizeAutoApplyError(error, 'Could not mark as applied.');
+      }
+    },
+    onSuccess: async () => {
+      if (!jobApplicationId) return;
+      await queryClient.invalidateQueries({
+        queryKey: autoApplyQueryKeys.workspace(jobApplicationId),
+      });
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.submissions });
+      await queryClient.invalidateQueries({
+        queryKey: autoApplyQueryKeys.events(jobApplicationId),
+      });
+    },
+  });
+}
+
+export function useAbandonApplication(jobApplicationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (payload: { reasonCode: string; note?: string }) => {
+      try {
+        return await autoApplyService.abandonApplication(jobApplicationId!, payload);
+      } catch (error) {
+        throw normalizeAutoApplyError(error, 'Could not abandon this application.');
+      }
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.submissions });
+      if (jobApplicationId) {
+        await queryClient.invalidateQueries({
+          queryKey: autoApplyQueryKeys.workspace(jobApplicationId),
+        });
+      }
+    },
+  });
+}
+
+export function useReportBrokenLink(jobApplicationId: string | undefined) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async () => {
+      try {
+        return await autoApplyService.reportBrokenLink(jobApplicationId!);
+      } catch (error) {
+        throw normalizeAutoApplyError(error, 'Could not report the broken link.');
+      }
+    },
+    onSuccess: async () => {
+      if (!jobApplicationId) return;
+      await queryClient.invalidateQueries({
+        queryKey: autoApplyQueryKeys.events(jobApplicationId),
+      });
+    },
+  });
+}

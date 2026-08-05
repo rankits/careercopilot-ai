@@ -16,6 +16,8 @@ describe('activityEventLabel', () => {
       "Opened the employer's application page",
     );
     expect(activityEventLabel('ANALYSIS_COMPLETED')).toBe('Analyzed the job posting');
+    expect(activityEventLabel('MARKED_APPLIED')).toBe('Marked as applied');
+    expect(activityEventLabel('BROKEN_LINK_REPORTED')).toBe('Reported a broken apply link');
   });
 
   it('uses a safe fallback for unknown types — never the raw enum', () => {

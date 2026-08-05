@@ -54,6 +54,9 @@ describe('JobApplicationService', () => {
     progressStep: null,
     reopenedAt: null,
     handoffOpenedAt: null,
+    appliedNotes: null,
+    abandonReason: null,
+    abandonNote: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -100,6 +103,9 @@ describe('JobApplicationService', () => {
         Promise.resolve({ ...baseApplication, resumeVersionId }),
       ),
       recordHandoffOpened: vi.fn().mockResolvedValue(null),
+      markApplied: vi.fn().mockResolvedValue(null),
+      abandonApplication: vi.fn().mockResolvedValue(null),
+      updateAppliedDetails: vi.fn().mockResolvedValue(baseApplication),
     };
     mockEligibility = {
       evaluateForJob: vi.fn().mockResolvedValue({ eligible: true, checks: [] }),

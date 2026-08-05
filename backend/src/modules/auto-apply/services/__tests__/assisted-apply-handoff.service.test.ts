@@ -21,6 +21,9 @@ describe('AssistedApplyHandoffService (AA-070)', () => {
     jobId,
     status: 'READY_FOR_REVIEW' as const,
     handoffOpenedAt: null,
+    appliedNotes: null,
+    abandonReason: null,
+    abandonNote: null,
     externalConfirmationUrl: null,
     resumeVersionId: 'rv-1',
   };

@@ -59,6 +59,9 @@ const baseRecord = {
     progressStep: null,
     reopenedAt: null,
     handoffOpenedAt: null,
+    appliedNotes: null,
+    abandonReason: null,
+    abandonNote: null,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
 };
