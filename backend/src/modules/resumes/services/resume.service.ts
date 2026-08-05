@@ -167,8 +167,24 @@ export const resumeService = {
     };
   },
 
-  async listResumes(input?: { userId?: string }): Promise<Resume[]> {
-    return resumeRepository.listResumes(input?.userId);
+  async listResumes(input: { userId: string }): Promise<Resume[]> {
+    return resumeRepository.listResumes(input.userId);
+  },
+
+  async downloadResume(resumeId: string, principalId: string) {
+    const resume = await assertOwnedResume(resumeId, principalId);
+    const storage = createResumeStorage();
+
+    try {
+      const buffer = await storage.retrieve(resume.storageKey);
+      return {
+        buffer,
+        mimeType: resume.mimeType,
+        originalName: resume.originalName,
+      };
+    } catch {
+      throw new AppError('Resume file could not be retrieved', 404, 'RESUME_FILE_NOT_FOUND');
+    }
   },
 
   async getParsedData(resumeId: string, principalId: string) {

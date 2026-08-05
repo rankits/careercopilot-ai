@@ -44,6 +44,60 @@ describe('mapResumeToProfile', () => {
     });
   });
 
+  it('maps stored ParsedResumeData (AI normaliser output) into required form fields', () => {
+    expect(
+      mapResumeToProfile({
+        personalDetails: {
+          fullName: 'Ada Lovelace',
+          email: 'ada@example.com',
+          phone: '+44 1234',
+          location: 'London',
+          summary: 'Computing pioneer',
+          currentTitle: 'Engineer',
+          currentCompany: 'Analytical Engines',
+        },
+        professionalProfile: {
+          summary: 'Computing pioneer',
+          currentTitle: 'Engineer',
+          totalExperienceYears: 8,
+        },
+        experience: [{ company: 'Analytical Engines', title: 'Engineer' }],
+        education: [{ institution: 'University of London', qualification: 'Mathematics' }],
+        skills: ['Algorithms', 'Git'],
+        certifications: [{ name: 'Advanced Computing', issuer: 'Babbage Institute' }],
+        projects: [{ name: 'Bernoulli Engine', description: 'Algorithm implementation' }],
+        totalExperienceYears: 8,
+      }),
+    ).toMatchObject({
+      fullName: 'Ada Lovelace',
+      email: 'ada@example.com',
+      phone: '+44 1234',
+      designation: 'Engineer',
+      currentCompany: 'Analytical Engines',
+      totalExperience: '8',
+      skills: 'Algorithms, Git',
+      summary: 'Computing pioneer',
+      workExperience: 'Engineer — Analytical Engines',
+    });
+  });
+
+  it('keeps RULE_BASED raw section lines instead of dropping them', () => {
+    expect(
+      mapResumeToProfile({
+        personalDetails: { fullName: 'Ada Lovelace', email: 'ada@example.com', phone: '+44 1234' },
+        experience: [{ raw: 'Engineer at Analytical Engines' }],
+        education: [{ raw: 'Mathematics — University of London' }],
+        skills: ['Algorithms'],
+        certifications: [{ raw: 'Advanced Computing' }],
+      }),
+    ).toMatchObject({
+      workExperience: 'Engineer at Analytical Engines',
+      education: 'Mathematics — University of London',
+      certifications: 'Advanced Computing',
+      skills: 'Algorithms',
+    });
+  });
+
   it('returns safe empty values for missing or partial fields', () => {
     expect(mapResumeToProfile({ personalInformation: { fullName: 'Ada' } })).toMatchObject({
       fullName: 'Ada',
