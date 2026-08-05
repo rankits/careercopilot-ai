@@ -141,9 +141,7 @@ describe('SubmissionOrchestrationService', () => {
 
   it('approves once readiness passes', async () => {
     await service.approve('user-1', 'jobapp-1');
-    expect(readiness.evaluate).toHaveBeenCalledWith(
-      expect.objectContaining({ stage: 'APPROVE' }),
-    );
+    expect(readiness.evaluate).toHaveBeenCalledWith(expect.objectContaining({ stage: 'APPROVE' }));
     expect(jobAppService.transitionStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', 'APPROVED');
   });
 
@@ -225,10 +223,45 @@ describe('SubmissionOrchestrationService', () => {
   it('rolls back QUEUED when queue publish fails', async () => {
     vi.mocked(queue.enqueue).mockRejectedValue(new Error('broker down'));
     await expect(service.queueForSubmission('user-1', 'jobapp-1')).rejects.toThrow(
-      expect.objectContaining({ code: 'QUEUE_PUBLISH_FAILED' }),
+      expect.objectContaining({
+        code: 'QUEUE_PUBLISH_FAILED',
+        statusCode: 503,
+        message: "We couldn't queue this application. Try again.",
+      }),
     );
     expect(jobAppRepo.updateStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', {
       status: 'APPROVED',
     });
+  });
+
+  it('AA-009: rolls back QUEUED when enqueue throws QueuePublishError (falsy publish path)', async () => {
+    const { QueuePublishError } =
+      await import('@/modules/auto-apply/errors/queue-publish.error.js');
+    vi.mocked(queue.enqueue).mockRejectedValue(
+      new QueuePublishError('Broker publish returned failure'),
+    );
+
+    await expect(service.queueForSubmission('user-1', 'jobapp-1')).rejects.toThrow(
+      expect.objectContaining({ code: 'QUEUE_PUBLISH_FAILED', statusCode: 503 }),
+    );
+    expect(jobAppRepo.updateStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', {
+      status: 'APPROVED',
+    });
+  });
+
+  it('AA-009: retry after publish failure behaves as a fresh queue attempt', async () => {
+    const { QueuePublishError } =
+      await import('@/modules/auto-apply/errors/queue-publish.error.js');
+    vi.mocked(queue.enqueue)
+      .mockRejectedValueOnce(new QueuePublishError('first fail'))
+      .mockResolvedValueOnce(undefined);
+
+    await expect(service.queueForSubmission('user-1', 'jobapp-1')).rejects.toMatchObject({
+      code: 'QUEUE_PUBLISH_FAILED',
+    });
+
+    const result = await service.queueForSubmission('user-1', 'jobapp-1');
+    expect(result.status).toBe('QUEUED');
+    expect(queue.enqueue).toHaveBeenCalledTimes(2);
   });
 });
