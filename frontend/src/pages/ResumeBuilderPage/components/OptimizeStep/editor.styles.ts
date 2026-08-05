@@ -1,11 +1,25 @@
 import { Box, Typography, styled } from '@/lib/material';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
-import { border, borderRadius, muted, t, title } from '../../styles/shared';
+import { border, borderRadius, muted, scrollableMultilineSx, t, title } from '../../styles/shared';
+
+export { scrollableMultilineSx };
 
 export const SectionEditorShell = styled(Box)({
   display: 'grid',
   gap: spacing[3],
+  minWidth: 0,
+});
+
+export const ScrollableEntries = styled(Box)({
+  display: 'grid',
+  gap: spacing[3],
+  maxHeight: '22rem',
+  minWidth: 0,
+  overflowX: 'hidden',
+  overflowY: 'auto',
+  paddingRight: spacing[1],
+  scrollbarWidth: 'thin',
 });
 
 export const FieldLabel = styled(Typography)({
@@ -23,6 +37,30 @@ export const ChipInputRow = styled(Box)({
   maxWidth: '100%',
   minHeight: '2.5rem',
   minWidth: 0,
+});
+
+/** Plain text skill suggestions — not chip pills. */
+export const SkillSuggestionRow = styled(Box)({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: `${spacing[1]} ${spacing[2]}`,
+  maxWidth: '100%',
+  minWidth: 0,
+  '& button': {
+    background: 'transparent',
+    border: 'none',
+    borderBottom: `1px solid ${t.primarySoft}`,
+    color: t.primary,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semiBold,
+    padding: `0.15rem 0`,
+    '&:hover': {
+      borderBottomColor: t.primary,
+      color: t.primaryHover,
+    },
+  },
 });
 
 export const EntryCard = styled(Box)({
