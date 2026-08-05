@@ -28,7 +28,16 @@ export const getStuckSubmissionsController = async (
       queueStalledAfterMinutes,
       awaitingConfirmationAfterDays,
     });
-    return res.status(200).json(successResponse('Stuck submissions fetched successfully', stuck));
+    return res.status(200).json(
+      successResponse('Stuck submissions fetched successfully', {
+        ...stuck,
+        /** AA-092 / AA-093 operator playbooks (discoverability from diagnostics). */
+        playbooks: {
+          dataRepair: 'docs/assisted-apply/DATA_REPAIR_PLAYBOOK.md',
+          rolloutRollback: 'docs/assisted-apply/ROLLOUT_AND_ROLLBACK.md',
+        },
+      }),
+    );
   } catch (error) {
     return next(error);
   }

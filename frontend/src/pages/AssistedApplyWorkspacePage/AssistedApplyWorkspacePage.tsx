@@ -5,6 +5,10 @@ import {
   useAssistedApplyWorkspace,
   useUpdateWorkspaceProgressStep,
 } from '@/features/auto-apply/hooks/useAssistedApplyWorkspace';
+import {
+  isWorkspaceEnabledClient,
+  useAssistedApplyRolloutFlags,
+} from '@/features/auto-apply/hooks/useAssistedApplyRolloutFlags';
 
 import { ROUTES } from '@/constants/routes';
 import type { WorkspaceStepId } from '@/features/auto-apply/types/autoApply.types';
@@ -40,13 +44,18 @@ import { ResumeAnalysisStep } from './ResumeAnalysisStep';
 import { ResumeSelectionStep } from './ResumeSelectionStep';
 import { assistedApplyTouchTargetSx } from './WorkspaceStickyActions';
 
-const WORKSPACE_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_WORKSPACE !== 'false';
+const WORKSPACE_VITE_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_WORKSPACE !== 'false';
 
 export function AssistedApplyWorkspacePage() {
   const { jobApplicationId = '' } = useParams<{ jobApplicationId: string }>();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const workspaceQuery = useAssistedApplyWorkspace(jobApplicationId || undefined);
+  const rolloutQuery = useAssistedApplyRolloutFlags();
+  const workspaceEnabled =
+    WORKSPACE_VITE_ENABLED && isWorkspaceEnabledClient(rolloutQuery.data);
+  const workspaceQuery = useAssistedApplyWorkspace(
+    workspaceEnabled ? jobApplicationId || undefined : undefined,
+  );
   const progressMutation = useUpdateWorkspaceProgressStep(jobApplicationId || undefined);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
   const [abandonOpen, setAbandonOpen] = useState(false);
@@ -72,10 +81,10 @@ export function AssistedApplyWorkspacePage() {
   }, [workspaceQuery.data, searchParams]);
 
   useEffect(() => {
-    if (!WORKSPACE_ENABLED) {
+    if (!workspaceEnabled && !rolloutQuery.isLoading) {
       void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`, { replace: true });
     }
-  }, [navigate]);
+  }, [navigate, workspaceEnabled, rolloutQuery.isLoading]);
 
   useEffect(() => {
     if (!jobApplicationId || !workspaceQuery.data) return;

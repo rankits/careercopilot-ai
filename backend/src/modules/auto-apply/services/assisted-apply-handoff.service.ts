@@ -8,6 +8,10 @@ import { autoApplyEventService } from '@/modules/auto-apply/controllers/audit-ev
 import { toAssistedApplyViewState } from '@/modules/auto-apply/utils/assisted-apply-workspace.util.js';
 import type { JobApplicationStatusValue } from '@/modules/auto-apply/types/job-application.types.js';
 import { env } from '@/shared/config/env.conf.js';
+import {
+  isUserInRollout,
+  parseAllowlist,
+} from '@/modules/auto-apply/utils/assisted-apply-rollout.util.js';
 
 export interface HandoffResult {
   applyUrl: string;
@@ -46,8 +50,13 @@ export class AssistedApplyHandoffService {
     private readonly queuePublish?: { publish: (...args: unknown[]) => unknown },
   ) {}
 
-  isDirectHandoffEnabled(): boolean {
-    return env.ASSISTED_APPLY_DIRECT_HANDOFF !== false;
+  isDirectHandoffEnabled(userId?: string): boolean {
+    if (env.ASSISTED_APPLY_DIRECT_HANDOFF === false) return false;
+    if (!userId) return true;
+    return isUserInRollout(userId, {
+      percent: env.ASSISTED_APPLY_HANDOFF_ROLLOUT_PERCENT,
+      allowlist: parseAllowlist(env.ASSISTED_APPLY_ROLLOUT_ALLOWLIST),
+    });
   }
 
   async handoff(
@@ -55,7 +64,7 @@ export class AssistedApplyHandoffService {
     jobApplicationId: string,
     operationId?: string,
   ): Promise<HandoffResult> {
-    if (!this.isDirectHandoffEnabled()) {
+    if (!this.isDirectHandoffEnabled(userId)) {
       throw new AppError('Direct handoff is not enabled', 503, 'HANDOFF_DISABLED');
     }
 
