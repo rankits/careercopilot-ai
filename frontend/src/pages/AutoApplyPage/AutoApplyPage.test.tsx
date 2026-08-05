@@ -18,12 +18,20 @@ function renderPage(initialEntry = '/auto-apply') {
 }
 
 describe('AutoApplyPage', () => {
-  it('renders the heading and the profile tab by default', () => {
+  it('renders Application Setup heading and the profile tab by default', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { name: /^Auto Apply$/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Application Setup$/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /profile/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText(/Your Auto Apply preferences/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        /Save your profile, resume, and answers once\. When you're ready to apply, use Assisted Apply from any job/i,
+      ),
+    ).toBeInTheDocument();
+    const subtitle = screen.getByText(/Save your profile, resume, and answers once/i).textContent ?? '';
+    expect(subtitle.toLowerCase()).not.toMatch(/\bautomatically\b/);
+    expect(subtitle.toLowerCase()).not.toMatch(/\bsubmitted\b/);
   });
 
   it('opens the submissions tab from ?tab=submissions', () => {

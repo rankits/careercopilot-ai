@@ -39,7 +39,7 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     id: 'saved-resumes',
     label: 'Saved Resumes',
   },
-  { href: ROUTES.AUTO_APPLY, icon: SmartToyOutlinedIcon, id: 'auto-apply', label: 'Auto Apply' },
+  { href: ROUTES.AUTO_APPLY, icon: SmartToyOutlinedIcon, id: 'auto-apply', label: 'Application Setup' },
   { icon: TuneOutlinedIcon, id: 'ai-match', label: 'AI Match' },
   { icon: BusinessCenterOutlinedIcon, id: 'applications', label: 'Applications' },
 ];
