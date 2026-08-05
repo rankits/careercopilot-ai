@@ -43,6 +43,9 @@ type JobApplicationRecord = {
   progressStep: string | null;
   reopenedAt: Date | null;
   handoffOpenedAt: Date | null;
+  appliedNotes: string | null;
+  abandonReason: string | null;
+  abandonNote: string | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -459,5 +462,81 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
       }
       throw error;
     }
+  }
+
+  async markApplied(
+    userId: string,
+    id: string,
+    data: { submittedAt: Date; appliedNotes: string | null },
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto | null> {
+    try {
+      const record = await prisma.jobApplication.update({
+        where: {
+          id,
+          userId,
+          status: expectedStatus as JobApplicationStatus,
+        },
+        data: {
+          status: 'SUBMITTED',
+          submittedAt: data.submittedAt,
+          appliedNotes: data.appliedNotes,
+          progressStep: 'done',
+        },
+      });
+      return toDto(record);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async abandonApplication(
+    userId: string,
+    id: string,
+    data: { abandonReason: string; abandonNote: string | null },
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto | null> {
+    try {
+      const record = await prisma.jobApplication.update({
+        where: {
+          id,
+          userId,
+          status: expectedStatus as JobApplicationStatus,
+        },
+        data: {
+          status: 'WITHDRAWN',
+          abandonReason: data.abandonReason,
+          abandonNote: data.abandonNote,
+        },
+      });
+      return toDto(record);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  async updateAppliedDetails(
+    userId: string,
+    id: string,
+    data: { submittedAt?: Date; appliedNotes?: string | null },
+  ): Promise<JobApplicationDto> {
+    const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
+    if (!existing) {
+      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+    const record = await prisma.jobApplication.update({
+      where: { id: existing.id },
+      data: {
+        ...(data.submittedAt ? { submittedAt: data.submittedAt } : {}),
+        ...(data.appliedNotes !== undefined ? { appliedNotes: data.appliedNotes } : {}),
+      },
+    });
+    return toDto(record);
   }
 }

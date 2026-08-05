@@ -48,6 +48,9 @@ export interface JobApplicationDto {
   progressStep: string | null;
   reopenedAt: Date | null;
   handoffOpenedAt: Date | null;
+  appliedNotes: string | null;
+  abandonReason: string | null;
+  abandonNote: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

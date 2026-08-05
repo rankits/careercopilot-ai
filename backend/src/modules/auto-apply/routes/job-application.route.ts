@@ -29,6 +29,11 @@ import {
   analyzeResumeForApplicationController,
   handoffApplicationController,
 } from '@/modules/auto-apply/controllers/assisted-apply-resume-handoff.controller.js';
+import {
+  markAppliedController,
+  abandonApplicationController,
+  reportBrokenLinkController,
+} from '@/modules/auto-apply/controllers/assisted-apply-completion.controller.js';
 import { operationIdMiddleware } from '@/modules/auto-apply/middlewares/operation-id.middleware.js';
 import {
   InitiateJobApplicationSchema,
@@ -58,6 +63,29 @@ const ResumeAnalysisBodySchema = z.object({
     })
     .optional()
     .default({}),
+});
+
+const MarkAppliedBodySchema = z.object({
+  body: z
+    .object({
+      appliedAt: z.string().optional(),
+      notes: z.string().max(2000).optional(),
+    })
+    .optional()
+    .default({}),
+});
+
+const AbandonBodySchema = z.object({
+  body: z.object({
+    reasonCode: z.enum([
+      'NOT_INTERESTED',
+      'TOO_MANY_REQUIREMENTS',
+      'BROKEN_LINK',
+      'WILL_APPLY_LATER',
+      'OTHER',
+    ]),
+    note: z.string().max(2000).optional(),
+  }),
 });
 
 router.get(
@@ -119,6 +147,29 @@ router.post(
   requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN),
   operationIdMiddleware,
   handoffApplicationController,
+);
+
+router.post(
+  '/:id/mark-applied',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN),
+  validateResource(MarkAppliedBodySchema),
+  markAppliedController,
+);
+
+router.post(
+  '/:id/abandon',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN),
+  validateResource(AbandonBodySchema),
+  abandonApplicationController,
+);
+
+router.post(
+  '/:id/report-broken-link',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN),
+  reportBrokenLinkController,
 );
 
 router.post(

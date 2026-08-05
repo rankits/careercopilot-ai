@@ -133,6 +133,9 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
     progressStep: null,
     reopenedAt: null,
     handoffOpenedAt: null,
+    appliedNotes: null,
+    abandonReason: null,
+    abandonNote: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -285,6 +288,34 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
     record.updatedAt = new Date();
     return this.copy(record);
   }
+
+  async markApplied(userId, id, data, expectedStatus) {
+    const record = this.findLiveProp(userId, id);
+    if (record.status !== expectedStatus) return null;
+    record.status = 'SUBMITTED';
+    record.submittedAt = data.submittedAt;
+    record.appliedNotes = data.appliedNotes;
+    record.progressStep = 'done';
+    record.updatedAt = new Date();
+    return this.copy(record);
+  }
+  async abandonApplication(userId, id, data, expectedStatus) {
+    const record = this.findLiveProp(userId, id);
+    if (record.status !== expectedStatus) return null;
+    record.status = 'WITHDRAWN';
+    record.abandonReason = data.abandonReason;
+    record.abandonNote = data.abandonNote;
+    record.updatedAt = new Date();
+    return this.copy(record);
+  }
+  async updateAppliedDetails(userId, id, data) {
+    const record = this.findLiveProp(userId, id);
+    if (data.submittedAt) record.submittedAt = data.submittedAt;
+    if (data.appliedNotes !== undefined) record.appliedNotes = data.appliedNotes;
+    record.updatedAt = new Date();
+    return this.copy(record);
+  }
+
 }
 
 class FakeConsentRepository implements IApplicationConsentRepository {
