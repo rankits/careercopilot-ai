@@ -1,3 +1,10 @@
+export const readRequiredViteEnv = (value: unknown, name: string): string => {
+  if (typeof value === 'string' && value.length > 0) {
+    return value;
+  }
+  throw new Error(`${name} is not configured`);
+};
+
 const readOptionalViteEnv = (value: unknown, fallback: string): string =>
   typeof value === 'string' && value.length > 0 ? value : fallback;
 

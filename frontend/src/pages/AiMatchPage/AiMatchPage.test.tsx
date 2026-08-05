@@ -10,7 +10,7 @@ import type * as RecommendationHooks from '@/features/recommendations/hooks/useR
 
 import { authReducer } from '@/features/auth/authSlice';
 
-import { ForYouPage } from './ForYouPage';
+import { AiMatchPage } from './AiMatchPage';
 
 const {
   listMock,
@@ -134,7 +134,7 @@ function renderPage(isProfileComplete = true, route = '/ai-match') {
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
         <MemoryRouter initialEntries={[route]}>
-          <ForYouPage />
+          <AiMatchPage />
         </MemoryRouter>
       </QueryClientProvider>
     </Provider>,
@@ -197,7 +197,7 @@ beforeEach(() => {
   });
 });
 
-describe('ForYouPage', () => {
+describe('AiMatchPage', () => {
   it('renders recommendation mode tabs with profile selected by default', async () => {
     listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
     renderPage(true);
