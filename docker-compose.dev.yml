@@ -237,6 +237,9 @@ services:
       RABBITMQ_URL: '${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}'
       RUN_MIGRATIONS: 'false'
       ENABLE_AUTO_APPLY: '${ENABLE_AUTO_APPLY:-true}'
+      ENABLE_AUTO_APPLY_HEADLESS_SNAPSHOT: '${ENABLE_AUTO_APPLY_HEADLESS_SNAPSHOT:-true}'
+      PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: '${PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH:-/usr/bin/chromium}'
+      CHROMIUM_PATH: '${CHROMIUM_PATH:-/usr/bin/chromium}'
       LOG_LEVEL: '${LOG_LEVEL:-info}'
     volumes:
       - ./backend:/app
