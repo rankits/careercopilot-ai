@@ -5,7 +5,7 @@ import { requireUserPrincipalId, getParam } from '@/modules/auto-apply/utils/req
 import { ApplicationReadinessStage } from '@/modules/auto-apply/types/application-readiness.types.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
-const STAGES: ApplicationReadinessStage[] = ['PLAN', 'APPROVE', 'QUEUE', 'SUBMIT'];
+const STAGES: ApplicationReadinessStage[] = ['PLAN', 'APPROVE', 'QUEUE', 'SUBMIT', 'HANDOFF'];
 
 export const evaluateReadinessController = async (
   req: Request,

@@ -4,9 +4,12 @@ import type {
   ApplicationConsentDto,
   ApplicationPageAnalysisDto,
   ApplicationPlanResult,
+  ApplicationReadinessDto,
+  ApplicationReadinessStage,
   ApplicationRuleDto,
   ApplicationAnswerDto,
   ApprovedResumeVersionDto,
+  AutoApplyAuditEventDto,
   BackendSuccessResponse,
   CandidateApplicationProfileDto,
   ConsentType,
@@ -335,5 +338,31 @@ export const autoApplyService = {
       BackendSuccessResponse<{ progressStep: WorkspaceStepId }>
     >(`/auto-apply/submissions/${jobApplicationId}/progress-step`, { progressStep });
     return unwrapData(data, 'Missing progress-step data in API response');
+  },
+
+  async listAuditEvents(jobApplicationId?: string): Promise<AutoApplyAuditEventDto[]> {
+    const { data } = await httpClient.get<BackendSuccessResponse<AutoApplyAuditEventDto[]>>(
+      '/auto-apply/events',
+      {
+        params: jobApplicationId ? { jobApplicationId } : undefined,
+      },
+    );
+    return data.data ?? [];
+  },
+
+  async getApplicationReadiness(
+    jobId: string,
+    options?: { stage?: ApplicationReadinessStage; jobApplicationId?: string },
+  ): Promise<ApplicationReadinessDto> {
+    const { data } = await httpClient.get<BackendSuccessResponse<ApplicationReadinessDto>>(
+      `/auto-apply/readiness/${jobId}`,
+      {
+        params: {
+          stage: options?.stage ?? 'PLAN',
+          ...(options?.jobApplicationId ? { jobApplicationId: options.jobApplicationId } : {}),
+        },
+      },
+    );
+    return unwrapData(data, 'Missing readiness data in API response');
   },
 };

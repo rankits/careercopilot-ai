@@ -1,4 +1,4 @@
-export type ApplicationReadinessStage = 'PLAN' | 'APPROVE' | 'QUEUE' | 'SUBMIT';
+export type ApplicationReadinessStage = 'PLAN' | 'APPROVE' | 'QUEUE' | 'SUBMIT' | 'HANDOFF';
 
 export type ApplyMode = 'PREPARE' | 'ASSISTED' | 'AUTOPILOT' | 'EXTENSION';
 
