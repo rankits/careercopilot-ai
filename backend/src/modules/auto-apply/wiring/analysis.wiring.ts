@@ -32,7 +32,7 @@ const analysisRepository = new PrismaApplicationPageAnalysisRepository();
 const matchScoreLookup = new PrismaMatchScoreLookup();
 const consentRepository = new PrismaApplicationConsentRepository();
 const resumeVersionRepository = new PrismaApprovedResumeVersionRepository();
-const jobApplicationRepository = new PrismaJobApplicationRepository();
+export const jobApplicationRepository = new PrismaJobApplicationRepository();
 
 export const readinessAdapterRegistry = new JobApplicationAdapterRegistry();
 readinessAdapterRegistry.register(new ExternalRedirectAdapter());
