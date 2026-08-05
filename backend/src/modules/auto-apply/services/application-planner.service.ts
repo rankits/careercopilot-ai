@@ -21,7 +21,7 @@ import { readinessToPlannerDecision } from '@/modules/auto-apply/services/applic
 import { ApplicationContentPreparationService } from '@/modules/auto-apply/services/application-content-preparation.service.js';
 import { PreparedScreeningAnswer } from '@/modules/auto-apply/types/application-content.types.js';
 import { toApplicationPageAnalysisSummary } from '@/modules/auto-apply/types/application-page-analysis-summary.types.js';
-import { logger } from '@/shared/logger/logger.js';
+import { getOperationLogger } from '@/modules/auto-apply/middlewares/operation-id.middleware.js';
 
 /**
  * AA-013: strip SDK/custom props (request bodies, resume text, etc.) so only
@@ -288,7 +288,7 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
 
       return prepared;
     } catch (error) {
-      logger.warn(
+      getOperationLogger().warn(
         {
           err: toSafeContentPrepLogError(error),
           jobApplicationId: args.application.id,
