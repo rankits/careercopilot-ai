@@ -11,6 +11,15 @@ export interface ISubmissionOrchestrationService {
   approve(userId: string, jobApplicationId: string): Promise<JobApplicationDto>;
   /** APPROVED -> QUEUED, then publishes the submission job. */
   queueForSubmission(userId: string, jobApplicationId: string): Promise<JobApplicationDto>;
+  /**
+   * Compensating QUEUED → APPROVED|SUBMISSION_FAILED after a failed publish
+   * (AA-011). Not a forward graph edge. Guard miss is a safe no-op.
+   */
+  compensateQueuePublishFailure(
+    userId: string,
+    jobApplicationId: string,
+    previousStatus: JobApplicationDto['status'],
+  ): Promise<void>;
   /** ACTION_REQUIRED -> SUBMITTED, once the user has completed an
    * externally-handed-off application themselves. */
   confirmCompleted(userId: string, jobApplicationId: string): Promise<JobApplicationDto>;
