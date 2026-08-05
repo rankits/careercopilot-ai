@@ -4,9 +4,11 @@ import { env } from '@/config/env';
 import { ROUTES } from '@/constants/routes';
 import {
   getAccessToken,
+  isAuthSessionAllowed,
   notifyAuthSessionExpired,
   setAccessToken,
 } from '@/features/auth/utils/authSession';
+import { queryClient } from '@/services/queryClient';
 
 export const httpClient = axios.create({
   baseURL: env.apiBaseUrl,
@@ -49,6 +51,10 @@ let refreshPromise: Promise<string> | null = null;
 
 /** De-dupes concurrent 401s into a single in-flight refresh call. */
 const refreshAccessToken = (): Promise<string> => {
+  if (!isAuthSessionAllowed()) {
+    return Promise.reject(new Error('Session ended'));
+  }
+
   refreshPromise ??= axios
     .post<{ accessToken: string }>(
       `${env.apiBaseUrl}${REFRESH_TOKEN_URL}`,
@@ -56,6 +62,9 @@ const refreshAccessToken = (): Promise<string> => {
       { withCredentials: true },
     )
     .then(({ data }) => {
+      if (!isAuthSessionAllowed()) {
+        throw new Error('Session ended');
+      }
       setAccessToken(data.accessToken);
       onTokenRefreshed?.(data.accessToken);
       return data.accessToken;
@@ -67,11 +76,20 @@ const refreshAccessToken = (): Promise<string> => {
   return refreshPromise;
 };
 
+const endSessionAndRedirectToLogin = () => {
+  notifyAuthSessionExpired();
+  onUnauthorized?.();
+  queryClient.clear();
+
+  if (window.location.pathname !== ROUTES.LOGIN && window.location.pathname !== ROUTES.REGISTER) {
+    window.location.assign(ROUTES.LOGIN);
+  }
+};
+
 httpClient.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
     if (axios.isAxiosError(error) && error.response?.status === 401) {
-      notifyAuthSessionExpired();
       const config = error.config as RetriableRequestConfig | undefined;
       const isRefreshCall = config?.url?.includes(REFRESH_TOKEN_URL);
       const wasAuthenticatedRequest = Boolean(config?.headers?.Authorization);
@@ -83,20 +101,12 @@ httpClient.interceptors.response.use(
           config.headers.Authorization = `Bearer ${accessToken}`;
           return await httpClient(config);
         } catch {
-          onUnauthorized?.();
+          endSessionAndRedirectToLogin();
           return Promise.reject(error instanceof Error ? error : new Error('HTTP request failed'));
         }
       }
 
-      onUnauthorized?.();
-
-      const isAuthRoute =
-        window.location.pathname === ROUTES.LOGIN || window.location.pathname === ROUTES.REGISTER;
-
-      if (!isAuthRoute) {
-        const returnTo = encodeURIComponent(`${window.location.pathname}${window.location.search}`);
-        window.location.assign(`${ROUTES.LOGIN}?returnTo=${returnTo}`);
-      }
+      endSessionAndRedirectToLogin();
     }
 
     return Promise.reject(error instanceof Error ? error : new Error('HTTP request failed'));
