@@ -62,8 +62,7 @@ describe('authService register', () => {
   });
 
   it('propagates API failures for the caller to handle', async () => {
-    const failure = new Error('Request failed');
-    postMock.mockRejectedValue(failure);
+    postMock.mockRejectedValue(new Error('Request failed'));
 
     await expect(
       authService.register({
@@ -73,7 +72,7 @@ describe('authService register', () => {
         password: 'password123',
         phone: '+919876543210',
       }),
-    ).rejects.toBe(failure);
+    ).rejects.toThrow('Unable to create account. Please try again.');
   });
 });
 
@@ -196,12 +195,11 @@ describe('authService login', () => {
   });
 
   it('propagates login API failures for the caller to handle', async () => {
-    const failure = new Error('Request failed');
-    postMock.mockRejectedValue(failure);
+    postMock.mockRejectedValue(new Error('Request failed'));
 
     await expect(
       authService.login({ email: 'ada@example.com', password: 'password123' }),
-    ).rejects.toBe(failure);
+    ).rejects.toThrow('Unable to log in. Please try again.');
   });
 });
 
