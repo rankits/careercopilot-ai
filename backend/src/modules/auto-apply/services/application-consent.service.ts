@@ -3,6 +3,13 @@ import {
   ApplicationConsentDto,
   ConsentTypeValue,
 } from '@/modules/auto-apply/types/application-consent.types.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+
+/** Consent types that remain in the enum for Later automation but must not be grantable yet (AA-002). */
+const CONSENT_TYPES_NOT_AVAILABLE_YET: ReadonlySet<ConsentTypeValue> = new Set([
+  'EMAIL_SUBMISSION',
+  'AUTOPILOT_SUBMISSION',
+]);
 
 export class ApplicationConsentService {
   constructor(private readonly repository: IApplicationConsentRepository) {}
@@ -20,6 +27,13 @@ export class ApplicationConsentService {
     userId: string,
     consentType: ConsentTypeValue,
   ): Promise<ApplicationConsentDto> {
+    if (CONSENT_TYPES_NOT_AVAILABLE_YET.has(consentType)) {
+      throw new AppError(
+        "This consent type isn't available yet.",
+        403,
+        'CONSENT_NOT_AVAILABLE_YET',
+      );
+    }
     return this.repository.grant(userId, consentType);
   }
 
