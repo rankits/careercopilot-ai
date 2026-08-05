@@ -84,6 +84,42 @@ describe('auto-apply submission orchestration IDOR / authz', () => {
     expect(spy).toHaveBeenCalledWith(String(user.id), APP_ID);
   });
 
+  it('AA-009: surfaces QUEUE_PUBLISH_FAILED as 503 from queue', async () => {
+    const user = await seedVerifiedUser({ email: 'orchestration-queue-fail@example.com' });
+    const token = accessTokenForUser(user);
+
+    vi.spyOn(submissionOrchestrationService, 'queueForSubmission').mockRejectedValue(
+      new AppError("We couldn't queue this application. Try again.", 503, 'QUEUE_PUBLISH_FAILED'),
+    );
+
+    const res = await request(app).post(`${API}/${APP_ID}/queue`).set(authHeader(token));
+
+    expect(res.status).toBe(503);
+    expect(res.body.code).toBe('QUEUE_PUBLISH_FAILED');
+    expect(res.body.message).toBe("We couldn't queue this application. Try again.");
+  });
+
+  it('AA-009: queue succeeds on retry after a prior QUEUE_PUBLISH_FAILED', async () => {
+    const user = await seedVerifiedUser({ email: 'orchestration-queue-retry@example.com' });
+    const token = accessTokenForUser(user);
+
+    const spy = vi
+      .spyOn(submissionOrchestrationService, 'queueForSubmission')
+      .mockRejectedValueOnce(
+        new AppError("We couldn't queue this application. Try again.", 503, 'QUEUE_PUBLISH_FAILED'),
+      )
+      .mockResolvedValueOnce({ ...sampleApplication, status: 'QUEUED' } as never);
+
+    const fail = await request(app).post(`${API}/${APP_ID}/queue`).set(authHeader(token));
+    expect(fail.status).toBe(503);
+    expect(fail.body.code).toBe('QUEUE_PUBLISH_FAILED');
+
+    const ok = await request(app).post(`${API}/${APP_ID}/queue`).set(authHeader(token));
+    expect(ok.status).toBe(200);
+    expect(ok.body.data.status).toBe('QUEUED');
+    expect(spy).toHaveBeenCalledTimes(2);
+  });
+
   it('surfaces RETRY_NOT_ALLOWED as 409 from retry', async () => {
     const user = await seedVerifiedUser({ email: 'orchestration-retry@example.com' });
     const token = accessTokenForUser(user);
