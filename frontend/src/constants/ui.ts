@@ -32,6 +32,8 @@ export const APP_ACTIONS = {
   APPLY_NOW: 'Apply Now',
   RETRY: 'Retry',
   SAVE: 'Save',
+  SAVE_FOR_LATER: 'Save for later',
+  SAVED: 'Saved',
   UPLOAD_RESUME: 'Upload Resume',
   VIEW_JOB: 'View Job',
 } as const;
@@ -107,9 +109,10 @@ export const JOB_CARD_COPY = {
 
 /** Accessible names composed from job data at render time. */
 export const JOB_CARD_ARIA = {
-  apply: (title: string, available: boolean) => `Apply to ${title}${available ? '' : ' unavailable'}`,
+  apply: (title: string, available: boolean) =>
+    `Apply to ${title}${available ? '' : ' unavailable'}`,
   companyLogo: (company: string) => `${company} logo`,
-  details: (open: boolean, title: string) => `${open ? 'Hide' : 'Show'} details for ${title}`,
+  details: (title: string) => `View details for ${title}`,
   dismiss: (title: string) => `Dismiss ${title} recommendation`,
   lessLikeThis: (title: string) => `Show fewer jobs like ${title}`,
   match: (match: number, subtitle?: string) =>
@@ -119,7 +122,6 @@ export const JOB_CARD_ARIA = {
     selected ? `More jobs like ${title} selected` : `Show more jobs like ${title}`,
   notRelevant: (title: string) => `Mark ${title} as not relevant`,
   open: (title: string, company: string) => `Open ${title} at ${company}`,
-  recommendationDetails: (title: string) => `${title} recommendation details`,
   save: (saved: boolean, title: string) => `${saved ? 'Unsave' : 'Save'} ${title}`,
   viewJob: (title: string) => `View ${title}`,
 } as const;
