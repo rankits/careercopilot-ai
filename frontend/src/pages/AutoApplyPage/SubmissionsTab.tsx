@@ -20,6 +20,7 @@ import {
 } from '@/features/auto-apply/hooks/useSubmissions';
 
 import type {
+  ApplicationPageAnalysisSummary,
   ApplicationPlanResult,
   JobApplicationDto,
 } from '@/features/auto-apply/types/autoApply.types';
@@ -51,6 +52,91 @@ const DECISION_COLOR: Record<
   UNSUPPORTED_CHANNEL: 'default',
   NOT_ELIGIBLE: 'error',
 };
+
+function formatRequirementCode(code: string): string {
+  return code
+    .toLowerCase()
+    .split('_')
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(' ');
+}
+
+function PageAnalysisPanel({ analysis }: { analysis: ApplicationPageAnalysisSummary }) {
+  return (
+    <Box sx={{ mt: 1.5 }}>
+      <Typography fontWeight={600} sx={{ mb: 0.75 }} variant="body2">
+        Job page analysis
+      </Typography>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1 }}>
+        <Chip label={`Provider: ${analysis.provider}`} size="small" variant="outlined" />
+        <Chip
+          color={
+            analysis.submissionCapability === 'EXTERNAL_MANUAL' ? 'warning' : 'default'
+          }
+          label={analysis.submissionCapability.replace(/_/g, ' ')}
+          size="small"
+        />
+        <Chip
+          label={`Form: ${analysis.formStatus.replace(/_/g, ' ')}`}
+          size="small"
+          variant="outlined"
+        />
+      </Box>
+      <Typography color="text.secondary" sx={{ display: 'block', mb: 1 }} variant="caption">
+        {analysis.submissionCapability === 'EXTERNAL_MANUAL'
+          ? 'Final submit stays on the employer site — Career Copilot does not auto-submit.'
+          : `Submission mode: ${analysis.submissionCapability.replace(/_/g, ' ')}.`}
+        {analysis.formStatus === 'NOT_INSPECTED'
+          ? ' Form fields are not inspected yet (browser-assisted later).'
+          : ''}
+      </Typography>
+      {analysis.requirements.length === 0 ? (
+        <Typography color="text.secondary" variant="caption">
+          No structured requirements extracted yet.
+        </Typography>
+      ) : (
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          {analysis.requirements.map((requirement) => (
+            <Box
+              key={`${requirement.code}-${requirement.assertion}`}
+              sx={{
+                pl: 1.25,
+                borderLeft: '2px solid',
+                borderColor: 'divider',
+              }}
+            >
+              <Typography fontWeight={600} variant="caption">
+                {formatRequirementCode(requirement.code)}
+                {' · '}
+                {requirement.importance.toLowerCase()}
+                {' · '}
+                {requirement.assertion.replace(/_/g, ' ').toLowerCase()}
+                {requirement.reviewStatus === 'REVIEW_REQUIRED' ? ' · review' : ''}
+              </Typography>
+              {requirement.sourceText ? (
+                <Typography
+                  color="text.secondary"
+                  component="blockquote"
+                  sx={{ m: 0, mt: 0.25, fontStyle: 'italic' }}
+                  variant="caption"
+                >
+                  “{requirement.sourceText}”
+                </Typography>
+              ) : null}
+              <Typography color="text.secondary" sx={{ display: 'block' }} variant="caption">
+                Evidence: {requirement.evidenceStrength.replace(/_/g, ' ').toLowerCase()}
+                {typeof requirement.confidence === 'number'
+                  ? ` · confidence ${Math.round(requirement.confidence * 100)}%`
+                  : ''}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
+}
 
 function StatusChip({ status }: { status: JobApplicationDto['status'] }) {
   const color =
@@ -115,6 +201,8 @@ function PlanPanel({
             : ''}
         </Typography>
       )}
+
+      {plan.pageAnalysis ? <PageAnalysisPanel analysis={plan.pageAnalysis} /> : null}
 
       {(blocking.length > 0 || warnings.length > 0) && (
         <Box sx={{ mt: 1.5 }}>

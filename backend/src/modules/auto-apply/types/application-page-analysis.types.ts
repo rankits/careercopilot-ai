@@ -4,7 +4,7 @@
  */
 
 export const APPLICATION_PAGE_ANALYSIS_SCHEMA_VERSION = 1;
-export const APPLICATION_PAGE_EXTRACTOR_VERSION = 'deterministic-v1';
+export const APPLICATION_PAGE_EXTRACTOR_VERSION = 'deterministic-v2';
 export const APPLICATION_PAGE_EXTRACTION_POLICY_VERSION = 'policy-v1';
 
 export type ApplyMode = 'PREPARE' | 'ASSISTED' | 'AUTOPILOT' | 'EXTENSION';
