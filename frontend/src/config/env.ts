@@ -1,4 +1,4 @@
-const readRequiredViteEnv = (value: unknown, name: string): string => {
+export const readRequiredViteEnv = (value: unknown, name: string): string => {
   if (typeof value === 'string' && value.length > 0) {
     return value;
   }

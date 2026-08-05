@@ -37,6 +37,7 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
           setToast(null);
         }}
+        sx={{ top: { xs: '4.75rem', sm: '5rem' } }}
       >
         <Alert onClose={() => setToast(null)} severity={toast?.severity} sx={{ width: '100%' }}>
           {toast?.message}
