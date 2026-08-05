@@ -105,6 +105,8 @@ const baseProps = {
   onDrop: vi.fn(),
   onFileSelect: vi.fn(),
   onUseResume: vi.fn(),
+  onDeleteResume: vi.fn(),
+  onShowMoreResumes: vi.fn(),
   onTargetRoleChange: vi.fn(),
   onIndustryChange: vi.fn(),
   onExperienceLevelChange: vi.fn(),

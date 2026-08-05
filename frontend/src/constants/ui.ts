@@ -17,6 +17,7 @@ import {
   HomeOutlinedIcon,
   InsightsOutlinedIcon,
   LockOutlinedIcon,
+  PersonOutlineIcon,
   SearchOutlinedIcon,
   SecurityOutlinedIcon,
   TuneOutlinedIcon,
@@ -107,7 +108,8 @@ export const JOB_CARD_COPY = {
 
 /** Accessible names composed from job data at render time. */
 export const JOB_CARD_ARIA = {
-  apply: (title: string, available: boolean) => `Apply to ${title}${available ? '' : ' unavailable'}`,
+  apply: (title: string, available: boolean) =>
+    `Apply to ${title}${available ? '' : ' unavailable'}`,
   companyLogo: (company: string) => `${company} logo`,
   details: (open: boolean, title: string) => `${open ? 'Hide' : 'Show'} details for ${title}`,
   dismiss: (title: string) => `Dismiss ${title} recommendation`,
@@ -502,11 +504,11 @@ export const SIDEBAR_NAV_LABELS = {
   applications: 'Applications',
   aiMatch: 'AI Match',
   dashboard: 'Dashboard',
-  forYou: 'For You',
   jobsFeed: 'Jobs Feed',
   resumeBuilder: 'Resume Builder',
   savedJobs: 'Saved Jobs',
   savedResumes: 'Saved Resumes',
+  settings: 'Profile',
 } as const;
 
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
@@ -529,10 +531,10 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     label: SIDEBAR_NAV_LABELS.savedJobs,
   },
   {
-    href: ROUTES.FOR_YOU,
+    href: ROUTES.AI_MATCH,
     icon: TuneOutlinedIcon,
-    id: 'for-you',
-    label: SIDEBAR_NAV_LABELS.forYou,
+    id: 'ai-match',
+    label: SIDEBAR_NAV_LABELS.aiMatch,
   },
   {
     href: ROUTES.APPLICATIONS,
@@ -552,8 +554,22 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     id: 'saved-resumes',
     label: SIDEBAR_NAV_LABELS.savedResumes,
   },
-  { icon: TuneOutlinedIcon, id: 'ai-match', label: SIDEBAR_NAV_LABELS.aiMatch },
+  {
+    href: ROUTES.PROFILE_EDIT,
+    icon: PersonOutlineIcon,
+    id: 'settings',
+    label: SIDEBAR_NAV_LABELS.settings,
+  },
 ];
+
+/** Primary destinations shown in the mobile bottom bar (max 5). */
+export const DEFAULT_BOTTOM_NAV_IDS = [
+  'dashboard',
+  'jobs-feed',
+  'ai-match',
+  'applications',
+  'settings',
+] as const;
 
 /** Static user-facing copy and defaults for the Sidebar. */
 export const SIDEBAR_COPY = {

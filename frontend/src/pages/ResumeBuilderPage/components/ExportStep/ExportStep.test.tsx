@@ -63,4 +63,40 @@ describe('ExportStep', () => {
     fireEvent.click(screen.getByRole('button', { name: /Save Resume/i }));
     expect(onDone).toHaveBeenCalled();
   });
+
+  it('shows improved analysis ATS when recheck has not returned yet', () => {
+    render(
+      <ExportStep
+        analysis={
+          {
+            atsScore: 81,
+            baselineAtsScore: 55,
+            editedContent: 'SKILLS\nJava, Spring Boot',
+            targetRole: 'Java Developer',
+            skillAnalysis: {
+              matchedSkills: ['Java', 'Spring Boot'],
+              missingSkills: [],
+              transferableSkills: [],
+              recommendedSkills: [],
+            },
+          } as never
+        }
+        editedContent="SKILLS\nJava, Spring Boot"
+        exportingFormat={null}
+        jobDescription="Java Spring Boot"
+        preferredSkills={['Java']}
+        recheckResult={null}
+        rechecking={false}
+        savingVersion={false}
+        targetRole="Java Developer"
+        template="original"
+        onBack={vi.fn()}
+        onDone={vi.fn()}
+        onExport={vi.fn()}
+        onTemplateChange={vi.fn()}
+      />,
+    );
+
+    expect(screen.getByText(/Previous 55\/100 → now 81\/100/i)).toBeInTheDocument();
+  });
 });

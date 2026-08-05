@@ -8,7 +8,6 @@ import { DEFAULT_SIDEBAR_ITEMS } from '@/constants/ui';
 
 import { Sidebar } from './Sidebar';
 
-
 function renderSidebar(ui: ReactNode) {
   return render(<MemoryRouter>{ui}</MemoryRouter>);
 }
@@ -28,10 +27,15 @@ describe('Sidebar', () => {
       'href',
       '/saved-jobs',
     );
-    expect(screen.getByRole('link', { name: /for you/i })).toHaveAttribute('href', '/for-you');
+    expect(screen.getByRole('link', { name: /ai match/i })).toHaveAttribute('href', '/ai-match');
+    expect(screen.queryByRole('button', { name: /^ai match$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /applications/i })).toHaveAttribute(
       'href',
       '/applications',
+    );
+    expect(screen.getByRole('link', { name: /^profile$/i })).toHaveAttribute(
+      'href',
+      '/profile/edit',
     );
   });
 
@@ -91,5 +95,9 @@ describe('Sidebar', () => {
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
     expect(screen.getAllByRole('link')).toHaveLength(5);
+    expect(screen.getByRole('link', { name: /^profile$/i })).toHaveAttribute(
+      'href',
+      '/profile/edit',
+    );
   });
 });

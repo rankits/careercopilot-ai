@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   confirmProfileController,
+  deleteResumeController,
   downloadResumeController,
   getCandidateProfileController,
   getMyCandidateProfileController,
@@ -43,6 +44,13 @@ router.get(
   authMiddleware,
   requirePermission(RESUME_PERMISSIONS.READ_OWN),
   listResumesController,
+);
+router.delete(
+  '/:resumeId',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.DELETE_OWN),
+  validateResource(resumeIdParamsSchema),
+  deleteResumeController,
 );
 router.get(
   '/profile/me',

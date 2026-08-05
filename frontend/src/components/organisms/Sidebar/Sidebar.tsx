@@ -4,7 +4,12 @@ import { Button } from '@/components/atoms/Button';
 
 import fullLogoUrl from '@/assets/logo/career-copilot-logo.png';
 import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.png';
-import { BRAND_NAME, DEFAULT_SIDEBAR_ITEMS, SIDEBAR_COPY } from '@/constants/ui';
+import {
+  BRAND_NAME,
+  DEFAULT_BOTTOM_NAV_IDS,
+  DEFAULT_SIDEBAR_ITEMS,
+  SIDEBAR_COPY,
+} from '@/constants/ui';
 import {
   Box,
   ChevronLeftIcon,
@@ -53,7 +58,15 @@ function SidebarNavButton({
       aria-label={item.label}
       active={active}
       collapsed={collapsed}
-      onClick={() => onSelect?.(item)}
+      onClick={(event) => {
+        // Stay put when the active sidebar item is clicked again (avoids discard modal / remount).
+        if (active) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        onSelect?.(item);
+      }}
       tone={tone}
     >
       <Icon fontSize="small" />
@@ -89,11 +102,14 @@ export function Sidebar({
   const collapsed = variant === 'collapsed';
   const nextVariant = collapsed ? 'open' : 'collapsed';
   const hasLatestResume = Boolean(latestResumeName);
+  const bottomNavItems = DEFAULT_BOTTOM_NAV_IDS.map((id) =>
+    items.find((item) => item.id === id),
+  ).filter((item): item is SidebarNavItem => Boolean(item));
 
   if (mobileMode === 'bottomNav') {
     return (
       <BottomNav aria-label={SIDEBAR_COPY.bottomNavAria}>
-        {items.slice(0, 5).map((item) => (
+        {bottomNavItems.map((item) => (
           <SidebarNavButton
             active={item.id === activeItemId}
             collapsed

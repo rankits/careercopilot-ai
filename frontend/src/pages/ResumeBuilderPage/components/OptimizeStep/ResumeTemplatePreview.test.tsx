@@ -139,9 +139,9 @@ describe('ResumeTemplatePreview', () => {
     expect(screen.getAllByText('Ada Lovelace').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders default/uploaded badge for original template', () => {
+  it('renders default badge for original template', () => {
     render(<ResumeTemplatePreview draft={draft} template="original" targetRole="Engineer" />);
-    expect(screen.getAllByText(/Uploaded resume design/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Default · your resume/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('keeps Projects as one logical section (measure + page copies only)', () => {

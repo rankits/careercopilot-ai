@@ -31,7 +31,7 @@ vi.mock('@/features/resume/services/resume.service', () => ({
   },
 }));
 
-function renderLayout() {
+function renderLayout(initialEntry = '/app') {
   const store = configureStore({
     preloadedState: {
       auth: {
@@ -61,10 +61,11 @@ function renderLayout() {
       <QueryClientProvider client={queryClient}>
         <Provider store={store}>
           <ToastProvider>
-            <MemoryRouter initialEntries={['/app']}>
+            <MemoryRouter initialEntries={[initialEntry]}>
               <Routes>
                 <Route element={<AppLayout />}>
                   <Route path="/app" element={<h1>Dashboard</h1>} />
+                  <Route path="/profile/edit" element={<h1>Edit profile</h1>} />
                 </Route>
                 <Route path="/login" element={<h1>Login destination</h1>} />
                 <Route path="/profile" element={<h1>Upload resume destination</h1>} />
@@ -111,6 +112,20 @@ describe('AppLayout logout', () => {
 
     expect(screen.queryByRole('menuitem', { name: /upload resume/i })).not.toBeInTheDocument();
     expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument();
+  });
+
+  it('marks Profile active on the edit profile route', () => {
+    renderLayout('/profile/edit');
+
+    expect(screen.getByRole('heading', { name: /edit profile/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^profile$/i })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(screen.getByRole('link', { name: /^dashboard$/i })).not.toHaveAttribute(
+      'aria-current',
+      'page',
+    );
   });
 
   it('still clears the session and shows an error toast when the logout API fails', async () => {

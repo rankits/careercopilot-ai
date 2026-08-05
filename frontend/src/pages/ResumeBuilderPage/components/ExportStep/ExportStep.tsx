@@ -92,8 +92,9 @@ export function ExportStep({
 
   const previousScore =
     recheckResult?.previousAtsScore ?? analysis?.baselineAtsScore ?? analysis?.atsScore ?? 0;
-  const finalScore = recheckResult?.atsScore ?? previousScore;
-  const improvement = recheckResult?.improvement ?? finalScore - previousScore;
+  // Prefer real recheck; otherwise keep the improved ATS already synced from Optimize.
+  const finalScore = recheckResult?.atsScore ?? analysis?.atsScore ?? previousScore;
+  const improvement = recheckResult?.improvement ?? Math.max(0, finalScore - previousScore);
   const scoreColor = (score: number) =>
     score >= 80
       ? colorTokens.feedbackSuccess
