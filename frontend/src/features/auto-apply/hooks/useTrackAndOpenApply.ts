@@ -3,20 +3,19 @@ import { useNavigate } from 'react-router-dom';
 
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
-import { useCandidateProfile } from '@/features/auto-apply/hooks/useCandidateProfile';
-import { useConsents } from '@/features/auto-apply/hooks/useConsents';
+import { useSetupStatus } from '@/features/auto-apply/hooks/useSetupStatus';
 import { useCreatePlan } from '@/features/auto-apply/hooks/usePlan';
 import { usePrepareApplication } from '@/features/auto-apply/hooks/usePrepareApplication';
-import { useResumeVersions } from '@/features/auto-apply/hooks/useResumeVersions';
 import { useInitiateSubmission } from '@/features/auto-apply/hooks/useSubmissions';
 
 import { ROUTES } from '@/constants/routes';
 import { isAutoApplyClientError } from '@/features/auto-apply/utils/apiError';
-import {
-  getAutoApplySetupGaps,
-  isAutoApplySetupComplete,
-} from '@/features/auto-apply/utils/setupCompleteness';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
+import {
+  buildSetupGapToastMessage,
+  destinationToSetupHref,
+  resolveSetupGapFixActions,
+} from '@/pages/AutoApplyPage/missingFieldNavigation';
 
 export interface TrackAndOpenApplyInput {
   jobId: string | null | undefined;
@@ -47,9 +46,7 @@ export function useTrackAndOpenApply() {
   const initiate = useInitiateSubmission();
   const createPlan = useCreatePlan();
   const prepare = usePrepareApplication();
-  const { data: profile } = useCandidateProfile();
-  const { data: resumes } = useResumeVersions();
-  const { data: consents } = useConsents();
+  const setupStatusQuery = useSetupStatus();
   const { showToast } = useToast();
   const navigate = useNavigate();
 
@@ -63,9 +60,6 @@ export function useTrackAndOpenApply() {
           void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`);
         }
       };
-      const goToSetup = () => {
-        void navigate(ROUTES.AUTO_APPLY);
-      };
 
       if (!input.jobId) {
         const openedExternal = shouldOpenExternal ? openExternalApply(input.applyUrl) : false;
@@ -76,15 +70,24 @@ export function useTrackAndOpenApply() {
         return { tracked: false, alreadyTracked: false, openedExternal };
       }
 
-      if (!isAutoApplySetupComplete({ profile, resumes, consents })) {
-        const firstGap = getAutoApplySetupGaps({ profile, resumes, consents })[0];
+      const setupStatus = setupStatusQuery.data;
+      if (setupStatus && !setupStatus.readyForAssistedApply) {
+        const fixActions = resolveSetupGapFixActions(setupStatus.gaps);
+        const firstAction = fixActions[0];
+        const href = firstAction ? destinationToSetupHref(firstAction.destination) : ROUTES.AUTO_APPLY;
+
         showToast({
-          message: firstGap
-            ? `Finish Auto Apply setup first: ${firstGap.label}.`
-            : 'Finish Auto Apply setup before starting Assisted Apply.',
+          message: buildSetupGapToastMessage(fixActions),
           severity: 'warning',
+          actionLabel: 'Fix now',
+          onAction: () => {
+            if (href) void navigate(href);
+          },
+          autoHideDuration: 8000,
         });
-        goToSetup();
+
+        if (href) void navigate(href);
+
         return {
           tracked: false,
           alreadyTracked: false,
@@ -132,7 +135,6 @@ export function useTrackAndOpenApply() {
         const alreadyTracked = isAutoApplyClientError(error) && error.code === 'APPLICATION_EXISTS';
 
         if (alreadyTracked) {
-          // Still refresh intelligence + review for an existing submission.
           try {
             await prepare.mutateAsync({
               jobId: input.jobId,
@@ -158,7 +160,7 @@ export function useTrackAndOpenApply() {
         return { tracked: false, alreadyTracked: false, openedExternal };
       }
     },
-    [consents, createPlan, initiate, navigate, prepare, profile, resumes, showToast],
+    [createPlan, initiate, navigate, prepare, setupStatusQuery.data, showToast],
   );
 
   return {

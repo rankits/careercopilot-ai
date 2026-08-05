@@ -73,6 +73,14 @@ export class PrismaCandidateApplicationProfileRepository implements ICandidateAp
       ? { ...DEFAULT_PREFERENCES, ...(existing?.preferences as object), ...input.preferences }
       : ((existing?.preferences as object) ?? DEFAULT_PREFERENCES);
 
+    if (
+      input.preferences &&
+      'requiresSponsorship' in input.preferences &&
+      input.preferences.requiresSponsorship == null
+    ) {
+      delete (nextPreferences as Partial<CandidateApplicationPreferences>).requiresSponsorship;
+    }
+
     const nextLinks = input.links
       ? { ...(existing?.links as object), ...input.links }
       : ((existing?.links as object) ?? {});

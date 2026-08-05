@@ -4,6 +4,7 @@ import type { ReactNode } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type { SetupStatusDto } from '../types/autoApply.types';
 import { AutoApplyClientError } from '../utils/apiError';
 
 import { useTrackAndOpenApply } from './useTrackAndOpenApply';
@@ -15,6 +16,7 @@ const {
   openExternalApplyMock,
   showToastMock,
   navigateMock,
+  setupStatusMock,
 } = vi.hoisted(() => ({
   initiateMock: vi.fn(),
   createPlanMock: vi.fn(),
@@ -22,6 +24,15 @@ const {
   openExternalApplyMock: vi.fn(),
   showToastMock: vi.fn(),
   navigateMock: vi.fn(),
+  setupStatusMock: {
+    data: {
+      readyForAssistedApply: true,
+      gaps: [],
+      complete: true,
+      percent: 100,
+      sections: [],
+    } satisfies SetupStatusDto,
+  },
 }));
 
 vi.mock('./useSubmissions', () => ({
@@ -45,33 +56,8 @@ vi.mock('./usePrepareApplication', () => ({
   }),
 }));
 
-vi.mock('./useCandidateProfile', () => ({
-  useCandidateProfile: () => ({
-    data: {
-      preferences: {
-        desiredRoles: ['Engineer'],
-        preferredLocations: ['Remote'],
-        remotePreferences: ['REMOTE'],
-        expectedSalary: { currency: 'USD' },
-        noticePeriodDays: 0,
-      },
-      links: {},
-    },
-  }),
-}));
-
-vi.mock('./useResumeVersions', () => ({
-  useResumeVersions: () => ({
-    data: [
-      { id: 'r1', resumeId: 'res-1', label: 'Main', category: 'General', tags: [], isActive: true },
-    ],
-  }),
-}));
-
-vi.mock('./useConsents', () => ({
-  useConsents: () => ({
-    data: [{ id: 'c1', consentType: 'RESUME_USAGE', version: 1, grantedAt: '', revokedAt: null }],
-  }),
+vi.mock('./useSetupStatus', () => ({
+  useSetupStatus: () => setupStatusMock,
 }));
 
 vi.mock('@/features/jobs/utils/openExternalApply', () => ({
@@ -109,6 +95,13 @@ describe('useTrackAndOpenApply', () => {
     openExternalApplyMock.mockReset();
     showToastMock.mockReset();
     navigateMock.mockReset();
+    setupStatusMock.data = {
+      readyForAssistedApply: true,
+      gaps: [],
+      complete: true,
+      percent: 100,
+      sections: [],
+    };
     openExternalApplyMock.mockReturnValue(true);
     createPlanMock.mockResolvedValue({});
     prepareMock.mockResolvedValue({
@@ -152,6 +145,35 @@ describe('useTrackAndOpenApply', () => {
     expect(openExternalApplyMock).not.toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith('/auto-apply?tab=submissions');
     expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
+  });
+
+  it('redirects incomplete setup to section deep links with Fix now toast (AA-029)', async () => {
+    setupStatusMock.data = {
+      readyForAssistedApply: false,
+      gaps: [
+        {
+          code: 'APPROVED_RESUME',
+          label: 'Approve at least one resume',
+          section: 'resumes',
+        },
+      ],
+      complete: false,
+      percent: 50,
+      sections: [],
+    };
+
+    const { result } = renderHook(() => useTrackAndOpenApply(), { wrapper });
+
+    await result.current.trackAndOpenApply({ jobId: 'job-1' });
+
+    expect(showToastMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        message: expect.stringContaining('approved resume'),
+        actionLabel: 'Fix now',
+      }),
+    );
+    expect(navigateMock).toHaveBeenCalledWith('/auto-apply?section=resumes&field=defaultResume');
+    expect(initiateMock).not.toHaveBeenCalled();
   });
 
   it('opens external URL only when openExternal is true', async () => {

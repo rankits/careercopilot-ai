@@ -1,12 +1,14 @@
-import { Snackbar, Alert } from '@mui/material';
+import { Snackbar, Alert, Button } from '@mui/material';
 import { useCallback, useMemo, useState } from 'react';
 
 import { DEFAULT_AUTO_HIDE_DURATION } from './constants';
 import { ToastContext, type ToastOptions, type ToastSeverity } from './ToastContext';
 
 interface ToastState {
+  actionLabel?: string;
   autoHideDuration: number;
   message: string;
+  onAction?: () => void;
   severity: ToastSeverity;
 }
 
@@ -15,8 +17,10 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const showToast = useCallback((options: ToastOptions) => {
     setToast({
+      actionLabel: options.actionLabel,
       autoHideDuration: options.autoHideDuration ?? DEFAULT_AUTO_HIDE_DURATION,
       message: options.message,
+      onAction: options.onAction,
       severity: options.severity ?? 'info',
     });
   }, []);
@@ -39,7 +43,25 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
         }}
         sx={{ top: { xs: '1rem', sm: '1.25rem' } }}
       >
-        <Alert onClose={() => setToast(null)} severity={toast?.severity} sx={{ width: '100%' }}>
+        <Alert
+          action={
+            toast?.actionLabel && toast.onAction ? (
+              <Button
+                color="inherit"
+                onClick={() => {
+                  toast.onAction?.();
+                  setToast(null);
+                }}
+                size="small"
+              >
+                {toast.actionLabel}
+              </Button>
+            ) : undefined
+          }
+          onClose={() => setToast(null)}
+          severity={toast?.severity}
+          sx={{ width: '100%' }}
+        >
           {toast?.message}
         </Alert>
       </Snackbar>

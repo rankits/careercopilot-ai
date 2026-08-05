@@ -6,6 +6,8 @@ export interface ToastOptions {
   message: string;
   severity?: ToastSeverity;
   autoHideDuration?: number;
+  actionLabel?: string;
+  onAction?: () => void;
 }
 
 interface ToastContextValue {
