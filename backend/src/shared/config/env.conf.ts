@@ -133,6 +133,8 @@ const envSchema = z
 
     // Feature flags
     ENABLE_EMAIL_WORKER: booleanFromString(true),
+    // When true, /health probes RabbitMQ even if ENABLE_EMAIL_WORKER is false.
+    HEALTH_CHECK_RABBITMQ: booleanFromString(false),
     ENABLE_SWAGGER: booleanFromString(true),
     // Run database seeds automatically when the server starts (dev only)
     RUN_SEEDS_ON_STARTUP: booleanFromString(true),

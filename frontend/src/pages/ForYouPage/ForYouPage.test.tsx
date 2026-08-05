@@ -113,7 +113,13 @@ function renderPage(isProfileComplete = true, route = '/for-you') {
     reducer: { auth: authReducer },
     preloadedState: {
       auth: {
-        user: { id: 'u1', email: 'a@b.com', name: 'A', role: 'USER', isProfileCreated: true },
+        user: {
+          id: 'u1',
+          email: 'a@b.com',
+          name: 'A',
+          role: 'USER' as const,
+          isProfileCreated: true,
+        },
         accessToken: 'token',
         isAuthenticated: true,
         isProfileComplete,
@@ -624,7 +630,9 @@ describe('ForYouPage', () => {
     expect(
       await screen.findByText(/profile changed since these matches were generated/i),
     ).toBeInTheDocument();
-    await user.click(screen.getAllByRole('button', { name: /refresh matches/i })[0]);
+    const refreshButton = screen.getAllByRole('button', { name: /refresh matches/i })[0];
+    expect(refreshButton).toBeDefined();
+    await user.click(refreshButton!);
     await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1));
     expect(generateMock).not.toHaveBeenCalled();
   });

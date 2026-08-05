@@ -73,7 +73,7 @@ const main = async (): Promise<void> => {
 };
 
 main().catch((error: unknown) => {
-  logger.error({ error }, 'Job embedding backfill failed');
+  logger.error({ err: error }, 'Job embedding backfill failed');
   console.error(error instanceof Error ? error.message : error);
   process.exitCode = 1;
 });
