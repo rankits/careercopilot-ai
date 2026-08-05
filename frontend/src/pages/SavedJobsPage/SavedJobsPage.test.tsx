@@ -24,11 +24,9 @@ vi.mock('@/features/applications/services/applications.service', () => ({
 }));
 
 vi.mock('@/features/applications/hooks/useSaveJob', async () => {
-  const actual = await vi.importActual<typeof import('@/features/applications/hooks/useSaveJob')>(
-    '@/features/applications/hooks/useSaveJob',
-  );
+  const actual = await vi.importActual('@/features/applications/hooks/useSaveJob');
   return {
-    ...actual,
+    ...(actual as Record<string, unknown>),
     useSaveJob: () => ({
       isSaving: false,
       saveJob: vi.fn(),
@@ -37,8 +35,8 @@ vi.mock('@/features/applications/hooks/useSaveJob', async () => {
   };
 });
 
-vi.mock('@tanstack/react-query', async (importOriginal) => {
-  const actual = await importOriginal<typeof ReactQueryNS>();
+vi.mock('@tanstack/react-query', async () => {
+  const actual = await vi.importActual<typeof ReactQueryNS>('@tanstack/react-query');
   return {
     ...actual,
     useQuery: (options: unknown) => {

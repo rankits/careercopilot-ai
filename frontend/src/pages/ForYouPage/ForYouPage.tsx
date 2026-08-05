@@ -91,8 +91,8 @@ const getModeFromSearchParams = (searchParams: URLSearchParams): RecommendationM
     : 'profile';
 };
 
-const getTabId = (mode: RecommendationMode) => `for-you-${mode}-tab`;
-const getPanelId = (mode: RecommendationMode) => `for-you-${mode}-panel`;
+const getTabId = (mode: RecommendationMode) => `ai-match-${mode}-tab`;
+const getPanelId = (mode: RecommendationMode) => `ai-match-${mode}-panel`;
 
 const failedLifecycleStates = new Set<RecommendationLifecycleState>([
   'FAILED',
@@ -479,7 +479,7 @@ export function ForYouPage() {
     <Box component="section" sx={{ display: 'grid', gap: 3, py: 2 }}>
       <Box sx={{ display: 'grid', gap: 1 }}>
         <Typography component="h1" sx={{ fontWeight: 800, fontSize: '1.5rem', m: 0 }}>
-          For You
+          AI Match
         </Typography>
         <Typography sx={{ color: 'text.secondary' }}>
           Personalized matches from your profile. Generation is explicit - loading this page never
