@@ -892,4 +892,99 @@ export const autoApplySwagger = {
     },
     TAGS,
   ),
+
+  ...createApiEndpoint(
+    `${BASE_URL}/jobs/{jobId}/analysis`,
+    {
+      post: {
+        config: {
+          summary: 'Analyze or refresh the job application page',
+          description:
+            'Fetches the public job page with SSRF controls, detects provider (e.g. Ashby → EXTERNAL_MANUAL), extracts requirements with evidence, and persists an ApplicationPageAnalysis snapshot. Idempotent on jobId + URL + content hash + extractor version.',
+          params: [jobIdParam],
+          body: {
+            type: 'object',
+            properties: {
+              forceRefresh: { type: 'boolean' },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Job page analysis ready',
+              schema: successSchema('Job page analysis ready', { type: 'object' }),
+            },
+            ...commonSecureResponses,
+          },
+        },
+        secure: true,
+      },
+    },
+    TAGS,
+  ),
+
+  ...createApiEndpoint(
+    `${BASE_URL}/jobs/{jobId}/analysis/latest`,
+    {
+      get: {
+        config: {
+          summary: 'Get the latest job page analysis',
+          description: 'Returns the most recent ApplicationPageAnalysis for the job, or null.',
+          params: [jobIdParam],
+          responses: {
+            200: {
+              description: 'Latest analysis',
+              schema: successSchema('Latest job page analysis', { type: 'object', nullable: true }),
+            },
+            ...commonSecureResponses,
+          },
+        },
+        secure: true,
+      },
+    },
+    TAGS,
+  ),
+
+  ...createApiEndpoint(
+    `${BASE_URL}/jobs/{jobId}/prepare`,
+    {
+      post: {
+        config: {
+          summary: 'Prepare Application — analyze → match (consent) → readiness',
+          description:
+            'Orchestrates Pre-Application Intelligence for the frontend Prepare Application CTA. Does not submit. Match scoring uses cached recommendations only in Phase 1; missing match is a warning for PREPARE/ASSISTED.',
+          params: [jobIdParam],
+          body: {
+            type: 'object',
+            properties: {
+              applyMode: {
+                type: 'string',
+                enum: ['PREPARE', 'ASSISTED', 'AUTOPILOT', 'EXTENSION'],
+              },
+              jobApplicationId: { type: 'string', format: 'uuid' },
+              resumeVersionId: { type: 'string', format: 'uuid' },
+              allowMatchCompute: { type: 'boolean' },
+              forceRefreshAnalysis: { type: 'boolean' },
+            },
+          },
+          responses: {
+            200: {
+              description: 'Preparation complete',
+              schema: successSchema('Application preparation complete', {
+                type: 'object',
+                properties: {
+                  analysis: { type: 'object' },
+                  match: { type: 'object' },
+                  readiness: { type: 'object' },
+                  package: { type: 'object' },
+                },
+              }),
+            },
+            ...commonSecureResponses,
+          },
+        },
+        secure: true,
+      },
+    },
+    TAGS,
+  ),
 };

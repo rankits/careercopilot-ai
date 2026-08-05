@@ -286,3 +286,44 @@ model AutoApplyAuditEvent {
   @@index([eventType, createdAt])
   @@map("auto_apply_audit_events")
 }
+
+// ─── Pre-Application page analysis (job-side intelligence) ───────────────────
+// Separate from canonical Job fields — AI/rule extractions requirements with
+// provenance live here only (never silently overwrite Job columns).
+model ApplicationPageAnalysis {
+  id                       String   @id @default(uuid())
+  jobId                    String   @map("job_id")
+  jobApplicationId         String?  @map("job_application_id")
+
+  schemaVersion            Int      @default(1) @map("schema_version")
+  extractorVersion         String   @map("extractor_version") @db.VarChar(64)
+  extractionPolicyVersion  String   @map("extraction_policy_version") @db.VarChar(64)
+
+  provider                 String   @db.VarChar(32)
+  jobPageUrl               String   @map("job_page_url") @db.Text
+  applicationUrl           String?  @map("application_url") @db.Text
+
+  jobPageStatus            String   @map("job_page_status") @db.VarChar(32)
+  formStatus               String   @map("form_status") @db.VarChar(32)
+  submissionCapability     String   @map("submission_capability") @db.VarChar(32)
+  outcomeStatus            String   @map("outcome_status") @db.VarChar(48)
+
+  requirements             Json     @default("[]")
+  fields                   Json     @default("[]")
+  snapshot                 Json     @default("{}")
+  freshness                Json     @default("{}")
+
+  // Sanitized visible text only — never raw HTML in this column.
+  sanitizedText            String?  @map("sanitized_text") @db.Text
+  contentHash              String   @map("content_hash") @db.VarChar(64)
+  idempotencyKey           String   @unique @map("idempotency_key") @db.VarChar(191)
+
+  analyzedAt               DateTime @map("analyzed_at")
+  expiresAt                DateTime @map("expires_at")
+  createdAt                DateTime @default(now()) @map("created_at")
+  updatedAt                DateTime @updatedAt @map("updated_at")
+
+  @@index([jobId, analyzedAt(sort: Desc)])
+  @@index([jobId, expiresAt])
+  @@map("application_page_analyses")
+}
