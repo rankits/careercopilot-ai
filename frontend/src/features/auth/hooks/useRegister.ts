@@ -4,10 +4,16 @@ import { useNavigate } from 'react-router-dom';
 import { ROUTES } from '@/constants/routes';
 import { authService } from '@/features/auth/services/auth.service';
 import type { RegisterPayload } from '@/features/auth/types/auth.types';
+import { getAuthErrorMessage } from '@/features/auth/utils/apiError';
 
 export interface RegisterFormValues extends Omit<RegisterPayload, 'phone'> {
   confirmPassword: string;
   phone: string;
+}
+
+export interface RegisterSubmitResult {
+  errorMessage?: string;
+  succeeded: boolean;
 }
 
 export function useRegister() {
@@ -23,13 +29,13 @@ export function useRegister() {
     void navigate(ROUTES.LOGIN);
   };
 
-  const submit = async (values: RegisterFormValues) => {
+  const submit = async (values: RegisterFormValues): Promise<RegisterSubmitResult> => {
     if (registerMutation.isPending) {
-      return false;
+      return { succeeded: false };
     }
 
     try {
-      const phone = values.phone.replace(/[^\d+]/g, '');
+      const phone = values.phone.replace(/\D/g, '');
       await registerMutation.mutateAsync({
         email: values.email.trim().toLowerCase(),
         firstName: values.firstName.trim(),
@@ -38,9 +44,15 @@ export function useRegister() {
         ...(phone ? { phone } : {}),
       });
 
-      return true;
-    } catch {
-      return false;
+      return { succeeded: true };
+    } catch (error) {
+      return {
+        errorMessage: getAuthErrorMessage(
+          error,
+          'Unable to create your account. Please try again.',
+        ),
+        succeeded: false,
+      };
     }
   };
 

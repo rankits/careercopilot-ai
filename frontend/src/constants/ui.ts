@@ -232,6 +232,13 @@ export const APP_HEADER_DEFAULTS = {
  * AuthForm
  * -------------------------------------------------------------------------- */
 
+export const AUTH_FIELD_LIMITS = {
+  email: 300,
+  name: 80,
+  password: 128,
+  phone: 10,
+} as const;
+
 export const AUTH_FORM_CONTENT: Record<AuthFormMode, AuthFormContent> = {
   login: {
     footerActionLabel: 'Create account',
@@ -254,6 +261,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'email',
       label: 'Email address',
+      maxLength: AUTH_FIELD_LIMITS.email,
       name: 'email',
       placeholder: 'you@example.com',
       startIcon: 'email',
@@ -263,6 +271,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
       autoComplete: 'current-password',
       endIcon: 'visibilityOff',
       label: 'Password',
+      maxLength: AUTH_FIELD_LIMITS.password,
       name: 'password',
       placeholder: 'Enter your password',
       startIcon: 'lock',
@@ -273,6 +282,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'given-name',
       label: 'First name',
+      maxLength: AUTH_FIELD_LIMITS.name,
       name: 'firstName',
       placeholder: 'Jane',
       startIcon: 'person',
@@ -281,6 +291,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'family-name',
       label: 'Last name',
+      maxLength: AUTH_FIELD_LIMITS.name,
       name: 'lastName',
       placeholder: 'Doe',
       startIcon: 'person',
@@ -289,6 +300,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'email',
       label: 'Email address',
+      maxLength: AUTH_FIELD_LIMITS.email,
       name: 'email',
       placeholder: 'you@example.com',
       startIcon: 'email',
@@ -297,8 +309,9 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'tel',
       label: 'Phone number',
+      maxLength: AUTH_FIELD_LIMITS.phone,
       name: 'phone',
-      placeholder: '+1 555 123 4567',
+      placeholder: '9876543210',
       startIcon: 'phone',
       type: 'tel',
     },
@@ -306,6 +319,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
       autoComplete: 'new-password',
       endIcon: 'visibilityOff',
       label: 'Password',
+      maxLength: AUTH_FIELD_LIMITS.password,
       name: 'password',
       placeholder: 'Enter your password',
       startIcon: 'lock',
@@ -315,6 +329,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
       autoComplete: 'new-password',
       endIcon: 'visibilityOff',
       label: 'Confirm password',
+      maxLength: AUTH_FIELD_LIMITS.password,
       name: 'confirmPassword',
       placeholder: 'Confirm your password',
       startIcon: 'lock',
@@ -338,22 +353,44 @@ export const AUTH_FORM_ARIA = {
 
 export const AUTH_FORM_VALIDATION_SCHEMAS = {
   login: yup.object({
-    email: yup.string().email('Enter a valid email address').required('Email is required'),
-    password: yup.string().required('Password is required'),
+    email: yup
+      .string()
+      .max(AUTH_FIELD_LIMITS.email, 'Email address must be 300 characters or fewer')
+      .email('Enter a valid email address')
+      .required('Email is required'),
+    password: yup
+      .string()
+      .required('Password is required')
+      .min(8, 'Password must be at least 8 characters')
+      .max(AUTH_FIELD_LIMITS.password, 'Password must be 128 characters or fewer'),
     rememberMe: yup.boolean().default(true),
   }),
   register: yup.object({
     confirmPassword: yup
       .string()
+      .max(AUTH_FIELD_LIMITS.password, 'Confirm password must be 128 characters or fewer')
       .oneOf([yup.ref('password')], 'Passwords must match')
       .required('Confirm password is required'),
-    email: yup.string().email('Enter a valid email address').required('Email is required'),
-    firstName: yup.string().trim().required('First name is required'),
-    lastName: yup.string().trim().required('Last name is required'),
+    email: yup
+      .string()
+      .max(AUTH_FIELD_LIMITS.email, 'Email address must be 300 characters or fewer')
+      .email('Enter a valid email address')
+      .required('Email is required'),
+    firstName: yup
+      .string()
+      .trim()
+      .max(AUTH_FIELD_LIMITS.name, 'First name must be 80 characters or fewer')
+      .required('First name is required'),
+    lastName: yup
+      .string()
+      .trim()
+      .max(AUTH_FIELD_LIMITS.name, 'Last name must be 80 characters or fewer')
+      .required('Last name is required'),
     password: yup
       .string()
       .required('Password is required')
       .min(8, 'Password must be at least 8 characters')
+      .max(AUTH_FIELD_LIMITS.password, 'Password must be 128 characters or fewer')
       .matches(/[A-Z]/, 'Password must include an uppercase letter')
       .matches(/[a-z]/, 'Password must include a lowercase letter')
       .matches(/\d/, 'Password must include a number')
@@ -361,7 +398,8 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
     phone: yup
       .string()
       .required('Phone number is required')
-      .matches(/^\+?(?=(?:\D*\d){10,15}\D*$)[\d\s()-]+$/, {
+      .length(AUTH_FIELD_LIMITS.phone, 'Phone number must be 10 digits')
+      .matches(/^\d{10}$/, {
         excludeEmptyString: true,
         message: 'Enter a valid phone number',
       }),
