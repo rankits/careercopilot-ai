@@ -5,6 +5,14 @@ import { Button } from '@/components/atoms/Button';
 import { useCachedCompanyLogo } from '@/features/jobs/hooks/useCachedCompanyLogo';
 
 import {
+  APP_ACTIONS,
+  JOB_CARD_ARIA,
+  JOB_CARD_COPY,
+  JOB_CARD_LIMITS,
+  JOB_UI,
+  SKILL_GAP_SECTIONS,
+} from '@/constants/ui';
+import {
   BookmarkBorderOutlinedIcon,
   BookmarkOutlinedIcon,
   BusinessCenterOutlinedIcon,
@@ -137,7 +145,7 @@ export function JobCard({
       sx={onOpen ? { cursor: 'pointer' } : undefined}
     >
       <Accent tone={job.accent} />
-      <CompanyLogo aria-label={`${job.company} logo`}>
+      <CompanyLogo aria-label={JOB_CARD_ARIA.companyLogo(job.company)}>
         {showLogoImage ? (
           <img alt="" loading="lazy" onError={onLogoError} src={logoSrc} />
         ) : (
@@ -149,7 +157,7 @@ export function JobCard({
         {job.isRecommended ? (
           <RecommendationPill>
             <SmartToyOutlinedIcon fontSize="small" />
-            AI Recommended
+            {JOB_CARD_COPY.aiRecommended}
           </RecommendationPill>
         ) : null}
 
@@ -158,7 +166,7 @@ export function JobCard({
             <Typography component="h2">
               {onOpen ? (
                 <OpenJobButton
-                  aria-label={`Open ${job.title} at ${job.company}`}
+                  aria-label={JOB_CARD_ARIA.open(job.title, job.company)}
                   onClick={(event) => {
                     event.stopPropagation();
                     onOpen(job);
@@ -174,7 +182,9 @@ export function JobCard({
             <Typography component="p">{job.company}</Typography>
             {job.matchSubtitle ? <Typography component="p">{job.matchSubtitle}</Typography> : null}
           </div>
-          {job.verified ? <VerifiedIcon fontSize="small" aria-label="Verified company" /> : null}
+          {job.verified ? (
+            <VerifiedIcon fontSize="small" aria-label={JOB_CARD_COPY.verifiedCompany} />
+          ) : null}
         </TitleRow>
 
         <JobMeta>
@@ -211,16 +221,15 @@ export function JobCard({
       {showMatch || showActions ? (
         <JobActions>
           {showMatch ? (
-            <MatchPill
-              aria-label={`${job.match} percent match${job.matchSubtitle ? `, ${job.matchSubtitle}` : ''}`}
-            >
-              {job.match}% Match
+            <MatchPill aria-label={JOB_CARD_ARIA.match(job.match, job.matchSubtitle)}>
+              {job.match}
+              {JOB_UI.MATCH_SUFFIX}
               <MatchRing aria-hidden="true" />
             </MatchPill>
           ) : null}
           {onDismiss ? (
             <Button
-              aria-label={`Dismiss ${job.title} recommendation`}
+              aria-label={JOB_CARD_ARIA.dismiss(job.title)}
               onClick={(event) => {
                 event.stopPropagation();
                 onDismiss(job);
@@ -228,12 +237,12 @@ export function JobCard({
               size="small"
               variant="ghost"
             >
-              Dismiss
+              {JOB_CARD_COPY.dismiss}
             </Button>
           ) : null}
           {onNotRelevant ? (
             <Button
-              aria-label={`Mark ${job.title} as not relevant`}
+              aria-label={JOB_CARD_ARIA.notRelevant(job.title)}
               onClick={(event) => {
                 event.stopPropagation();
                 onNotRelevant(job);
@@ -241,16 +250,12 @@ export function JobCard({
               size="small"
               variant="ghost"
             >
-              Not relevant
+              {JOB_CARD_COPY.notRelevant}
             </Button>
           ) : null}
           {onMoreLikeThis ? (
             <Button
-              aria-label={
-                isMoreLikeThis
-                  ? `More jobs like ${job.title} selected`
-                  : `Show more jobs like ${job.title}`
-              }
+              aria-label={JOB_CARD_ARIA.moreLikeThis(isMoreLikeThis, job.title)}
               aria-pressed={isMoreLikeThis}
               disabled={isMoreLikeThis}
               onClick={(event) => {
@@ -260,12 +265,12 @@ export function JobCard({
               size="small"
               variant="ghost"
             >
-              More like this
+              {JOB_CARD_COPY.moreLikeThis}
             </Button>
           ) : null}
           {onLessLikeThis ? (
             <Button
-              aria-label={`Show fewer jobs like ${job.title}`}
+              aria-label={JOB_CARD_ARIA.lessLikeThis(job.title)}
               onClick={(event) => {
                 event.stopPropagation();
                 onLessLikeThis(job);
@@ -273,12 +278,12 @@ export function JobCard({
               size="small"
               variant="ghost"
             >
-              Less like this
+              {JOB_CARD_COPY.lessLikeThis}
             </Button>
           ) : null}
           {onSave ? (
             <SaveButton
-              aria-label={isSaved ? `Unsave ${job.title}` : `Save ${job.title}`}
+              aria-label={JOB_CARD_ARIA.save(isSaved, job.title)}
               aria-pressed={isSaved}
               onClick={(event) => {
                 event.stopPropagation();
@@ -294,7 +299,7 @@ export function JobCard({
           ) : null}
           {onApply ? (
             <Button
-              aria-label={canApply ? `Apply to ${job.title}` : `Apply to ${job.title} unavailable`}
+              aria-label={JOB_CARD_ARIA.apply(job.title, canApply)}
               disabled={!canApply}
               onClick={(event) => {
                 event.stopPropagation();
@@ -304,14 +309,14 @@ export function JobCard({
               size="small"
               variant="outline"
             >
-              Apply Now
+              {APP_ACTIONS.APPLY_NOW}
             </Button>
           ) : null}
           {hasDetails ? (
             <Button
               aria-controls={detailsId}
               aria-expanded={detailsOpen}
-              aria-label={`${detailsOpen ? 'Hide' : 'Show'} details for ${job.title}`}
+              aria-label={JOB_CARD_ARIA.details(detailsOpen, job.title)}
               onClick={(event) => {
                 event.stopPropagation();
                 setDetailsOpen((open) => !open);
@@ -325,7 +330,7 @@ export function JobCard({
               }
               variant="ghost"
             >
-              Details
+              {JOB_CARD_COPY.details}
             </Button>
           ) : null}
         </JobActions>
@@ -333,7 +338,7 @@ export function JobCard({
 
       {hasDetails && detailsOpen ? (
         <RecommendationDetails
-          aria-label={`${job.title} recommendation details`}
+          aria-label={JOB_CARD_ARIA.recommendationDetails(job.title)}
           id={detailsId}
           role="region"
         >
@@ -341,17 +346,19 @@ export function JobCard({
 
           {details?.bullets.length ? (
             <RecommendationDetailsGrid>
-              {details.bullets.slice(0, 3).map((bullet) => (
+              {details.bullets.slice(0, JOB_CARD_LIMITS.maxBullets).map((bullet) => (
                 <div key={`${bullet.label}-${bullet.message}`}>
                   <Typography component="h3">
                     {bullet.label}
                     {typeof bullet.score === 'number'
-                      ? ` - ${Math.round(bullet.score * 100)}%`
+                      ? ` - ${Math.round(bullet.score * JOB_CARD_LIMITS.percentScale)}%`
                       : ''}
                   </Typography>
                   <Typography component="p">{bullet.message}</Typography>
                   {bullet.evidence.length ? (
-                    <Typography component="p">{bullet.evidence.slice(0, 2).join(', ')}</Typography>
+                    <Typography component="p">
+                      {bullet.evidence.slice(0, JOB_CARD_LIMITS.maxEvidence).join(', ')}
+                    </Typography>
                   ) : null}
                 </div>
               ))}
@@ -360,16 +367,11 @@ export function JobCard({
 
           {hasSkillGap && details?.skillGap ? (
             <RecommendationDetailsGrid>
-              {(
-                [
-                  ['Matched', details.skillGap.exact],
-                  ['Alias', details.skillGap.alias],
-                  ['Related', details.skillGap.related],
-                  ['Transferable', details.skillGap.transferable],
-                  ['Missing', details.skillGap.missing],
-                ] satisfies Array<[string, string[]]>
-              ).map(([label, values]) =>
-                Array.isArray(values) && values.length > 0 ? (
+              {SKILL_GAP_SECTIONS.map(({ key, label }) => {
+                const values = details.skillGap[key];
+                if (!values.length) return null;
+
+                return (
                   <RecommendationDetailSkillGroup key={label}>
                     <Typography component="h3">{label}</Typography>
                     <div>
@@ -378,8 +380,8 @@ export function JobCard({
                       ))}
                     </div>
                   </RecommendationDetailSkillGroup>
-                ) : null,
-              )}
+                );
+              })}
             </RecommendationDetailsGrid>
           ) : null}
         </RecommendationDetails>

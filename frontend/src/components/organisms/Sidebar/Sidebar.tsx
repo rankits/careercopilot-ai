@@ -4,6 +4,7 @@ import { Button } from '@/components/atoms/Button';
 
 import fullLogoUrl from '@/assets/logo/career-copilot-logo.png';
 import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.png';
+import { BRAND_NAME, DEFAULT_SIDEBAR_ITEMS, SIDEBAR_COPY } from '@/constants/ui';
 import {
   Box,
   ChevronLeftIcon,
@@ -13,7 +14,6 @@ import {
   Typography,
 } from '@/lib/material';
 
-import { DEFAULT_SIDEBAR_ITEMS } from './constants';
 import type { SidebarNavItem, SidebarProps } from './interfaces';
 import {
   BottomNav,
@@ -80,7 +80,7 @@ export function Sidebar({
 
   if (mobileMode === 'bottomNav') {
     return (
-      <BottomNav aria-label="Mobile navigation">
+      <BottomNav aria-label={SIDEBAR_COPY.bottomNavAria}>
         {items.slice(0, 5).map((item) => (
           <SidebarNavButton
             active={item.id === activeItemId}
@@ -97,13 +97,13 @@ export function Sidebar({
 
   return (
     <SidebarRoot
-      aria-label="Primary navigation"
+      aria-label={SIDEBAR_COPY.primaryNavAria}
       className={className}
       tone={tone}
       variant={variant}
     >
       <SidebarToggle
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-label={collapsed ? SIDEBAR_COPY.expandAria : SIDEBAR_COPY.collapseAria}
         onClick={() => onVariantChange?.(nextVariant)}
         size="small"
       >
@@ -112,7 +112,7 @@ export function Sidebar({
 
       <SidebarHeader collapsed={collapsed}>
         <SidebarLogoImage
-          alt="Career Copilot"
+          alt={BRAND_NAME}
           collapsed={collapsed}
           src={collapsed ? penguinLogoUrl : fullLogoUrl}
         />
