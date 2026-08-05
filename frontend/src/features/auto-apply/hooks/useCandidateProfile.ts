@@ -23,6 +23,7 @@ export function useUpsertCandidateProfile() {
     mutationKey: ['auto-apply', 'profile', 'upsert'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.profile });
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.setupStatus });
     },
   });
 }

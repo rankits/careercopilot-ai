@@ -13,6 +13,8 @@ import auditEventRoutes from '@/modules/auto-apply/routes/audit-event.route.js';
 import adminDiagnosticsRoutes from '@/modules/auto-apply/routes/admin-diagnostics.route.js';
 import applicationReadinessRoutes from '@/modules/auto-apply/routes/application-readiness.route.js';
 import applicationAnalysisRoutes from '@/modules/auto-apply/routes/application-analysis.route.js';
+import setupStatusRoutes from '@/modules/auto-apply/routes/setup-status.route.js';
+import privacyAcknowledgementRoutes from '@/modules/auto-apply/routes/privacy-acknowledgement.route.js';
 
 const router = express.Router();
 
@@ -30,5 +32,7 @@ router.use('/submissions', jobApplicationRoutes);
 router.use('/vacancy-email', vacancyEmailRoutes);
 router.use('/events', auditEventRoutes);
 router.use('/admin', adminDiagnosticsRoutes);
+router.use('/setup-status', setupStatusRoutes);
+router.use('/privacy-acknowledgement', privacyAcknowledgementRoutes);
 
 export default router;

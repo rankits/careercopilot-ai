@@ -23,6 +23,7 @@ export function useUpsertApplicationRule() {
     mutationKey: ['auto-apply', 'rule', 'upsert'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.rule });
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.setupStatus });
     },
   });
 }
@@ -36,6 +37,7 @@ export function useToggleAutopilotPause() {
     mutationKey: ['auto-apply', 'rule', 'toggle-pause'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.rule });
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.setupStatus });
     },
   });
 }
