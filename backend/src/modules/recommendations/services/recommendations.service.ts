@@ -137,7 +137,9 @@ export class RecommendationsService {
       excludeJobIds:
         authorized.sourceType === 'JOB' && authorized.sourceId ? [authorized.sourceId] : undefined,
     });
-    const runId = records[0]?.runId;
+    const runId =
+      records[0]?.runId ??
+      (await dependencies.unitOfWork.execute(({ runs }) => runs.findLatestByUser(userId)))?.id;
     if (!runId) {
       throw new RecommendationError(
         'Recommendation run was not found',
@@ -242,11 +244,25 @@ export class RecommendationsService {
               )
             : affinityBoosted;
         if (eligible.length === 0) {
-          throw new RecommendationError(
-            'No eligible jobs were found for this recommendation context',
-            404,
-            RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
+          await dependencies.unitOfWork.execute(async ({ runs }) => {
+            await runs.updateCandidateCount(input.userId, run.id, 0);
+            await runs.markCompleted(input.userId, run.id);
+          });
+          recordRecommendationGenerate(this.logger, {
+            userId: input.userId,
+            runId: run.id,
+            candidateCount: 0,
+            durationMs: Date.now() - startedAt,
+            success: true,
+            filterMode,
+            empty: true,
+            stageDurationsMs,
+          });
+          this.logger.info(
+            { userId: input.userId, runId: run.id, candidateCount: 0 },
+            'Recommendation generation completed with no eligible jobs',
           );
+          return [];
         }
         const ranked = await measureStage('ranking', async () => {
           const deterministic = sortRecommendationsForRanking(eligible);

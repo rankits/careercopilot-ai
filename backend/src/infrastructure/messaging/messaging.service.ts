@@ -18,6 +18,10 @@ export class MessageBusService implements IMessageBus {
     return this.driver.connect();
   }
 
+  async ping(): Promise<boolean> {
+    return this.driver.ping();
+  }
+
   async publish<T>(
     exchange: string,
     routingKey: string,

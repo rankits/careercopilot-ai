@@ -18,6 +18,7 @@ vi.mock('@/infrastructure/messaging/index.js', async () => {
     ...actual,
     messageBus: {
       connect: vi.fn(async () => {}),
+      ping: vi.fn(async () => true),
       publish: vi.fn(async () => true),
       publishEvent: vi.fn(async () => true),
       subscribe: vi.fn(async () => {}),

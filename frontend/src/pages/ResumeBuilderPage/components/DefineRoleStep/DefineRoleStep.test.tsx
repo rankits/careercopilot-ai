@@ -22,6 +22,8 @@ describe('DefineRoleStep', () => {
       id: 'r1',
       originalName: 'resume.pdf',
       fileName: 'resume.pdf',
+      storedName: 'resume.pdf',
+      mimeType: 'application/pdf',
       sizeBytes: 1024,
       status: 'READY',
       createdAt: '2026-08-01T10:00:00.000Z',
