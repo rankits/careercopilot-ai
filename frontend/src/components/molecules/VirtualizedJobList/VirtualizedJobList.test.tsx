@@ -11,7 +11,7 @@ describe('VirtualizedJobList', () => {
     }));
 
     const { container } = render(
-      <div style={{ height: 400 }}>
+      <div style={{ height: 400, overflow: 'auto' }}>
         <VirtualizedJobList
           ariaLabel="Job feed results"
           getKey={(item) => item.id}
