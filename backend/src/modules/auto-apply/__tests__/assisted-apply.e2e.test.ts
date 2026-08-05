@@ -263,6 +263,28 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
     record.updatedAt = new Date();
     return this.copy(record);
   }
+
+  async updateResumeSelection(userId: string, id: string, resumeVersionId: string) {
+    const record = this.findLiveProp(userId, id);
+    record.resumeVersionId = resumeVersionId;
+    record.updatedAt = new Date();
+    return this.copy(record);
+  }
+  async recordHandoffOpened(
+    userId: string,
+    id: string,
+    data: { applyUrl: string; openedAt: Date },
+    expectedStatus: string,
+  ) {
+    const record = this.findLiveProp(userId, id);
+    if (record.status !== expectedStatus) return null;
+    record.status = 'ACTION_REQUIRED';
+    record.handoffOpenedAt = data.openedAt;
+    record.externalConfirmationUrl = data.applyUrl;
+    record.progressStep = 'open';
+    record.updatedAt = new Date();
+    return this.copy(record);
+  }
 }
 
 class FakeConsentRepository implements IApplicationConsentRepository {
