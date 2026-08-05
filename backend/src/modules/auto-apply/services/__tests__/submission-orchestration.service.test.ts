@@ -229,9 +229,14 @@ describe('SubmissionOrchestrationService', () => {
         message: "We couldn't queue this application. Try again.",
       }),
     );
-    expect(jobAppRepo.updateStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', {
-      status: 'APPROVED',
-    });
+    expect(jobAppRepo.updateStatus).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      {
+        status: 'APPROVED',
+      },
+      'QUEUED',
+    );
   });
 
   it('AA-009: rolls back QUEUED when enqueue throws QueuePublishError (falsy publish path)', async () => {
@@ -244,9 +249,14 @@ describe('SubmissionOrchestrationService', () => {
     await expect(service.queueForSubmission('user-1', 'jobapp-1')).rejects.toThrow(
       expect.objectContaining({ code: 'QUEUE_PUBLISH_FAILED', statusCode: 503 }),
     );
-    expect(jobAppRepo.updateStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', {
-      status: 'APPROVED',
-    });
+    expect(jobAppRepo.updateStatus).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      {
+        status: 'APPROVED',
+      },
+      'QUEUED',
+    );
   });
 
   it('AA-009: retry after publish failure behaves as a fresh queue attempt', async () => {

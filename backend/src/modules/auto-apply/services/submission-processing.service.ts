@@ -209,15 +209,19 @@ export class SubmissionProcessingService {
       rawResponseSanitized: result.rawResponseSanitized,
     });
 
-    await this.jobApplicationRepository.finalizeSubmission(userId, jobApplicationId, {
-      status: nextStatusFor(result),
-      externalApplicationId: result.externalApplicationId,
-      externalConfirmationUrl: result.externalConfirmationUrl,
-      failureCode: result.outcome !== 'SUCCEEDED' ? result.errorCode : undefined,
-      failureMessage: result.outcome !== 'SUCCEEDED' ? result.errorMessage : undefined,
-      markSubmittedNow: result.outcome === 'SUCCEEDED' && !result.requiresUserAction,
-    });
-
+    await this.jobApplicationRepository.finalizeSubmission(
+      userId,
+      jobApplicationId,
+      {
+        status: nextStatusFor(result),
+        externalApplicationId: result.externalApplicationId,
+        externalConfirmationUrl: result.externalConfirmationUrl,
+        failureCode: result.outcome !== 'SUCCEEDED' ? result.errorCode : undefined,
+        failureMessage: result.outcome !== 'SUCCEEDED' ? result.errorMessage : undefined,
+        markSubmittedNow: result.outcome === 'SUCCEEDED' && !result.requiresUserAction,
+      },
+      'SUBMITTING',
+    );
     await this.eventService.record({
       userId,
       eventType: eventTypeFor(result),
@@ -251,12 +255,16 @@ export class SubmissionProcessingService {
       errorCode,
       errorMessage,
     );
-    await this.jobApplicationRepository.finalizeSubmission(userId, jobApplicationId, {
-      status: 'SUBMISSION_FAILED',
-      failureCode: errorCode,
-      failureMessage: errorMessage,
-    });
-    await this.eventService.record({
+    await this.jobApplicationRepository.finalizeSubmission(
+      userId,
+      jobApplicationId,
+      {
+        status: 'SUBMISSION_FAILED',
+        failureCode: errorCode,
+        failureMessage: errorMessage,
+      },
+      'SUBMITTING',
+    );    await this.eventService.record({
       userId,
       eventType: 'SUBMISSION_FAILED',
       jobApplicationId,
