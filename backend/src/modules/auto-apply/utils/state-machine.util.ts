@@ -26,6 +26,7 @@ const TRANSITIONS: Record<JobApplicationStatus, JobApplicationStatus[]> = {
   // drive this transition — never a blind/automatic retry.
   SUBMISSION_FAILED: ['QUEUED'],
   ACTION_REQUIRED: ['SUBMITTED', 'WITHDRAWN'],
+  // Candidates can reopen an abandoned application via reopenFromWithdrawn — see AA-042.
   WITHDRAWN: ['DISCOVERED'],
 };
 
