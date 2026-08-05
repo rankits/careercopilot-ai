@@ -84,8 +84,8 @@ export function AnswersTab({
 
         {suggestedQuestionKey && (
           <Alert severity="info">
-            Question key prefilled from your application plan. Enter the answer and save, then return
-            to Submissions and click Refresh plan.
+            Question key prefilled from your application review. Enter the answer and save, then
+            return to Submissions — we will re-check automatically.
           </Alert>
         )}
 

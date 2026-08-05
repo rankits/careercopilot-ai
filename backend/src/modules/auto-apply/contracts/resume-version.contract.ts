@@ -8,12 +8,13 @@ export interface IApprovedResumeVersionRepository {
     resumeId: string;
     label: string;
     category: string;
+    tags: string[];
     isActive: boolean;
   }): Promise<ApprovedResumeVersionDto>;
   update(
     userId: string,
     id: string,
-    data: { label?: string; category?: string; isActive?: boolean },
+    data: { label?: string; category?: string; tags?: string[]; isActive?: boolean },
   ): Promise<ApprovedResumeVersionDto>;
   delete(userId: string, id: string): Promise<boolean>;
 }

@@ -131,3 +131,43 @@ export const withdrawJobApplicationController = async (
     return next(error);
   }
 };
+
+export const deleteJobApplicationController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = requireUserPrincipalId(req);
+    const id = getParam(req.params.id, 'id');
+    await jobApplicationService.delete(userId, id);
+    return res.status(200).json(successResponse('Auto-apply submission deleted', null));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const reopenJobApplicationController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const userId = requireUserPrincipalId(req);
+    const id = getParam(req.params.id, 'id');
+    const application = await jobApplicationService.reopen(userId, id);
+    void autoApplyEventService.record({
+      userId,
+      eventType: 'SUBMISSION_INITIATED',
+      jobApplicationId: application.id,
+      metadata: { reopened: true },
+    });
+    return res
+      .status(200)
+      .json(
+        successResponse('Withdrawn submission reopened for another apply attempt', application),
+      );
+  } catch (error) {
+    return next(error);
+  }
+};

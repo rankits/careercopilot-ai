@@ -26,7 +26,7 @@ const TRANSITIONS: Record<JobApplicationStatus, JobApplicationStatus[]> = {
   // drive this transition — never a blind/automatic retry.
   SUBMISSION_FAILED: ['QUEUED'],
   ACTION_REQUIRED: ['SUBMITTED', 'WITHDRAWN'],
-  WITHDRAWN: [],
+  WITHDRAWN: ['DISCOVERED'],
 };
 
 export function isValidTransition(from: JobApplicationStatus, to: JobApplicationStatus): boolean {

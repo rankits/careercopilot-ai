@@ -62,31 +62,34 @@ describe('JobApplicationService', () => {
       findByUserIdAndJobId: vi.fn().mockResolvedValue(null),
       findByUserIdAndCanonicalJobId: vi.fn().mockResolvedValue(null),
       create: vi.fn().mockResolvedValue(baseApplication),
-      updateStatus: vi
-        .fn()
-        .mockImplementation((_userId, _id, data) =>
-          Promise.resolve({
-            ...baseApplication,
-            status: data.status,
-            eligibilityResult: data.eligibilityResult ?? null,
-          }),
-        ),
-      updatePlan: vi
-        .fn()
-        .mockImplementation((_userId, _id, data) =>
-          Promise.resolve({
-            ...baseApplication,
-            channel: data.channel,
-            resumeVersionId: data.resumeVersionId,
-            planInputsHash: data.planInputsHash,
-          }),
-        ),
+      updateStatus: vi.fn().mockImplementation((_userId, _id, data) =>
+        Promise.resolve({
+          ...baseApplication,
+          status: data.status,
+          eligibilityResult: data.eligibilityResult ?? null,
+        }),
+      ),
+      updatePlan: vi.fn().mockImplementation((_userId, _id, data) =>
+        Promise.resolve({
+          ...baseApplication,
+          channel: data.channel,
+          resumeVersionId: data.resumeVersionId,
+          planInputsHash: data.planInputsHash,
+        }),
+      ),
       claimForSubmission: vi.fn().mockResolvedValue({ ...baseApplication, status: 'SUBMITTING' }),
       finalizeSubmission: vi
         .fn()
         .mockImplementation((_userId, _id, data) =>
           Promise.resolve({ ...baseApplication, status: data.status }),
         ),
+      countConsumedSince: vi.fn().mockResolvedValue(0),
+      updateMatchScore: vi.fn().mockResolvedValue(baseApplication),
+      queueAtomically: vi.fn().mockResolvedValue({ ...baseApplication, status: 'QUEUED' }),
+      delete: vi.fn().mockResolvedValue(true),
+      reopenFromWithdrawn: vi
+        .fn()
+        .mockResolvedValue({ ...baseApplication, status: 'DISCOVERED', planVersion: 2 }),
     };
     mockEligibility = {
       evaluateForJob: vi.fn().mockResolvedValue({ eligible: true, checks: [] }),
@@ -111,6 +114,18 @@ describe('JobApplicationService', () => {
       expect.objectContaining({ code: 'APPLICATION_EXISTS', statusCode: 409 }),
     );
     expect(mockRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('reopens a withdrawn submission instead of blocking initiate', async () => {
+    vi.mocked(mockRepo.findByUserIdAndJobId).mockResolvedValue({
+      ...baseApplication,
+      status: 'WITHDRAWN',
+    });
+
+    const result = await service.initiate('user-1', 'job-1');
+    expect(mockRepo.reopenFromWithdrawn).toHaveBeenCalledWith('user-1', 'jobapp-1');
+    expect(mockRepo.create).not.toHaveBeenCalled();
+    expect(result.application.status).toBe('DISCOVERED');
   });
 
   it('blocks initiating a submission that matches an existing canonical job id (hard check)', async () => {
