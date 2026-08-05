@@ -18,6 +18,7 @@ describe('ApprovedResumeVersionService', () => {
     resumeId: 'resume-1',
     label: 'Backend Resume',
     category: 'Backend',
+    tags: [],
     isActive: true,
     createdAt: new Date('2026-01-01T00:00:00.000Z'),
     updatedAt: new Date('2026-01-01T00:00:00.000Z'),
@@ -40,6 +41,7 @@ describe('ApprovedResumeVersionService', () => {
       resumeId: 'resume-1',
       label: 'Backend Resume',
       category: 'Backend',
+      tags: [],
       isActive: true,
     });
 
@@ -57,6 +59,7 @@ describe('ApprovedResumeVersionService', () => {
         resumeId: 'someone-elses-resume',
         label: 'Backend Resume',
         category: 'Backend',
+        tags: [],
         isActive: true,
       }),
     ).rejects.toThrow(new AppError('Resume not found', 404, 'RESUME_NOT_FOUND'));

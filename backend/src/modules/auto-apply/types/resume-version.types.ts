@@ -4,6 +4,7 @@ export interface ApprovedResumeVersionDto {
   resumeId: string;
   label: string;
   category: string;
+  tags: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;

@@ -9,6 +9,10 @@ import {
   EligibilityResult,
 } from '@/modules/auto-apply/types/eligibility.types.js';
 import { DEFAULT_APPLICATION_RULE } from '@/modules/auto-apply/types/application-rule.types.js';
+import {
+  jobMatchesRemotePreferences,
+  resolveRemotePreferences,
+} from '@/modules/auto-apply/utils/remote-preferences.util.js';
 
 /**
  * Implements AJA-RULE-001's hard eligibility engine — deliberately
@@ -64,22 +68,21 @@ export class EligibilityService implements IEligibilityService {
     } else {
       checks.push({ check: 'PROFILE_COMPLETE', status: 'PASSED' });
 
-      const remotePreference = profile.preferences.remotePreference;
-      if (!remotePreference || remotePreference === 'ANY') {
+      const remoteMatch = jobMatchesRemotePreferences(job.remoteType, profile.preferences);
+      if (remoteMatch === 'PASSED') {
         checks.push({ check: 'REMOTE_PREFERENCE', status: 'PASSED' });
-      } else if (!job.remoteType) {
+      } else if (remoteMatch === 'NOT_EVALUATED') {
         checks.push({
           check: 'REMOTE_PREFERENCE',
           status: 'NOT_EVALUATED',
           reason: 'Job does not specify a remote type',
         });
-      } else if (job.remoteType.toUpperCase() === remotePreference) {
-        checks.push({ check: 'REMOTE_PREFERENCE', status: 'PASSED' });
       } else {
+        const modes = resolveRemotePreferences(profile.preferences).join(', ');
         checks.push({
           check: 'REMOTE_PREFERENCE',
           status: 'FAILED',
-          reason: `Candidate requires ${remotePreference}, job is ${job.remoteType}`,
+          reason: `Candidate accepts ${modes}, job is ${job.remoteType}`,
         });
       }
 

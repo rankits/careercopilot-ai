@@ -11,6 +11,8 @@ import {
   evaluateJobApplicationEligibilityController,
   transitionJobApplicationStatusController,
   withdrawJobApplicationController,
+  deleteJobApplicationController,
+  reopenJobApplicationController,
 } from '@/modules/auto-apply/controllers/job-application.controller.js';
 import {
   approveSubmissionController,
@@ -69,6 +71,20 @@ router.post(
   ...requireUser,
   requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_DELETE_OWN),
   withdrawJobApplicationController,
+);
+
+router.post(
+  '/:id/reopen',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_CREATE_OWN),
+  reopenJobApplicationController,
+);
+
+router.delete(
+  '/:id',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_DELETE_OWN),
+  deleteJobApplicationController,
 );
 
 router.post(

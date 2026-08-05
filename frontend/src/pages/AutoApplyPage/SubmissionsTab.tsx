@@ -1,14 +1,19 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
-import { useCreatePlan } from '@/features/auto-apply/hooks/usePlan';
+import { useCandidateProfile } from '@/features/auto-apply/hooks/useCandidateProfile';
+import { useConsents } from '@/features/auto-apply/hooks/useConsents';
+import { loadSubmissionReview, useCreatePlan } from '@/features/auto-apply/hooks/usePlan';
+import { useResumeVersions } from '@/features/auto-apply/hooks/useResumeVersions';
 import {
   useApproveSubmission,
   useConfirmSubmission,
+  useDeleteSubmission,
   useInitiateSubmission,
   useQueueSubmission,
+  useReopenSubmission,
   useRetrySubmission,
   useSubmissions,
   useWithdrawSubmission,
@@ -18,7 +23,21 @@ import type {
   ApplicationPlanResult,
   JobApplicationDto,
 } from '@/features/auto-apply/types/autoApply.types';
-import { Alert, Box, Chip, CircularProgress, Paper, TextField, Typography } from '@/lib/material';
+import { isAutoApplyClientError } from '@/features/auto-apply/utils/apiError';
+import { isAutoApplySetupComplete } from '@/features/auto-apply/utils/setupCompleteness';
+import {
+  Alert,
+  Box,
+  Chip,
+  CircularProgress,
+  Collapse,
+  DeleteOutlineIcon,
+  ExpandMoreIcon,
+  IconButton,
+  Paper,
+  TextField,
+  Typography,
+} from '@/lib/material';
 
 import type { AutoApplyTabId } from './missingFieldNavigation';
 import { resolveReadinessFixActions } from './missingFieldNavigation';
@@ -53,9 +72,11 @@ export type NavigateFixAction = (action: {
 function PlanPanel({
   plan,
   onNavigateFix,
+  isRefreshing,
 }: {
   plan: ApplicationPlanResult;
   onNavigateFix?: NavigateFixAction;
+  isRefreshing?: boolean;
 }) {
   const readinessReasons = [
     ...(plan.readiness?.blockingReasons ?? []),
@@ -68,10 +89,10 @@ function PlanPanel({
     plan.decision === 'READY_FOR_REVIEW';
 
   return (
-    <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
-      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+    <Box sx={{ mt: 1, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1, flexWrap: 'wrap' }}>
         <Typography fontWeight={600} variant="body2">
-          Plan decision:
+          Application details
         </Typography>
         <Chip
           color={DECISION_COLOR[plan.decision]}
@@ -81,16 +102,27 @@ function PlanPanel({
         <Typography color="text.secondary" variant="body2">
           Channel: {plan.channel.replace(/_/g, ' ')}
         </Typography>
+        {isRefreshing && <CircularProgress size={14} />}
       </Box>
 
       {plan.selectedResumeVersion && (
-        <Typography variant="body2">Resume: {plan.selectedResumeVersion.label}</Typography>
+        <Typography variant="body2">
+          Resume: {plan.selectedResumeVersion.label}
+          {(plan.selectedResumeVersion.tags?.length ?? 0) > 0
+            ? ` · ${plan.selectedResumeVersion.tags.join(', ')}`
+            : ''}
+        </Typography>
       )}
 
       {(plan.contentWarnings?.length ?? 0) > 0 && (
         <Box sx={{ mt: 1 }}>
           {plan.contentWarnings!.map((warning) => (
-            <Typography color="text.secondary" key={warning} sx={{ display: 'block' }} variant="caption">
+            <Typography
+              color="text.secondary"
+              key={warning}
+              sx={{ display: 'block' }}
+              variant="caption"
+            >
               {warning}
             </Typography>
           ))}
@@ -100,7 +132,7 @@ function PlanPanel({
       {(plan.coverLetter || plan.application.coverLetterContent) && (
         <Box sx={{ mt: 1.5 }}>
           <Typography fontWeight={600} variant="body2">
-            Cover letter (review before approve)
+            Cover letter
           </Typography>
           <Typography
             component="pre"
@@ -124,13 +156,13 @@ function PlanPanel({
           </Typography>
           {plan.screeningAnswers!.map((answer) => (
             <Box key={answer.questionKey} sx={{ mb: 0.75 }}>
-              <Typography variant="caption" fontWeight={600}>
+              <Typography fontWeight={600} variant="caption">
                 {answer.questionLabel}
                 {answer.requiresUserReview ? ' · review required' : ''}
                 {answer.status === 'REQUIRES_USER_ACTION' ? ' · missing' : ''}
               </Typography>
               <Typography color="text.secondary" sx={{ display: 'block' }} variant="caption">
-                {answer.answer ?? 'Not filled — add in Verified Answers, then Refresh plan.'}
+                {answer.answer ?? 'Not filled — add in Verified Answers, then return here.'}
               </Typography>
             </Box>
           ))}
@@ -145,9 +177,9 @@ function PlanPanel({
             variant="body2"
           >
             {plan.decision === 'INFORMATION_REQUIRED'
-              ? 'Missing or incomplete — fix these, then click Refresh plan:'
+              ? 'Finish these details — we will re-check when you return:'
               : warningOnly
-                ? 'Notes (plan can continue):'
+                ? 'Notes (you can continue):'
                 : 'Related items:'}
           </Typography>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
@@ -180,20 +212,6 @@ function PlanPanel({
         </Box>
       )}
 
-      {plan.decision === 'INFORMATION_REQUIRED' && fixActions.length === 0 && (
-        <Typography color="warning.main" sx={{ mt: 1 }} variant="body2">
-          Information is still required, but no specific fix actions were returned. Click Refresh
-          plan again after updating profile, answers, or resumes.
-        </Typography>
-      )}
-
-      {!plan.contentGenerationAvailable && (
-        <Typography color="text.secondary" sx={{ mt: 1, display: 'block' }} variant="caption">
-          No cover letter / screening package yet — approve a resume, grant Content Generation
-          consent, add verified answers, then Refresh plan.
-        </Typography>
-      )}
-
       <Box sx={{ mt: 1, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
         {plan.eligibility.checks.map((check) => (
           <Typography
@@ -216,21 +234,45 @@ const TERMINAL_STATUSES: JobApplicationDto['status'][] = [
   'CONFIRMATION_RECEIVED',
 ];
 
+const REVIEWABLE_STATUSES: JobApplicationDto['status'][] = [
+  'DISCOVERED',
+  'MATCHED',
+  'APPLICATION_PLANNING',
+  'INFORMATION_REQUIRED',
+  'READY_FOR_REVIEW',
+  'NOT_ELIGIBLE',
+  'APPROVED',
+  'ACTION_REQUIRED',
+  'SUBMISSION_FAILED',
+];
+
 function SubmissionRow({
   submission,
   onNavigateFix,
+  setupComplete,
 }: {
   submission: JobApplicationDto;
   onNavigateFix?: NavigateFixAction;
+  setupComplete: boolean;
 }) {
-  const createPlan = useCreatePlan();
   const approveSubmission = useApproveSubmission();
   const queueSubmission = useQueueSubmission();
   const confirmSubmission = useConfirmSubmission();
   const retrySubmission = useRetrySubmission();
   const withdrawSubmission = useWithdrawSubmission();
+  const deleteSubmission = useDeleteSubmission();
+  const reopenSubmission = useReopenSubmission();
+  const createPlan = useCreatePlan();
   const { showToast } = useToast();
   const [plan, setPlan] = useState<ApplicationPlanResult | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(
+    () =>
+      submission.status === 'READY_FOR_REVIEW' ||
+      submission.status === 'INFORMATION_REQUIRED' ||
+      submission.status === 'NOT_ELIGIBLE',
+  );
+  const [loadingDetails, setLoadingDetails] = useState(false);
+  const loadedFor = useRef<string | null>(null);
 
   const runAction = async (
     action: () => Promise<unknown>,
@@ -248,28 +290,73 @@ function SubmissionRow({
     }
   };
 
-  const handleGeneratePlan = async () => {
-    if (!submission.jobId) return;
-    try {
-      const result = await createPlan.mutateAsync(submission.jobId);
-      setPlan(result);
-    } catch (error) {
-      showToast({
-        message: error instanceof Error ? error.message : 'Unable to generate a plan for this job.',
-        severity: 'error',
-      });
-    }
-  };
+  useEffect(() => {
+    if (!submission.jobId || !REVIEWABLE_STATUSES.includes(submission.status)) return;
+    const key = `${submission.id}:${submission.status}:${submission.planVersion}`;
+    if (loadedFor.current === key) return;
+    loadedFor.current = key;
+
+    let cancelled = false;
+    setLoadingDetails(true);
+    void (async () => {
+      try {
+        const result = await loadSubmissionReview(submission.jobId!, submission.status);
+        if (!cancelled) {
+          setPlan(result);
+          if (result) {
+            setDetailsOpen(true);
+          }
+        }
+      } catch (error) {
+        if (!cancelled) {
+          showToast({
+            message: error instanceof Error ? error.message : 'Unable to load application details.',
+            severity: 'error',
+          });
+        }
+      } finally {
+        if (!cancelled) setLoadingDetails(false);
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [submission.id, submission.jobId, submission.status, submission.planVersion, showToast]);
 
   const isProcessing = submission.status === 'QUEUED' || submission.status === 'SUBMITTING';
   const isTerminal = TERMINAL_STATUSES.includes(submission.status);
-  const canRefreshPlan =
-    submission.status === 'DISCOVERED' ||
-    submission.status === 'MATCHED' ||
-    submission.status === 'APPLICATION_PLANNING' ||
-    submission.status === 'INFORMATION_REQUIRED' ||
-    submission.status === 'READY_FOR_REVIEW' ||
-    submission.status === 'NOT_ELIGIBLE';
+  const canDelete = submission.status !== 'QUEUED' && submission.status !== 'SUBMITTING';
+  const canShowDetails = Boolean(plan) || loadingDetails || Boolean(submission.jobId);
+
+  const guardSetup = (proceed: () => void) => {
+    if (!setupComplete) {
+      showToast({
+        message: 'Finish your Auto Apply setup (profile, resume, and resume permission) first.',
+        severity: 'warning',
+      });
+      return;
+    }
+    proceed();
+  };
+
+  const handleApplyAgain = () => {
+    guardSetup(
+      () =>
+        void runAction(
+          async () => {
+            const reopened = await reopenSubmission.mutateAsync(submission.id);
+            if (reopened.jobId) {
+              const result = await createPlan.mutateAsync(reopened.jobId);
+              setPlan(result);
+              setDetailsOpen(true);
+            }
+          },
+          'Ready to apply again — review is preparing.',
+          'Unable to restart this application.',
+        ),
+    );
+  };
 
   return (
     <Box sx={{ p: 2 }}>
@@ -284,14 +371,31 @@ function SubmissionRow({
         </Box>
         <StatusChip status={submission.status} />
 
+        {canShowDetails && submission.status !== 'WITHDRAWN' && (
+          <Button onClick={() => setDetailsOpen((open) => !open)} size="small" variant="outline">
+            {detailsOpen ? 'Hide details' : 'View details'}
+            <ExpandMoreIcon
+              fontSize="small"
+              sx={{
+                ml: 0.5,
+                transform: detailsOpen ? 'rotate(180deg)' : 'none',
+                transition: 'transform 0.15s',
+              }}
+            />
+          </Button>
+        )}
+
         {submission.status === 'READY_FOR_REVIEW' && (
           <Button
             isLoading={approveSubmission.isPending}
             onClick={() =>
-              void runAction(
-                () => approveSubmission.mutateAsync(submission.id),
-                'Submission approved.',
-                'Unable to approve this submission.',
+              guardSetup(
+                () =>
+                  void runAction(
+                    () => approveSubmission.mutateAsync(submission.id),
+                    'Submission approved.',
+                    'Unable to approve this submission.',
+                  ),
               )
             }
             size="small"
@@ -304,15 +408,18 @@ function SubmissionRow({
           <Button
             isLoading={queueSubmission.isPending}
             onClick={() =>
-              void runAction(
-                () => queueSubmission.mutateAsync(submission.id),
-                'Submission queued.',
-                'Unable to queue this submission.',
+              guardSetup(
+                () =>
+                  void runAction(
+                    () => queueSubmission.mutateAsync(submission.id),
+                    'Submission queued.',
+                    'Unable to queue this submission.',
+                  ),
               )
             }
             size="small"
           >
-            Queue for submission
+            Continue to apply
           </Button>
         )}
 
@@ -370,14 +477,13 @@ function SubmissionRow({
           </Button>
         )}
 
-        {canRefreshPlan && (
+        {submission.status === 'WITHDRAWN' && (
           <Button
-            isLoading={createPlan.isPending}
-            onClick={() => void handleGeneratePlan()}
+            isLoading={reopenSubmission.isPending || createPlan.isPending}
+            onClick={handleApplyAgain}
             size="small"
-            variant="outline"
           >
-            {submission.status === 'DISCOVERED' ? 'Generate plan' : 'Refresh plan'}
+            Apply again
           </Button>
         )}
 
@@ -398,6 +504,23 @@ function SubmissionRow({
             Withdraw
           </Button>
         )}
+
+        {canDelete && (
+          <IconButton
+            aria-label="Delete submission"
+            disabled={deleteSubmission.isPending}
+            onClick={() =>
+              void runAction(
+                () => deleteSubmission.mutateAsync(submission.id),
+                'Submission deleted.',
+                'Unable to delete this submission.',
+              )
+            }
+            size="small"
+          >
+            <DeleteOutlineIcon fontSize="small" />
+          </IconButton>
+        )}
       </Box>
 
       {submission.status === 'SUBMISSION_FAILED' && submission.failureMessage && (
@@ -406,7 +529,21 @@ function SubmissionRow({
         </Typography>
       )}
 
-      {plan && <PlanPanel onNavigateFix={onNavigateFix} plan={plan} />}
+      <Collapse in={detailsOpen && submission.status !== 'WITHDRAWN'}>
+        {loadingDetails && !plan && (
+          <Typography color="text.secondary" sx={{ mt: 1 }} variant="caption">
+            Loading application details…
+          </Typography>
+        )}
+        {plan && (
+          <PlanPanel isRefreshing={loadingDetails} onNavigateFix={onNavigateFix} plan={plan} />
+        )}
+        {!loadingDetails && !plan && submission.jobId && (
+          <Typography color="text.secondary" sx={{ mt: 1 }} variant="caption">
+            No saved review details yet for this submission.
+          </Typography>
+        )}
+      </Collapse>
     </Box>
   );
 }
@@ -417,24 +554,55 @@ export function SubmissionsTab({
   onNavigateFix?: NavigateFixAction;
 } = {}) {
   const { data: submissions, isLoading } = useSubmissions();
+  const { data: profile } = useCandidateProfile();
+  const { data: resumes } = useResumeVersions();
+  const { data: consents } = useConsents();
   const initiateSubmission = useInitiateSubmission();
+  const createPlan = useCreatePlan();
   const { showToast } = useToast();
   const [jobId, setJobId] = useState('');
 
+  const setupComplete = isAutoApplySetupComplete({ profile, resumes, consents });
+
   const handleTrack = async () => {
+    if (!setupComplete) {
+      showToast({
+        message: 'Finish Profile, Resume Versions, and Consents before tracking a job.',
+        severity: 'warning',
+      });
+      return;
+    }
     try {
       const result = await initiateSubmission.mutateAsync(jobId.trim());
+      if (result.application.jobId) {
+        try {
+          await createPlan.mutateAsync(result.application.jobId);
+        } catch {
+          // Row load will fetch details.
+        }
+      }
       setJobId('');
       if (result.possibleDuplicates.length > 0) {
         showToast({
           message:
-            'Tracking started — a possible duplicate was detected, review your submissions list.',
+            'Tracking started — a possible duplicate was detected. Review the submissions list.',
           severity: 'warning',
         });
       } else {
-        showToast({ message: 'Now tracking this job for auto-apply.', severity: 'success' });
+        showToast({
+          message: 'Tracking started. Application details will appear below.',
+          severity: 'success',
+        });
       }
     } catch (error) {
+      if (isAutoApplyClientError(error) && error.code === 'APPLICATION_EXISTS') {
+        setJobId('');
+        showToast({
+          message: 'This job is already in your submissions list.',
+          severity: 'info',
+        });
+        return;
+      }
       showToast({
         message: error instanceof Error ? error.message : 'Unable to start tracking this job.',
         severity: 'error',
@@ -444,19 +612,31 @@ export function SubmissionsTab({
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 820 }}>
+      {!setupComplete && (
+        <Alert severity="warning">
+          Complete your setup (Profile, an approved resume, and resume permission) before tracking
+          jobs or approving applications.
+        </Alert>
+      )}
+
       <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
-        <Typography variant="h6">Track a job for auto-apply</Typography>
+        <Typography variant="h6">Track a job</Typography>
+        <Typography color="text.secondary" variant="body2">
+          Prefer Assisted Apply from a job page. Or paste a Job ID here — review details load
+          automatically.
+        </Typography>
         <Box sx={{ display: 'flex', gap: 2 }}>
           <TextField
+            disabled={!setupComplete}
             fullWidth
-            helperText="From the job feed / job detail page URL"
+            helperText="From the job feed / job detail page"
             label="Job ID"
             onChange={(event) => setJobId(event.target.value)}
             value={jobId}
           />
           <Button
-            disabled={!jobId.trim()}
-            isLoading={initiateSubmission.isPending}
+            disabled={!setupComplete || !jobId.trim()}
+            isLoading={initiateSubmission.isPending || createPlan.isPending}
             onClick={() => void handleTrack()}
             sx={{ alignSelf: 'flex-start' }}
           >
@@ -478,7 +658,11 @@ export function SubmissionsTab({
               key={submission.id}
               sx={{ borderTop: index === 0 ? 'none' : '1px solid', borderColor: 'divider' }}
             >
-              <SubmissionRow onNavigateFix={onNavigateFix} submission={submission} />
+              <SubmissionRow
+                onNavigateFix={onNavigateFix}
+                setupComplete={setupComplete}
+                submission={submission}
+              />
             </Box>
           ))}
         </Paper>

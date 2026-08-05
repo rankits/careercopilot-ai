@@ -1,20 +1,71 @@
 import { z } from 'zod';
 
-const SalaryRangeSchema = z.object({
-  min: z.number().positive().optional(),
-  max: z.number().positive().optional(),
-  currency: z.string().trim().length(3).optional(),
-});
+import { toLegacyRemotePreference } from '@/modules/auto-apply/utils/remote-preferences.util.js';
 
-export const CandidateApplicationPreferencesSchema = z.object({
-  desiredRoles: z.array(z.string().trim().min(1).max(120)).max(20).default([]),
-  preferredLocations: z.array(z.string().trim().min(1).max(120)).max(20).default([]),
-  remotePreference: z.enum(['REMOTE', 'HYBRID', 'ONSITE', 'ANY']).default('ANY'),
-  expectedSalary: SalaryRangeSchema.optional(),
-  noticePeriodDays: z.number().int().min(0).max(365).optional(),
-  willingToRelocate: z.boolean().optional(),
-  requiresSponsorship: z.boolean().optional(),
-});
+const WorkModeSchema = z.enum(['REMOTE', 'HYBRID', 'ONSITE']);
+
+export const SALARY_CURRENCIES = [
+  'USD',
+  'EUR',
+  'GBP',
+  'INR',
+  'CAD',
+  'AUD',
+  'SGD',
+  'JPY',
+  'AED',
+  'CHF',
+] as const;
+
+const SalaryRangeSchema = z
+  .object({
+    min: z.number().nonnegative().optional(),
+    max: z.number().nonnegative().optional(),
+    currency: z.enum(SALARY_CURRENCIES).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.min != null && value.max != null && value.max < value.min) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Salary max must be greater than or equal to min',
+        path: ['max'],
+      });
+    }
+  });
+
+export const CandidateApplicationPreferencesSchema = z
+  .object({
+    desiredRoles: z.array(z.string().trim().min(1).max(120)).max(20).default([]),
+    preferredLocations: z.array(z.string().trim().min(1).max(120)).max(20).default([]),
+    remotePreferences: z.array(WorkModeSchema).max(3).optional(),
+    /** Legacy single value — converted into remotePreferences when present. */
+    remotePreference: z.enum(['REMOTE', 'HYBRID', 'ONSITE', 'ANY']).optional(),
+    expectedSalary: SalaryRangeSchema.optional(),
+    noticePeriodDays: z.number().int().min(0).max(365).optional(),
+    willingToRelocate: z.boolean().optional(),
+    requiresSponsorship: z.boolean().optional(),
+  })
+  .transform((value) => {
+    let remotePreferences = value.remotePreferences ?? [];
+    if (remotePreferences.length === 0 && value.remotePreference) {
+      if (value.remotePreference === 'ANY') {
+        remotePreferences = ['REMOTE', 'HYBRID', 'ONSITE'];
+      } else {
+        remotePreferences = [value.remotePreference];
+      }
+    }
+    const unique = [...new Set(remotePreferences)];
+    return {
+      desiredRoles: value.desiredRoles,
+      preferredLocations: value.preferredLocations,
+      remotePreferences: unique,
+      remotePreference: toLegacyRemotePreference(unique),
+      expectedSalary: value.expectedSalary,
+      noticePeriodDays: value.noticePeriodDays,
+      willingToRelocate: value.willingToRelocate,
+      requiresSponsorship: value.requiresSponsorship,
+    };
+  });
 
 export const CandidateApplicationLinksSchema = z.object({
   linkedin: z.string().trim().url().max(2048).optional(),

@@ -252,7 +252,10 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
           status: {
             in: ['QUEUED', 'SUBMITTING', 'SUBMITTED', 'CONFIRMATION_RECEIVED', 'ACTION_REQUIRED'],
           },
-          OR: [{ queuedAt: { gte: startOfDay } }, { queuedAt: null, createdAt: { gte: startOfDay } }],
+          OR: [
+            { queuedAt: { gte: startOfDay } },
+            { queuedAt: null, createdAt: { gte: startOfDay } },
+          ],
         },
       });
       if (dailyUsed >= limits.dailyLimit) {
@@ -294,5 +297,58 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
       });
       return toDto(record);
     });
+  }
+
+  async delete(userId: string, id: string): Promise<boolean> {
+    const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
+    if (!existing) {
+      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+    if (existing.status === 'QUEUED' || existing.status === 'SUBMITTING') {
+      throw new AppError(
+        'Cannot delete a submission that is currently being processed. Withdraw it first if needed.',
+        409,
+        'SUBMISSION_IN_PROGRESS',
+      );
+    }
+    await prisma.jobApplication.delete({ where: { id: existing.id } });
+    return true;
+  }
+
+  async reopenFromWithdrawn(userId: string, id: string): Promise<JobApplicationDto> {
+    const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
+    if (!existing) {
+      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+    if (existing.status !== 'WITHDRAWN') {
+      throw new AppError(
+        'Only withdrawn submissions can be reopened for another apply attempt.',
+        409,
+        'INVALID_STATUS_TRANSITION',
+      );
+    }
+    const record = await prisma.jobApplication.update({
+      where: { id: existing.id },
+      data: {
+        status: 'DISCOVERED',
+        approvalMode: 'PER_APPLICATION',
+        approvedAt: null,
+        queuedAt: null,
+        submittedAt: null,
+        externalApplicationId: null,
+        externalConfirmationUrl: null,
+        failureCode: null,
+        failureMessage: null,
+        consentId: null,
+        planInputsHash: null,
+        coverLetterContent: null,
+        matchScore: null,
+        eligibilityResult: Prisma.DbNull,
+        resumeVersionId: null,
+        channel: 'UNSUPPORTED',
+        planVersion: { increment: 1 },
+      },
+    });
+    return toDto(record);
   }
 }
