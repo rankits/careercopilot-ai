@@ -116,7 +116,7 @@ const getFailureCopy = (state: RecommendationLifecycleState | undefined) => {
   }
 };
 
-export function ForYouPage() {
+export function AiMatchPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1476,7 +1476,7 @@ export function ForYouPage() {
                 </Typography>
               ) : null}
               <VirtualizedJobList
-                ariaLabel="For you recommendations"
+                ariaLabel="AI Match recommendations"
                 getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
                 items={visibleCards}
                 renderItem={(job) => (
