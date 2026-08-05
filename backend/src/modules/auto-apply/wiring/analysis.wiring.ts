@@ -21,6 +21,8 @@ import { PrismaApplicationPageAnalysisRepository } from '@/modules/auto-apply/re
 import { SecurePublicPageFetcher } from '@/modules/auto-apply/services/secure-page-fetcher.service.js';
 import { DeterministicRequirementExtractor } from '@/modules/auto-apply/services/deterministic-requirement-extractor.service.js';
 import { NoopAiRequirementExtractor } from '@/modules/auto-apply/services/ai-requirement-extractor.port.js';
+import { createAiRequirementExtractor } from '@/modules/auto-apply/services/ai-requirement-extractor.service.js';
+import { createHeadlessPageSnapshot } from '@/modules/auto-apply/services/headless-page-snapshot.service.js';
 import { JobPageAnalyzerService } from '@/modules/auto-apply/services/job-page-analyzer.service.js';
 import { RecommendationsMatchAdapter } from '@/modules/auto-apply/adapters/recommendations-match.adapter.js';
 import { PrepareApplicationService } from '@/modules/auto-apply/services/prepare-application.service.js';
@@ -54,12 +56,20 @@ export const applicationReadinessService = new ApplicationReadinessService(
   analysisRepository,
 );
 
+/** OpenRouter when configured; otherwise deterministic-only (Noop). */
+const aiRequirementExtractor = createAiRequirementExtractor();
+const headlessSnapshot = createHeadlessPageSnapshot();
+
 export const jobPageAnalyzerService = new JobPageAnalyzerService(
   analysisRepository,
   new SecurePublicPageFetcher(),
   new DeterministicRequirementExtractor(),
-  new NoopAiRequirementExtractor(),
+  aiRequirementExtractor,
+  headlessSnapshot,
 );
+
+// Keep Noop export available for tests that import wiring helpers.
+export { NoopAiRequirementExtractor };
 
 export const applicationMatchPort = new RecommendationsMatchAdapter(
   matchScoreLookup,

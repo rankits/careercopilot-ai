@@ -9,6 +9,8 @@ export const VAULT_SCREENING_KEYS: ReadonlyArray<{ key: string; label: string }>
   { key: 'sponsorship_required', label: 'Requires sponsorship' },
   { key: 'notice_period_days', label: 'Notice period (days)' },
   { key: 'years_of_experience', label: 'Years of experience' },
+  { key: 'current_work_region', label: 'Current work region' },
+  { key: 'mobile_design_experience', label: 'Mobile design experience' },
   { key: 'expected_salary', label: 'Expected salary' },
   { key: 'willing_to_relocate', label: 'Willing to relocate' },
 ];

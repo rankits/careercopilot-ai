@@ -23,6 +23,15 @@ import {
   Typography,
 } from '@/lib/material';
 
+const SUGGESTED_ANSWER_KEYS: ReadonlyArray<{ key: string; hint: string }> = [
+  { key: 'work_authorization', hint: 'e.g. Authorized to work in the US' },
+  { key: 'notice_period_days', hint: 'e.g. 30' },
+  { key: 'years_of_experience', hint: 'e.g. 6' },
+  { key: 'current_work_region', hint: 'e.g. India, United States, Canada' },
+  { key: 'mobile_design_experience', hint: 'e.g. 4 years mobile product design' },
+  { key: 'sponsorship_required', hint: 'yes or no' },
+];
+
 export function AnswersTab({
   suggestedQuestionKey,
 }: {
@@ -89,9 +98,27 @@ export function AnswersTab({
           </Alert>
         )}
 
+        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75 }}>
+          {SUGGESTED_ANSWER_KEYS.map((item) => (
+            <Chip
+              clickable
+              color={questionKey === item.key ? 'primary' : 'default'}
+              key={item.key}
+              label={item.key}
+              onClick={() => setQuestionKey(item.key)}
+              size="small"
+              variant={questionKey === item.key ? 'filled' : 'outlined'}
+            />
+          ))}
+        </Box>
+        <Typography color="text.secondary" variant="caption">
+          {SUGGESTED_ANSWER_KEYS.find((item) => item.key === questionKey)?.hint ??
+            'Pick a common key or type your own snake_case key'}
+        </Typography>
+
         <TextField
           fullWidth
-          helperText="snake_case, e.g. notice_period_days"
+          helperText="snake_case, e.g. current_work_region"
           label="Question key"
           onChange={(event) => setQuestionKey(event.target.value)}
           value={questionKey}

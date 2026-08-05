@@ -138,6 +138,10 @@ const envSchema = z
     ENABLE_SWAGGER: booleanFromString(true),
     // Global Auto Apply kill switch — when false, PLAN/APPROVE/QUEUE/SUBMIT all fail closed.
     ENABLE_AUTO_APPLY: booleanFromString(true),
+    // Chromium snapshot for JS-heavy job pages (Ashby etc). Set false to skip.
+    ENABLE_AUTO_APPLY_HEADLESS_SNAPSHOT: booleanFromString(true),
+    // Optional path to system Chromium (Alpine docker: /usr/bin/chromium-browser).
+    PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: z.preprocess(emptyToUndefined, z.string().optional()),
     // Run database seeds automatically when the server starts (dev only)
     RUN_SEEDS_ON_STARTUP: booleanFromString(true),
 
