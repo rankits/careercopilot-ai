@@ -112,7 +112,7 @@ describe('LoginPage', () => {
 
     await user.click(screen.getByRole('link', { name: /forgot password/i }));
 
-    expect(screen.getByRole('heading', { name: /forgot password\?/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /forgot password\?/i })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument();
     expect(screen.getByRole('textbox', { name: /email address/i })).toBeInTheDocument();
 

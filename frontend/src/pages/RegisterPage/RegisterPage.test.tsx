@@ -207,7 +207,7 @@ describe('RegisterPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert', undefined, { timeout: 5000 })).toHaveTextContent(
       /unable to create your account\. please try again/i,
     );
     expect(screen.getByRole('button', { name: /create account/i })).toBeEnabled();

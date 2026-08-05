@@ -136,7 +136,9 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
                   maxLength,
                 },
               }}
-              onBlur={() => {
+              {...register(field.name as Path<TFormValues>)}
+              onBlur={(e) => {
+                void register(field.name as Path<TFormValues>).onBlur(e);
                 void trigger(field.name as Path<TFormValues>);
               }}
               onInput={

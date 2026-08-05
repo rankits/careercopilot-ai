@@ -59,7 +59,6 @@ export function ForgotPasswordDialog({
     register,
     watch,
     trigger,
-    // handleSubmit,
     reset,
   } = useForm<ForgotPasswordFormValues>({
     resolver: yupResolver(
@@ -85,7 +84,6 @@ export function ForgotPasswordDialog({
     onClose();
   }
 
-  // const submitHandler = async (data: ForgotPasswordFormValues) => {
   const submitHandler = async () => {
     if (step === 1) {
       const isValid = await trigger('email');
@@ -110,8 +108,14 @@ export function ForgotPasswordDialog({
 
   function handleOtpChange(index: number, value: string) {
     const digit = value.replace(/\D/g, '').slice(-1);
+
     setOtp((current) => current.map((item, itemIndex) => (itemIndex === index ? digit : item)));
-    if (digit && index < otp.length - 1) otpRefs.current[index + 1]?.focus();
+
+    if (digit && index < otp.length - 1) {
+      setTimeout(() => {
+        otpRefs.current[index + 1]?.focus();
+      }, 0);
+    }
   }
 
   function handleOtpKeyDown(index: number, key: string) {
@@ -279,7 +283,6 @@ export function ForgotPasswordDialog({
                       borderColor: '#D0D5DD',
                     },
                     '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                      borderColor: '#7C3AED',
                       borderWidth: '1px',
                     },
                   }}
@@ -300,9 +303,9 @@ export function ForgotPasswordDialog({
                         autoFocus={index === 0}
                         inputProps={{
                           maxLength: 1,
-                          ref: (element: HTMLInputElement | null) => {
-                            otpRefs.current[index] = element;
-                          },
+                        }}
+                        inputRef={(element: HTMLInputElement | null) => {
+                          otpRefs.current[index] = element;
                         }}
                         key={index}
                         onChange={(event) => handleOtpChange(index, event.target.value)}
@@ -365,7 +368,6 @@ export function ForgotPasswordDialog({
                         borderColor: '#D0D5DD',
                       },
                       '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#7C3AED',
                         borderWidth: '1px',
                       },
                     }}
@@ -420,7 +422,6 @@ export function ForgotPasswordDialog({
                         borderColor: '#D0D5DD',
                       },
                       '& .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        borderColor: '#7C3AED',
                         borderWidth: '1px',
                       },
                     }}
