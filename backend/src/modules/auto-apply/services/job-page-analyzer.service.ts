@@ -40,6 +40,13 @@ const STATUS_TTL_MS = 6 * 60 * 60 * 1000;
 const inFlight = new Map<string, Promise<ApplicationPageAnalysisDto>>();
 
 function isRequirementsFresh(analysis: ApplicationPageAnalysisDto, now: Date): boolean {
+  if (
+    analysis.extractorVersion !== APPLICATION_PAGE_EXTRACTOR_VERSION ||
+    analysis.extractionPolicyVersion !== APPLICATION_PAGE_EXTRACTION_POLICY_VERSION ||
+    analysis.schemaVersion !== APPLICATION_PAGE_ANALYSIS_SCHEMA_VERSION
+  ) {
+    return false;
+  }
   const analyzedAt = analysis.freshness.requirementsAnalyzedAt
     ? new Date(analysis.freshness.requirementsAnalyzedAt)
     : new Date(analysis.analyzedAt);
@@ -217,6 +224,20 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
     }
     const requirements = [...byCode.values()];
 
+    if (requirements.length === 0 && sanitizedText.length > 400) {
+      const { logger } = await import('@/shared/logger/logger.js');
+      logger.warn(
+        {
+          metric: 'auto_apply.analysis.empty_requirements',
+          jobId: input.jobId,
+          provider,
+          sanitizedTextLength: sanitizedText.length,
+          deterministicCount: deterministic.requirements.length,
+          aiCount: aiRequirements.length,
+        },
+        'Page analysis produced no requirements from substantial text',
+      );
+    }
     const idempotencyKey = buildAnalysisIdempotencyKey({
       jobId: input.jobId,
       normalizedUrl: finalUrl.split('?')[0] ?? finalUrl,

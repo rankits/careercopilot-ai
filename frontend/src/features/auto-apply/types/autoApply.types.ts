@@ -191,6 +191,7 @@ export interface ApplicationPlanResult {
   screeningAnswers?: PreparedScreeningAnswerDto[];
   contentWarnings?: string[];
   readiness?: ApplicationReadinessDto;
+  pageAnalysis?: ApplicationPageAnalysisSummary | null;
 }
 
 export interface PreparedScreeningAnswerDto {
@@ -206,6 +207,29 @@ export interface PreparedScreeningAnswerDto {
 
 export type ApplyMode = 'PREPARE' | 'ASSISTED' | 'AUTOPILOT' | 'EXTENSION';
 
+export interface ApplicationPageRequirementSummary {
+  code: string;
+  importance: string;
+  assertion: string;
+  required: boolean;
+  confidence: number;
+  evidenceStrength: string;
+  sourceText?: string;
+  reviewStatus?: string;
+}
+
+export interface ApplicationPageAnalysisSummary {
+  id: string;
+  provider: string;
+  submissionCapability: string;
+  formStatus: string;
+  outcomeStatus: string;
+  jobPageUrl: string;
+  analyzedAt: string;
+  expiresAt: string;
+  requirements: ApplicationPageRequirementSummary[];
+}
+
 export interface ApplicationPageAnalysisDto {
   id: string;
   jobId: string;
@@ -218,6 +242,7 @@ export interface ApplicationPageAnalysisDto {
     code: string;
     required?: boolean;
     assertion?: string;
+    importance?: string;
     sourceText?: string;
     evidenceStrength?: string;
     confidence?: number;

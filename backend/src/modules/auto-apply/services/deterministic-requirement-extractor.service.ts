@@ -16,12 +16,19 @@ function pushRequirement(
 }
 
 function extractWorkRegion(text: string, sourceUrl: string): ExtractedRequirement | null {
-  const patterns: Array<{ re: RegExp; raw: string; region: string; countries: string[] }> = [
+  const patterns: Array<{
+    re: RegExp;
+    raw: string | ((match: RegExpMatchArray) => string);
+    region: string;
+    countries: string[];
+    interpretationStatus?: GeographicValue['interpretationStatus'];
+  }> = [
     {
       re: /(?:based in|located in|open (?:only )?to candidates (?:based )?in|limited to candidates (?:based )?in)\s+North America/i,
       raw: 'North America',
       region: 'NORTH_AMERICA',
       countries: [],
+      interpretationStatus: 'REVIEW_REQUIRED',
     },
     {
       re: /(?:United States|USA|U\.S\.A\.)\s+(?:only|based)/i,
@@ -29,16 +36,40 @@ function extractWorkRegion(text: string, sourceUrl: string): ExtractedRequiremen
       region: 'UNITED_STATES',
       countries: ['US'],
     },
+    {
+      re: /(?:only\s+)?(?:open\s+to|hiring)\s+(?:US|U\.S\.|United States)[-\s]?based\s+candidates/i,
+      raw: 'US-based candidates',
+      region: 'UNITED_STATES',
+      countries: ['US'],
+    },
+    {
+      // e.g. "This role is based in San Francisco, CA."
+      re: /(?:this\s+role\s+is\s+)?based\s+in\s+([A-Za-z][A-Za-z .'-]{1,40}),\s*([A-Z]{2})\b/i,
+      raw: (match) => match[0],
+      region: 'UNITED_STATES',
+      countries: ['US'],
+      interpretationStatus: 'EXPLICIT_COUNTRIES',
+    },
+    {
+      re: /(?:this\s+role\s+is\s+)?(?:located|based)\s+in\s+(San Francisco|New York(?: City)?|Seattle|Austin|Boston|Los Angeles|Chicago|Denver|Atlanta)\b/i,
+      raw: (match) => match[0],
+      region: 'UNITED_STATES',
+      countries: ['US'],
+      interpretationStatus: 'EXPLICIT_COUNTRIES',
+    },
   ];
 
   for (const pattern of patterns) {
     const match = text.match(pattern.re);
     if (!match) continue;
+    const rawValue = typeof pattern.raw === 'function' ? pattern.raw(match) : pattern.raw;
     const geographic: GeographicValue = {
-      rawValue: pattern.raw,
+      rawValue,
       normalizedRegion: pattern.region,
       explicitCountries: pattern.countries,
-      interpretationStatus: pattern.countries.length > 0 ? 'EXPLICIT_COUNTRIES' : 'REVIEW_REQUIRED',
+      interpretationStatus:
+        pattern.interpretationStatus ??
+        (pattern.countries.length > 0 ? 'EXPLICIT_COUNTRIES' : 'REVIEW_REQUIRED'),
     };
     return {
       code: 'WORK_REGION',
@@ -47,7 +78,7 @@ function extractWorkRegion(text: string, sourceUrl: string): ExtractedRequiremen
       importance: 'REQUIRED',
       assertion: 'REQUIRES',
       required: true,
-      confidence: 0.99,
+      confidence: 0.95,
       evidenceStrength: 'EXPLICIT_TEXT',
       extractionMethod: 'DOM_RULE',
       sourceText: match[0],
