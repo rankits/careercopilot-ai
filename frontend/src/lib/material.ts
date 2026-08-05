@@ -86,6 +86,7 @@ export { default as DialogActions } from '@mui/material/DialogActions';
 export { default as DialogContent } from '@mui/material/DialogContent';
 export { default as DialogContentText } from '@mui/material/DialogContentText';
 export { default as DialogTitle } from '@mui/material/DialogTitle';
+export { default as Divider } from '@mui/material/Divider';
 export { default as Drawer } from '@mui/material/Drawer';
 export { default as Fab } from '@mui/material/Fab';
 export { default as FormControl } from '@mui/material/FormControl';

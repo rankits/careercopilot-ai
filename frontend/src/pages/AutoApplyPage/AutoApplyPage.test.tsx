@@ -5,12 +5,24 @@ import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
 import type { SetupStatusDto } from '@/features/auto-apply/types/autoApply.types';
 
 import { AutoApplyPage } from './AutoApplyPage';
 
+vi.mock('./ProfileTab', () => ({
+  ProfileTab: () => <h2>Personal & contact details</h2>,
+}));
+
+vi.mock('./AnswersTab', () => ({
+  AnswersTab: () => <div>Verified answers</div>,
+}));
+
+vi.mock('./AssistedApplicationsList', () => ({
+  AssistedApplicationsList: () => <div>Assisted applications list</div>,
+}));
 vi.mock('./SubmissionsTab', () => ({
-  SubmissionsTab: () => <div>Track a job</div>,
+  SubmissionsTab: () => <div>Assisted applications list</div>,
 }));
 
 vi.mock('./ResumeVersionsTab', () => ({
@@ -154,14 +166,14 @@ describe('AutoApplyPage', () => {
     expect(screen.queryByRole('button', { name: /Browse jobs/i })).not.toBeInTheDocument();
   });
 
-  it('opens the submissions tab from ?tab=submissions', () => {
+  it('opens the assisted applications tab from ?tab=submissions', () => {
     renderPage('/auto-apply?tab=submissions');
 
-    expect(screen.getByRole('tab', { name: /submissions/i })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: /assisted applications/i })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    expect(screen.getByText(/Track a job/i)).toBeInTheDocument();
+    expect(screen.getByText(/Assisted applications list/i)).toBeInTheDocument();
   });
 
   it('opens work-auth section deep link onto the answers tab (AA-020)', () => {
@@ -173,7 +185,7 @@ describe('AutoApplyPage', () => {
     );
   });
 
-  it('hides premature UI on the submissions tab', () => {
+  it('hides premature UI on the assisted applications tab', () => {
     renderPage('/auto-apply?tab=submissions');
 
     expect(screen.queryByRole('button', { name: /^Approve$/i })).not.toBeInTheDocument();
@@ -182,13 +194,13 @@ describe('AutoApplyPage', () => {
     expect(screen.queryByText(/^Processing…$/)).not.toBeInTheDocument();
   });
 
-  it('switches to the submissions tab on click', async () => {
+  it('switches to the assisted applications tab on click', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('tab', { name: /submissions/i }));
+    await user.click(screen.getByRole('tab', { name: /assisted applications/i }));
 
-    expect(screen.getByText(/Track a job/i)).toBeInTheDocument();
+    expect(screen.getByText(/Assisted applications list/i)).toBeInTheDocument();
   });
 
   it('switches to the exclusions tab and never exposes autopilot or daily-limit controls', async () => {
