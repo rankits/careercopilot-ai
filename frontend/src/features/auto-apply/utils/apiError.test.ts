@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
 import axios, { AxiosError } from 'axios';
+import { describe, expect, it } from 'vitest';
 
 import { AutoApplyClientError, normalizeAutoApplyError } from './apiError';
 
