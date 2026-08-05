@@ -24,7 +24,10 @@ const samplePlan = {
   eligibility: { eligible: true, checks: [] },
   selectedResumeVersion: null,
   unresolvedQuestions: [],
-  contentGenerationAvailable: false as const,
+  contentGenerationAvailable: false,
+  coverLetter: null,
+  screeningAnswers: [],
+  contentWarnings: [],
 };
 
 describe('auto-apply planner IDOR / authz', () => {
