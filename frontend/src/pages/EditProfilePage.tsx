@@ -75,16 +75,6 @@ const DEFAULT_VALUES: ResumeProfileFormValues = {
   workExperience: '',
 };
 
-const REQUIRED_PROFILE_FIELDS: Array<keyof ResumeProfileFormValues> = [
-  'fullName',
-  'email',
-  'phone',
-  'designation',
-  'totalExperience',
-  'skills',
-  'summary',
-];
-
 const SECTIONS: Array<{
   badge?: string;
   fields: ReviewField[];
@@ -148,6 +138,16 @@ const SECTIONS: Array<{
 
 type Notice = { message: string; severity: 'error' | 'success' } | null;
 
+function hasProfileFormChanges(
+  current: ResumeProfileFormValues,
+  baseline: ResumeProfileFormValues | null,
+): boolean {
+  if (!baseline) return false;
+  return (Object.keys(current) as Array<keyof ResumeProfileFormValues>).some(
+    (key) => (current[key] ?? '') !== (baseline[key] ?? ''),
+  );
+}
+
 /**
  * Edits the caller's confirmed candidate profile. Re-uploading a resume parses
  * and replaces form values on this page (no redirect), while every upload is
@@ -164,8 +164,10 @@ export function EditProfilePage() {
   const [uploadedResumes, setUploadedResumes] = useState<UploadedResumeVersion[]>([]);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
+  const [baselineValues, setBaselineValues] = useState<ResumeProfileFormValues | null>(null);
+  const [hasEditedFields, setHasEditedFields] = useState(false);
   const {
-    formState: { errors, isDirty },
+    formState: { errors },
     handleSubmit,
     register,
     reset,
@@ -176,9 +178,7 @@ export function EditProfilePage() {
   });
   const values = watch();
   const completion = getProfileCompletion(values);
-  const hasRequiredManualDetails = REQUIRED_PROFILE_FIELDS.every(
-    (field) => values[field].trim().length > 0,
-  );
+  const hasUnsavedChanges = hasEditedFields || hasProfileFormChanges(values, baselineValues);
 
   const refreshUploadedResumes = useCallback(async () => {
     try {
@@ -191,6 +191,7 @@ export function EditProfilePage() {
 
   const parser = useResumeParser((profile) => {
     reset(profile);
+    setHasEditedFields(true);
     setNotice({
       message: 'Resume parsed. Review the updated details before saving.',
       severity: 'success',
@@ -198,10 +199,9 @@ export function EditProfilePage() {
     void refreshUploadedResumes();
   });
   const presentation = getResumePresentation(parser.metadata);
-  // Enable Save only after the user edits fields, or after a new resume parse
-  // that still needs to be confirmed (reset after parse clears isDirty).
+  // Enable Save after any edit or a new resume parse. Required fields are validated on submit.
   const canSubmit =
-    !profileMissing && hasRequiredManualDetails && (isDirty || Boolean(parser.resumeId));
+    !profileMissing && !isLoadingProfile && (hasUnsavedChanges || Boolean(parser.resumeId));
 
   useEffect(() => {
     let cancelled = false;
@@ -218,7 +218,10 @@ export function EditProfilePage() {
           });
           return;
         }
-        reset(mapProfileToFormValues(profile));
+        const mapped = mapProfileToFormValues(profile);
+        reset(mapped);
+        setBaselineValues(mapped);
+        setHasEditedFields(false);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -264,6 +267,8 @@ export function EditProfilePage() {
     onSuccess: ({ message }, profile) => {
       setPendingProfile(null);
       reset(profile);
+      setBaselineValues(profile);
+      setHasEditedFields(false);
       parser.reset();
       showToast({ message, severity: 'success' });
       void refreshUploadedResumes();
@@ -271,7 +276,7 @@ export function EditProfilePage() {
   });
 
   const sectionStatus = (fields: ReviewField[]) => {
-    const completed = fields.filter(({ name }) => values[name].trim()).length;
+    const completed = fields.filter(({ name }) => (values[name] ?? '').trim()).length;
     return `${completed} / ${fields.length} completed`;
   };
 
@@ -368,6 +373,10 @@ export function EditProfilePage() {
                       section.fields.some(({ name }) => Boolean(validationErrors[name])),
                     );
                     if (firstInvalid) setExpandedSection(firstInvalid.title);
+                    showToast({
+                      message: 'Please fill in all required fields before saving.',
+                      severity: 'error',
+                    });
                   },
                 )(event);
               }}
@@ -378,6 +387,7 @@ export function EditProfilePage() {
                   errors={errors}
                   expanded={expandedSection === section.title}
                   key={section.title}
+                  onFieldChange={() => setHasEditedFields(true)}
                   onToggle={() =>
                     setExpandedSection((current) =>
                       current === section.title ? '' : section.title,
