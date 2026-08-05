@@ -33,8 +33,8 @@ export const getStuckSubmissionsController = async (
         ...stuck,
         /** AA-092 / AA-093 operator playbooks (discoverability from diagnostics). */
         playbooks: {
-          dataRepair: 'docs/assisted-apply/DATA_REPAIR_PLAYBOOK.md',
-          rolloutRollback: 'docs/assisted-apply/ROLLOUT_AND_ROLLBACK.md',
+          dataRepair: 'docs/auto-apply/DATA_REPAIR_PLAYBOOK.md',
+          rolloutRollback: 'docs/auto-apply/ROLLOUT_AND_ROLLBACK.md',
         },
       }),
     );
