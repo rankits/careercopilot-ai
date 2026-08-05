@@ -1,3 +1,4 @@
+import { JobApplicationStatus } from '@prisma/client';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import { logger } from '@/shared/logger/logger.js';
 import {
@@ -11,7 +12,10 @@ import {
 } from '@/modules/auto-apply/contracts/submission-orchestration.contract.js';
 import { IApplicationReadinessService } from '@/modules/auto-apply/contracts/application-readiness.contract.js';
 import { IApplicationRuleRepository } from '@/modules/auto-apply/contracts/application-rule.contract.js';
-import { JobApplicationDto } from '@/modules/auto-apply/types/job-application.types.js';
+import {
+  JobApplicationDto,
+  JobApplicationStatusValue,
+} from '@/modules/auto-apply/types/job-application.types.js';
 import { DEFAULT_APPLICATION_RULE } from '@/modules/auto-apply/types/application-rule.types.js';
 import { assertReadinessReady } from '@/modules/auto-apply/services/application-readiness.service.js';
 
@@ -81,14 +85,8 @@ export class SubmissionOrchestrationService implements ISubmissionOrchestrationS
         'Auto-apply submission published to APPLICATION_SUBMIT queue',
       );
     } catch (error) {
-      await this.jobApplicationRepository.updateStatus(
-        userId,
-        jobApplicationId,
-        {
-          status: previousStatus === 'SUBMISSION_FAILED' ? 'SUBMISSION_FAILED' : 'APPROVED',
-        },
-        'QUEUED',
-      );      throw new AppError(
+      await this.compensateQueuePublishFailure(userId, jobApplicationId, previousStatus);
+      throw new AppError(
         "We couldn't queue this application. Try again.",
         503,
         'QUEUE_PUBLISH_FAILED',
@@ -97,6 +95,68 @@ export class SubmissionOrchestrationService implements ISubmissionOrchestrationS
     }
 
     return queued;
+  }
+
+  /**
+   * Compensating rollback after a failed broker publish (AA-011).
+   * Not a forward state-machine edge — see compensating-transitions note on
+   * `state-machine.util.ts`. Guarded with `expectedStatus: QUEUED` (AA-010).
+   * Guard misses are a warned no-op so the original publish failure still surfaces.
+   */
+  async compensateQueuePublishFailure(
+    userId: string,
+    jobApplicationId: string,
+    previousStatus: JobApplicationStatus | JobApplicationStatusValue,
+  ): Promise<void> {
+    const toStatus: JobApplicationStatusValue =
+      previousStatus === 'SUBMISSION_FAILED' ? 'SUBMISSION_FAILED' : 'APPROVED';
+
+    try {
+      await this.jobApplicationRepository.updateStatus(
+        userId,
+        jobApplicationId,
+        { status: toStatus },
+        'QUEUED',
+      );
+      logger.info(
+        {
+          operation: 'compensateQueuePublishFailure',
+          jobApplicationId,
+          userId,
+          fromStatus: 'QUEUED',
+          toStatus,
+        },
+        'Compensating rollback after queue publish failure',
+      );
+    } catch (error) {
+      if (error instanceof AppError && error.code === 'INVALID_STATUS_TRANSITION') {
+        logger.warn(
+          {
+            operation: 'compensateQueuePublishFailure',
+            jobApplicationId,
+            userId,
+            toStatus,
+          },
+          'compensateQueuePublishFailure no-op — row no longer QUEUED',
+        );
+        return;
+      }
+      if (error instanceof AppError && error.code === 'APPLICATION_NOT_FOUND') {
+        logger.warn(
+          {
+            operation: 'compensateQueuePublishFailure',
+            jobApplicationId,
+            userId,
+          },
+          'compensateQueuePublishFailure no-op — application not found',
+        );
+        return;
+      }
+      logger.error(
+        { err: error, operation: 'compensateQueuePublishFailure', jobApplicationId, userId },
+        'Unexpected error during compensateQueuePublishFailure — continuing with publish failure',
+      );
+    }
   }
 
   async confirmCompleted(userId: string, jobApplicationId: string): Promise<JobApplicationDto> {
