@@ -13,7 +13,9 @@ export type AutoApplyEventType =
   | 'SUBMISSION_WITHDRAWN'
   | 'SUBMISSION_RECLAIMED'
   | 'RESUME_CONFIRMED'
-  | 'HANDOFF_OPENED';
+  | 'HANDOFF_OPENED'
+  | 'MARKED_APPLIED'
+  | 'BROKEN_LINK_REPORTED';
 
 export interface AutoApplyAuditEventDto {
   id: string;

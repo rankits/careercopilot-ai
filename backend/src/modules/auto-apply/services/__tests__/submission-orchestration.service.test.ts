@@ -49,6 +49,9 @@ describe('SubmissionOrchestrationService', () => {
     progressStep: null,
     reopenedAt: null,
     handoffOpenedAt: null,
+    appliedNotes: null,
+    abandonReason: null,
+    abandonNote: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };

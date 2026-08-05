@@ -30,6 +30,7 @@ import {
   Typography,
 } from '@/lib/material';
 
+import { AbandonApplicationModal } from './AbandonApplicationModal';
 import { ActivityTimelinePanel } from './ActivityTimelinePanel';
 import { AnalysisStep } from './AnalysisStep';
 import { FitStep } from './FitStep';
@@ -46,6 +47,7 @@ export function AssistedApplyWorkspacePage() {
   const workspaceQuery = useAssistedApplyWorkspace(jobApplicationId || undefined);
   const progressMutation = useUpdateWorkspaceProgressStep(jobApplicationId || undefined);
   const [menuAnchor, setMenuAnchor] = useState<null | HTMLElement>(null);
+  const [abandonOpen, setAbandonOpen] = useState(false);
   const [dismissedDuplicate, setDismissedDuplicate] = useState(false);
   const [dismissedReopened, setDismissedReopened] = useState(false);
 
@@ -162,6 +164,7 @@ export function AssistedApplyWorkspacePage() {
           jobApplicationId={jobApplicationId}
           jobId={jobId}
           openedAt={data.handoff?.openedAt ?? null}
+          viewState={data.viewState}
         />
       );
     }
@@ -214,16 +217,23 @@ export function AssistedApplyWorkspacePage() {
             open={Boolean(menuAnchor)}
           >
             <MenuItem
+              disabled={data.viewState === 'APPLIED' || data.viewState === 'ABANDONED'}
               onClick={() => {
                 setMenuAnchor(null);
-                // Full abandon flow is AA-073; affordance only for AA-040.
+                setAbandonOpen(true);
               }}
             >
-              Abandon this application
+              Abandon
             </MenuItem>
           </Menu>
         </Stack>
       </Stack>
+
+      <AbandonApplicationModal
+        jobApplicationId={jobApplicationId}
+        onClose={() => setAbandonOpen(false)}
+        open={abandonOpen}
+      />
 
       {showDuplicate ? (
         <Alert

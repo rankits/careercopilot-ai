@@ -222,6 +222,11 @@ model JobApplication {
   reopenedAt             DateTime?             @map("reopened_at")
   /** AA-070: set when candidate opens employer apply URL via direct handoff (no queue). */
   handoffOpenedAt        DateTime?             @map("handoff_opened_at")
+  /** AA-072: optional notes when candidate marks applied. */
+  appliedNotes           String?               @map("applied_notes") @db.Text
+  /** AA-073: abandon reason code + optional note. */
+  abandonReason          String?               @map("abandon_reason") @db.VarChar(40)
+  abandonNote            String?               @map("abandon_note") @db.Text
 
   createdAt              DateTime              @default(now()) @map("created_at")
   updatedAt              DateTime              @updatedAt @map("updated_at")
@@ -298,6 +303,8 @@ enum AutoApplyEventType {
   SUBMISSION_RECLAIMED
   RESUME_CONFIRMED
   HANDOFF_OPENED
+  MARKED_APPLIED
+  BROKEN_LINK_REPORTED
 }
 
 model AutoApplyAuditEvent {
