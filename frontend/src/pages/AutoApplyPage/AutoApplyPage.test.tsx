@@ -6,11 +6,11 @@ import { describe, expect, it } from 'vitest';
 
 import { AutoApplyPage } from './AutoApplyPage';
 
-function renderPage() {
+function renderPage(initialEntry = '/auto-apply') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter>
+      <MemoryRouter initialEntries={[initialEntry]}>
         <AutoApplyPage />
       </MemoryRouter>
     </QueryClientProvider>,
@@ -24,6 +24,16 @@ describe('AutoApplyPage', () => {
     expect(screen.getByRole('heading', { name: /auto apply/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /profile/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByText(/candidate application profile/i)).toBeInTheDocument();
+  });
+
+  it('opens the submissions tab from ?tab=submissions', () => {
+    renderPage('/auto-apply?tab=submissions');
+
+    expect(screen.getByRole('tab', { name: /submissions/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByText(/track a job for auto-apply/i)).toBeInTheDocument();
   });
 
   it('never claims full autopilot is enabled', () => {
