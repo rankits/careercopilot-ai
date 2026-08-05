@@ -21,6 +21,10 @@ import {
   retrySubmissionController,
 } from '@/modules/auto-apply/controllers/submission-orchestration.controller.js';
 import {
+  getAssistedApplyWorkspaceController,
+  updateWorkspaceProgressStepController,
+} from '@/modules/auto-apply/controllers/assisted-apply-workspace.controller.js';
+import {
   InitiateJobApplicationSchema,
   JobApplicationStatusTransitionSchema,
 } from '@/modules/auto-apply/validations/job-application.validation.js';
@@ -28,6 +32,12 @@ import {
 const router = express.Router();
 
 const requireUser = [authMiddleware, requirePrincipalType('USER')] as const;
+
+const ProgressStepBodySchema = z.object({
+  body: z.object({
+    progressStep: z.enum(['analysis', 'fit', 'resume', 'open', 'done']),
+  }),
+});
 
 router.get(
   '/',
@@ -49,6 +59,21 @@ router.get(
   ...requireUser,
   requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_READ_OWN),
   getJobApplicationController,
+);
+
+router.get(
+  '/:id/workspace',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_READ_OWN),
+  getAssistedApplyWorkspaceController,
+);
+
+router.patch(
+  '/:id/progress-step',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN),
+  validateResource(ProgressStepBodySchema),
+  updateWorkspaceProgressStepController,
 );
 
 router.post(

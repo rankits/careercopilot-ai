@@ -51,6 +51,8 @@ describe('JobApplicationService', () => {
     failureMessage: null,
     planInputsHash: null,
     planVersion: 1,
+    progressStep: null,
+    reopenedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -90,6 +92,9 @@ describe('JobApplicationService', () => {
       reopenFromWithdrawn: vi
         .fn()
         .mockResolvedValue({ ...baseApplication, status: 'DISCOVERED', planVersion: 2 }),
+      updateProgressStep: vi.fn().mockImplementation((_userId, _id, progressStep) =>
+        Promise.resolve({ ...baseApplication, progressStep }),
+      ),
     };
     mockEligibility = {
       evaluateForJob: vi.fn().mockResolvedValue({ eligible: true, checks: [] }),

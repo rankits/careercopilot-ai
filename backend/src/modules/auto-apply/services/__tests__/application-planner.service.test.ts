@@ -86,6 +86,8 @@ describe('ApplicationPlannerService', () => {
     failureMessage: null,
     planInputsHash: null,
     planVersion: 1,
+    progressStep: null,
+    reopenedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -150,6 +152,9 @@ describe('ApplicationPlannerService', () => {
       countConsumedSince: vi.fn().mockResolvedValue(0),
       updateMatchScore: vi.fn(),
       queueAtomically: vi.fn(),
+      delete: vi.fn(),
+      reopenFromWithdrawn: vi.fn(),
+      updateProgressStep: vi.fn(),
     };
 
     jobAppService = {

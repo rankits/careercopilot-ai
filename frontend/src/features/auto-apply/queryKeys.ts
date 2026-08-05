@@ -7,5 +7,7 @@ export const autoApplyQueryKeys = {
   submissions: ['auto-apply', 'submissions'] as const,
   setupStatus: ['auto-apply', 'setup-status'] as const,
   privacyAcknowledgement: ['auto-apply', 'privacy-acknowledgement'] as const,
+  workspace: (jobApplicationId: string) =>
+    ['auto-apply', 'workspace', jobApplicationId] as const,
   plan: (jobId: string) => ['auto-apply', 'plan', jobId] as const,
 };

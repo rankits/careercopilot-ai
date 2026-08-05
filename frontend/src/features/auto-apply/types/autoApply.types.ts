@@ -171,6 +171,7 @@ export interface JobApplicationDto {
 export interface InitiateSubmissionResult {
   application: JobApplicationDto;
   possibleDuplicates: JobApplicationDto[];
+  wasReopened?: boolean;
 }
 
 export type ApplicationPlanDecision =
@@ -327,6 +328,33 @@ export interface SetupStatusDto {
   readyForAssistedApply: boolean;
   gaps: SetupGapDto[];
   sections: SetupSectionStatusDto[];
+}
+
+export type WorkspaceStepId = 'analysis' | 'fit' | 'resume' | 'open' | 'done';
+
+export interface WorkspaceStepStatusDto {
+  id: WorkspaceStepId;
+  label: string;
+  complete: boolean;
+}
+
+export interface AssistedApplyWorkspaceDto {
+  application: {
+    id: string;
+    jobId: string | null;
+    jobTitle: string | null;
+    company: string | null;
+    status: string;
+  };
+  viewState: string;
+  viewLabel: string;
+  steps: WorkspaceStepStatusDto[];
+  progressStep: WorkspaceStepId | null;
+  wasReopened: boolean;
+  analysisSummary: { id: string; outcomeStatus: string; analyzedAt: string } | null;
+  fit: { matchScore: number | null } | null;
+  resume: { resumeVersionId: string } | null;
+  handoff: { externalConfirmationUrl: string | null; submittedAt: string | null } | null;
 }
 
 export interface PrivacyAcknowledgementDto {

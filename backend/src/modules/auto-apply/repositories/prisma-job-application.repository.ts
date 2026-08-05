@@ -40,6 +40,8 @@ type JobApplicationRecord = {
   failureMessage: string | null;
   planInputsHash: string | null;
   planVersion: number;
+  progressStep: string | null;
+  reopenedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -390,7 +392,25 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
         resumeVersionId: null,
         channel: 'UNSUPPORTED',
         planVersion: { increment: 1 },
+        reopenedAt: new Date(),
+        progressStep: null,
       },
+    });
+    return toDto(record);
+  }
+
+  async updateProgressStep(
+    userId: string,
+    id: string,
+    progressStep: string,
+  ): Promise<JobApplicationDto> {
+    const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
+    if (!existing) {
+      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+    const record = await prisma.jobApplication.update({
+      where: { id: existing.id },
+      data: { progressStep },
     });
     return toDto(record);
   }

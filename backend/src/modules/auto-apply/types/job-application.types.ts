@@ -45,6 +45,8 @@ export interface JobApplicationDto {
   failureMessage: string | null;
   planInputsHash: string | null;
   planVersion: number;
+  progressStep: string | null;
+  reopenedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
