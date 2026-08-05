@@ -105,7 +105,8 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
 
     if (readiness.decision === 'NOT_ELIGIBLE') {
       decision = 'NOT_ELIGIBLE';
-      if (application.status !== 'NOT_ELIGIBLE') {
+      // Status was narrowed away from NOT_ELIGIBLE by the early return above.
+      if (application.status !== ('NOT_ELIGIBLE' as typeof application.status)) {
         application = await this.jobApplicationService.transitionStatus(
           userId,
           application.id,

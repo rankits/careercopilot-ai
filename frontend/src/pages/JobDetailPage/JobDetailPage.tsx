@@ -233,6 +233,22 @@ export function JobDetailPage() {
                     jobId,
                     applyUrl,
                     openExternal: false,
+                    applyMode: 'PREPARE',
+                  })
+                }
+                size="small"
+              >
+                Prepare Application
+              </Button>
+              <Button
+                disabled={!jobId}
+                isLoading={isTrackingApply}
+                onClick={() =>
+                  void trackAndOpenApply({
+                    jobId,
+                    applyUrl,
+                    openExternal: false,
+                    applyMode: 'ASSISTED',
                   })
                 }
                 size="small"

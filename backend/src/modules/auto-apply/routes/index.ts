@@ -12,6 +12,7 @@ import vacancyEmailRoutes from '@/modules/auto-apply/routes/vacancy-email.route.
 import auditEventRoutes from '@/modules/auto-apply/routes/audit-event.route.js';
 import adminDiagnosticsRoutes from '@/modules/auto-apply/routes/admin-diagnostics.route.js';
 import applicationReadinessRoutes from '@/modules/auto-apply/routes/application-readiness.route.js';
+import applicationAnalysisRoutes from '@/modules/auto-apply/routes/application-analysis.route.js';
 
 const router = express.Router();
 
@@ -21,6 +22,7 @@ router.use('/resume-versions', resumeVersionRoutes);
 router.use('/rules', applicationRuleRoutes);
 router.use('/eligibility', eligibilityRoutes);
 router.use('/readiness', applicationReadinessRoutes);
+router.use('/jobs/:jobId', applicationAnalysisRoutes);
 router.use('/channel', channelDetectionRoutes);
 router.use('/plan', plannerRoutes);
 router.use('/consents', applicationConsentRoutes);

@@ -250,15 +250,33 @@ describe('ApplicationReadinessService', () => {
     ).toBe(true);
   });
 
-  it('blocks when match score is below threshold', async () => {
+  it('blocks when match score is below threshold at QUEUE', async () => {
     matchScore.findOverallScore.mockResolvedValue(0.5);
-    const result = await service.evaluate({ userId, jobId, stage: 'APPROVE' });
+    const result = await service.evaluate({ userId, jobId, stage: 'QUEUE' });
     expect(result.decision).toBe('NOT_ELIGIBLE');
     expect(
       result.blockingReasons.some(
         (r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_BELOW_THRESHOLD,
       ),
     ).toBe(true);
+  });
+
+  it('warns when match score is below threshold at PLAN for assisted prepare', async () => {
+    matchScore.findOverallScore.mockResolvedValue(0.5);
+    const result = await service.evaluate({
+      userId,
+      jobId,
+      stage: 'PLAN',
+      applyMode: 'ASSISTED',
+    });
+    expect(
+      result.warnings.some((r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_BELOW_THRESHOLD),
+    ).toBe(true);
+    expect(
+      result.blockingReasons.some(
+        (r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_BELOW_THRESHOLD,
+      ),
+    ).toBe(false);
   });
 
   it('warns when match score is missing instead of blocking the plan', async () => {

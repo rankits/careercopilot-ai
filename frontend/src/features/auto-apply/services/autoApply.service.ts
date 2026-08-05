@@ -2,6 +2,7 @@ import { httpClient } from '@/services/httpClient';
 
 import type {
   ApplicationConsentDto,
+  ApplicationPageAnalysisDto,
   ApplicationPlanResult,
   ApplicationRuleDto,
   ApplicationAnswerDto,
@@ -14,6 +15,8 @@ import type {
   EligibilityResult,
   InitiateSubmissionResult,
   JobApplicationDto,
+  PrepareApplicationPayload,
+  PrepareApplicationResult,
   UpsertCandidateProfilePayload,
   UpsertRulePayload,
 } from '../types/autoApply.types';
@@ -211,6 +214,47 @@ export const autoApplyService = {
       const { data } = await httpClient.get<BackendSuccessResponse<ApplicationPlanResult>>(
         `/auto-apply/plan/${jobId}`,
       );
+      return data.data ?? null;
+    } catch (error) {
+      const status = (error as { response?: { status?: number } }).response?.status;
+      if (status === 404) return null;
+      throw error;
+    }
+  },
+
+  async prepareApplication(
+    jobId: string,
+    payload: PrepareApplicationPayload = {},
+  ): Promise<PrepareApplicationResult> {
+    const { data } = await httpClient.post<BackendSuccessResponse<PrepareApplicationResult>>(
+      `/auto-apply/jobs/${jobId}/prepare`,
+      {
+        applyMode: payload.applyMode ?? 'PREPARE',
+        jobApplicationId: payload.jobApplicationId,
+        resumeVersionId: payload.resumeVersionId,
+        allowMatchCompute: payload.allowMatchCompute,
+        forceRefreshAnalysis: payload.forceRefreshAnalysis,
+      },
+    );
+    return unwrapData(data, 'Missing prepare-application data in API response');
+  },
+
+  async analyzeJobPage(
+    jobId: string,
+    options?: { forceRefresh?: boolean },
+  ): Promise<ApplicationPageAnalysisDto> {
+    const { data } = await httpClient.post<BackendSuccessResponse<ApplicationPageAnalysisDto>>(
+      `/auto-apply/jobs/${jobId}/analysis`,
+      { forceRefresh: options?.forceRefresh === true },
+    );
+    return unwrapData(data, 'Missing job analysis data in API response');
+  },
+
+  async getLatestJobAnalysis(jobId: string): Promise<ApplicationPageAnalysisDto | null> {
+    try {
+      const { data } = await httpClient.get<
+        BackendSuccessResponse<ApplicationPageAnalysisDto | null>
+      >(`/auto-apply/jobs/${jobId}/analysis/latest`);
       return data.data ?? null;
     } catch (error) {
       const status = (error as { response?: { status?: number } }).response?.status;
