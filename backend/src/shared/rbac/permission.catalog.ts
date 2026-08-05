@@ -83,6 +83,7 @@ export const AUTO_APPLY_PERMISSIONS = {
   VACANCY_EMAIL_READ_OWN: 'applications.autoapply.vacancy-email.read.own',
   EVENTS_READ_OWN: 'applications.autoapply.events.read.own',
   DIAGNOSTICS_READ_ANY: 'applications.autoapply.diagnostics.read.any',
+  DIAGNOSTICS_WRITE_ANY: 'applications.autoapply.diagnostics.write.any',
   PLAN_CREATE_OWN: 'applications.autoapply.plan.create.own',
   PLAN_READ_OWN: 'applications.autoapply.plan.read.own',
 
@@ -396,6 +397,12 @@ export const PERMISSIONS: PermissionDefinition[] = [
     action: 'read.any',
     description:
       'Read cross-user diagnostics for stuck/unknown-outcome auto-apply submissions (admin only)',
+  },
+  {
+    key: AUTO_APPLY_PERMISSIONS.DIAGNOSTICS_WRITE_ANY,
+    resource: 'applications.autoapply.diagnostics',
+    action: 'write.any',
+    description: 'Reclaim / mutate stuck auto-apply submissions (admin only)',
   },
   {
     key: AUTO_APPLY_PERMISSIONS.PLAN_CREATE_OWN,
