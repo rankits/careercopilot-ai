@@ -171,6 +171,12 @@ export const resumeService = {
     return resumeRepository.listResumes(input.userId);
   },
 
+  async deleteResume(resumeId: string, principalId: string) {
+    await assertOwnedResume(resumeId, principalId);
+    await resumeRepository.deleteResume(resumeId);
+    return { id: resumeId };
+  },
+
   async downloadResume(resumeId: string, principalId: string) {
     const resume = await assertOwnedResume(resumeId, principalId);
     const storage = createResumeStorage();

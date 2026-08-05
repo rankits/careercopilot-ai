@@ -8,14 +8,15 @@ import {
   INVALID_TARGET_MESSAGE,
   buildTargetRoleJdValidationPrompt,
 } from '@/modules/resume-analysis/ai/prompts/validate-target.prompt.js';
-import { computeSectionScoresFromContent } from '@/modules/resume-analysis/utils/ats-score.js';
-import { termAppearsIn, textAppearsFuzzy } from '@/modules/resume-analysis/utils/text-match.js';
+import { textAppearsFuzzy } from '@/modules/resume-analysis/utils/text-match.js';
 import { buildJdCoverageExtras } from '@/modules/resume-analysis/utils/suggestion-coverage.js';
 import {
-  extractProfessionalSkillsFromText,
-  normalizeProfessionalSkill,
-  normalizeProfessionalSkills,
-} from '@/modules/resumes/utils/skill-normalizer.js';
+  cleanSemanticSkill,
+  dedupeSemanticKeywords,
+  dedupeSemanticSkills,
+} from '@/modules/resume-analysis/utils/semantic-skills.js';
+import { groundSkillGapAgainstResume } from '@/modules/resume-analysis/utils/skill-grounding.js';
+import { skillMatchKey } from '@/modules/resumes/utils/skill-normalizer.js';
 
 type ResumeAnalysisAiProvider = 'google' | 'groq' | 'openrouter' | 'openai';
 
@@ -654,7 +655,7 @@ const invokeProviderModel = async (
 };
 
 const normalizeSkillText = (value: string): string =>
-  normalizeProfessionalSkills(value.split(/[,|;/]+/)).join(', ');
+  dedupeSemanticSkills(value.split(/[,|;/]+/)).join(', ');
 
 const isGroundedSuggestion = (
   suggestion: AiAnalysisOutput['suggestions'][number],
@@ -668,88 +669,126 @@ const isGroundedSuggestion = (
   return textAppearsFuzzy(resumeText, original);
 };
 
-const sanitizeSkillKeywords = <T extends { term: string }>(items: T[]): T[] =>
-  items.flatMap((item) => {
-    const term = normalizeProfessionalSkill(item.term);
-    return term ? [{ ...item, term }] : [];
-  });
+const clampPct = (value: unknown, fallback = 0): number => {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(n)));
+};
 
-const skillMatchScore = (matchedSkills: string[], jdSkills: string[]): number =>
-  jdSkills.length > 0 ? Math.round((matchedSkills.length / jdSkills.length) * 100) : 0;
-
-const sanitizeAiSkillOutput = (aiResult: AiAnalysisOutput): AiAnalysisOutput => ({
-  ...aiResult,
-  missingSkills: normalizeProfessionalSkills(aiResult.missingSkills ?? []),
-  improvedSkills: normalizeProfessionalSkills(aiResult.improvedSkills ?? []),
-  recommendedSkillOrder: normalizeProfessionalSkills(aiResult.recommendedSkillOrder ?? []),
-  missingKeywords: sanitizeSkillKeywords(aiResult.missingKeywords ?? []),
-  matchedKeywords: sanitizeSkillKeywords(aiResult.matchedKeywords ?? []),
-  skillAnalysis: {
-    matchedSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.matchedSkills ?? []),
-    missingSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.missingSkills ?? []),
-    transferableSkills: normalizeProfessionalSkills(
-      aiResult.skillAnalysis?.transferableSkills ?? [],
-    ),
-    recommendedSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.recommendedSkills ?? []),
-  },
-  suggestions: (aiResult.suggestions ?? [])
-    .map((suggestion) =>
-      suggestion.category === 'skills'
-        ? { ...suggestion, suggestedText: normalizeSkillText(suggestion.suggestedText) }
-        : suggestion,
-    )
-    .filter(
-      (suggestion) => suggestion.category !== 'skills' || suggestion.suggestedText.length > 0,
-    ),
-  optimizedSections: {
-    ...aiResult.optimizedSections,
-    skills: normalizeProfessionalSkills(aiResult.optimizedSections?.skills ?? []),
-  },
-});
-
-const enrichAnalysisWithJdSkills = (
+/**
+ * AI semantic ATS + resume-text safety net.
+ * AI owns synonyms/scores; grounding prevents "0 matched" when the resume
+ * clearly evidences JD skills (React/Node resume vs React JD, etc.).
+ */
+const finalizeAiSemanticAnalysis = (
   aiResult: AiAnalysisOutput,
   resumeText: string,
   jobDescription?: string,
   targetRole?: string,
 ): AiAnalysisOutput => {
-  const jdText = [jobDescription ?? '', targetRole ?? ''].join('\n');
-  if (!jdText.trim()) return aiResult;
+  const grounded = groundSkillGapAgainstResume({
+    resumeText,
+    jobDescription,
+    targetRole,
+    aiMatched: aiResult.skillAnalysis?.matchedSkills,
+    aiMissing: [
+      ...(aiResult.skillAnalysis?.missingSkills ?? []),
+      ...(aiResult.missingSkills ?? []),
+    ],
+    aiRecommended: aiResult.skillAnalysis?.recommendedSkills,
+    aiAdditional: [
+      ...(aiResult.skillAnalysis?.additionalSkills ?? []),
+      ...(aiResult.additionalSkillsFound ?? []),
+      ...(aiResult.skillAnalysis?.transferableSkills ?? []),
+    ],
+    aiKeywordTerms: [
+      ...(aiResult.missingKeywords ?? []).map((item) => item.term),
+      ...(aiResult.matchedKeywords ?? []).map((item) => item.term),
+    ],
+  });
 
-  const fromExtract = extractProfessionalSkillsFromText(jobDescription ?? '');
-  const fromAi = normalizeProfessionalSkills([
-    ...(aiResult.skillAnalysis?.missingSkills ?? []),
-    ...(aiResult.skillAnalysis?.recommendedSkills ?? []),
-    ...(aiResult.missingSkills ?? []),
-    ...(aiResult.skillAnalysis?.matchedSkills ?? []),
-  ]).filter((skill) => termAppearsIn(jdText, skill));
-
-  const jdSkills = normalizeProfessionalSkills([...fromExtract, ...fromAi]);
-  if (jdSkills.length === 0) return aiResult;
-
-  const matchedFromJd = jdSkills.filter((skill) => termAppearsIn(resumeText, skill));
-  const missingFromJd = jdSkills.filter((skill) => !termAppearsIn(resumeText, skill));
-
-  // Honest cross-domain scoring: zero skill/experience/project match when no JD skills appear.
-  const crossDomain = matchedFromJd.length === 0 && jdSkills.length >= 2;
-
-  const skillAnalysis = {
-    matchedSkills: normalizeProfessionalSkills(matchedFromJd),
-    missingSkills: normalizeProfessionalSkills(missingFromJd),
-    transferableSkills: normalizeProfessionalSkills(
-      aiResult.skillAnalysis?.transferableSkills ?? [],
-    ),
-    recommendedSkills: normalizeProfessionalSkills(missingFromJd),
-  };
-
-  const missingKeywords = [...(aiResult.missingKeywords ?? [])];
-  const existingTerms = new Set(missingKeywords.map((item) => item.term.toLowerCase()));
-  for (const skill of missingFromJd.slice(0, 10)) {
-    if (existingTerms.has(skill.toLowerCase())) continue;
-    missingKeywords.push({
-      term: skill,
+  const { matchedSkills, missingSkills, additionalSkills, recommendedSkills, crossDomain } =
+    grounded;
+  const matchedKeySet = new Set(matchedSkills.map((skill) => skillMatchKey(skill)));
+  const matchedKeywords = dedupeSemanticKeywords([
+    ...(aiResult.matchedKeywords ?? []),
+    ...matchedSkills.map((term) => ({ term, importance: 'high' as const })),
+  ]);
+  const missingKeywords = dedupeSemanticKeywords([
+    ...(aiResult.missingKeywords ?? []),
+    ...missingSkills.map((term) => ({
+      term,
       importance: 'high' as const,
-      reason: `${skill} appears in the job description and should be reflected for ATS keyword match.`,
+      reason: `${term} is required or strongly preferred by the JD and is not evidenced on the resume.`,
+    })),
+  ]).filter((item) => !matchedKeySet.has(skillMatchKey(item.term)));
+
+  const aiSkillMatch = clampPct(aiResult.skillMatch);
+  const skillMatch = crossDomain
+    ? Math.min(Math.max(grounded.skillMatch, aiSkillMatch), 20)
+    : Math.max(grounded.skillMatch, aiSkillMatch);
+
+  const keywordMatch = crossDomain
+    ? Math.min(clampPct(aiResult.keywordMatch), 20)
+    : Math.max(clampPct(aiResult.keywordMatch), skillMatch);
+
+  let atsScore = clampPct(aiResult.atsScore, skillMatch);
+  if (!crossDomain && matchedSkills.length > 0 && atsScore < 45 && skillMatch >= 35) {
+    atsScore = Math.max(atsScore, Math.min(92, Math.round(skillMatch * 0.7 + 20)));
+  }
+  if (crossDomain) atsScore = Math.min(atsScore, 35);
+
+  const experienceRelevance = crossDomain
+    ? 0
+    : clampPct(aiResult.experienceRelevance ?? aiResult.sectionScores?.experience, skillMatch);
+  const sectionScores = {
+    summary: clampPct(aiResult.sectionScores?.summary, skillMatch),
+    experience: clampPct(aiResult.sectionScores?.experience ?? experienceRelevance, skillMatch),
+    skills: clampPct(aiResult.sectionScores?.skills, skillMatch),
+    education: clampPct(aiResult.sectionScores?.education),
+    projects: clampPct(aiResult.sectionScores?.projects, Math.round(skillMatch * 0.85)),
+    achievements: clampPct(aiResult.sectionScores?.achievements),
+  };
+  if (!crossDomain && matchedSkills.length > 0) {
+    sectionScores.skills = Math.max(sectionScores.skills, skillMatch);
+    if (sectionScores.experience < 30 && skillMatch >= 40) {
+      sectionScores.experience = Math.max(sectionScores.experience, Math.round(skillMatch * 0.65));
+    }
+  }
+
+  const strengths = [...(aiResult.strengths ?? [])].filter((item) => item.trim().length > 0);
+  if (strengths.length === 0 && matchedSkills.length > 0) {
+    strengths.push(`Matched JD skills: ${matchedSkills.slice(0, 6).join(', ')}`);
+  }
+  if (strengths.length === 0) {
+    strengths.push('Resume text is structured enough for ATS parsing.');
+  }
+
+  const weaknesses = [...(aiResult.weaknesses ?? [])].filter((item) => item.trim().length > 0);
+  if (missingSkills.length > 0 && !weaknesses.some((item) => /missing|skill/i.test(item))) {
+    weaknesses.push(`Missing JD skills: ${missingSkills.slice(0, 10).join(', ')}`);
+  }
+
+  const atsIssues = [...(aiResult.atsIssues ?? [])].filter(
+    (item) => item.issue?.trim() && item.fix?.trim(),
+  );
+  if (
+    missingSkills.length > 0 &&
+    !atsIssues.some((item) => /skill/i.test(item.section) || /skill gap/i.test(item.issue))
+  ) {
+    atsIssues.push({
+      issue: 'Skill gap versus job description',
+      section: 'skills',
+      severity: 'HIGH',
+      fix: `Add factual skills or transferable wording for: ${missingSkills.slice(0, 8).join(', ')}`,
+    });
+  }
+  if (crossDomain && !atsIssues.some((item) => /experience/i.test(item.section))) {
+    atsIssues.push({
+      issue: 'Experience domain does not align with the target role',
+      section: 'experience',
+      severity: 'HIGH',
+      fix: 'Reframe experience toward JD responsibilities with transferable language — do not invent employers or tools.',
     });
   }
 
@@ -760,40 +799,21 @@ const enrichAnalysisWithJdSkills = (
   const improvedSummary =
     (aiResult.optimizedSections?.professionalSummary ?? '').trim() ||
     (aiResult.improvedSummary ?? '').trim();
-  const expBullet = aiResult.optimizedSections?.experienceBullets?.find(
-    (item) =>
-      item?.originalText?.trim() &&
-      item?.optimizedText?.trim() &&
-      textAppearsFuzzy(resumeText, item.originalText),
-  );
 
   const coverage = buildJdCoverageExtras({
-    missingSkills: missingFromJd,
+    missingSkills,
     currentSkillsLine:
-      (aiResult.optimizedSections?.skills ?? []).join(', ') ||
-      skillAnalysis.matchedSkills.slice(0, 8).join(', ') ||
+      dedupeSemanticSkills(aiResult.optimizedSections?.skills ?? []).join(', ') ||
+      matchedSkills.slice(0, 8).join(', ') ||
       '',
     improvedSummary,
     targetRole,
-    experience:
-      crossDomain && expBullet
-        ? { originalText: expBullet.originalText, optimizedText: expBullet.optimizedText }
-        : null,
+    experience: null,
     existing: suggestions,
   });
   for (const item of coverage) {
     suggestions.unshift({ ...item, impact: item.impact });
   }
-
-  const honestSkillMatch = skillMatchScore(matchedFromJd, jdSkills);
-  const keywordMatch = crossDomain
-    ? Math.min(aiResult.keywordMatch ?? 0, 20)
-    : (aiResult.keywordMatch ?? 0);
-  const sectionScores = computeSectionScoresFromContent({
-    resumeText,
-    skillMatch: honestSkillMatch,
-    keywordMatch,
-  });
 
   const optimizedSummary =
     improvedSummary ||
@@ -801,37 +821,66 @@ const enrichAnalysisWithJdSkills = (
       ? `Professional targeting ${targetRole}, bringing transferable strengths from prior experience. Eager to apply proven collaboration and execution skills to ${targetRole} responsibilities.`
       : '');
 
-  // Never invent a stub as optimizedResumeText — incomplete AI text blanks the resume.
-  // Summary/skills suggestions stay in optimizedSections / suggestions only.
   return {
     ...aiResult,
-    skillAnalysis,
+    skillAnalysis: {
+      matchedSkills,
+      missingSkills,
+      transferableSkills: additionalSkills,
+      additionalSkills,
+      recommendedSkills,
+    },
+    additionalSkillsFound: additionalSkills,
     missingKeywords,
-    suggestions,
+    matchedKeywords,
+    strengths: strengths.slice(0, 5),
+    weaknesses: weaknesses.slice(0, 7),
+    atsIssues: atsIssues.slice(0, 8),
+    suggestions: suggestions.map((suggestion) =>
+      suggestion.category === 'skills'
+        ? { ...suggestion, suggestedText: normalizeSkillText(suggestion.suggestedText) }
+        : suggestion,
+    ),
     optimizedResumeText: aiResult.optimizedResumeText ?? '',
     optimizedSections: {
       ...aiResult.optimizedSections,
       professionalSummary:
         aiResult.optimizedSections?.professionalSummary?.trim() || optimizedSummary,
-      skills: normalizeProfessionalSkills([
+      skills: dedupeSemanticSkills([
         ...(aiResult.optimizedSections?.skills ?? []),
-        ...matchedFromJd,
-      ]).filter((skill) => termAppearsIn(resumeText, skill)),
+        ...matchedSkills,
+      ]),
     },
     improvedSummary: aiResult.improvedSummary?.trim() || optimizedSummary,
-    missingSkills: missingFromJd,
-    improvedSkills: normalizeProfessionalSkills(aiResult.improvedSkills ?? []).filter((skill) =>
-      termAppearsIn(resumeText, skill),
-    ),
-    recommendedSkillOrder: normalizeProfessionalSkills([...matchedFromJd, ...missingFromJd]),
-    skillMatch: honestSkillMatch,
+    missingSkills,
+    improvedSkills: dedupeSemanticSkills(aiResult.improvedSkills ?? []),
+    recommendedSkillOrder: dedupeSemanticSkills([
+      ...(aiResult.recommendedSkillOrder ?? []),
+      ...matchedSkills,
+      ...recommendedSkills,
+    ]),
+    skillMatch,
     keywordMatch,
-    experienceRelevance: crossDomain ? 0 : (aiResult.experienceRelevance ?? 0),
+    experienceRelevance,
     sectionScores,
-    atsScore: crossDomain
-      ? Math.min(aiResult.atsScore ?? 0, 35)
-      : (aiResult.atsScore ?? honestSkillMatch),
+    atsScore,
+    contentQuality: clampPct(aiResult.contentQuality),
+    readability: clampPct(aiResult.readability),
+    formattingScore: clampPct(aiResult.formattingScore),
   };
+};
+
+/** Finalize AI output with JD↔resume grounding (not chip-only ATS). */
+const enrichAnalysisWithJdSkills = (
+  aiResult: AiAnalysisOutput,
+  resumeText: string,
+  jobDescription?: string,
+  targetRole?: string,
+): AiAnalysisOutput => finalizeAiSemanticAnalysis(aiResult, resumeText, jobDescription, targetRole);
+
+const sanitizeAiSkillOutput = (aiResult: AiAnalysisOutput): AiAnalysisOutput => {
+  void cleanSemanticSkill;
+  return aiResult;
 };
 
 export const resumeAnalysisAiClient = {

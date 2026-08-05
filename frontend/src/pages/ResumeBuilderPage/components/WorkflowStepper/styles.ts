@@ -27,11 +27,11 @@ export const Stepper = styled(Box)({
   minHeight: '5.25rem',
   minWidth: 0,
   overflowX: 'hidden',
-  padding: `${spacing[4]} ${spacing[8]}`,
+  padding: `${spacing[3]} ${spacing[5]}`,
   width: '100%',
 
   '@media (max-width: 75rem)': {
-    paddingInline: spacing[5],
+    paddingInline: spacing[4],
     '& .step-description': { display: 'none' },
     '& .step-connector': {
       flex: '0 1 1rem',
@@ -79,8 +79,9 @@ export const Stepper = styled(Box)({
     display: 'flex',
     flex: '1 1 0',
     gap: spacing[2],
-    maxWidth: '14rem',
+    maxWidth: 'min(14rem, 100%)',
     minWidth: 0,
+    overflow: 'hidden',
   },
   '& .step-copy': { display: 'grid', gap: spacing[1], minWidth: 0 },
   '& .step-label': {

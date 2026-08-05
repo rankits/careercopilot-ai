@@ -4,6 +4,8 @@ import {
   extractProfessionalSkillsFromText,
   normalizeProfessionalSkill,
   normalizeProfessionalSkills,
+  skillAppearsIn,
+  skillMatchKey,
 } from '@/modules/resumes/utils/skill-normalizer.js';
 
 describe('skill-normalizer', () => {
@@ -82,5 +84,26 @@ describe('skill-normalizer', () => {
   it('does not treat role titles as skills', () => {
     expect(normalizeProfessionalSkill('Business Development Executive')).toBeNull();
     expect(normalizeProfessionalSkill('Full Stack Developer')).toBeNull();
+  });
+
+  it('matches equivalent skill spellings in resume text', () => {
+    expect(skillMatchKey('React.js')).toBe(skillMatchKey('React'));
+    expect(skillMatchKey('Node.js')).toBe(skillMatchKey('Node'));
+    expect(normalizeProfessionalSkill('React.js')).toBe('React');
+    expect(normalizeProfessionalSkill('react.js')).toBe('React');
+    expect(skillAppearsIn('Built UI with React and TypeScript', 'React.js')).toBe(true);
+    expect(skillAppearsIn('Experienced with Node.js APIs', 'Node')).toBe(true);
+    expect(skillAppearsIn('Java Spring Boot services', 'Spring Boot')).toBe(true);
+    expect(skillAppearsIn('Only Python listed here', 'Java')).toBe(false);
+    expect(skillAppearsIn('Skills: ReactJS, NodeJS, NextJS', 'React')).toBe(true);
+    expect(skillAppearsIn('Skills: ReactJS, NodeJS, NextJS', 'Node.js')).toBe(true);
+    expect(skillAppearsIn('Skills: ReactJS, NodeJS, NextJS', 'Next.js')).toBe(true);
+    expect(skillAppearsIn('Technical Skills\nJavaScript | React . js | HTML5', 'React')).toBe(true);
+  });
+
+  it('extracts glued JS skill names from resume prose', () => {
+    expect(
+      extractProfessionalSkillsFromText('SKILLS\nReactJS, NodeJS, TypeScript, ExpressJS'),
+    ).toEqual(expect.arrayContaining(['React', 'Node.js', 'TypeScript', 'Express']));
   });
 });
