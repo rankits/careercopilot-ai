@@ -21,6 +21,32 @@ import { readinessToPlannerDecision } from '@/modules/auto-apply/services/applic
 import { ApplicationContentPreparationService } from '@/modules/auto-apply/services/application-content-preparation.service.js';
 import { PreparedScreeningAnswer } from '@/modules/auto-apply/types/application-content.types.js';
 import { toApplicationPageAnalysisSummary } from '@/modules/auto-apply/types/application-page-analysis-summary.types.js';
+import { logger } from '@/shared/logger/logger.js';
+
+/**
+ * AA-013: strip SDK/custom props (request bodies, resume text, etc.) so only
+ * name/message/code/stack reach logs — never user content payloads.
+ */
+export function toSafeContentPrepLogError(error: unknown): {
+  type: string;
+  message: string;
+  code?: string;
+  stack?: string;
+} {
+  if (error instanceof Error) {
+    const code =
+      'code' in error && typeof (error as { code?: unknown }).code === 'string'
+        ? (error as { code: string }).code
+        : undefined;
+    return {
+      type: error.name,
+      message: error.message,
+      ...(code ? { code } : {}),
+      ...(error.stack ? { stack: error.stack } : {}),
+    };
+  }
+  return { type: 'UnknownError', message: 'Content preparation failed' };
+}
 
 /**
  * AJA-PLAN-001 — orchestrates duplicate check, eligibility, readiness, and
@@ -261,7 +287,16 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
       }
 
       return prepared;
-    } catch {
+    } catch (error) {
+      logger.warn(
+        {
+          err: toSafeContentPrepLogError(error),
+          jobApplicationId: args.application.id,
+          userId: args.userId,
+          jobId: args.jobId,
+        },
+        'Content preparation failed',
+      );
       return {
         coverLetter: args.application.coverLetterContent ?? null,
         screeningAnswers: [],
