@@ -11,6 +11,7 @@ import { isAutoApplyClientError } from '@/features/auto-apply/utils/apiError';
 import { openExternalApply, toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
 import { ROUTES } from '@/constants/routes';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
+import { trackEvent } from '@/shared/analytics/trackEvent';
 import { formatRelativeTime } from './activityLabels';
 import {
   Alert,
@@ -27,6 +28,8 @@ import {
   Tooltip,
   Typography,
 } from '@/lib/material';
+
+import { assistedApplyTouchTargetSx, WorkspaceStickyActions } from './WorkspaceStickyActions';
 
 const HANDOFF_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_DIRECT_HANDOFF !== 'false';
 
@@ -92,6 +95,7 @@ export function OpenApplicationStep({
     const ok = openExternalApply(safe);
     if (!ok) {
       setPopupBlockedUrl(safe);
+      trackEvent('popup_blocked', { job_application_id: jobApplicationId });
     }
     return ok;
   };
@@ -104,13 +108,18 @@ export function OpenApplicationStep({
     }
     handoffMutation.mutate(undefined, {
       onSuccess: (result) => {
+        trackEvent('handoff_opened', { job_application_id: jobApplicationId });
         tryOpen(result.applyUrl);
       },
       onError: (error) => {
         if (isAutoApplyClientError(error) && error.code === 'HANDOFF_BLOCKED') {
-          const reasons = (error.data as { reasons?: Array<{ message: string }> } | undefined)
+          const reasons = (error.data as { reasons?: Array<{ message: string; code?: string }> } | undefined)
             ?.reasons;
           const reasonText = reasons?.map((r) => r.message).join(' ') ?? error.message;
+          trackEvent('handoff_blocked', {
+            job_application_id: jobApplicationId,
+            reason_codes: reasons?.map((r) => r.code).filter(Boolean).join(',') || 'unknown',
+          });
           setLocalError(`This application can't be opened right now: ${reasonText}`);
           return;
         }
@@ -136,9 +145,11 @@ export function OpenApplicationStep({
       {
         onSuccess: () => {
           setMarkOpen(false);
+          trackEvent('mark_applied', { job_application_id: jobApplicationId });
           showToast({ message: 'Marked as applied.', severity: 'success' });
         },
         onError: (error) => {
+          trackEvent('mark_applied_failed', { job_application_id: jobApplicationId });
           showToast({
             message: error instanceof Error ? error.message : 'Could not mark as applied.',
             severity: 'error',
@@ -164,66 +175,81 @@ export function OpenApplicationStep({
 
       {localError ? <Alert severity="error">{localError}</Alert> : null}
 
-      <Box>
-        {blocked && !alreadyOpened ? (
-          <Tooltip title={blockMessage}>
-            <span>
-              <MuiButton disabled variant="contained">
-                Open application
-              </MuiButton>
-            </span>
-          </Tooltip>
-        ) : (
-          <MuiButton
-            disabled={handoffMutation.isPending || isApplied}
-            onClick={handleOpen}
-            variant="contained"
-          >
-            {handoffMutation.isPending
-              ? 'Opening…'
-              : alreadyOpened
-                ? 'Reopen application page'
-                : 'Open application'}
-          </MuiButton>
-        )}
-      </Box>
+      <WorkspaceStickyActions>
+        <Box>
+          {blocked && !alreadyOpened ? (
+            <Tooltip title={blockMessage}>
+              <span>
+                <MuiButton disabled sx={assistedApplyTouchTargetSx} variant="contained">
+                  Open application
+                </MuiButton>
+              </span>
+            </Tooltip>
+          ) : (
+            <MuiButton
+              disabled={handoffMutation.isPending || isApplied}
+              onClick={handleOpen}
+              sx={assistedApplyTouchTargetSx}
+              variant="contained"
+            >
+              {handoffMutation.isPending
+                ? 'Opening…'
+                : alreadyOpened
+                  ? 'Reopen application page'
+                  : 'Open application'}
+            </MuiButton>
+          )}
+        </Box>
 
-      {alreadyOpened && !isApplied ? (
-        <Stack direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" spacing={1}>
-          <MuiButton onClick={() => setMarkOpen(true)} variant="contained">
-            Mark as applied
-          </MuiButton>
-          <MuiButton
-            onClick={() => {
-              showToast({
-                message: 'You can come back anytime to mark this as applied.',
-                severity: 'info',
-              });
-              void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`);
-            }}
-            variant="outlined"
-          >
-            Return later
-          </MuiButton>
-          <MuiButton
-            disabled={reportMutation.isPending}
-            onClick={() => {
-              reportMutation.mutate(undefined, {
-                onSuccess: () => {
-                  showToast({ message: 'Thanks — we recorded this.', severity: 'success' });
-                },
-              });
-            }}
-            variant="text"
-          >
-            Report broken link
-          </MuiButton>
-        </Stack>
-      ) : null}
+        {alreadyOpened && !isApplied ? (
+          <Stack direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" spacing={1} sx={{ mt: 1 }}>
+            <MuiButton
+              onClick={() => setMarkOpen(true)}
+              sx={assistedApplyTouchTargetSx}
+              variant="contained"
+            >
+              Mark as applied
+            </MuiButton>
+            <MuiButton
+              onClick={() => {
+                trackEvent('return_later_clicked', { job_application_id: jobApplicationId });
+                showToast({
+                  message: 'You can come back anytime to mark this as applied.',
+                  severity: 'info',
+                });
+                void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`);
+              }}
+              sx={assistedApplyTouchTargetSx}
+              variant="outlined"
+            >
+              Return later
+            </MuiButton>
+            <MuiButton
+              disabled={reportMutation.isPending}
+              onClick={() => {
+                reportMutation.mutate(undefined, {
+                  onSuccess: () => {
+                    trackEvent('broken_link_reported', { job_application_id: jobApplicationId });
+                    showToast({ message: 'Thanks — we recorded this.', severity: 'success' });
+                  },
+                });
+              }}
+              sx={assistedApplyTouchTargetSx}
+              variant="text"
+            >
+              Report broken link
+            </MuiButton>
+          </Stack>
+        ) : null}
+      </WorkspaceStickyActions>
 
       {/* AA-071 popup blocked recovery */}
-      <Dialog open={Boolean(popupBlockedUrl)} onClose={() => setPopupBlockedUrl(null)}>
-        <DialogTitle>Your browser blocked the new tab</DialogTitle>
+      <Dialog
+        aria-labelledby="popup-blocked-title"
+        onClose={() => setPopupBlockedUrl(null)}
+        open={Boolean(popupBlockedUrl)}
+      >
+        <DialogTitle id="popup-blocked-title">Your browser blocked the new tab</DialogTitle>
         <DialogContent>
           <DialogContentText>
             We&apos;ve already recorded that you opened this application. Use the link below to
@@ -250,8 +276,8 @@ export function OpenApplicationStep({
       </Dialog>
 
       {/* AA-072 mark as applied */}
-      <Dialog open={markOpen} onClose={() => setMarkOpen(false)}>
-        <DialogTitle>Mark this application as applied?</DialogTitle>
+      <Dialog aria-labelledby="mark-applied-title" onClose={() => setMarkOpen(false)} open={markOpen}>
+        <DialogTitle id="mark-applied-title">Mark this application as applied?</DialogTitle>
         <DialogContent>
           <Stack spacing={2} sx={{ mt: 1, minWidth: { sm: 360 } }}>
             <TextField

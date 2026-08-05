@@ -4,6 +4,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAbandonApplication } from '@/features/auto-apply/hooks/useResumeHandoff';
 import { ROUTES } from '@/constants/routes';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
+import { trackEvent } from '@/shared/analytics/trackEvent';
 import {
   Dialog,
   DialogActions,
@@ -16,6 +17,8 @@ import {
   Stack,
   TextField,
 } from '@/lib/material';
+
+import { assistedApplyTouchTargetSx } from './WorkspaceStickyActions';
 
 const REASONS: Array<{ code: string; label: string }> = [
   { code: 'NOT_INTERESTED', label: 'Not interested' },
@@ -48,6 +51,10 @@ export function AbandonApplicationModal({
       { reasonCode, note: note.trim() || undefined },
       {
         onSuccess: () => {
+          trackEvent('application_abandoned', {
+            job_application_id: jobApplicationId,
+            reasonCode,
+          });
           onClose();
           showToast({ message: 'Application withdrawn.', severity: 'success' });
           void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`);
@@ -63,8 +70,8 @@ export function AbandonApplicationModal({
   };
 
   return (
-    <Dialog open={open} onClose={onClose}>
-      <DialogTitle>Stop tracking this application?</DialogTitle>
+    <Dialog aria-labelledby="abandon-title" onClose={onClose} open={open}>
+      <DialogTitle id="abandon-title">Stop tracking this application?</DialogTitle>
       <DialogContent>
         <Stack spacing={2} sx={{ mt: 1, minWidth: { sm: 360 } }}>
           <RadioGroup onChange={(_e, value) => setReasonCode(value)} value={reasonCode}>
@@ -88,11 +95,14 @@ export function AbandonApplicationModal({
         </Stack>
       </DialogContent>
       <DialogActions>
-        <MuiButton onClick={onClose}>Cancel</MuiButton>
+        <MuiButton onClick={onClose} sx={assistedApplyTouchTargetSx}>
+          Cancel
+        </MuiButton>
         <MuiButton
           color="error"
           disabled={!reasonCode || abandonMutation.isPending}
           onClick={handleConfirm}
+          sx={assistedApplyTouchTargetSx}
           variant="contained"
         >
           Abandon
