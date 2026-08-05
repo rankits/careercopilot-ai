@@ -1,7 +1,8 @@
 # Pre-Application Intelligence and Form Analysis
 
-**Status:** Spec only — not implemented yet  
-**Goal:** Before Assisted/Auto Apply starts, understand what the *job* and *application form* require, then feed that into the existing Application Readiness Gate.  
+**Status:** Partially implemented — Job Posting Analyzer, prepare/match, and planner integration exist in-repo; Application Form Inspector is not implemented yet.  
+**Live backlog:** [`docs/assisted-apply/README.md`](../../../../docs/assisted-apply/README.md)  
+**Goal:** Before Assisted Apply starts, understand what the *job* (and later the *application form*) require, then feed that into the existing Application Readiness Gate.  
 **Golden fixture:** Linear — Mobile Product Designer  
 `https://jobs.ashbyhq.com/linear/eac7f181-d658-4943-9430-51bae2bcd110`
 
