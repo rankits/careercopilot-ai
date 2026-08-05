@@ -118,6 +118,26 @@ export interface IJobApplicationRepository {
     data: { applyUrl: string; openedAt: Date },
     expectedStatus: JobApplicationStatusValue,
   ): Promise<JobApplicationDto | null>;
+  /** AA-072: mark applied (SUBMITTED) with optional notes/date. */
+  markApplied(
+    userId: string,
+    id: string,
+    data: { submittedAt: Date; appliedNotes: string | null },
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto | null>;
+  /** AA-073: abandon with reason. */
+  abandonApplication(
+    userId: string,
+    id: string,
+    data: { abandonReason: string; abandonNote: string | null },
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto | null>;
+  /** AA-072: update notes/date on already-SUBMITTED application. */
+  updateAppliedDetails(
+    userId: string,
+    id: string,
+    data: { submittedAt?: Date; appliedNotes?: string | null },
+  ): Promise<JobApplicationDto>;
 }
 
 export interface InitiateJobApplicationResult {

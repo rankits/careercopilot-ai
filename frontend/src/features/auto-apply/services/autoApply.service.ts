@@ -396,4 +396,33 @@ export const autoApplyService = {
     );
     return unwrapData(data, 'Missing handoff data in API response');
   },
+
+  async markApplied(
+    jobApplicationId: string,
+    payload?: { appliedAt?: string; notes?: string },
+  ): Promise<{ status: string; appliedAt: string; viewState: string }> {
+    const { data } = await httpClient.post<
+      BackendSuccessResponse<{ status: string; appliedAt: string; viewState: string }>
+    >(`/auto-apply/submissions/${jobApplicationId}/mark-applied`, payload ?? {});
+    return unwrapData(data, 'Missing mark-applied data in API response');
+  },
+
+  async abandonApplication(
+    jobApplicationId: string,
+    payload: { reasonCode: string; note?: string },
+  ): Promise<{ status: string; abandonReason: string }> {
+    const { data } = await httpClient.post<
+      BackendSuccessResponse<{ status: string; abandonReason: string }>
+    >(`/auto-apply/submissions/${jobApplicationId}/abandon`, payload);
+    return unwrapData(data, 'Missing abandon data in API response');
+  },
+
+  async reportBrokenLink(
+    jobApplicationId: string,
+  ): Promise<{ reported: true; reportedAt: string }> {
+    const { data } = await httpClient.post<
+      BackendSuccessResponse<{ reported: true; reportedAt: string }>
+    >(`/auto-apply/submissions/${jobApplicationId}/report-broken-link`, {});
+    return unwrapData(data, 'Missing report-broken-link data in API response');
+  },
 };

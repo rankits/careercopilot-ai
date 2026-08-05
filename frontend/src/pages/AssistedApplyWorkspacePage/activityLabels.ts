@@ -18,6 +18,7 @@ const EVENT_LABELS: Record<string, string> = {
   ANALYSIS_COMPLETED: 'Analyzed the job posting',
   HANDOFF_OPENED: "Opened the employer's application page",
   MARKED_APPLIED: 'Marked as applied',
+  BROKEN_LINK_REPORTED: 'Reported a broken apply link',
   WITHDRAWN: 'Withdrawn',
   REOPENED: 'Reopened',
 };
@@ -41,7 +42,11 @@ export function activityEventCategory(eventType: string): ActivityEventCategory 
   if (eventType === 'ANALYSIS_COMPLETED' || eventType === 'ELIGIBILITY_EVALUATED') {
     return 'analysis';
   }
-  if (eventType === 'HANDOFF_OPENED' || eventType === 'MARKED_APPLIED') {
+  if (
+    eventType === 'HANDOFF_OPENED' ||
+    eventType === 'MARKED_APPLIED' ||
+    eventType === 'BROKEN_LINK_REPORTED'
+  ) {
     return 'handoff';
   }
   if (
