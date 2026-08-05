@@ -20,11 +20,11 @@ export function LoginPage() {
         onValidSubmit={async (values) => {
           const result = await submit(values);
 
-          if (result.ok) {
+          if (result.succeeded) {
             showToast({ message: 'Signed in successfully', severity: 'success' });
           } else {
             showToast({
-              message: result.error,
+              message: result.errorMessage ?? 'Unable to log in. Please try again.',
               severity: 'error',
             });
           }
