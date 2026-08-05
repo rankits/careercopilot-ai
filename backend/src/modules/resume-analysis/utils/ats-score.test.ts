@@ -104,17 +104,61 @@ B.Tech Computer Science
         {
           category: 'summary',
           originalText: 'Full-stack engineer with React experience.',
-          suggestedText:
-            'Java developer with Spring Boot and Hibernate experience plus React.',
+          suggestedText: 'Java developer with Spring Boot and Hibernate experience plus React.',
           impact: 'HIGH',
         },
       ],
     });
 
     expect(after.atsScore).toBeGreaterThan(baseline.atsScore);
-    expect(after.atsScore).toBeGreaterThanOrEqual(62 + 3);
+    expect(after.atsScore).toBeGreaterThanOrEqual(74);
+    expect(after.atsScore).toBeLessThanOrEqual(94);
     expect(after.keywordMatch).toBeGreaterThan(baseline.keywordMatch);
     expect(after.skillMatch).toBeGreaterThan(baseline.skillMatch);
+  });
+
+  it('reaches mid/high 70s from a low baseline when all skills match and suggestions are applied', () => {
+    const improved = `
+PROFESSIONAL SUMMARY
+Java developer with Spring Boot and Hibernate experience plus React.
+
+EXPERIENCE
+Software Engineer at Acme
+Built React dashboards with TypeScript and migrated services to Java Spring Boot.
+
+SKILLS
+Java, Spring Boot, Hibernate, React, TypeScript, CSS
+
+EDUCATION
+B.Tech Computer Science
+`;
+
+    const after = scoreEditedResume({
+      content: improved,
+      baselineAtsScore: 40,
+      jobDescription: 'Need Java Spring Boot Hibernate developer',
+      targetRole: 'Java Developer',
+      keywords: baseKeywords,
+      skillAnalysis: baseSkills,
+      appliedSuggestions: [
+        {
+          category: 'skills',
+          originalText: 'React, TypeScript, CSS',
+          suggestedText: 'Java, Spring Boot, Hibernate, React, TypeScript, CSS',
+          impact: 'HIGH',
+        },
+        {
+          category: 'summary',
+          originalText: 'Full-stack engineer with React experience.',
+          suggestedText: 'Java developer with Spring Boot and Hibernate experience plus React.',
+          impact: 'HIGH',
+        },
+      ],
+    });
+
+    expect(after.skillMatch).toBe(100);
+    expect(after.atsScore).toBeGreaterThanOrEqual(74);
+    expect(after.atsScore).toBeLessThanOrEqual(91);
   });
 
   it('raises score when only applied suggestion text is present', () => {

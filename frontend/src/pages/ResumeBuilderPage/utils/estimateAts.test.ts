@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
-import { estimateImprovedAtsScore, scoreTone } from './estimateAts';
+import {
+  estimateImprovedAtsScore,
+  refreshSkillAnalysisFromContent,
+  scoreTone,
+} from './estimateAts';
 
 describe('estimateImprovedAtsScore', () => {
   it('returns baseline when no improvements are present', () => {
@@ -26,7 +30,24 @@ describe('estimateImprovedAtsScore', () => {
     });
 
     expect(score).toBeGreaterThan(62);
-    expect(score).toBeLessThanOrEqual(99);
+    expect(score).toBeLessThanOrEqual(94);
+  });
+});
+
+describe('refreshSkillAnalysisFromContent', () => {
+  it('moves recovered skills from missing to matched', () => {
+    const refreshed = refreshSkillAnalysisFromContent('Skills: React, Java, Spring Boot', {
+      matchedSkills: ['React'],
+      missingSkills: ['Java', 'Spring Boot', 'Kafka'],
+      transferableSkills: [],
+      recommendedSkills: ['Java', 'Spring Boot', 'Kafka'],
+    });
+
+    expect(refreshed.matchedSkills).toEqual(
+      expect.arrayContaining(['React', 'Java', 'Spring Boot']),
+    );
+    expect(refreshed.missingSkills).toEqual(['Kafka']);
+    expect(refreshed.recommendedSkills).toEqual(['Kafka']);
   });
 });
 

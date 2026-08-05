@@ -17,9 +17,16 @@ export { EmptyText, FileTile, ScoreBadge } from '../../styles/shared';
 export const DefineRoleShell = styled(Box)({
   display: 'grid',
   gap: spacing[5],
-  gridTemplateColumns: 'minmax(0, 1fr) 22.5rem',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 22.5rem)',
+  minWidth: 0,
+  overflowX: 'hidden',
   padding: `${spacing[5]} ${spacing[7]} ${spacing[6]}`,
+  width: '100%',
   '@media (max-width: 72rem)': { gridTemplateColumns: '1fr' },
+  '@media (max-width: 48rem)': {
+    gap: spacing[3],
+    padding: `${spacing[3]} ${spacing[3]} ${spacing[5]}`,
+  },
 
   '& .main': { alignContent: 'start', display: 'grid', gap: spacing[3], minWidth: 0 },
   '& .section-heading': { display: 'grid', gap: spacing[2] },
@@ -45,7 +52,7 @@ export const DefineRoleShell = styled(Box)({
   '& .role-tip': {
     alignItems: 'center',
     background: `linear-gradient(135deg, ${t.primarySoft}, ${t.background})`,
-    border: '1px solid rgba(124,58,237,0.16)',
+    border: '1px solid rgba(37, 99, 235, 0.16)',
     borderRadius: borderRadius['2xl'],
     color: t.primary,
     display: 'grid',
@@ -57,7 +64,11 @@ export const DefineRoleShell = styled(Box)({
       gridTemplateColumns: 'auto minmax(0, 1fr)',
     },
   },
-  '& .tip-title': { color: t.primaryHover, fontSize: fontSize.sm, fontWeight: fontWeight.extraBold },
+  '& .tip-title': {
+    color: t.primaryHover,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.extraBold,
+  },
   '& .tip-text': { ...muted, fontSize: fontSize.xs, lineHeight: 1.55 },
   '& .tip-actions': {
     alignItems: 'center',
@@ -70,6 +81,14 @@ export const DefineRoleShell = styled(Box)({
       '& > button': { flex: 1 },
     },
   },
+  '& .role-actions': {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[3],
+    justifyContent: 'flex-end',
+    marginTop: spacing[2],
+  },
   '& .aside': { alignSelf: 'start', display: 'grid', gap: spacing[4] },
   '& .aside-card': {
     ...panel,
@@ -79,7 +98,7 @@ export const DefineRoleShell = styled(Box)({
   '& .uploaded-resume': {
     alignItems: 'center',
     background: `linear-gradient(135deg, ${t.background}, ${t.primarySofter})`,
-    border: '1px solid rgba(124,58,237,0.16)',
+    border: '1px solid rgba(37, 99, 235, 0.16)',
     borderRadius: borderRadius.xl,
     display: 'grid',
     gap: spacing[3],

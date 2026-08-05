@@ -4,44 +4,38 @@ import {
   BookmarkBorderOutlinedIcon,
   Box,
   DescriptionOutlinedIcon,
-  EditOutlinedIcon,
+  NavigateBeforeIcon,
   NavigateNextIcon,
   Typography,
 } from '@/lib/material';
 
 import { WORKFLOW_STEPS, type ResumeBuilderStep } from '../../constants';
 
-import {
-  HeaderPrimaryButtonSx,
-  HeaderSecondaryButtonSx,
-  HeroHeader,
-  ProgressBar,
-} from './styles';
+import { HeaderPrimaryButtonSx, HeaderSecondaryButtonSx, HeroHeader, ProgressBar } from './styles';
 
 interface PageHeaderProps {
   canContinue: boolean;
   current: ResumeBuilderStep;
+  onBack?: () => void;
   onNext: () => void;
   onSaveDraft?: () => void;
   savingDraft?: boolean;
-  targetRole?: string;
-  onEditRole?: () => void;
 }
 
 export function PageHeader({
   canContinue,
   current,
+  onBack,
   onNext,
   onSaveDraft,
   savingDraft = false,
-  targetRole = '',
-  onEditRole,
 }: PageHeaderProps) {
   const activeIndex = Math.max(
     0,
     WORKFLOW_STEPS.findIndex((workflowStep) => workflowStep.internalSteps.includes(current)),
   );
   const progress = ((activeIndex + 1) / WORKFLOW_STEPS.length) * 100;
+  const isExportStep = current === 10;
   const nextLabel = activeIndex === 3 ? 'Next: Export' : 'Next';
 
   return (
@@ -57,31 +51,6 @@ export function PageHeader({
           <Typography className="page-subtitle">
             Upload, optimize, and export your resume with AI assistance.
           </Typography>
-          {targetRole.trim() ? (
-            <Box
-              sx={{
-                alignItems: 'center',
-                display: 'flex',
-                flexWrap: 'wrap',
-                gap: 1,
-                mt: 0.5,
-              }}
-            >
-              <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>
-                Target role: <strong>{targetRole}</strong>
-              </Typography>
-              {onEditRole ? (
-                <Button
-                  size="small"
-                  startIcon={<EditOutlinedIcon fontSize="small" />}
-                  variant="outline"
-                  onClick={onEditRole}
-                >
-                  Edit role
-                </Button>
-              ) : null}
-            </Box>
-          ) : null}
         </Box>
       </Box>
 
@@ -96,26 +65,41 @@ export function PageHeader({
       </Box>
 
       <Box className="header-actions">
-        <Button
-          disabled={!onSaveDraft || savingDraft}
-          isLoading={savingDraft}
-          onClick={onSaveDraft}
-          size="medium"
-          startIcon={<BookmarkBorderOutlinedIcon fontSize="small" />}
-          sx={HeaderSecondaryButtonSx}
-          variant="outline"
-        >
-          Save Draft
-        </Button>
-        <Button
-          disabled={!canContinue}
-          endIcon={<NavigateNextIcon fontSize="small" />}
-          onClick={onNext}
-          size="medium"
-          sx={HeaderPrimaryButtonSx}
-        >
-          {nextLabel}
-        </Button>
+        {onBack ? (
+          <Button
+            onClick={onBack}
+            size="medium"
+            startIcon={<NavigateBeforeIcon fontSize="small" />}
+            sx={HeaderSecondaryButtonSx}
+            variant="outline"
+          >
+            Back
+          </Button>
+        ) : null}
+        {!isExportStep && onSaveDraft ? (
+          <Button
+            disabled={savingDraft}
+            isLoading={savingDraft}
+            onClick={onSaveDraft}
+            size="medium"
+            startIcon={<BookmarkBorderOutlinedIcon fontSize="small" />}
+            sx={HeaderSecondaryButtonSx}
+            variant="outline"
+          >
+            Save Draft
+          </Button>
+        ) : null}
+        {!isExportStep ? (
+          <Button
+            disabled={!canContinue}
+            endIcon={<NavigateNextIcon fontSize="small" />}
+            onClick={onNext}
+            size="medium"
+            sx={HeaderPrimaryButtonSx}
+          >
+            {nextLabel}
+          </Button>
+        ) : null}
       </Box>
     </HeroHeader>
   );

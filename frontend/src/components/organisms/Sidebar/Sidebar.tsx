@@ -2,9 +2,16 @@ import { Link as RouterLink } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
 
-import fullLogoUrl from '@/assets/logo/career-copilot-full-logo.svg';
-import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.svg';
-import { ChevronLeftIcon, ChevronRightIcon, Typography } from '@/lib/material';
+import fullLogoUrl from '@/assets/logo/career-copilot-logo.png';
+import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.png';
+import {
+  Box,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  LinearProgress,
+  StarIcon,
+  Typography,
+} from '@/lib/material';
 
 import { DEFAULT_SIDEBAR_ITEMS } from './constants';
 import type { SidebarNavItem, SidebarProps } from './interfaces';

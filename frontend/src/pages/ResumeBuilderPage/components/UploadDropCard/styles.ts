@@ -26,7 +26,7 @@ export const DropZone = styled(Box, {
 })<{ dragging?: boolean }>(({ dragging = false }) => ({
   alignItems: 'center',
   background: `linear-gradient(135deg, ${dragging ? t.primarySoft : t.primarySofter}, ${t.background})`,
-  border: `1.5px dashed ${dragging ? t.primary : 'rgba(124,58,237,0.28)'}`,
+  border: `1.5px dashed ${dragging ? t.primary : `color-mix(in srgb, ${t.primary} 28%, transparent)`}`,
   borderRadius: borderRadius['2xl'],
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
   cursor: 'pointer',
@@ -39,14 +39,14 @@ export const DropZone = styled(Box, {
   '&:hover': {
     background: `linear-gradient(135deg, ${t.primarySoft}, ${t.background})`,
     borderColor: t.primary,
-    boxShadow: '0 16px 38px rgba(124,58,237,0.1)',
+    boxShadow: '0 16px 38px rgba(37, 99, 235, 0.1)',
   },
   '@media (max-width: 40rem)': { alignItems: 'flex-start', flexDirection: 'column' },
 
   '& .upload-icon-box': {
     ...iconBox('4.25rem'),
     background: `linear-gradient(145deg, ${t.background}, ${t.primarySoft})`,
-    border: '1px solid rgba(124,58,237,0.14)',
+    border: '1px solid rgba(37, 99, 235, 0.14)',
     borderRadius: borderRadius['2xl'],
     flex: '0 0 auto',
   },
@@ -57,7 +57,7 @@ export const DropZone = styled(Box, {
   '& .browse-button': {
     alignItems: 'center',
     background: t.background,
-    border: '1px solid rgba(124,58,237,0.36)',
+    border: '1px solid rgba(37, 99, 235, 0.36)',
     borderRadius: borderRadius.xl,
     color: t.primaryHover,
     cursor: 'pointer',

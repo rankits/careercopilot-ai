@@ -54,6 +54,22 @@ describe('HomePage', () => {
     expect(screen.getByText(/your profile is ready/i)).toBeInTheDocument();
   });
 
+  it('shows the onboarding hint when the profile is incomplete', () => {
+    getReadinessMock.mockReturnValue({
+      data: { canGenerateFromProfile: false, blockers: ['PROFILE_INCOMPLETE'] },
+    });
+    renderPage();
+    expect(screen.getByText(/complete your profile to unlock/i)).toBeInTheDocument();
+  });
+
+  it('falls back to a generic readiness hint otherwise', () => {
+    getReadinessMock.mockReturnValue({
+      data: { canGenerateFromProfile: false, blockers: [] },
+    });
+    renderPage();
+    expect(screen.getByText(/open for you to check recommendation readiness/i)).toBeInTheDocument();
+  });
+
   it('navigates to For You from the recommendations CTA', async () => {
     const user = userEvent.setup();
 

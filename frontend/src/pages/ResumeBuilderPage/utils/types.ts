@@ -103,10 +103,8 @@ export const RESUME_SECTIONS: Array<{ id: ResumeSectionId; label: string; tip: s
 
 export const SECTION_ALIASES: Record<ResumeSectionId, RegExp> = {
   summary: /^(professional\s+)?summary$|^profile(\s+summary)?$|^objective$|^about(\s+me)?$/i,
-  experience:
-    /^(work\s+)?experience$|^employment$|^work\s+history$|^professional\s+experience$/i,
-  skills:
-    /^skills$|^technical\s+skills$|^core\s+competencies$|^technologies$|^tech\s+stack$/i,
+  experience: /^(work\s+)?experience$|^employment$|^work\s+history$|^professional\s+experience$/i,
+  skills: /^skills$|^technical\s+skills$|^core\s+competencies$|^technologies$|^tech\s+stack$/i,
   education: /^education$|^academic$|^qualifications$/i,
   projects: /^projects?$|^personal\s+projects$|^key\s+projects$/i,
   certifications: /^certifications?$|^licenses?$|^certificates?$/i,

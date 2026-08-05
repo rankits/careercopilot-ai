@@ -37,7 +37,12 @@ const extractJsonObject = (raw: string): string => {
 };
 
 const tryRepairJson = (raw: string): string => {
-  let text = extractJsonObject(raw.replace(/^```json\s*/i, '').replace(/```$/i, '').trim());
+  let text = extractJsonObject(
+    raw
+      .replace(/^```json\s*/i, '')
+      .replace(/```$/i, '')
+      .trim(),
+  );
   if (!text) return text;
   try {
     JSON.parse(text);

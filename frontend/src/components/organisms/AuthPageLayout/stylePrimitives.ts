@@ -5,8 +5,10 @@ import {
   colorTokens,
   fontSize,
   fontWeight,
+  iconToneTokens,
   shadows,
   sizing,
+  type IconTone,
 } from '@/tokens';
 
 export const createStyledBox = (styles: SxProps<Theme>) =>
@@ -51,13 +53,6 @@ export const borderedCardSurface = {
   border: `${borderWidth.thin} solid ${colorTokens.borderDefault}`,
 } as const;
 
-const iconSurfaceBase = {
-  ...flexCenter,
-  bgcolor: colorTokens.actionPrimarySubtle,
-  borderRadius: borderRadius.full,
-  color: colorTokens.actionPrimary,
-} as const;
-
 export const authLayout = {
   contentColumns: `minmax(0, 52fr) minmax(${sizing[30]}, 48fr)`,
   contentMaxWidth: sizing[100],
@@ -67,12 +62,29 @@ export const authLayout = {
   viewportHeight: '100dvh',
 } as const;
 
-export const createIconSurface = (size: string, shrink = false) => ({
-  ...iconSurfaceBase,
-  ...(shrink ? { flexShrink: 0 } : {}),
-  height: size,
-  width: size,
-});
+export const createIconSurface = (
+  size: string,
+  options: { shrink?: boolean; tone?: IconTone } = {},
+) => {
+  const tone = iconToneTokens[options.tone ?? 'primary'];
+
+  return {
+    ...flexCenter,
+    ...(options.shrink ? { flexShrink: 0 } : {}),
+    background: tone.background,
+    borderRadius: borderRadius.full,
+    color: tone.color,
+    height: size,
+    width: size,
+    '& svg': {
+      color: tone.color,
+      fill: 'currentColor',
+    },
+    '& .MuiSvgIcon-root': {
+      color: tone.color,
+    },
+  };
+};
 
 export const createResponsiveColumns = (desktopColumns: string) => ({
   xs: authLayout.mobileColumn,

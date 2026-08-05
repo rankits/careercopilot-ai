@@ -4,3 +4,11 @@ node_modules
 coverage
 frontend/coverage
 package-lock.json
+frontend/package-lock.json
+frontend/test-results
+frontend/playwright-report
+frontend/blob-report
+test-results
+playwright-report
+blob-report
+docs

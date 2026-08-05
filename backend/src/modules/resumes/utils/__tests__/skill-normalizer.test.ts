@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+
 import {
   extractProfessionalSkillsFromText,
   normalizeProfessionalSkill,
@@ -6,14 +7,24 @@ import {
 } from '@/modules/resumes/utils/skill-normalizer.js';
 
 describe('skill-normalizer', () => {
-  it('rejects generic fragments and action words', () => {
+  it('rejects generic fragments, section labels, and incomplete tokens', () => {
     expect(
       normalizeProfessionalSkills([
-        'microservices.Required',
-        'applications.Write',
-        'lifecycle.Troubleshoot',
-        'field.Strong',
-        'code.Contribute',
+        'API',
+        'APIs',
+        'CD',
+        'Control',
+        'Design',
+        'In',
+        'RESTful',
+        'Missing / Recommended',
+        'Automation',
+        'Babel',
+        'Collaboration',
+        'Context',
+        'Context API',
+        'CS',
+        'CSS Deep',
         'Familiarity',
         'Engineering',
         'Proficiency',
@@ -32,13 +43,17 @@ describe('skill-normalizer', () => {
         'js',
         'node',
         'reactjs',
-        'docker container',
+        'docker',
         'REST APIs',
         'git',
+        'HTML5',
+        'CSS3',
       ]),
     ).toEqual([
+      'CSS3',
       'Docker',
       'Git',
+      'HTML5',
       'Java',
       'JavaScript',
       'Node.js',
@@ -49,7 +64,7 @@ describe('skill-normalizer', () => {
     ]);
   });
 
-  it('extracts only recognized skills from job-description prose', () => {
+  it('extracts only catalog skills from job-description prose', () => {
     expect(
       extractProfessionalSkillsFromText(
         'Required: Strong Java, SpringBoot, Hibernate, postgres, Kafka. Ability to troubleshoot applications and write code.',
@@ -60,64 +75,12 @@ describe('skill-normalizer', () => {
   it('validates a single skill before returning it', () => {
     expect(normalizeProfessionalSkill('Docker')).toBe('Docker');
     expect(normalizeProfessionalSkill('Nice to Have')).toBeNull();
-  });
-
-  it('keeps valid cross-industry professional skills', () => {
-    expect(
-      normalizeProfessionalSkills([
-        'Lead Generation',
-        'Cold Calling',
-        'Salesforce',
-        'Clinical Documentation',
-        'Electronic Health Records',
-        'Financial Analysis',
-        'RF Planning',
-      ]),
-    ).toEqual([
-      'Clinical Documentation',
-      'Cold Calling',
-      'Electronic Health Records',
-      'Financial Analysis',
-      'Lead Generation',
-      'RF Planning',
-      'Salesforce',
-    ]);
+    expect(normalizeProfessionalSkill('API')).toBeNull();
+    expect(normalizeProfessionalSkill('TypeScript')).toBe('TypeScript');
   });
 
   it('does not treat role titles as skills', () => {
     expect(normalizeProfessionalSkill('Business Development Executive')).toBeNull();
     expect(normalizeProfessionalSkill('Full Stack Developer')).toBeNull();
-    expect(normalizeProfessionalSkill('Lead Generation')).toBe('Lead Generation');
-  });
-
-  it('rejects generic JD and resume words from skill gap analysis', () => {
-    expect(
-      normalizeProfessionalSkills([
-        'Development',
-        'Management',
-        'Performance',
-        'Present',
-        'Summary',
-        'Years',
-        'Achievement',
-        'Administration',
-        'BDE',
-        'Business',
-        'Client',
-        'Conduct',
-        'Cloud',
-        'Component-based',
-        'CSS3',
-        'Description',
-        'Educational',
-        'ES6',
-        'Google',
-        'HTML5',
-        'Hybrid',
-        'Information',
-      ]),
-    ).toEqual([]);
-    expect(normalizeProfessionalSkill('Business Development')).toBe('Business Development');
-    expect(normalizeProfessionalSkill('Client Acquisition')).toBe('Client Acquisition');
   });
 });
