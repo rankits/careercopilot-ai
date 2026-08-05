@@ -91,15 +91,18 @@ export function parseResumeContent(content: string, targetRole = ''): ResumeDraf
   if (clean[0] && clean[0].length < 80 && !matchTopSection(clean[0])) {
     draft.fullName = sanitizeExtractedText(clean[0]);
   }
-  if (
+
+  // Prefer the user's target role as the subtitle under the name (cross-field JD alignment).
+  const roleTarget = targetRole.trim();
+  if (roleTarget) {
+    draft.role = roleTarget;
+  } else if (
     clean[1] &&
     clean[1].length < 70 &&
     !matchTopSection(clean[1]) &&
     !/@|http|linkedin|github|\+|^\d/i.test(clean[1])
   ) {
     draft.role = sanitizeExtractedText(clean[1]);
-  } else if (targetRole) {
-    draft.role = targetRole;
   }
 
   const emailMatch = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i);
@@ -189,7 +192,10 @@ export function parseResumeContent(content: string, targetRole = ''): ResumeDraf
     .map((line) => line.trim())
     .filter((line) => line && !/full professional proficiency/i.test(line))
     .join(', ');
-  const interests = (buckets.interests ?? []).map((line) => line.trim()).filter(Boolean).join(', ');
+  const interests = (buckets.interests ?? [])
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(', ');
 
   if (languages) draft.customFields.push({ id: newId(), label: 'Languages', value: languages });
   if (interests) draft.customFields.push({ id: newId(), label: 'Interests', value: interests });

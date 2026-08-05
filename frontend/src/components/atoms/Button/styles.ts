@@ -19,7 +19,7 @@ const toneStyles: Record<
     active: colorTokens.actionPrimaryActive,
     base: colorTokens.actionPrimary,
     hover: colorTokens.actionPrimaryHover,
-    surface: colorTokens.actionPrimarySubtle,
+    surface: colorTokens.actionGhostHover,
   },
   success: {
     active: colorTokens.actionSuccessHover,
@@ -80,21 +80,21 @@ function getVariantStyles(tone: ButtonTone, variant: ButtonVariant): SystemStyle
     return {
       '&:active': {
         ...primaryGradientBackground,
-        boxShadow: '0 0.25rem 0.75rem rgba(89, 30, 194, 0.28)',
+        boxShadow: '0 0.25rem 0.75rem rgba(37, 99, 235, 0.28)',
         transform: 'translateY(0.0625rem)',
       },
       '&:focus-visible': {
         ...primaryGradientBackground,
-        boxShadow: `${colorTokens.actionPrimarySubtle} 0 0 0 0.25rem, 0 0.625rem 1.125rem rgba(89, 30, 194, 0.26)`,
+        boxShadow: `${colorTokens.actionPrimarySubtle} 0 0 0 0.25rem, 0 0.625rem 1.125rem rgba(37, 99, 235, 0.26)`,
       },
       '&:hover': {
         ...primaryGradientBackground,
-        boxShadow: '0 0.875rem 1.5rem rgba(89, 30, 194, 0.32)',
+        boxShadow: '0 0.875rem 1.5rem rgba(37, 99, 235, 0.32)',
         transform: 'translateY(-0.0625rem)',
       },
       ...primaryGradientBackground,
       borderColor: 'transparent',
-      boxShadow: '0 0.625rem 1.125rem rgba(89, 30, 194, 0.26)',
+      boxShadow: '0 0.625rem 1.125rem rgba(37, 99, 235, 0.26)',
       color: colorTokens.textInverse,
     };
   }

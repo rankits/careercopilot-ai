@@ -309,7 +309,7 @@ export const HeaderAvatar = styled('span', {
   alignItems: 'center',
   background: backgroundColor,
   borderRadius: borderRadius.full,
-  boxShadow: '0 8px 24px rgba(130, 48, 240, 0.2)',
+  boxShadow: '0 8px 24px rgba(37, 99, 235, 0.2)',
   color: colorTokens.textInverse,
   display: 'inline-flex',
   flexShrink: 0,

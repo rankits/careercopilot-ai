@@ -1,17 +1,14 @@
-import { IJobProvider } from "@/modules/jobs/interfaces/IJobProvider.js";
-import { ProviderTier } from "@/modules/jobs/types/job.types.js";
-import { DuplicateProviderRegistrationError } from "@/modules/jobs/errors/DuplicateProviderRegistrationError.js";
-import { jobsLogger } from "@/shared/utils/logger.js";
+import { IJobProvider } from '@/modules/jobs/interfaces/IJobProvider.js';
+import { ProviderTier } from '@/modules/jobs/types/job.types.js';
+import { DuplicateProviderRegistrationError } from '@/modules/jobs/errors/DuplicateProviderRegistrationError.js';
+import { jobsLogger } from '@/shared/utils/logger.js';
 
 export interface IJobProviderRegistry {
   register(provider: IJobProvider): void;
   getByName(name: string): IJobProvider | undefined;
   getAll(): IJobProvider[];
   getByTier(tier: ProviderTier): IJobProvider[];
-  getEnabledProviders(filter?: {
-    tiers?: ProviderTier[];
-    names?: string[];
-  }): IJobProvider[];
+  getEnabledProviders(filter?: { tiers?: ProviderTier[]; names?: string[] }): IJobProvider[];
   getEnabledProvidersSortedByPriority(filter?: {
     tiers?: ProviderTier[];
     names?: string[];
@@ -33,7 +30,7 @@ export class JobProviderRegistry implements IJobProviderRegistry {
         tier: provider.tier,
         enabled: provider.isEnabled,
       },
-      "Provider registered",
+      'Provider registered',
     );
   }
 
@@ -49,10 +46,7 @@ export class JobProviderRegistry implements IJobProviderRegistry {
     return this.getAll().filter((p) => p.tier === tier);
   }
 
-  getEnabledProviders(filter?: {
-    tiers?: ProviderTier[];
-    names?: string[];
-  }): IJobProvider[] {
+  getEnabledProviders(filter?: { tiers?: ProviderTier[]; names?: string[] }): IJobProvider[] {
     return this.getAll().filter((p) => {
       if (!p.isEnabled) {
         return false;
@@ -63,9 +57,7 @@ export class JobProviderRegistry implements IJobProviderRegistry {
         }
       }
       if (filter?.names && filter.names.length > 0) {
-        const normalizedFilterNames = filter.names.map((n) =>
-          n.trim().toLowerCase()
-        );
+        const normalizedFilterNames = filter.names.map((n) => n.trim().toLowerCase());
         if (!normalizedFilterNames.includes(p.name.trim().toLowerCase())) {
           return false;
         }
@@ -96,9 +88,8 @@ export class JobProviderRegistry implements IJobProviderRegistry {
           priority: provider.manifest?.priority ?? 0,
         })),
       },
-      "Enabled providers sorted by priority",
+      'Enabled providers sorted by priority',
     );
     return sorted;
   }
 }
-

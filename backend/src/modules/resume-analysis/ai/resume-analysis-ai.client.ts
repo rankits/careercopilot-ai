@@ -4,7 +4,13 @@ import { AppError } from '@/shared/utils/errors/AppError.js';
 import type { AiAnalysisOutput } from '@/modules/resume-analysis/types/resume-analysis.types.js';
 import { resumeAnalysisAiSchema } from '@/modules/resume-analysis/ai/resume-analysis-ai.schema.js';
 import { buildResumeAnalysisPrompt } from '@/modules/resume-analysis/ai/prompts/resume-analysis.prompt.js';
-import { termAppearsIn } from '@/modules/resume-analysis/utils/text-match.js';
+import {
+  INVALID_TARGET_MESSAGE,
+  buildTargetRoleJdValidationPrompt,
+} from '@/modules/resume-analysis/ai/prompts/validate-target.prompt.js';
+import { computeSectionScoresFromContent } from '@/modules/resume-analysis/utils/ats-score.js';
+import { termAppearsIn, textAppearsFuzzy } from '@/modules/resume-analysis/utils/text-match.js';
+import { buildJdCoverageExtras } from '@/modules/resume-analysis/utils/suggestion-coverage.js';
 import {
   extractProfessionalSkillsFromText,
   normalizeProfessionalSkill,
@@ -141,11 +147,9 @@ const OPENAI_DEFAULT_MODELS = ['gpt-4o-mini', 'gpt-4o'];
 
 const getModelCandidates = (provider: ResumeAnalysisAiProvider): string[] => {
   if (provider === 'openrouter') {
-    const primary =
-      process.env.AI_RESUME_ANALYSIS_MODEL || OPENROUTER_DEFAULT_MODELS[0];
+    const primary = process.env.AI_RESUME_ANALYSIS_MODEL || OPENROUTER_DEFAULT_MODELS[0];
     const fallbacks = (
-      process.env.AI_RESUME_ANALYSIS_FALLBACK_MODELS ||
-      OPENROUTER_DEFAULT_MODELS.slice(1).join(',')
+      process.env.AI_RESUME_ANALYSIS_FALLBACK_MODELS || OPENROUTER_DEFAULT_MODELS.slice(1).join(',')
     )
       .split(',')
       .map((model) => model.trim())
@@ -154,8 +158,7 @@ const getModelCandidates = (provider: ResumeAnalysisAiProvider): string[] => {
 
     // openrouter/free often returns empty / safety text — skip unless explicitly allowed.
     const allowAutoFree =
-      String(process.env.AI_RESUME_ANALYSIS_ALLOW_OPENROUTER_FREE || '').toLowerCase() ===
-      'true';
+      String(process.env.AI_RESUME_ANALYSIS_ALLOW_OPENROUTER_FREE || '').toLowerCase() === 'true';
 
     const models = Array.from(new Set([primary, ...fallbacks])).filter(
       (model) => allowAutoFree || !isOpenRouterFreeAutoRouter(model),
@@ -175,12 +178,9 @@ const getModelCandidates = (provider: ResumeAnalysisAiProvider): string[] => {
 
   if (provider === 'groq') {
     // Prefer smaller/faster models first when daily token budget is tight.
-    const primary =
-      process.env.AI_RESUME_ANALYSIS_GROQ_MODEL || 'llama-3.1-8b-instant';
+    const primary = process.env.AI_RESUME_ANALYSIS_GROQ_MODEL || 'llama-3.1-8b-instant';
     const groqSafe = primary.includes('/') ? 'llama-3.1-8b-instant' : primary;
-    return Array.from(
-      new Set([groqSafe, 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile']),
-    );
+    return Array.from(new Set([groqSafe, 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile']));
   }
 
   const configuredModel =
@@ -298,10 +298,7 @@ const extractJson = (raw: unknown): string => {
 const createGoogleClient = (model: string): ChatGoogleGenerativeAI => {
   const apiKey = getGoogleApiKey();
   if (!apiKey) {
-    throw new AppError(
-      'AI provider not configured. Set GOOGLE_API_KEY or GEMINI_API_KEY.',
-      500,
-    );
+    throw new AppError('AI provider not configured. Set GOOGLE_API_KEY or GEMINI_API_KEY.', 500);
   }
   return new ChatGoogleGenerativeAI({
     apiKey,
@@ -324,11 +321,7 @@ const invokeGoogleModel = async (
   return extractJson((response as { content?: unknown }).content ?? response);
 };
 
-const getMaxOutputTokens = (
-  providerLabel: string,
-  model?: string,
-  override?: number,
-): number => {
+const getMaxOutputTokens = (providerLabel: string, model?: string, override?: number): number => {
   if (typeof override === 'number' && override > 0) {
     return Math.min(override, 8000);
   }
@@ -390,7 +383,12 @@ const extractJsonObject = (raw: string): string => {
 
 /** Best-effort repair when the model truncates JSON mid-string. */
 const tryRepairJson = (raw: string): string => {
-  let text = extractJsonObject(raw.replace(/^```json\s*/i, '').replace(/```$/i, '').trim());
+  let text = extractJsonObject(
+    raw
+      .replace(/^```json\s*/i, '')
+      .replace(/```$/i, '')
+      .trim(),
+  );
   if (!text) return text;
   try {
     JSON.parse(text);
@@ -500,10 +498,7 @@ const invokeOpenAiCompatibleChat = async (input: {
         const detail =
           body.error?.message ??
           `${input.providerLabel} resume analysis request failed with ${response.status}`;
-        const err = new AppError(
-          `${detail} [${input.providerLabel} HTTP ${response.status}]`,
-          500,
-        );
+        const err = new AppError(`${detail} [${input.providerLabel} HTTP ${response.status}]`, 500);
 
         if (attempt === 0 && isMaxTokensAffordabilityError(err)) {
           const affordable = parseAffordableMaxTokens(err);
@@ -670,7 +665,7 @@ const isGroundedSuggestion = (
   const suggested = suggestion.suggestedText.trim();
   if (!original || !suggested) return false;
   if (original.split(/\n/).length > 1 || suggested.split(/\n/).length > 1) return false;
-  return resumeText.includes(original);
+  return textAppearsFuzzy(resumeText, original);
 };
 
 const sanitizeSkillKeywords = <T extends { term: string }>(items: T[]): T[] =>
@@ -692,7 +687,9 @@ const sanitizeAiSkillOutput = (aiResult: AiAnalysisOutput): AiAnalysisOutput => 
   skillAnalysis: {
     matchedSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.matchedSkills ?? []),
     missingSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.missingSkills ?? []),
-    transferableSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.transferableSkills ?? []),
+    transferableSkills: normalizeProfessionalSkills(
+      aiResult.skillAnalysis?.transferableSkills ?? [],
+    ),
     recommendedSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.recommendedSkills ?? []),
   },
   suggestions: (aiResult.suggestions ?? [])
@@ -701,7 +698,9 @@ const sanitizeAiSkillOutput = (aiResult: AiAnalysisOutput): AiAnalysisOutput => 
         ? { ...suggestion, suggestedText: normalizeSkillText(suggestion.suggestedText) }
         : suggestion,
     )
-    .filter((suggestion) => suggestion.category !== 'skills' || suggestion.suggestedText.length > 0),
+    .filter(
+      (suggestion) => suggestion.category !== 'skills' || suggestion.suggestedText.length > 0,
+    ),
   optimizedSections: {
     ...aiResult.optimizedSections,
     skills: normalizeProfessionalSkills(aiResult.optimizedSections?.skills ?? []),
@@ -717,25 +716,29 @@ const enrichAnalysisWithJdSkills = (
   const jdText = [jobDescription ?? '', targetRole ?? ''].join('\n');
   if (!jdText.trim()) return aiResult;
 
-  const jdSkills = normalizeProfessionalSkills([
-    ...extractProfessionalSkillsFromText(jobDescription ?? ''),
-    ...(aiResult.skillAnalysis?.missingSkills ?? []).filter((skill) =>
-      termAppearsIn(jobDescription ?? '', skill),
-    ),
-    ...(aiResult.skillAnalysis?.recommendedSkills ?? []).filter((skill) =>
-      termAppearsIn(jobDescription ?? '', skill),
-    ),
-    ...(aiResult.missingSkills ?? []).filter((skill) => termAppearsIn(jobDescription ?? '', skill)),
-  ]);
+  const fromExtract = extractProfessionalSkillsFromText(jobDescription ?? '');
+  const fromAi = normalizeProfessionalSkills([
+    ...(aiResult.skillAnalysis?.missingSkills ?? []),
+    ...(aiResult.skillAnalysis?.recommendedSkills ?? []),
+    ...(aiResult.missingSkills ?? []),
+    ...(aiResult.skillAnalysis?.matchedSkills ?? []),
+  ]).filter((skill) => termAppearsIn(jdText, skill));
+
+  const jdSkills = normalizeProfessionalSkills([...fromExtract, ...fromAi]);
   if (jdSkills.length === 0) return aiResult;
 
   const matchedFromJd = jdSkills.filter((skill) => termAppearsIn(resumeText, skill));
   const missingFromJd = jdSkills.filter((skill) => !termAppearsIn(resumeText, skill));
 
+  // Honest cross-domain scoring: zero skill/experience/project match when no JD skills appear.
+  const crossDomain = matchedFromJd.length === 0 && jdSkills.length >= 2;
+
   const skillAnalysis = {
     matchedSkills: normalizeProfessionalSkills(matchedFromJd),
     missingSkills: normalizeProfessionalSkills(missingFromJd),
-    transferableSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.transferableSkills ?? []),
+    transferableSkills: normalizeProfessionalSkills(
+      aiResult.skillAnalysis?.transferableSkills ?? [],
+    ),
     recommendedSkills: normalizeProfessionalSkills(missingFromJd),
   };
 
@@ -753,52 +756,156 @@ const enrichAnalysisWithJdSkills = (
   const suggestions = (aiResult.suggestions ?? []).filter((suggestion) =>
     isGroundedSuggestion(suggestion, resumeText),
   );
-  const hasSkillsSuggestion = suggestions.some((item) => /^skills$/i.test(item.category));
 
-  if (missingFromJd.length > 0 && !hasSkillsSuggestion) {
-    const currentSkillsLine =
+  const improvedSummary =
+    (aiResult.optimizedSections?.professionalSummary ?? '').trim() ||
+    (aiResult.improvedSummary ?? '').trim();
+  const expBullet = aiResult.optimizedSections?.experienceBullets?.find(
+    (item) =>
+      item?.originalText?.trim() &&
+      item?.optimizedText?.trim() &&
+      textAppearsFuzzy(resumeText, item.originalText),
+  );
+
+  const coverage = buildJdCoverageExtras({
+    missingSkills: missingFromJd,
+    currentSkillsLine:
       (aiResult.optimizedSections?.skills ?? []).join(', ') ||
       skillAnalysis.matchedSkills.slice(0, 8).join(', ') ||
-      '';
-    const suggestedSkills = normalizeProfessionalSkills([
-      ...skillAnalysis.matchedSkills,
-      ...missingFromJd.slice(0, 8),
-    ]).join(', ');
-
-    suggestions.unshift({
-      id: 'suggestion-jd-skills',
-      title: `Add ${missingFromJd.slice(0, 3).join(', ')} for JD ATS match`,
-      category: 'skills',
-      originalText: currentSkillsLine,
-      suggestedText: suggestedSkills,
-      impact: 'HIGH' as const,
-      reason:
-        'These skills are required or strongly preferred in the job description. Adding them to your Skills section improves ATS skill/keyword match.',
-    });
+      '',
+    improvedSummary,
+    targetRole,
+    experience:
+      crossDomain && expBullet
+        ? { originalText: expBullet.originalText, optimizedText: expBullet.optimizedText }
+        : null,
+    existing: suggestions,
+  });
+  for (const item of coverage) {
+    suggestions.unshift({ ...item, impact: item.impact });
   }
 
+  const honestSkillMatch = skillMatchScore(matchedFromJd, jdSkills);
+  const keywordMatch = crossDomain
+    ? Math.min(aiResult.keywordMatch ?? 0, 20)
+    : (aiResult.keywordMatch ?? 0);
+  const sectionScores = computeSectionScoresFromContent({
+    resumeText,
+    skillMatch: honestSkillMatch,
+    keywordMatch,
+  });
+
+  const optimizedSummary =
+    improvedSummary ||
+    (crossDomain && targetRole
+      ? `Professional targeting ${targetRole}, bringing transferable strengths from prior experience. Eager to apply proven collaboration and execution skills to ${targetRole} responsibilities.`
+      : '');
+
+  // Never invent a stub as optimizedResumeText — incomplete AI text blanks the resume.
+  // Summary/skills suggestions stay in optimizedSections / suggestions only.
   return {
     ...aiResult,
     skillAnalysis,
     missingKeywords,
     suggestions,
+    optimizedResumeText: aiResult.optimizedResumeText ?? '',
     optimizedSections: {
       ...aiResult.optimizedSections,
+      professionalSummary:
+        aiResult.optimizedSections?.professionalSummary?.trim() || optimizedSummary,
       skills: normalizeProfessionalSkills([
         ...(aiResult.optimizedSections?.skills ?? []),
         ...matchedFromJd,
       ]).filter((skill) => termAppearsIn(resumeText, skill)),
     },
+    improvedSummary: aiResult.improvedSummary?.trim() || optimizedSummary,
     missingSkills: missingFromJd,
     improvedSkills: normalizeProfessionalSkills(aiResult.improvedSkills ?? []).filter((skill) =>
       termAppearsIn(resumeText, skill),
     ),
     recommendedSkillOrder: normalizeProfessionalSkills([...matchedFromJd, ...missingFromJd]),
-    skillMatch: skillMatchScore(matchedFromJd, jdSkills),
+    skillMatch: honestSkillMatch,
+    keywordMatch,
+    experienceRelevance: crossDomain ? 0 : (aiResult.experienceRelevance ?? 0),
+    sectionScores,
+    atsScore: crossDomain
+      ? Math.min(aiResult.atsScore ?? 0, 35)
+      : (aiResult.atsScore ?? honestSkillMatch),
   };
 };
 
 export const resumeAnalysisAiClient = {
+  /**
+   * Cheap AI gate before full ATS analysis.
+   * Invalid role/JD → skip analyze so we never return a misleading score.
+   */
+  async validateTargetRoleAndJd(
+    targetRole: string,
+    jobDescription?: string,
+  ): Promise<{ valid: boolean; message: string }> {
+    const role = targetRole.trim();
+    const jd = (jobDescription ?? '').trim();
+    if (role.length < 2 || jd.length < 12) {
+      return { valid: false, message: INVALID_TARGET_MESSAGE };
+    }
+
+    const providers = getProviderFallbackChain();
+    if (providers.length === 0) {
+      // No keys — do not invent ATS; treat as invalid so UI can Oops safely.
+      return { valid: false, message: INVALID_TARGET_MESSAGE };
+    }
+
+    const { systemPrompt, userMessage } = buildTargetRoleJdValidationPrompt(role, jd);
+    let lastError: unknown;
+
+    for (const provider of providers) {
+      const models = getModelCandidates(provider).slice(0, 2);
+      for (const model of models) {
+        try {
+          logger.info({ provider, model }, 'Validating target role / JD before ATS analysis');
+          const rawText = await invokeProviderModel(provider, model, systemPrompt, userMessage);
+          if (isNonJsonModelOutput(rawText)) {
+            throw new SyntaxError('Non-JSON target validation response');
+          }
+          let jsonText = extractJsonObject(
+            rawText
+              .replace(/^```json\s*/i, '')
+              .replace(/```$/i, '')
+              .trim(),
+          );
+          try {
+            JSON.parse(jsonText);
+          } catch {
+            jsonText = tryRepairJson(jsonText);
+          }
+          const parsed = JSON.parse(jsonText) as { valid?: unknown; reason?: unknown };
+          const valid = parsed.valid === true;
+          const reason =
+            typeof parsed.reason === 'string' && parsed.reason.trim()
+              ? parsed.reason.trim()
+              : INVALID_TARGET_MESSAGE;
+          return {
+            valid,
+            message: valid ? '' : reason || INVALID_TARGET_MESSAGE,
+          };
+        } catch (err) {
+          lastError = err;
+          if (isProviderExhaustedError(err)) break;
+          logger.warn(
+            { err, provider, model },
+            'Target role/JD validation model failed; trying next',
+          );
+        }
+      }
+    }
+
+    logger.warn(
+      { err: lastError },
+      'Target role/JD validation failed for all providers — blocking analysis',
+    );
+    return { valid: false, message: INVALID_TARGET_MESSAGE };
+  },
+
   async analyze(
     resumeText: string,
     targetRole: string,
@@ -845,9 +952,7 @@ export const resumeAnalysisAiClient = {
             : Number(process.env.AI_RESUME_ANALYSIS_MAX_JD_CHARS || 5000);
 
         let safeResume = truncateForAi(resumeText, resumeLimit);
-        let safeJd = jobDescription
-          ? truncateForAi(jobDescription, jdLimit)
-          : jobDescription;
+        let safeJd = jobDescription ? truncateForAi(jobDescription, jdLimit) : jobDescription;
 
         const runOnce = async (resume: string, jd: string | undefined, useCompact: boolean) => {
           const { systemPrompt, userMessage } = buildResumeAnalysisPrompt(
@@ -874,7 +979,10 @@ export const resumeAnalysisAiClient = {
             );
           }
           let jsonText = extractJsonObject(
-            rawText.replace(/^```json\s*/i, '').replace(/```$/i, '').trim(),
+            rawText
+              .replace(/^```json\s*/i, '')
+              .replace(/```$/i, '')
+              .trim(),
           );
           try {
             JSON.parse(jsonText);
@@ -950,7 +1058,10 @@ export const resumeAnalysisAiClient = {
                 { err, provider, model },
                 'Compact JSON still truncated; retrying once with smaller input',
               );
-              safeResume = truncateForAi(safeResume, Math.max(1200, Math.floor(safeResume.length * 0.5)));
+              safeResume = truncateForAi(
+                safeResume,
+                Math.max(1200, Math.floor(safeResume.length * 0.5)),
+              );
               safeJd = safeJd
                 ? truncateForAi(safeJd, Math.max(600, Math.floor(safeJd.length * 0.5)))
                 : safeJd;
@@ -977,10 +1088,7 @@ export const resumeAnalysisAiClient = {
             message.includes('non-json') ||
             err instanceof SyntaxError
           ) {
-            logger.error(
-              { err, model, provider },
-              'Invalid resume analysis response',
-            );
+            logger.error({ err, model, provider }, 'Invalid resume analysis response');
             // Paid Gemini truncation: skip remaining OpenRouter free models → Groq.
             if (provider === 'openrouter' && !isFreeOpenRouterModel(model)) {
               logger.warn(

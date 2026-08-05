@@ -69,9 +69,11 @@ const mapLocation = (
   remote: boolean | null | undefined,
 ): NormalizedJob['location'] => {
   const rawLocation = cleanOptionalString(location);
+  const city = rawLocation ? rawLocation.split(',')[0]?.trim() : undefined;
 
   return {
     raw: rawLocation ?? '',
+    city,
     isRemote: remote === true,
   };
 };
@@ -79,8 +81,15 @@ const mapLocation = (
 const mapTags = (
   tags: string[] | null | undefined,
   jobTypes: string[] | null | undefined,
+  remote?: boolean | null,
+  providerName = 'arbeitnow',
 ): string[] => {
-  const values = [...(tags ?? []), ...(jobTypes ?? [])]
+  const values = [
+    ...(tags ?? []),
+    ...(jobTypes ?? []),
+    remote === true ? 'remote' : 'onsite',
+    providerName,
+  ]
     .map((value) => value.trim())
     .filter(Boolean);
 
@@ -103,7 +112,7 @@ export class ArbeitnowJobMapper implements IJobMapper<ArbeitnowJobPosting> {
 
     const description = stripHtml(raw.description) ?? '';
 
-    const tags = mapTags(raw.tags, raw.job_types);
+    const tags = mapTags(raw.tags, raw.job_types, raw.remote, providerName);
 
     const postedAt = toIsoDate(raw.created_at) ?? new Date().toISOString();
 

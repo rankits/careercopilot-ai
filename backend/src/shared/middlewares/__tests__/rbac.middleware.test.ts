@@ -23,9 +23,7 @@ const res = {} as Response;
 
 /** Awaits the async `.then().catch(next)` chain inside `requirePermission`
  * before asserting on how `next` was called. */
-const runAsyncMiddleware = (
-  run: (next: (err?: unknown) => void) => void,
-): Promise<unknown[]> =>
+const runAsyncMiddleware = (run: (next: (err?: unknown) => void) => void): Promise<unknown[]> =>
   new Promise((resolve) => {
     const calls: unknown[] = [];
     run((err) => {

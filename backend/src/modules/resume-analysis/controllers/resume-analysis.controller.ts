@@ -2,11 +2,7 @@ import { NextFunction, Request, Response } from 'express';
 import { resumeAnalysisService } from '@/modules/resume-analysis/services/resume-analysis.service.js';
 import { successResponse } from '@/shared/utils/response.js';
 
-export const startAnalysisController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const startAnalysisController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { targetRole, experienceLevel, jobDescription } = req.body as {
       targetRole: string;
@@ -27,11 +23,7 @@ export const startAnalysisController = async (
   }
 };
 
-export const getAnalysisController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getAnalysisController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     // Polling must never receive a stale 304 — status flips ANALYZING → COMPLETED.
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
@@ -71,11 +63,7 @@ export const getKeywordsController = async (req: Request, res: Response, next: N
   }
 };
 
-export const getSuggestionsController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getSuggestionsController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const suggestions = await resumeAnalysisService.getSuggestions(String(req.params.resumeId));
     return res.status(200).json(successResponse('Suggestions retrieved', suggestions));
@@ -90,9 +78,13 @@ export const applySuggestionController = async (
   next: NextFunction,
 ) => {
   try {
+    const preserveContent = Boolean(
+      (req.body as { preserveContent?: boolean } | undefined)?.preserveContent,
+    );
     const result = await resumeAnalysisService.applySuggestion(
       String(req.params.resumeId),
       Number(req.params.suggestionId),
+      { preserveContent },
     );
     return res.status(200).json(successResponse('Suggestion applied', result));
   } catch (error) {
@@ -116,11 +108,7 @@ export const ignoreSuggestionController = async (
   }
 };
 
-export const updateContentController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const updateContentController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const result = await resumeAnalysisService.updateContent(
       String(req.params.resumeId),
@@ -185,6 +173,19 @@ export const getSavedVersionController = async (
   try {
     const version = await resumeAnalysisService.getSavedVersion(Number(req.params.versionId));
     return res.status(200).json(successResponse('Saved resume retrieved', version));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const deleteSavedVersionController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    const result = await resumeAnalysisService.deleteSavedVersion(Number(req.params.versionId));
+    return res.status(200).json(successResponse('Saved resume deleted', result));
   } catch (error) {
     return next(error);
   }

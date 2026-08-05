@@ -27,9 +27,7 @@ export function useJobFeedSearchParams() {
 
   const state = useMemo<JobFeedUrlState>(() => {
     const sortRaw = searchParams.get('sortBy') ?? 'newest';
-    const sortBy = SORT_VALUES.has(sortRaw)
-      ? (sortRaw as JobFeedUrlState['sortBy'])
-      : 'newest';
+    const sortBy = SORT_VALUES.has(sortRaw) ? (sortRaw as JobFeedUrlState['sortBy']) : 'newest';
     const workMode = (searchParams.get('workMode') as JobFeedWorkMode) || 'all';
     const minSalaryRaw = searchParams.get('minSalary');
     const maxSalaryRaw = searchParams.get('maxSalary');
@@ -89,7 +87,6 @@ export function useJobFeedSearchParams() {
 
   const listParams = useMemo<ListJobsParams>(() => {
     const params: ListJobsParams = {
-      page: state.page,
       limit: state.limit,
       sortBy: state.sortBy,
       ...(state.query ? { query: state.query } : {}),
@@ -108,7 +105,7 @@ export function useJobFeedSearchParams() {
     if (state.workMode === 'internship') params.employmentTypes = 'INTERNSHIP';
 
     return params;
-  }, [state]);
+  }, [state.limit, state.maxSalary, state.minSalary, state.query, state.sortBy, state.workMode]);
 
   return { state, listParams, patch, clearAll };
 }

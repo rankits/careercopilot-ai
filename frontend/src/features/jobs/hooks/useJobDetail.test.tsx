@@ -76,4 +76,14 @@ describe('useJobDetail', () => {
     expect(result.current.error).toBeInstanceOf(JobNotFoundError);
     expect(getJobMock).toHaveBeenCalledTimes(1);
   });
+
+  it('retries transient errors once before giving up', async () => {
+    getJobMock.mockRejectedValue(new Error('network blip'));
+    const { result } = renderHook(() => useJobDetail('job-1'), { wrapper });
+
+    // The default retry delay (~1s) can exceed waitFor's 1s default, so give it room.
+    await waitFor(() => expect(result.current.isError).toBe(true), { timeout: 5000 });
+    // A transient error should trigger the bounded retry (at least one retry).
+    expect(getJobMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+  });
 });

@@ -45,10 +45,16 @@ export function GuestRoute() {
   return <Outlet />;
 }
 
+/**
+ * Guards the resume-upload/create-profile page. Only requires
+ * authentication - unlike `ProtectedRoute`, it does NOT redirect away once
+ * `isProfileComplete` is true, because that page doubles as "upload a new
+ * resume and replace my profile" for already-onboarded users (reachable via
+ * the header menu / Edit Profile page), not just first-time onboarding.
+ */
 export function OnboardingRoute() {
   const { isSessionResolved } = useAuthBootstrap();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
 
   if (!isSessionResolved) {
     return <RouteLoading />;
@@ -56,10 +62,6 @@ export function OnboardingRoute() {
 
   if (!isAuthenticated) {
     return <Navigate replace to={ROUTES.LOGIN} />;
-  }
-
-  if (isProfileComplete) {
-    return <Navigate replace to={ROUTES.JOB_FEED} />;
   }
 
   return <Outlet />;

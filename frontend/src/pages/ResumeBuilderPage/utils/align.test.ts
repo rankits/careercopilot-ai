@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { alignDraftSkillsToJob, alignDraftToJob } from './align';
+import { alignDraftToJob } from './align';
 import { createEmptyDraft } from './draft';
 
 describe('align utils', () => {
@@ -50,8 +50,17 @@ describe('align utils', () => {
     expect(aligned.summary).toBe(optimized);
   });
 
-  it('keeps deprecated alignDraftSkillsToJob alias working', () => {
-    const draft = createEmptyDraft('Engineer');
-    expect(alignDraftSkillsToJob(draft, { preferredSkills: ['Go'] }).skillsList).toContain('Go');
+  it('sets subtitle role from targetRole for cross-field JD', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      role: 'Registered Nurse',
+    };
+
+    const aligned = alignDraftToJob(draft, {
+      targetRole: 'Software Engineer',
+      jobDescription: 'Need React and TypeScript engineers',
+    });
+
+    expect(aligned.role).toBe('Software Engineer');
   });
 });

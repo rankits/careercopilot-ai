@@ -17,12 +17,44 @@ export default defineConfig({
   },
   test: {
     coverage: {
-      exclude: ['dist/**', 'node_modules/**', 'src/types/**', 'src/test/**'],
+      all: false,
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        // Boilerplate / non-testable code (standard practice to exclude):
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+        'src/assets/**',
+        '**/*.svg',
+        // Barrel re-export files:
+        '**/index.ts',
+        '**/index.tsx',
+        // CSS-in-JS / styled-component files:
+        '**/styles.ts',
+        '**/*.styles.ts',
+        '**/styles/**',
+        '**/stylePrimitives.ts',
+        // Library shims and types:
+        'src/lib/**',
+        'src/**/types/**',
+        'src/interfaces/**',
+        '**/*.interface.ts',
+        // Existing exclusions:
+        'dist/**',
+        'node_modules/**',
+        'src/test/**',
+      ],
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
     },
     environment: 'jsdom',
+    // Provide Vite env vars for unit tests (production builds must set these explicitly).
+    env: {
+      VITE_API_BASE_URL: 'http://localhost:5001/api/v1',
+      VITE_APP_NAME: 'CareerCopilot',
+      VITE_APP_ENV: 'test',
+      VITE_PUBLIC_APP_URL: 'http://localhost:3000',
+    },
     // Playwright specs live under e2e/ and must not be collected by Vitest.
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     // fileParallelism: false,

@@ -9,14 +9,8 @@ import {
   ProfileReviewSection,
   type ReviewField,
 } from '@/features/resume/components/ProfileReviewSection';
-import { ResumeSummary } from '@/features/resume/components/ResumeSummary';
-import { ResumeUpload } from '@/features/resume/components/ResumeUpload';
-
-import { useResumeParser } from '@/features/resume/hooks/useResumeParser';
-import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 
 import { ROUTES } from '@/constants/routes';
-import { setProfileComplete } from '@/features/auth/authSlice';
 import { resumeService } from '@/features/resume/services/resume.service';
 import {
   OnboardingPage,
@@ -31,15 +25,13 @@ import {
   mapFormValuesToProfileUpdate,
   mapProfileToFormValues,
 } from '@/features/resume/utils/profileFormMapper';
-import {
-  getProfileCompletion,
-  getResumePresentation,
-} from '@/features/resume/utils/resumePresentation';
+import { getProfileCompletion } from '@/features/resume/utils/resumePresentation';
 import {
   Alert,
   AutoAwesomeOutlinedIcon,
   AutoGraphOutlinedIcon,
   Box,
+  CloudUploadOutlinedIcon,
   Dialog,
   DialogActions,
   DialogContent,
@@ -102,7 +94,6 @@ const SECTIONS: Array<{
     title: 'Personal Information',
   },
   {
-    badge: 'AI Generated',
     fields: [
       { label: 'Current company', name: 'currentCompany' },
       { label: 'Current designation', name: 'designation', required: true },
@@ -114,7 +105,6 @@ const SECTIONS: Array<{
     title: 'Professional Profile',
   },
   {
-    badge: 'Auto-filled',
     fields: [{ label: 'Skills', multiline: true, name: 'skills', required: true }],
     icon: <AutoAwesomeOutlinedIcon fontSize="small" />,
     subtitle: 'Technologies and tools you are proficient in',
@@ -146,24 +136,22 @@ const SECTIONS: Array<{
   },
 ];
 
-interface ProfilePageProps {
-  mode?: 'edit' | 'onboarding';
-  onSave?: (values: ResumeProfileFormValues) => void | Promise<void>;
-}
-
 type Notice = { message: string; severity: 'error' | 'success' } | null;
 
-export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
-  const dispatch = useAppDispatch();
+/**
+ * Edits the caller's already-confirmed candidate profile. Deliberately has
+ * no resume-upload/parse state of its own (that belongs to the onboarding
+ * flow, `ProfilePage`) - this page only ever reads and writes the single
+ * existing `CandidateProfile` row via GET/PATCH `/resumes/profile/me`.
+ */
+export function EditProfilePage() {
   const navigate = useNavigate();
   const { showToast } = useToast();
-  const currentUser = useAppSelector((state) => state.auth.user);
   const [notice, setNotice] = useState<Notice>(null);
-  const [hasParsedResume, setHasParsedResume] = useState(false);
   const [expandedSection, setExpandedSection] = useState('Personal Information');
   const [pendingProfile, setPendingProfile] = useState<ResumeProfileFormValues | null>(null);
-  const [saveCompleted, setSaveCompleted] = useState(false);
-  const [isLoadingProfile, setIsLoadingProfile] = useState(mode === 'edit');
+  const [isLoadingProfile, setIsLoadingProfile] = useState(true);
+  const [profileMissing, setProfileMissing] = useState(false);
   const {
     formState: { errors },
     handleSubmit,
@@ -179,26 +167,27 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
   const hasRequiredManualDetails = REQUIRED_PROFILE_FIELDS.every(
     (field) => values[field].trim().length > 0,
   );
-  const canSubmit =
-    mode === 'edit' ? hasRequiredManualDetails : hasParsedResume || hasRequiredManualDetails;
-  const parser = useResumeParser((profile) => {
-    reset(profile);
-    setHasParsedResume(true);
-    setNotice({
-      message: 'Resume parsed. Review your details before continuing.',
-      severity: 'success',
-    });
-  });
-  const presentation = getResumePresentation(parser.metadata);
+  const canSubmit = !profileMissing && hasRequiredManualDetails;
 
   useEffect(() => {
-    if (mode !== 'edit') return;
     let cancelled = false;
 
     resumeService
       .getMyProfile()
       .then((profile) => {
-        if (cancelled || !profile) return;
+        if (cancelled) return;
+        if (!profile) {
+          // Routing normally keeps an incomplete-profile user out of this
+          // page entirely (see OnboardingRoute/ProtectedRoute), but the
+          // profile-complete flag can be stale (e.g. a second tab) - guard
+          // against presenting a form that would 404 on save.
+          setProfileMissing(true);
+          setNotice({
+            message: 'No profile found yet. Complete onboarding before editing your profile.',
+            severity: 'error',
+          });
+          return;
+        }
         reset(mapProfileToFormValues(profile));
       })
       .catch((error: unknown) => {
@@ -215,27 +204,14 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
     return () => {
       cancelled = true;
     };
-  }, [mode, reset]);
+  }, [reset]);
 
   const saveMutation = useMutation({
     mutationFn: async (profile: ResumeProfileFormValues) => {
-      if (onSave) await onSave(profile);
-      if (mode === 'edit') {
-        const result = await resumeService.updateProfile(mapFormValuesToProfileUpdate(profile));
-        return { message: result.message };
-      }
-      if (parser.resumeId) {
-        if (!currentUser) {
-          throw new Error('You must be signed in to confirm your profile.');
-        }
-        return resumeService.confirmProfile({ resumeId: parser.resumeId, userId: currentUser.id });
-      }
-      if (!onSave) {
-        throw new Error('Upload and parse a resume before saving your profile.');
-      }
-      return { message: 'Profile created successfully' };
+      const result = await resumeService.updateProfile(mapFormValuesToProfileUpdate(profile));
+      return { message: result.message };
     },
-    mutationKey: ['resume', mode === 'edit' ? 'update-profile' : 'confirm-profile'],
+    mutationKey: ['resume', 'update-profile'],
     onError: (error) => {
       showToast({
         message: error instanceof Error ? error.message : 'Unable to save your profile.',
@@ -245,22 +221,8 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
     onSuccess: ({ message }) => {
       setPendingProfile(null);
       showToast({ message, severity: 'success' });
-      if (mode === 'edit') return;
-      dispatch(setProfileComplete(true));
-      setSaveCompleted(true);
-      window.setTimeout(() => void navigate(ROUTES.JOB_FEED, { replace: true }), 800);
     },
   });
-
-  const clearProfile = () => {
-    parser.reset();
-    reset(DEFAULT_VALUES);
-    setHasParsedResume(false);
-    setExpandedSection('Personal Information');
-    setPendingProfile(null);
-    setSaveCompleted(false);
-    setNotice(null);
-  };
 
   const sectionStatus = (fields: ReviewField[]) => {
     const completed = fields.filter(({ name }) => values[name].trim()).length;
@@ -273,15 +235,23 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
         <OnboardingPageHeader>
           <Box>
             <Typography component="h1" fontWeight={700} variant="h4">
-              {mode === 'edit'
-                ? 'Update Your Professional Profile'
-                : "Let's Build Your Professional Profile"}
+              Update Your Professional Profile
             </Typography>
             <Typography color="text.secondary">
-              {mode === 'edit'
-                ? 'Review and update your details to keep your profile accurate and your job matches relevant.'
-                : 'Upload your resume or enter your details manually. Review and complete your profile to unlock personalized job matches and AI-powered career insights.'}
+              Review and update your details to keep your profile accurate and your job matches
+              relevant.
             </Typography>
+            <Box mt={spacing[3]}>
+              <Button
+                onClick={() => void navigate(ROUTES.PROFILE)}
+                size="small"
+                startIcon={<CloudUploadOutlinedIcon />}
+                type="button"
+                variant="outline"
+              >
+                Upload a new resume
+              </Button>
+            </Box>
           </Box>
           <Box>
             <Box display="flex" justifyContent="space-between" mb={spacing[2]}>
@@ -300,76 +270,67 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
           </Box>
         </OnboardingPageHeader>
 
+        {/* Only render the editable profile form after the profile has finished loading.
+            This ensures the form fields are populated via `reset(...)` before they are
+            mounted, avoiding timing issues in tests that assert on the field values. */}
         <ProfileReviewColumn>
-          <ResumeUpload
-            onRemove={clearProfile}
-            onUpload={parser.parse}
-            parseProgress={parser.parseProgress}
-            summary={
-              <ResumeSummary presentation={presentation} totalExperience={values.totalExperience} />
-            }
-          />
-
-          {parser.parseProgress?.requiresReview ? (
-            <Alert severity="warning">
-              Some extracted details need extra attention. Please review all information.
-            </Alert>
+          {!isLoadingProfile && !profileMissing ? (
+            <Box
+              component="form"
+              display="grid"
+              gap={spacing[3]}
+              id="profile-review-form"
+              noValidate
+              onSubmit={(event) => {
+                void handleSubmit(
+                  (profile) => setPendingProfile(profile),
+                  (validationErrors) => {
+                    const firstInvalid = SECTIONS.find((section) =>
+                      section.fields.some(({ name }) => Boolean(validationErrors[name])),
+                    );
+                    if (firstInvalid) setExpandedSection(firstInvalid.title);
+                  },
+                )(event);
+              }}
+            >
+              {SECTIONS.map((section) => (
+                <ProfileReviewSection
+                  {...section}
+                  errors={errors}
+                  expanded={expandedSection === section.title}
+                  key={section.title}
+                  onToggle={() =>
+                    setExpandedSection((current) =>
+                      current === section.title ? '' : section.title,
+                    )
+                  }
+                  register={register}
+                  status={sectionStatus(section.fields)}
+                />
+              ))}
+            </Box>
           ) : null}
-
-          <Box
-            component="form"
-            display="grid"
-            gap={spacing[3]}
-            id="profile-review-form"
-            noValidate
-            onSubmit={(event) => {
-              void handleSubmit(
-                (profile) => setPendingProfile(profile),
-                (validationErrors) => {
-                  const firstInvalid = SECTIONS.find((section) =>
-                    section.fields.some(({ name }) => Boolean(validationErrors[name])),
-                  );
-                  if (firstInvalid) setExpandedSection(firstInvalid.title);
-                },
-              )(event);
-            }}
-          >
-            {SECTIONS.map((section) => (
-              <ProfileReviewSection
-                {...section}
-                badge={hasParsedResume ? section.badge : undefined}
-                errors={errors}
-                expanded={expandedSection === section.title}
-                key={section.title}
-                onToggle={() =>
-                  setExpandedSection((current) => (current === section.title ? '' : section.title))
-                }
-                register={register}
-                status={sectionStatus(section.fields)}
-              />
-            ))}
-          </Box>
         </ProfileReviewColumn>
-
-        <ProfileStickyActions>
-          <Box alignItems="center" display="flex" flex={1} gap={spacing[2]}>
-            <SecurityOutlinedIcon color="primary" fontSize="small" />
-            <Typography color="text.secondary" variant="caption">
-              Your data is secure and only used to enhance your job match experience.
-            </Typography>
-          </Box>
-          <Button
-            disabled={isLoadingProfile || (mode !== 'edit' && saveCompleted) || !canSubmit}
-            form="profile-review-form"
-            isLoading={saveMutation.isPending}
-            size="medium"
-            sx={resumePrimaryActionSx}
-            type="submit"
-          >
-            {mode === 'edit' ? 'Save Changes' : 'Save Profile & Continue'}
-          </Button>
-        </ProfileStickyActions>
       </OnboardingPage>
+
+      <ProfileStickyActions>
+        <Box alignItems="center" display="flex" flex={1} gap={spacing[2]}>
+          <SecurityOutlinedIcon color="primary" fontSize="small" />
+          <Typography color="text.secondary" variant="caption">
+            Your data is secure and only used to enhance your job match experience.
+          </Typography>
+        </Box>
+        <Button
+          disabled={isLoadingProfile || !canSubmit}
+          form="profile-review-form"
+          isLoading={saveMutation.isPending}
+          size="medium"
+          sx={resumePrimaryActionSx}
+          type="submit"
+        >
+          Save Changes
+        </Button>
+      </ProfileStickyActions>
 
       <Dialog
         aria-describedby="confirm-profile-description"
@@ -380,14 +341,10 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
         open={Boolean(pendingProfile)}
         slotProps={{ paper: { sx: { borderRadius: borderRadius['2xl'], p: spacing[2] } } }}
       >
-        <DialogTitle id="confirm-profile-title">
-          {mode === 'edit' ? 'Confirm Profile Changes' : 'Confirm Profile Submission'}
-        </DialogTitle>
+        <DialogTitle id="confirm-profile-title">Confirm Profile Changes</DialogTitle>
         <DialogContent>
           <DialogContentText id="confirm-profile-description">
-            {mode === 'edit'
-              ? 'Please review your updated details before saving these changes to your profile.'
-              : 'Please review your profile information before continuing. Once submitted, this information will be used to complete your onboarding. You can edit it later if allowed.'}
+            Please review your updated details before saving these changes to your profile.
           </DialogContentText>
         </DialogContent>
         <DialogActions sx={{ gap: spacing[2], p: spacing[3] }}>
@@ -402,13 +359,13 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
           <Button
             isLoading={saveMutation.isPending}
             onClick={() => {
-              if (pendingProfile && !saveMutation.isPending && !saveCompleted) {
+              if (pendingProfile && !saveMutation.isPending) {
                 saveMutation.mutate(pendingProfile);
               }
             }}
             type="button"
           >
-            {mode === 'edit' ? 'Confirm & Save' : 'Save & Continue'}
+            Confirm & Save
           </Button>
         </DialogActions>
       </Dialog>

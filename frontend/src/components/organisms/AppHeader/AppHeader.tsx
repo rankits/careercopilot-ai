@@ -1,6 +1,6 @@
 import { HeaderNotification, HeaderSearch, HeaderUserMenu } from '@/components/molecules';
 
-import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.svg';
+import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.png';
 
 import { HeaderActions, HeaderRoot, MobileLogo, SearchWrap } from './styles';
 
@@ -9,6 +9,7 @@ export interface AppHeaderProps {
   onLogoutClick?: () => void;
   onNotificationClick?: () => void;
   onSettingsClick?: () => void;
+  onUploadResumeClick?: () => void;
   onUserMenuClick?: () => void;
   searchPlaceholder?: string;
   userAvatarUrl?: string;
@@ -21,6 +22,7 @@ export function AppHeader({
   onLogoutClick,
   onNotificationClick,
   onSettingsClick,
+  onUploadResumeClick,
   onUserMenuClick,
   searchPlaceholder,
   userAvatarUrl,
@@ -43,6 +45,7 @@ export function AppHeader({
           onLogoutClick={onLogoutClick}
           onMenuClick={onUserMenuClick}
           onSettingsClick={onSettingsClick}
+          onUploadResumeClick={onUploadResumeClick}
           roleLabel={userRoleLabel}
         />
       </HeaderActions>
