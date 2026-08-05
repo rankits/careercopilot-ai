@@ -1,5 +1,11 @@
 import { ApprovedResumeVersionDto } from '@/modules/auto-apply/types/resume-version.types.js';
 
+export interface DeleteApprovedResumeVersionResult {
+  deleted: boolean;
+  newDefaultResumeVersionId: string | null;
+  newDefaultLabel: string | null;
+}
+
 export interface IApprovedResumeVersionRepository {
   findManyByUserId(userId: string): Promise<ApprovedResumeVersionDto[]>;
   findById(userId: string, id: string): Promise<ApprovedResumeVersionDto | null>;
@@ -16,7 +22,7 @@ export interface IApprovedResumeVersionRepository {
     id: string,
     data: { label?: string; category?: string; tags?: string[]; isActive?: boolean },
   ): Promise<ApprovedResumeVersionDto>;
-  delete(userId: string, id: string): Promise<boolean>;
+  delete(userId: string, id: string): Promise<DeleteApprovedResumeVersionResult>;
 }
 
 /** Minimal read-only lookup this resource needs from the resumes domain —

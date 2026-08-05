@@ -3,75 +3,40 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
-import {
-  useApplicationRule,
-  useToggleAutopilotPause,
-  useUpsertApplicationRule,
-} from '@/features/auto-apply/hooks/useApplicationRule';
+import { useApplicationRule, useUpsertApplicationRule } from '@/features/auto-apply/hooks/useApplicationRule';
+import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 
-import { Alert, Box, CircularProgress, Paper, TextField, Typography } from '@/lib/material';
+import { Box, CircularProgress, Paper, Typography } from '@/lib/material';
+
+import { ChipListEditor } from './ChipListEditor';
 
 export function RulesTab() {
   const { data: rule, isLoading } = useApplicationRule();
   const upsertRule = useUpsertApplicationRule();
-  const togglePause = useToggleAutopilotPause();
   const { showToast } = useToast();
 
-  const [minMatchScore, setMinMatchScore] = useState('0.85');
-  const [dailyLimit, setDailyLimit] = useState('5');
-  const [weeklyLimit, setWeeklyLimit] = useState('');
-  const [blacklistedCompanies, setBlacklistedCompanies] = useState('');
-  const [excludedTitles, setExcludedTitles] = useState('');
-  const [excludedSources, setExcludedSources] = useState('');
+  const [companies, setCompanies] = useState<string[]>([]);
+  const [titleKeywords, setTitleKeywords] = useState<string[]>([]);
+  const [sources, setSources] = useState<string[]>([]);
 
   useEffect(() => {
     if (!rule) return;
-    setMinMatchScore(String(rule.minMatchScore));
-    setDailyLimit(String(rule.dailyApplicationLimit));
-    setWeeklyLimit(rule.weeklyApplicationLimit?.toString() ?? '');
-    setBlacklistedCompanies(rule.blacklistedCompanySlugs.join(', '));
-    setExcludedTitles(rule.excludedTitleKeywords.join(', '));
-    setExcludedSources(rule.excludedSources.join(', '));
+    setCompanies(rule.blacklistedCompanySlugs);
+    setTitleKeywords(rule.excludedTitleKeywords);
+    setSources(rule.excludedSources);
   }, [rule]);
 
   const handleSave = async () => {
     try {
       await upsertRule.mutateAsync({
-        minMatchScore: minMatchScore ? Number(minMatchScore) : undefined,
-        dailyApplicationLimit: dailyLimit ? Number(dailyLimit) : undefined,
-        weeklyApplicationLimit: weeklyLimit ? Number(weeklyLimit) : null,
-        blacklistedCompanySlugs: blacklistedCompanies
-          .split(',')
-          .map((value) => value.trim())
-          .filter(Boolean),
-        excludedTitleKeywords: excludedTitles
-          .split(',')
-          .map((value) => value.trim())
-          .filter(Boolean),
-        excludedSources: excludedSources
-          .split(',')
-          .map((value) => value.trim())
-          .filter(Boolean),
+        blacklistedCompanySlugs: companies,
+        excludedTitleKeywords: titleKeywords,
+        excludedSources: sources,
       });
-      showToast({ message: 'Rule configuration saved.', severity: 'success' });
+      showToast({ message: 'Exclusions saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : 'Unable to save rule configuration.',
-        severity: 'error',
-      });
-    }
-  };
-
-  const handleTogglePause = async () => {
-    try {
-      await togglePause.mutateAsync(!rule?.autopilotPausedAt);
-      showToast({
-        message: rule?.autopilotPausedAt ? 'Autopilot resumed.' : 'Autopilot paused.',
-        severity: 'success',
-      });
-    } catch (error) {
-      showToast({
-        message: error instanceof Error ? error.message : 'Unable to change autopilot pause state.',
+        message: error instanceof Error ? error.message : "We couldn't update your exclusions. Try again.",
         severity: 'error',
       });
     }
@@ -79,77 +44,49 @@ export function RulesTab() {
 
   if (isLoading) {
     return (
-      <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+      <Box aria-busy="true" aria-label="Loading exclusions" sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
         <CircularProgress size={28} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 640 }}>
-      <Alert severity="info">
-        Full autopilot submission is not enabled yet — these limits are the eligibility
-        engine&apos;s operational policy, and the pause switch works today regardless.
-      </Alert>
+    <Box
+      aria-labelledby="setup-exclusions-heading"
+      id="setup-section-exclusions"
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
+    >
+      <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }} variant="outlined">
+        <Typography component="h2" data-setup-heading id="setup-exclusions-heading" tabIndex={-1} variant="h6">
+          Exclusions
+        </Typography>
+        <Typography color="text.secondary" variant="body2">
+          Optional filters to keep certain companies, title keywords, or job sources out of Assisted Apply
+          recommendations.
+        </Typography>
 
-      <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
-        <Typography variant="h6">Eligibility &amp; autopilot policy</Typography>
-
-        <TextField
-          helperText="0.00 - 1.00"
-          label="Minimum match score"
-          onChange={(event) => setMinMatchScore(event.target.value)}
-          slotProps={{ htmlInput: { min: 0, max: 1, step: 0.01 } }}
-          type="number"
-          value={minMatchScore}
+        <ChipListEditor
+          id="excludedCompanies"
+          label="Companies to exclude"
+          onChange={setCompanies}
+          values={companies}
         />
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <TextField
-            label="Daily application limit"
-            onChange={(event) => setDailyLimit(event.target.value)}
-            type="number"
-            value={dailyLimit}
-          />
-          <TextField
-            label="Weekly application limit"
-            onChange={(event) => setWeeklyLimit(event.target.value)}
-            type="number"
-            value={weeklyLimit}
-          />
-        </Box>
-        <TextField
-          fullWidth
-          helperText="Comma-separated company slugs"
-          label="Blacklisted companies"
-          onChange={(event) => setBlacklistedCompanies(event.target.value)}
-          value={blacklistedCompanies}
+        <ChipListEditor
+          id="excludedTitleKeywords"
+          label="Title keywords to exclude"
+          onChange={setTitleKeywords}
+          values={titleKeywords}
         />
-        <TextField
-          fullWidth
-          helperText="Comma-separated keywords"
-          label="Excluded title keywords"
-          onChange={(event) => setExcludedTitles(event.target.value)}
-          value={excludedTitles}
-        />
-        <TextField
-          fullWidth
-          helperText="Comma-separated provider names"
-          label="Excluded sources"
-          onChange={(event) => setExcludedSources(event.target.value)}
-          value={excludedSources}
+        <ChipListEditor
+          id="excludedSources"
+          label="Sources to exclude"
+          onChange={setSources}
+          values={sources}
         />
 
-        <Box sx={{ display: 'flex', gap: 2 }}>
-          <Button isLoading={upsertRule.isPending} onClick={() => void handleSave()}>
-            Save configuration
-          </Button>
-          <Button
-            isLoading={togglePause.isPending}
-            onClick={() => void handleTogglePause()}
-            tone={rule?.autopilotPausedAt ? 'primary' : 'danger'}
-            variant="outline"
-          >
-            {rule?.autopilotPausedAt ? 'Resume autopilot' : 'Pause autopilot'}
+        <Box>
+          <Button isLoading={upsertRule.isPending} onClick={() => void handleSave()} sx={setupTouchTargetSx}>
+            Save exclusions
           </Button>
         </Box>
       </Paper>

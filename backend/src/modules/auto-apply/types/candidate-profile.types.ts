@@ -21,6 +21,10 @@ export interface CandidateApplicationPreferences {
   noticePeriodDays?: number;
   willingToRelocate?: boolean;
   requiresSponsorship?: boolean;
+  /** Candidate's current city or region (distinct from preferred job locations). */
+  currentLocation?: string;
+  /** ISO 3166-1 alpha-2 country code for the candidate's current location. */
+  currentCountry?: string;
 }
 
 export interface CandidateApplicationLinks {

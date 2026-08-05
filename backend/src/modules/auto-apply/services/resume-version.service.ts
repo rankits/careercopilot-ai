@@ -1,5 +1,6 @@
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import {
+  DeleteApprovedResumeVersionResult,
   IApprovedResumeVersionRepository,
   IResumeOwnershipLookup,
 } from '@/modules/auto-apply/contracts/resume-version.contract.js';
@@ -45,7 +46,7 @@ export class ApprovedResumeVersionService {
     return this.repository.update(userId, id, input);
   }
 
-  async deleteVersion(userId: string, id: string): Promise<boolean> {
+  async deleteVersion(userId: string, id: string): Promise<DeleteApprovedResumeVersionResult> {
     return this.repository.delete(userId, id);
   }
 }
