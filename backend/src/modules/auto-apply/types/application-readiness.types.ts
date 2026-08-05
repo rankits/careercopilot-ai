@@ -1,5 +1,7 @@
 export type ApplicationReadinessStage = 'PLAN' | 'APPROVE' | 'QUEUE' | 'SUBMIT';
 
+export type ApplyMode = 'PREPARE' | 'ASSISTED' | 'AUTOPILOT' | 'EXTENSION';
+
 export type ApplicationReadinessDecision =
   | 'READY'
   | 'INFORMATION_REQUIRED'
@@ -11,24 +13,20 @@ export type ApplicationReadinessDecision =
   | 'JOB_UNAVAILABLE'
   | 'FEATURE_DISABLED';
 
-export type ApplicationReadinessRuleStatus =
-  | 'PASSED'
-  | 'FAILED'
-  | 'NOT_APPLICABLE'
-  | 'UNKNOWN';
+export type ApplicationReadinessRuleStatus = 'PASSED' | 'FAILED' | 'NOT_APPLICABLE' | 'UNKNOWN';
 
 export type ApplicationReadinessSeverity = 'BLOCKING' | 'WARNING';
 
-export type ApplicationReadinessCollectionMode =
-  | 'ONBOARDING'
-  | 'PROGRESSIVE'
-  | 'JOB_SPECIFIC';
+export type ApplicationReadinessCollectionMode = 'ONBOARDING' | 'PROGRESSIVE' | 'JOB_SPECIFIC';
 
 export interface ApplicationReadinessInput {
   userId: string;
   jobId: string;
   jobApplicationId?: string;
   stage: ApplicationReadinessStage;
+  /** Controls match-score severity and future autopilot gates. */
+  applyMode?: ApplyMode;
+  applicationAnalysisId?: string;
 }
 
 export interface ApplicationReadinessReason {

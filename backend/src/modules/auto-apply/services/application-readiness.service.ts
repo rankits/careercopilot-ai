@@ -37,6 +37,8 @@ import {
   jobMatchesRemotePreferences,
   resolveRemotePreferences,
 } from '@/modules/auto-apply/utils/remote-preferences.util.js';
+import type { IApplicationPageAnalysisRepository } from '@/modules/auto-apply/contracts/application-page-analysis.contract.js';
+import { evaluateAnalysisAgainstCandidate } from '@/modules/auto-apply/services/analysis-requirement-evaluation.util.js';
 
 const BASELINE_REQUIRED_ANSWER_KEYS = ['work_authorization', 'notice_period_days'] as const;
 
@@ -62,10 +64,11 @@ export class ApplicationReadinessService implements IApplicationReadinessService
     private readonly matchScoreLookup: IMatchScoreLookup,
     private readonly trackerDuplicateLookup: ITrackerDuplicateLookup,
     private readonly eligibilityService: IEligibilityService,
+    private readonly analysisRepository?: IApplicationPageAnalysisRepository,
   ) {}
 
   async evaluate(input: ApplicationReadinessInput): Promise<ApplicationReadinessResult> {
-    const { userId, jobId, stage } = input;
+    const { userId, jobId, stage, applyMode } = input;
     const blockingReasons: ApplicationReadinessReason[] = [];
     const warnings: ApplicationReadinessReason[] = [];
     const evaluatedRules: Record<string, ApplicationReadinessRuleResult> = {};
@@ -78,7 +81,7 @@ export class ApplicationReadinessService implements IApplicationReadinessService
       details?: Record<string, unknown>,
     ) => {
       evaluatedRules[check] = { status: ruleStatus, ...(details ? { details } : {}) };
-      const severity = stageSeverity(check, stage);
+      const severity = stageSeverity(check, stage, applyMode);
       if (severity === 'SKIP') return;
       if (severity === 'WARNING') {
         warnings.push({ ...reason, severity: 'WARNING' });
@@ -366,6 +369,42 @@ export class ApplicationReadinessService implements IApplicationReadinessService
         }
       } else {
         evaluatedRules.locationRemote = { status: 'PASSED' };
+      }
+    }
+
+    let analysisRecord = null as Awaited<
+      ReturnType<NonNullable<IApplicationPageAnalysisRepository['findLatestByJobId']>>
+    >;
+    if (this.analysisRepository) {
+      analysisRecord = await this.analysisRepository.findLatestByJobId(jobId);
+    }
+
+    const analysisEval = evaluateAnalysisAgainstCandidate(
+      analysisRecord,
+      {
+        workRegionAnswer:
+          answerByKey.get('current_work_region')?.answer ??
+          answerByKey.get('work_region')?.answer ??
+          null,
+        yearsOfExperienceAnswer: answerByKey.get('years_of_experience')?.answer ?? null,
+        mobileDesignAnswer:
+          answerByKey.get('mobile_design_experience')?.answer ??
+          answerByKey.get('mobile_design_experience_years')?.answer ??
+          null,
+        portfolioUrl: profile?.links.portfolio ?? null,
+        requiresSponsorship: profile?.preferences.requiresSponsorship ?? null,
+      },
+      { requireFreshForAutopilot: applyMode === 'AUTOPILOT', now: evaluatedAt },
+    );
+    Object.assign(evaluatedRules, analysisEval.rules);
+    for (const reason of analysisEval.reasons) {
+      const check = (reason.rule ?? 'analysisAvailability') as Parameters<typeof stageSeverity>[0];
+      const policySeverity = stageSeverity(check, stage, applyMode);
+      if (policySeverity === 'SKIP') continue;
+      if (policySeverity === 'WARNING' || reason.severity === 'WARNING') {
+        warnings.push({ ...reason, severity: 'WARNING' });
+      } else {
+        blockingReasons.push({ ...reason, severity: 'BLOCKING' });
       }
     }
 

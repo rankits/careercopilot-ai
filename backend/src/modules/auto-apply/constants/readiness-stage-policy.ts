@@ -1,4 +1,7 @@
-import { ApplicationReadinessStage } from '@/modules/auto-apply/types/application-readiness.types.js';
+import {
+  ApplicationReadinessStage,
+  ApplyMode,
+} from '@/modules/auto-apply/types/application-readiness.types.js';
 
 export type ReadinessCheckSeverity = 'BLOCKING' | 'WARNING' | 'SKIP';
 
@@ -44,7 +47,57 @@ export const READINESS_STAGE_POLICY: Record<
     QUEUE: 'WARNING',
     SUBMIT: 'WARNING',
   },
-  matchScore: { PLAN: 'BLOCKING', APPROVE: 'BLOCKING', QUEUE: 'BLOCKING', SUBMIT: 'BLOCKING' },
+  /** Threshold: warning for assisted/prepare; Autopilot handled via applyMode override. */
+  matchScore: { PLAN: 'WARNING', APPROVE: 'WARNING', QUEUE: 'BLOCKING', SUBMIT: 'BLOCKING' },
+  analysisAvailability: {
+    PLAN: 'WARNING',
+    APPROVE: 'WARNING',
+    QUEUE: 'BLOCKING',
+    SUBMIT: 'BLOCKING',
+  },
+  analysisFreshness: {
+    PLAN: 'WARNING',
+    APPROVE: 'WARNING',
+    QUEUE: 'BLOCKING',
+    SUBMIT: 'BLOCKING',
+  },
+  analysisWorkRegion: {
+    PLAN: 'BLOCKING',
+    APPROVE: 'BLOCKING',
+    QUEUE: 'BLOCKING',
+    SUBMIT: 'BLOCKING',
+  },
+  analysisExperience: {
+    PLAN: 'BLOCKING',
+    APPROVE: 'BLOCKING',
+    QUEUE: 'BLOCKING',
+    SUBMIT: 'BLOCKING',
+  },
+  analysisMobileExperience: {
+    PLAN: 'BLOCKING',
+    APPROVE: 'BLOCKING',
+    QUEUE: 'BLOCKING',
+    SUBMIT: 'BLOCKING',
+  },
+  analysisPortfolio: {
+    PLAN: 'BLOCKING',
+    APPROVE: 'BLOCKING',
+    QUEUE: 'BLOCKING',
+    SUBMIT: 'BLOCKING',
+  },
+  analysisSponsorship: {
+    PLAN: 'BLOCKING',
+    APPROVE: 'BLOCKING',
+    QUEUE: 'BLOCKING',
+    SUBMIT: 'BLOCKING',
+  },
+  analysisChannel: { PLAN: 'BLOCKING', APPROVE: 'BLOCKING', QUEUE: 'BLOCKING', SUBMIT: 'BLOCKING' },
+  analysisWeakInference: {
+    PLAN: 'WARNING',
+    APPROVE: 'WARNING',
+    QUEUE: 'WARNING',
+    SUBMIT: 'WARNING',
+  },
   dailyLimit: { PLAN: 'WARNING', APPROVE: 'BLOCKING', QUEUE: 'BLOCKING', SUBMIT: 'BLOCKING' },
   weeklyLimit: { PLAN: 'WARNING', APPROVE: 'BLOCKING', QUEUE: 'BLOCKING', SUBMIT: 'BLOCKING' },
   consent: { PLAN: 'WARNING', APPROVE: 'BLOCKING', QUEUE: 'BLOCKING', SUBMIT: 'BLOCKING' },
@@ -56,6 +109,19 @@ export const READINESS_STAGE_POLICY: Record<
 export function stageSeverity(
   check: keyof typeof READINESS_STAGE_POLICY,
   stage: ApplicationReadinessStage,
+  applyMode?: ApplyMode,
 ): ReadinessCheckSeverity {
+  if (
+    applyMode === 'AUTOPILOT' &&
+    (check === 'matchScore' || check === 'matchScorePresence' || check === 'analysisFreshness')
+  ) {
+    return 'BLOCKING';
+  }
+  if (
+    (applyMode === 'PREPARE' || applyMode === 'ASSISTED' || applyMode === 'EXTENSION') &&
+    (check === 'matchScore' || check === 'matchScorePresence')
+  ) {
+    return 'WARNING';
+  }
   return READINESS_STAGE_POLICY[check][stage];
 }
