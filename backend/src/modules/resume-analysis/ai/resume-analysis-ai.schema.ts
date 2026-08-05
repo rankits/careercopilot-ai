@@ -52,12 +52,15 @@ export const resumeAnalysisAiSchema = z.object({
       matchedSkills: z.array(z.string()).catch([]),
       missingSkills: z.array(z.string()).catch([]),
       transferableSkills: z.array(z.string()).catch([]),
+      /** Resume skills not required by the JD (additional skills found). */
+      additionalSkills: z.array(z.string()).catch([]),
       recommendedSkills: z.array(z.string()).catch([]),
     })
     .catch({
       matchedSkills: [],
       missingSkills: [],
       transferableSkills: [],
+      additionalSkills: [],
       recommendedSkills: [],
     }),
 
@@ -141,6 +144,8 @@ export const resumeAnalysisAiSchema = z.object({
   recruiterReadability: percentageSchema.catch(0).optional(),
   interviewReadiness: percentageSchema.catch(0).optional(),
   missingSkills: z.array(z.string()).catch([]).optional(),
+  /** Alias list: resume skills beyond JD requirements. */
+  additionalSkillsFound: z.array(z.string()).catch([]).optional(),
   improvedSummary: z.string().catch('').optional(),
   improvedExperience: z.array(z.string()).catch([]).optional(),
   improvedProjects: z.array(z.string()).catch([]).optional(),

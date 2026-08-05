@@ -1,17 +1,29 @@
 import { Box, styled } from '@/lib/material';
 import { colorTokens } from '@/tokens';
 
+import { borderRadius, spacing } from './styles/shared';
+
 export const Root = styled(Box)({
-  background: 'radial-gradient(circle at 15% 0%, rgba(37, 99, 235, 0.08), transparent 28rem), #fff',
+  borderRadius: borderRadius['2xl'],
+  boxSizing: 'border-box',
   display: 'grid',
+  gap: spacing[3],
   marginInline: 'auto',
-  maxWidth: '100rem',
-  minHeight: 'calc(100vh - 4rem)',
+  maxWidth: 'min(100%, 100rem)',
+  minHeight: 0,
   minWidth: 0,
-  overflowX: 'hidden',
+  overflowX: 'clip',
+  overflowY: 'visible',
+  padding: `${spacing[4]} ${spacing[3]}`,
   width: '100%',
   '@media (max-width: 48rem)': {
-    minHeight: 'calc(100vh - 3.5rem)',
+    gap: spacing[2],
+    padding: `${spacing[3]} ${spacing[2]}`,
+  },
+  // Extreme browser zoom (e.g. 33%): keep layout fluid and prevent overflow breakage.
+  '@media (min-width: 120rem)': {
+    gap: spacing[4],
+    padding: `${spacing[4]} ${spacing[5]}`,
   },
   '& > *': {
     minWidth: 0,
@@ -19,14 +31,13 @@ export const Root = styled(Box)({
   },
 });
 
-/** Keeps Back / Save / Next + stepper visible while scrolling on mobile. */
+/** Header + stepper chrome (scrolls with the page). */
 export const StickyChrome = styled(Box)({
   background: colorTokens.backgroundCard,
-  position: 'sticky',
-  top: 0,
-  zIndex: 30,
-  '@media (max-width: 48rem)': {
-    boxShadow: '0 1px 0 rgba(15, 23, 42, 0.08)',
-    paddingTop: 'env(safe-area-inset-top, 0px)',
-  },
+  borderRadius: borderRadius['2xl'],
+  boxSizing: 'border-box',
+  maxWidth: '100%',
+  minWidth: 0,
+  overflow: 'hidden',
+  width: '100%',
 });

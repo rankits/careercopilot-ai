@@ -84,4 +84,33 @@ Java, Python
     const draft = parseResumeContent(SAMPLE_RESUME, 'Business Development Executive');
     expect(draft.role).toBe('Business Development Executive');
   });
+
+  it('recovers structured sections when resume has no standard headers', () => {
+    const messy = `
+Jordan Lee
+jordan@example.com
++1 555 0100
+
+Results-driven software engineer with 5 years building React and Node.js products for SaaS companies worldwide.
+
+Acme Labs - Software Engineer
+Jan 2021 - Present
+- Built customer dashboards with React and TypeScript
+- Improved API latency using Node.js and PostgreSQL
+
+B.Tech Computer Science, 2019
+
+Java, React, TypeScript, Node.js, Docker, AWS
+`;
+    const draft = parseResumeContent(messy, 'Software Engineer');
+
+    expect(draft.fullName).toMatch(/Jordan/i);
+    expect(draft.email).toMatch(/jordan@example.com/i);
+    expect(draft.summary.toLowerCase()).toMatch(/software engineer|react|node/);
+    expect(draft.skillsList).toEqual(
+      expect.arrayContaining(['Java', 'React', 'TypeScript', 'Docker', 'AWS']),
+    );
+    expect(draft.experiences.length).toBeGreaterThan(0);
+    expect(draft.education).toMatch(/Computer Science|B\.Tech/i);
+  });
 });

@@ -31,19 +31,35 @@ interface ResumeTemplatePreviewProps {
 }
 
 function toBullets(text: string): string[] {
-  return text
-    .split(/\n/)
-    .map((line) =>
-      line
-        .replace(/^[\s|]*[-*•●·▪▸►]+[\s·.•]*/g, '')
-        .replace(/^[\s·.•]+/g, '')
-        .replace(/\s+/g, ' ')
-        .trim(),
-    )
-    .filter(Boolean)
-    .filter(
-      (line) => !/^responsibilities:?$/i.test(line) && !/^tech\s*(used|stack):?$/i.test(line),
-    );
+  const normalized = text
+    .replace(/\r\n/g, '\n')
+    // Break inline bullet runs onto their own lines (common in OCR / pasted resumes).
+    .replace(/(?:^|\s)[•●▪▸►]\s+/g, '\n')
+    .replace(/(?:^|\s)[-*]\s+(?=[A-Z0-9])/g, '\n');
+
+  const out: string[] = [];
+  for (const raw of normalized.split(/\n/)) {
+    const line = raw
+      .replace(/^[\s|]*[-*•●·▪▸►]+[\s·.•]*/g, '')
+      .replace(/^[\s·.•]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!line) continue;
+    if (/^responsibilities:?$/i.test(line) || /^tech\s*(used|stack):?$/i.test(line)) continue;
+
+    const prev = out[out.length - 1];
+    const hadBullet = /^[\s|]*[-*•●·▪▸►]/.test(raw);
+    if (
+      prev &&
+      !hadBullet &&
+      (/^[a-z]/.test(line) || /[,;:/-]$/.test(prev) || (!/[.!?]$/.test(prev) && prev.length > 30))
+    ) {
+      out[out.length - 1] = `${prev} ${line}`.replace(/\s+/g, ' ').trim();
+      continue;
+    }
+    out.push(line);
+  }
+  return out;
 }
 
 function ContactRow({ contact }: { contact: string[] }) {
@@ -62,13 +78,13 @@ function SkillsBlock({ skills }: { skills: string[] }) {
   return (
     <Box className="block">
       <Typography className="heading">Skills</Typography>
-      <Box className="skills">
-        {skills.map((skill) => (
-          <span key={skill} className="skill">
+      <ul className="skills-list">
+        {skills.map((skill, index) => (
+          <li key={`${skill}-${index}`} className="skill-item">
             {skill}
-          </span>
+          </li>
         ))}
-      </Box>
+      </ul>
     </Box>
   );
 }
@@ -120,8 +136,8 @@ function EntryList({
             </Box>
             {bullets.length > 0 ? (
               <ul className="bullets">
-                {bullets.map((bullet) => (
-                  <li key={bullet}>{bullet}</li>
+                {bullets.map((bullet, index) => (
+                  <li key={`${entry.id}-b-${index}`}>{bullet}</li>
                 ))}
               </ul>
             ) : null}
@@ -265,7 +281,7 @@ type PageAtom = { top: number; bottom: number };
 function collectPageAtoms(container: HTMLElement): PageAtom[] {
   // Fine-grained units so we never slice mid-bullet / mid-heading.
   const nodes = container.querySelectorAll<HTMLElement>(
-    '.header, .entry, .entry-top, .bullets li, .skills, .block > .heading, .block > .body',
+    '.header, .entry, .entry-top, .bullets li, .skills-list, .skill-item, .block > .heading, .block > .body',
   );
   return Array.from(nodes)
     .map((el) => {
@@ -293,9 +309,7 @@ export function computePageOffsets(container: HTMLElement, pageInner: number): n
     const idealBreak = pageStart + pageInner;
     let breakAt = idealBreak;
 
-    const cut = atoms.find(
-      (atom) => atom.top < idealBreak - 0.5 && atom.bottom > idealBreak + 0.5,
-    );
+    const cut = atoms.find((atom) => atom.top < idealBreak - 0.5 && atom.bottom > idealBreak + 0.5);
 
     if (cut) {
       if (cut.top > pageStart + 4) {
@@ -337,7 +351,10 @@ export const ResumeTemplatePreview = forwardRef<HTMLDivElement, ResumeTemplatePr
     const role = draft.role || targetRole || 'Professional';
     const contact = [draft.email, draft.phone, draft.location, draft.linkedin].filter(Boolean);
     const contactKey = contact.join('|');
-    const showEmpty = !hasPreviewContent(draft);
+    const structuredReady = hasPreviewContent(draft);
+    const originalFallback = draft.originalText.trim();
+    const showEmpty =
+      template === 'original' ? !structuredReady && !originalFallback : !structuredReady;
     const measureRef = useRef<HTMLDivElement>(null);
     const scaleHostRef = useRef<HTMLDivElement>(null);
     const [pageOffsets, setPageOffsets] = useState<number[]>([0]);
@@ -380,16 +397,18 @@ export const ResumeTemplatePreview = forwardRef<HTMLDivElement, ResumeTemplatePr
     const pageCount = pageOffsets.length;
 
     const renderPaper = () => (
-      <Paper className={`template-${template}`}>
+      <Paper className={`template-${template}`} data-template={template}>
         {template === 'original' ? (
-          <Typography className="badge">Uploaded resume design</Typography>
+          <Typography className="badge">Default · your resume</Typography>
         ) : null}
         {showEmpty ? (
           <Typography className="empty">
             {template === 'original'
-              ? 'Your uploaded resume will appear here after analysis.'
+              ? 'Your uploaded resume will appear here after we parse Summary, Experience, Skills, and Projects.'
               : 'Add content on the left to preview.'}
           </Typography>
+        ) : template === 'original' && !structuredReady && originalFallback ? (
+          <Typography className="original-fallback">{originalFallback}</Typography>
         ) : (
           <StructuredResumeBody draft={draft} role={role} contact={contact} template={template} />
         )}
@@ -420,9 +439,7 @@ export const ResumeTemplatePreview = forwardRef<HTMLDivElement, ResumeTemplatePr
             {pageOffsets.map((offsetY, index) => {
               const nextOffset = pageOffsets[index + 1];
               const sliceHeight =
-                nextOffset != null
-                  ? Math.max(1, nextOffset - offsetY)
-                  : A4_PAGE_CONTENT_HEIGHT_PX;
+                nextOffset != null ? Math.max(1, nextOffset - offsetY) : A4_PAGE_CONTENT_HEIGHT_PX;
 
               return (
                 <Box
