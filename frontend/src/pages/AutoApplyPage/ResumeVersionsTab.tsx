@@ -9,13 +9,14 @@ import {
   useCreateResumeVersion,
   useDeleteResumeVersion,
   useResumeVersions,
+  useUpdateResumeVersion,
 } from '@/features/auto-apply/hooks/useResumeVersions';
+import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 
 import { ROUTES } from '@/constants/routes';
 import { hasAuthSession } from '@/features/auth/utils/authSession';
 import {
   Alert,
-  Autocomplete,
   Box,
   Chip,
   CircularProgress,
@@ -27,7 +28,7 @@ import {
   IconButton,
   Link,
   Paper,
-  TextField,
+  Skeleton,
   Typography,
 } from '@/lib/material';
 import {
@@ -35,18 +36,6 @@ import {
   type SavedResumeVersion,
   type UploadedResume,
 } from '@/services/resumeBuilder.service';
-
-const TAG_SUGGESTIONS = [
-  'backend',
-  'frontend',
-  'fullstack',
-  'mobile',
-  'design',
-  'product',
-  'data',
-  'devops',
-  'leadership',
-];
 
 interface SelectableResume {
   resumeId: string;
@@ -105,11 +94,11 @@ function buildSelectableResumes(
 export function ResumeVersionsTab() {
   const { data: versions, isLoading: approvedLoading } = useResumeVersions();
   const createVersion = useCreateResumeVersion();
+  const updateVersion = useUpdateResumeVersion();
   const deleteVersion = useDeleteResumeVersion();
   const { showToast } = useToast();
-  const [pendingResume, setPendingResume] = useState<SelectableResume | null>(null);
-  const [pendingTags, setPendingTags] = useState<string[]>([]);
-  const [approving, setApproving] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; label: string } | null>(null);
+  const [approvingId, setApprovingId] = useState<string | null>(null);
 
   const savedQuery = useQuery({
     enabled: hasAuthSession(),
@@ -135,80 +124,153 @@ export function ResumeVersionsTab() {
     [versions],
   );
 
-  const resumesLoading = savedQuery.isLoading || uploadedQuery.isLoading;
-  const resumesError = savedQuery.isError && uploadedQuery.isError;
+  const unapprovedCatalog = selectableResumes.filter(
+    (resume) => !approvedResumeIds.has(resume.resumeId),
+  );
 
-  const handleConfirmApprove = async () => {
-    if (!pendingResume) return;
-    setApproving(true);
+  const handleApprove = async (resume: SelectableResume) => {
+    setApprovingId(resume.resumeId);
     try {
       await createVersion.mutateAsync({
-        resumeId: pendingResume.resumeId,
-        label: pendingResume.defaultLabel,
-        category: pendingResume.defaultCategory,
-        tags: pendingTags,
+        resumeId: resume.resumeId,
+        label: resume.defaultLabel,
+        category: resume.defaultCategory,
+        tags: [],
       });
-      showToast({ message: 'Resume approved for Auto Apply.', severity: 'success' });
-      setPendingResume(null);
-      setPendingTags([]);
+      showToast({ message: 'Resume approved for Assisted Apply.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : 'Unable to approve this resume.',
+        message: error instanceof Error ? error.message : "We couldn't update your resumes. Try again.",
         severity: 'error',
       });
     } finally {
-      setApproving(false);
+      setApprovingId(null);
     }
   };
 
-  const handleDelete = async (id: string) => {
+  const handleSetDefault = async (id: string) => {
     try {
-      await deleteVersion.mutateAsync(id);
+      await updateVersion.mutateAsync({ id, isDefault: true });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : 'Unable to remove this resume version.',
+        message: error instanceof Error ? error.message : "We couldn't update your resumes. Try again.",
+        severity: 'error',
+      });
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) return;
+    try {
+      const result = await deleteVersion.mutateAsync(deleteTarget.id);
+      if (result.newDefaultLabel) {
+        showToast({
+          message: `Deleted. ${result.newDefaultLabel} is now your default.`,
+          severity: 'success',
+        });
+      } else {
+        showToast({ message: 'Resume removed from Assisted Apply.', severity: 'success' });
+      }
+      setDeleteTarget(null);
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : "We couldn't update your resumes. Try again.",
         severity: 'error',
       });
     }
   };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}>
+    <Box
+      aria-labelledby="setup-resumes-heading"
+      id="setup-section-resumes"
+      sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
+    >
       <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
-        <Typography variant="h6">Your resumes</Typography>
-        <Typography color="text.secondary" variant="body2">
-          Approve a resume and add tags (for example &quot;mobile&quot; or &quot;backend&quot;) so
-          we know when to use it. Manage files in{' '}
-          <Link component={RouterLink} to={ROUTES.SAVED_RESUMES} underline="hover">
-            Saved Resumes
-          </Link>{' '}
-          or build a new one in the{' '}
-          <Link component={RouterLink} to={ROUTES.RESUME_BUILDER} underline="hover">
-            Resume Builder
-          </Link>
-          .
+        <Typography component="h2" data-setup-heading id="setup-resumes-heading" tabIndex={-1} variant="h6">
+          Resumes
         </Typography>
 
-        {resumesLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-            <CircularProgress size={28} />
+        {approvedLoading ? (
+          <Box aria-busy="true" aria-label="Loading approved resumes">
+            {Array.from({ length: 2 }).map((_, index) => (
+              <Skeleton height={56} key={`resume-skeleton-${index}`} sx={{ mb: 1 }} />
+            ))}
           </Box>
-        ) : resumesError ? (
-          <Alert severity="error">Unable to load your resumes. Try again in a moment.</Alert>
-        ) : selectableResumes.length === 0 ? (
-          <Alert severity="info">
-            No resumes found yet.{' '}
-            <Link component={RouterLink} to={ROUTES.RESUME_BUILDER} underline="hover">
-              Upload or build a resume
-            </Link>{' '}
-            first, then come back to approve it here.
-          </Alert>
+        ) : !versions || versions.length === 0 ? (
+          <Box id="setup-field-defaultResume">
+            <Typography sx={{ mb: 1.5 }} variant="body2">
+              No approved resumes yet.
+            </Typography>
+            <Button component={RouterLink} sx={setupTouchTargetSx} to={ROUTES.RESUME_BUILDER} variant="outline">
+              Open Resume Builder
+            </Button>
+          </Box>
         ) : (
-          <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-            {selectableResumes.map((resume, index) => {
-              const alreadyApproved = approvedResumeIds.has(resume.resumeId);
-              return (
+          <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+            {versions.map((version, index) => (
+              <Box
+                component="li"
+                key={version.id}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  flexWrap: 'wrap',
+                  py: 1.5,
+                  borderTop: index === 0 ? 'none' : '1px solid',
+                  borderColor: 'divider',
+                }}
+              >
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography fontWeight={600} noWrap variant="body2">
+                    {version.label}
+                  </Typography>
+                  <Typography color="text.secondary" variant="caption">
+                    {version.category}
+                  </Typography>
+                </Box>
+                {version.isActive ? (
+                  <Chip aria-label="Default resume" color="primary" label="Default" size="small" />
+                ) : (
+                  <Button
+                    aria-label={`Set ${version.label} as default`}
+                    isLoading={updateVersion.isPending}
+                    onClick={() => void handleSetDefault(version.id)}
+                    size="small"
+                    sx={setupTouchTargetSx}
+                    variant="outline"
+                  >
+                    Set as default
+                  </Button>
+                )}
+                <IconButton
+                  aria-label={`Delete ${version.label} from Assisted Apply`}
+                  onClick={() => setDeleteTarget({ id: version.id, label: version.label })}
+                  sx={setupTouchTargetSx}
+                >
+                  <DeleteOutlineIcon fontSize="small" />
+                </IconButton>
+              </Box>
+            ))}
+          </Box>
+        )}
+      </Paper>
+
+      {unapprovedCatalog.length > 0 ? (
+        <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
+          <Typography component="h3" variant="subtitle1">
+            Approve from Resume Builder
+          </Typography>
+          {savedQuery.isLoading || uploadedQuery.isLoading ? (
+            <CircularProgress aria-label="Loading resume catalog" size={28} />
+          ) : savedQuery.isError && uploadedQuery.isError ? (
+            <Alert severity="error">Unable to load your resumes. Try again in a moment.</Alert>
+          ) : (
+            <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+              {unapprovedCatalog.map((resume, index) => (
                 <Box
+                  component="li"
                   key={resume.resumeId}
                   sx={{
                     display: 'flex',
@@ -223,142 +285,58 @@ export function ResumeVersionsTab() {
                     <Typography fontWeight={600} noWrap variant="body2">
                       {resume.title}
                     </Typography>
-                    {resume.subtitle && (
+                    {resume.subtitle ? (
                       <Typography color="text.secondary" noWrap variant="caption">
                         {resume.subtitle}
                       </Typography>
-                    )}
+                    ) : null}
                   </Box>
-                  {alreadyApproved ? (
-                    <Chip color="success" label="Approved" size="small" variant="outlined" />
-                  ) : (
-                    <Button
-                      onClick={() => {
-                        setPendingResume(resume);
-                        setPendingTags(
-                          resume.defaultCategory && resume.defaultCategory !== 'General'
-                            ? [resume.defaultCategory.toLowerCase()]
-                            : [],
-                        );
-                      }}
-                      size="small"
-                      variant="outline"
-                    >
-                      Approve
-                    </Button>
-                  )}
+                  <Button
+                    aria-label={`Approve ${resume.title}`}
+                    isLoading={approvingId === resume.resumeId}
+                    onClick={() => void handleApprove(resume)}
+                    size="small"
+                    sx={setupTouchTargetSx}
+                  >
+                    Approve
+                  </Button>
                 </Box>
-              );
-            })}
-          </Box>
-        )}
-      </Paper>
-
-      <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
-        <Typography variant="h6">Approved for Auto Apply</Typography>
-        <Typography color="text.secondary" variant="body2">
-          Tags help us match the right resume to a job (for example a mobile-tagged resume for a
-          mobile design role).
-        </Typography>
-
-        {approvedLoading ? (
-          <Box sx={{ display: 'flex', justifyContent: 'center', py: 3 }}>
-            <CircularProgress size={28} />
-          </Box>
-        ) : !versions || versions.length === 0 ? (
-          <Alert severity="info">No approved resume versions yet.</Alert>
-        ) : (
-          <Box>
-            {versions.map((version, index) => (
-              <Box
-                key={version.id}
-                sx={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 2,
-                  py: 1.5,
-                  borderTop: index === 0 ? 'none' : '1px solid',
-                  borderColor: 'divider',
-                }}
-              >
-                <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography fontWeight={600} noWrap variant="body2">
-                    {version.label}
-                  </Typography>
-                  <Typography color="text.secondary" variant="body2">
-                    {version.category}
-                  </Typography>
-                  {(version.tags?.length ?? 0) > 0 && (
-                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
-                      {version.tags.map((tag) => (
-                        <Chip key={tag} label={tag} size="small" variant="outlined" />
-                      ))}
-                    </Box>
-                  )}
-                </Box>
-                <Chip
-                  color={version.isActive ? 'success' : 'default'}
-                  label={version.isActive ? 'Active' : 'Inactive'}
-                  size="small"
-                  variant="outlined"
-                />
-                <IconButton
-                  aria-label="Remove approved resume"
-                  onClick={() => void handleDelete(version.id)}
-                  size="small"
-                >
-                  <DeleteOutlineIcon fontSize="small" />
-                </IconButton>
-              </Box>
-            ))}
-          </Box>
-        )}
-      </Paper>
+              ))}
+            </Box>
+          )}
+        </Paper>
+      ) : null}
 
       <Dialog
+        aria-describedby="delete-resume-description"
+        aria-labelledby="delete-resume-title"
         fullWidth
-        maxWidth="sm"
-        onClose={() => !approving && setPendingResume(null)}
-        open={Boolean(pendingResume)}
+        maxWidth="xs"
+        onClose={() => !deleteVersion.isPending && setDeleteTarget(null)}
+        open={Boolean(deleteTarget)}
       >
-        <DialogTitle>Approve resume</DialogTitle>
-        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
-          <Typography color="text.secondary" variant="body2">
-            {pendingResume?.title}
+        <DialogTitle id="delete-resume-title">Delete this resume from Assisted Apply?</DialogTitle>
+        <DialogContent>
+          <Typography id="delete-resume-description" variant="body2">
+            This won&apos;t delete it from Resume Builder.
           </Typography>
-          <Autocomplete
-            freeSolo
-            multiple
-            onChange={(_event, value) =>
-              setPendingTags(
-                value
-                  .map((item) => (typeof item === 'string' ? item : item).trim().toLowerCase())
-                  .filter(Boolean),
-              )
-            }
-            options={TAG_SUGGESTIONS}
-            renderInput={(params) => (
-              <TextField
-                {...params}
-                helperText="Add tags so we know when to use this resume"
-                label="Tags"
-              />
-            )}
-            renderTags={(value, getTagProps) =>
-              value.map((option, index) => {
-                const { key, ...tagProps } = getTagProps({ index });
-                return <Chip key={key} label={option} size="small" {...tagProps} />;
-              })
-            }
-            value={pendingTags}
-          />
         </DialogContent>
         <DialogActions>
-          <Button disabled={approving} onClick={() => setPendingResume(null)} variant="outline">
+          <Button
+            disabled={deleteVersion.isPending}
+            onClick={() => setDeleteTarget(null)}
+            sx={setupTouchTargetSx}
+            variant="outline"
+          >
             Cancel
           </Button>
-          <Button isLoading={approving} onClick={() => void handleConfirmApprove()}>
-            Approve
+          <Button
+            isLoading={deleteVersion.isPending}
+            onClick={() => void handleConfirmDelete()}
+            sx={setupTouchTargetSx}
+            tone="danger"
+          >
+            Delete
           </Button>
         </DialogActions>
       </Dialog>

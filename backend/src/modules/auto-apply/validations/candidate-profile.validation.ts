@@ -43,7 +43,14 @@ export const CandidateApplicationPreferencesSchema = z
     expectedSalary: SalaryRangeSchema.optional(),
     noticePeriodDays: z.number().int().min(0).max(365).optional(),
     willingToRelocate: z.boolean().optional(),
-    requiresSponsorship: z.boolean().optional(),
+    requiresSponsorship: z.boolean().nullish().optional(),
+    currentLocation: z.string().trim().min(2).max(120).optional(),
+    currentCountry: z
+      .string()
+      .trim()
+      .length(2)
+      .regex(/^[A-Z]{2}$/, 'currentCountry must be a 2-letter ISO country code')
+      .optional(),
   })
   .transform((value) => {
     let remotePreferences = value.remotePreferences ?? [];
@@ -64,6 +71,8 @@ export const CandidateApplicationPreferencesSchema = z
       noticePeriodDays: value.noticePeriodDays,
       willingToRelocate: value.willingToRelocate,
       requiresSponsorship: value.requiresSponsorship,
+      currentLocation: value.currentLocation,
+      currentCountry: value.currentCountry,
     };
   });
 
