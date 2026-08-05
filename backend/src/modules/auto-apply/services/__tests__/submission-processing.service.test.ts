@@ -75,6 +75,9 @@ describe('SubmissionProcessingService', () => {
         .mockImplementation((_userId, _id, data) =>
           Promise.resolve({ ...claimedApplication, status: data.status }),
         ),
+      countConsumedSince: vi.fn().mockResolvedValue(0),
+      updateMatchScore: vi.fn(),
+      queueAtomically: vi.fn(),
     };
     consentRepo = {
       findManyByUserId: vi.fn(),
@@ -117,6 +120,17 @@ describe('SubmissionProcessingService', () => {
     adapterRegistry = { get: vi.fn().mockReturnValue(mockAdapter) };
     eventService = { record: vi.fn().mockResolvedValue(undefined), listForUser: vi.fn() };
 
+    const readinessService = {
+      evaluate: vi.fn().mockResolvedValue({
+        decision: 'READY',
+        ready: true,
+        blockingReasons: [],
+        warnings: [],
+        evaluatedRules: {},
+        evaluatedAt: new Date(),
+      }),
+    };
+
     service = new SubmissionProcessingService(
       jobAppRepo,
       consentRepo,
@@ -124,6 +138,7 @@ describe('SubmissionProcessingService', () => {
       jobLookup,
       adapterRegistry,
       eventService,
+      readinessService,
     );
   });
 

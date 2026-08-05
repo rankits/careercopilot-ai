@@ -139,6 +139,9 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
         channel: data.channel as AutoApplyChannel,
         resumeVersionId: data.resumeVersionId,
         planInputsHash: data.planInputsHash,
+        ...(data.coverLetterContent !== undefined && {
+          coverLetterContent: data.coverLetterContent,
+        }),
         ...(hashChanged && { planVersion: { increment: 1 } }),
       },
     });
@@ -180,5 +183,116 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
       },
     });
     return toDto(record);
+  }
+
+  async countConsumedSince(userId: string, since: Date): Promise<number> {
+    return prisma.jobApplication.count({
+      where: {
+        userId,
+        status: {
+          in: ['QUEUED', 'SUBMITTING', 'SUBMITTED', 'CONFIRMATION_RECEIVED', 'ACTION_REQUIRED'],
+        },
+        OR: [{ queuedAt: { gte: since } }, { queuedAt: null, createdAt: { gte: since } }],
+      },
+    });
+  }
+
+  async updateMatchScore(
+    userId: string,
+    id: string,
+    matchScore: number,
+  ): Promise<JobApplicationDto> {
+    const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
+    if (!existing) {
+      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+    const record = await prisma.jobApplication.update({
+      where: { id: existing.id },
+      data: { matchScore },
+    });
+    return toDto(record);
+  }
+
+  async queueAtomically(
+    userId: string,
+    id: string,
+    limits: { dailyLimit: number; weeklyLimit: number | null },
+  ): Promise<JobApplicationDto> {
+    return prisma.$transaction(async (tx) => {
+      await tx.applicationRule.upsert({
+        where: { userId },
+        create: { userId },
+        update: {},
+      });
+      await tx.$queryRaw`SELECT id FROM application_rules WHERE user_id = ${userId} FOR UPDATE`;
+
+      const now = new Date();
+      const startOfDay = new Date(
+        Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+      );
+      const startOfWeek = new Date(startOfDay);
+      startOfWeek.setUTCDate(startOfWeek.getUTCDate() - startOfWeek.getUTCDay());
+
+      const existing = await tx.jobApplication.findFirst({ where: { id, userId } });
+      if (!existing) {
+        throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+      }
+      if (existing.status !== 'APPROVED' && existing.status !== 'SUBMISSION_FAILED') {
+        throw new AppError(
+          `Cannot queue submission from status ${existing.status}`,
+          409,
+          'INVALID_STATUS_TRANSITION',
+        );
+      }
+
+      const dailyUsed = await tx.jobApplication.count({
+        where: {
+          userId,
+          id: { not: id },
+          status: {
+            in: ['QUEUED', 'SUBMITTING', 'SUBMITTED', 'CONFIRMATION_RECEIVED', 'ACTION_REQUIRED'],
+          },
+          OR: [{ queuedAt: { gte: startOfDay } }, { queuedAt: null, createdAt: { gte: startOfDay } }],
+        },
+      });
+      if (dailyUsed >= limits.dailyLimit) {
+        throw new AppError(
+          `Daily application limit of ${limits.dailyLimit} has been reached.`,
+          409,
+          'READINESS_LIMIT_REACHED',
+          { code: 'DAILY_LIMIT_REACHED', used: dailyUsed, limit: limits.dailyLimit },
+        );
+      }
+
+      if (limits.weeklyLimit != null) {
+        const weeklyUsed = await tx.jobApplication.count({
+          where: {
+            userId,
+            id: { not: id },
+            status: {
+              in: ['QUEUED', 'SUBMITTING', 'SUBMITTED', 'CONFIRMATION_RECEIVED', 'ACTION_REQUIRED'],
+            },
+            OR: [
+              { queuedAt: { gte: startOfWeek } },
+              { queuedAt: null, createdAt: { gte: startOfWeek } },
+            ],
+          },
+        });
+        if (weeklyUsed >= limits.weeklyLimit) {
+          throw new AppError(
+            `Weekly application limit of ${limits.weeklyLimit} has been reached.`,
+            409,
+            'READINESS_LIMIT_REACHED',
+            { code: 'WEEKLY_LIMIT_REACHED', used: weeklyUsed, limit: limits.weeklyLimit },
+          );
+        }
+      }
+
+      const record = await tx.jobApplication.update({
+        where: { id: existing.id },
+        data: { status: 'QUEUED', queuedAt: now, failureCode: null, failureMessage: null },
+      });
+      return toDto(record);
+    });
   }
 }
