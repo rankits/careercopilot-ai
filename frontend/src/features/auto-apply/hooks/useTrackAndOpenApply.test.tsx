@@ -8,17 +8,55 @@ import { AutoApplyClientError } from '../utils/apiError';
 
 import { useTrackAndOpenApply } from './useTrackAndOpenApply';
 
-const { initiateMock, openExternalApplyMock, showToastMock, navigateMock } = vi.hoisted(() => ({
-  initiateMock: vi.fn(),
-  openExternalApplyMock: vi.fn(),
-  showToastMock: vi.fn(),
-  navigateMock: vi.fn(),
-}));
+const { initiateMock, createPlanMock, openExternalApplyMock, showToastMock, navigateMock } =
+  vi.hoisted(() => ({
+    initiateMock: vi.fn(),
+    createPlanMock: vi.fn(),
+    openExternalApplyMock: vi.fn(),
+    showToastMock: vi.fn(),
+    navigateMock: vi.fn(),
+  }));
 
 vi.mock('./useSubmissions', () => ({
   useInitiateSubmission: () => ({
     mutateAsync: initiateMock,
     isPending: false,
+  }),
+}));
+
+vi.mock('./usePlan', () => ({
+  useCreatePlan: () => ({
+    mutateAsync: createPlanMock,
+    isPending: false,
+  }),
+}));
+
+vi.mock('./useCandidateProfile', () => ({
+  useCandidateProfile: () => ({
+    data: {
+      preferences: {
+        desiredRoles: ['Engineer'],
+        preferredLocations: ['Remote'],
+        remotePreferences: ['REMOTE'],
+        expectedSalary: { currency: 'USD' },
+        noticePeriodDays: 0,
+      },
+      links: {},
+    },
+  }),
+}));
+
+vi.mock('./useResumeVersions', () => ({
+  useResumeVersions: () => ({
+    data: [
+      { id: 'r1', resumeId: 'res-1', label: 'Main', category: 'General', tags: [], isActive: true },
+    ],
+  }),
+}));
+
+vi.mock('./useConsents', () => ({
+  useConsents: () => ({
+    data: [{ id: 'c1', consentType: 'RESUME_USAGE', version: 1, grantedAt: '', revokedAt: null }],
   }),
 }));
 
@@ -52,15 +90,17 @@ function wrapper({ children }: { children: ReactNode }) {
 describe('useTrackAndOpenApply', () => {
   beforeEach(() => {
     initiateMock.mockReset();
+    createPlanMock.mockReset();
     openExternalApplyMock.mockReset();
     showToastMock.mockReset();
     navigateMock.mockReset();
     openExternalApplyMock.mockReturnValue(true);
+    createPlanMock.mockResolvedValue({});
   });
 
-  it('initiates tracking and navigates to Auto Apply submissions without opening external URL by default', async () => {
+  it('initiates tracking, auto-prepares review, and navigates without opening external URL by default', async () => {
     initiateMock.mockResolvedValue({
-      application: { id: 'app-1' },
+      application: { id: 'app-1', jobId: '157482e4-c26a-427f-a55d-08b330526f39' },
       possibleDuplicates: [],
     });
 
@@ -74,14 +114,15 @@ describe('useTrackAndOpenApply', () => {
     await waitFor(() => {
       expect(initiateMock).toHaveBeenCalledWith('157482e4-c26a-427f-a55d-08b330526f39');
     });
+    expect(createPlanMock).toHaveBeenCalledWith('157482e4-c26a-427f-a55d-08b330526f39');
     expect(openExternalApplyMock).not.toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith('/auto-apply?tab=submissions');
     expect(showToastMock).toHaveBeenCalledWith(expect.objectContaining({ severity: 'success' }));
   });
 
-  it('opens the external apply URL when openExternal is true', async () => {
+  it('opens external URL only when openExternal is true', async () => {
     initiateMock.mockResolvedValue({
-      application: { id: 'app-1' },
+      application: { id: 'app-1', jobId: 'job-1' },
       possibleDuplicates: [],
     });
 
@@ -93,29 +134,21 @@ describe('useTrackAndOpenApply', () => {
       openExternal: true,
     });
 
-    expect(openExternalApplyMock).toHaveBeenCalledWith('https://jobs.example.com/apply');
+    await waitFor(() => {
+      expect(openExternalApplyMock).toHaveBeenCalledWith('https://jobs.example.com/apply');
+    });
   });
 
-  it('treats APPLICATION_EXISTS as already tracked and still navigates', async () => {
+  it('treats APPLICATION_EXISTS as already tracked', async () => {
     initiateMock.mockRejectedValue(
-      new AutoApplyClientError('An auto-apply submission already exists for this job.', {
-        code: 'APPLICATION_EXISTS',
-        statusCode: 409,
-      }),
+      new AutoApplyClientError('Already tracking', { code: 'APPLICATION_EXISTS' }),
     );
 
     const { result } = renderHook(() => useTrackAndOpenApply(), { wrapper });
 
-    const outcome = await result.current.trackAndOpenApply({
-      jobId: 'job-1',
-      applyUrl: 'https://jobs.example.com/apply',
-    });
+    const outcome = await result.current.trackAndOpenApply({ jobId: 'job-1' });
 
-    expect(outcome).toEqual({
-      tracked: false,
-      alreadyTracked: true,
-      openedExternal: false,
-    });
+    expect(outcome.alreadyTracked).toBe(true);
     expect(navigateMock).toHaveBeenCalledWith('/auto-apply?tab=submissions');
   });
 });

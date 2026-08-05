@@ -14,6 +14,7 @@ describe('CandidateApplicationProfileService', () => {
       desiredRoles: ['Backend Engineer'],
       preferredLocations: ['Remote'],
       remotePreference: 'REMOTE',
+      remotePreferences: ['REMOTE'],
     },
     links: {},
     verification: {},

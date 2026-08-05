@@ -82,6 +82,9 @@ export interface IJobApplicationRepository {
     id: string,
     limits: { dailyLimit: number; weeklyLimit: number | null },
   ): Promise<JobApplicationDto>;
+  delete(userId: string, id: string): Promise<boolean>;
+  /** Resets a withdrawn submission so the same job can be applied again. */
+  reopenFromWithdrawn(userId: string, id: string): Promise<JobApplicationDto>;
 }
 
 export interface InitiateJobApplicationResult {
@@ -102,4 +105,6 @@ export interface IJobApplicationService {
     toStatus: JobApplicationStatus,
   ): Promise<JobApplicationDto>;
   withdraw(userId: string, id: string): Promise<JobApplicationDto>;
+  delete(userId: string, id: string): Promise<boolean>;
+  reopen(userId: string, id: string): Promise<JobApplicationDto>;
 }

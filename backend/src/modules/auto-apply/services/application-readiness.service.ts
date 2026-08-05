@@ -33,6 +33,10 @@ import {
   ApplicationReadinessStage,
   CONSUMED_APPLICATION_STATUSES,
 } from '@/modules/auto-apply/types/application-readiness.types.js';
+import {
+  jobMatchesRemotePreferences,
+  resolveRemotePreferences,
+} from '@/modules/auto-apply/utils/remote-preferences.util.js';
 
 const BASELINE_REQUIRED_ANSWER_KEYS = ['work_authorization', 'notice_period_days'] as const;
 
@@ -329,20 +333,16 @@ export class ApplicationReadinessService implements IApplicationReadinessService
     }
 
     if (profile) {
-      const remotePreference = profile.preferences.remotePreference;
-      if (
-        remotePreference &&
-        remotePreference !== 'ANY' &&
-        job.remoteType &&
-        job.remoteType.toUpperCase() !== remotePreference
-      ) {
+      const remoteMatch = jobMatchesRemotePreferences(job.remoteType, profile.preferences);
+      if (remoteMatch === 'FAILED') {
+        const modes = resolveRemotePreferences(profile.preferences).join(', ');
         if (profile.preferences.willingToRelocate === undefined) {
           push(
             'locationRemote',
             {
               code: READINESS_REASON_CODES.RELOCATION_PREFERENCE_MISSING,
               message:
-                'Remote preference does not match this job. Confirm whether you are willing to relocate.',
+                'Your workplace preferences do not match this job. Confirm whether you are willing to relocate.',
               field: 'willingToRelocate',
               rule: 'locationRemote',
               severity: 'BLOCKING',
@@ -355,7 +355,7 @@ export class ApplicationReadinessService implements IApplicationReadinessService
             'locationRemote',
             {
               code: READINESS_REASON_CODES.REMOTE_INCOMPATIBLE,
-              message: `Candidate requires ${remotePreference}, job is ${job.remoteType}, and relocation is declined.`,
+              message: `You accept ${modes}, this job is ${job.remoteType}, and relocation is declined.`,
               rule: 'locationRemote',
               severity: 'BLOCKING',
             },

@@ -12,11 +12,12 @@ function toDto(record: {
   resumeId: string;
   label: string;
   category: string;
+  tags: string[];
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }): ApprovedResumeVersionDto {
-  return { ...record };
+  return { ...record, tags: record.tags ?? [] };
 }
 
 export class PrismaApprovedResumeVersionRepository implements IApprovedResumeVersionRepository {
@@ -38,6 +39,7 @@ export class PrismaApprovedResumeVersionRepository implements IApprovedResumeVer
     resumeId: string;
     label: string;
     category: string;
+    tags: string[];
     isActive: boolean;
   }): Promise<ApprovedResumeVersionDto> {
     const record = await prisma.approvedResumeVersion.create({ data });
@@ -47,7 +49,7 @@ export class PrismaApprovedResumeVersionRepository implements IApprovedResumeVer
   async update(
     userId: string,
     id: string,
-    data: { label?: string; category?: string; isActive?: boolean },
+    data: { label?: string; category?: string; tags?: string[]; isActive?: boolean },
   ): Promise<ApprovedResumeVersionDto> {
     const existing = await prisma.approvedResumeVersion.findFirst({ where: { id, userId } });
     if (!existing) {

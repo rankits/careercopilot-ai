@@ -32,6 +32,7 @@ describe('EligibilityService', () => {
       desiredRoles: [],
       preferredLocations: [],
       remotePreference: 'REMOTE',
+      remotePreferences: ['REMOTE'],
       expectedSalary: { min: 120000 },
     },
     links: {},
@@ -103,7 +104,11 @@ describe('EligibilityService', () => {
   it('fails REMOTE_PREFERENCE when candidate requires ONSITE but job is REMOTE', async () => {
     vi.mocked(profileRepo.findByUserId).mockResolvedValue({
       ...completeProfile,
-      preferences: { ...completeProfile.preferences, remotePreference: 'ONSITE' },
+      preferences: {
+        ...completeProfile.preferences,
+        remotePreference: 'ONSITE',
+        remotePreferences: ['ONSITE'],
+      },
     });
     const result = await service.evaluateForJob('user-1', 'job-1');
     expect(result.eligible).toBe(false);

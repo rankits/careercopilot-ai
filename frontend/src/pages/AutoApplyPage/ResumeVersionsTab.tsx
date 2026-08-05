@@ -15,13 +15,19 @@ import { ROUTES } from '@/constants/routes';
 import { hasAuthSession } from '@/features/auth/utils/authSession';
 import {
   Alert,
+  Autocomplete,
   Box,
   Chip,
   CircularProgress,
   DeleteOutlineIcon,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Link,
   Paper,
+  TextField,
   Typography,
 } from '@/lib/material';
 import {
@@ -30,8 +36,19 @@ import {
   type UploadedResume,
 } from '@/services/resumeBuilder.service';
 
+const TAG_SUGGESTIONS = [
+  'backend',
+  'frontend',
+  'fullstack',
+  'mobile',
+  'design',
+  'product',
+  'data',
+  'devops',
+  'leadership',
+];
+
 interface SelectableResume {
-  /** Resume table UUID used by auto-apply approve API */
   resumeId: string;
   title: string;
   subtitle: string;
@@ -66,10 +83,6 @@ function toSelectableFromUpload(resume: UploadedResume): SelectableResume {
   };
 }
 
-/**
- * Prefer saved builder versions (what users see on Saved Resumes), then
- * include any uploaded resumes not already represented. Dedupes by resumeId.
- */
 function buildSelectableResumes(
   saved: SavedResumeVersion[] | undefined,
   uploaded: UploadedResume[] | undefined,
@@ -94,7 +107,9 @@ export function ResumeVersionsTab() {
   const createVersion = useCreateResumeVersion();
   const deleteVersion = useDeleteResumeVersion();
   const { showToast } = useToast();
-  const [approvingResumeId, setApprovingResumeId] = useState<string | null>(null);
+  const [pendingResume, setPendingResume] = useState<SelectableResume | null>(null);
+  const [pendingTags, setPendingTags] = useState<string[]>([]);
+  const [approving, setApproving] = useState(false);
 
   const savedQuery = useQuery({
     enabled: hasAuthSession(),
@@ -123,22 +138,26 @@ export function ResumeVersionsTab() {
   const resumesLoading = savedQuery.isLoading || uploadedQuery.isLoading;
   const resumesError = savedQuery.isError && uploadedQuery.isError;
 
-  const handleApprove = async (resume: SelectableResume) => {
-    setApprovingResumeId(resume.resumeId);
+  const handleConfirmApprove = async () => {
+    if (!pendingResume) return;
+    setApproving(true);
     try {
       await createVersion.mutateAsync({
-        resumeId: resume.resumeId,
-        label: resume.defaultLabel,
-        category: resume.defaultCategory,
+        resumeId: pendingResume.resumeId,
+        label: pendingResume.defaultLabel,
+        category: pendingResume.defaultCategory,
+        tags: pendingTags,
       });
-      showToast({ message: 'Resume approved for auto-apply.', severity: 'success' });
+      showToast({ message: 'Resume approved for Auto Apply.', severity: 'success' });
+      setPendingResume(null);
+      setPendingTags([]);
     } catch (error) {
       showToast({
         message: error instanceof Error ? error.message : 'Unable to approve this resume.',
         severity: 'error',
       });
     } finally {
-      setApprovingResumeId(null);
+      setApproving(false);
     }
   };
 
@@ -158,7 +177,8 @@ export function ResumeVersionsTab() {
       <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
         <Typography variant="h6">Your resumes</Typography>
         <Typography color="text.secondary" variant="body2">
-          Approve a resume for the planner to use. Manage files in{' '}
+          Approve a resume and add tags (for example &quot;mobile&quot; or &quot;backend&quot;) so
+          we know when to use it. Manage files in{' '}
           <Link component={RouterLink} to={ROUTES.SAVED_RESUMES} underline="hover">
             Saved Resumes
           </Link>{' '}
@@ -213,8 +233,14 @@ export function ResumeVersionsTab() {
                     <Chip color="success" label="Approved" size="small" variant="outlined" />
                   ) : (
                     <Button
-                      isLoading={approvingResumeId === resume.resumeId}
-                      onClick={() => void handleApprove(resume)}
+                      onClick={() => {
+                        setPendingResume(resume);
+                        setPendingTags(
+                          resume.defaultCategory && resume.defaultCategory !== 'General'
+                            ? [resume.defaultCategory.toLowerCase()]
+                            : [],
+                        );
+                      }}
                       size="small"
                       variant="outline"
                     >
@@ -229,9 +255,10 @@ export function ResumeVersionsTab() {
       </Paper>
 
       <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
-        <Typography variant="h6">Approved for auto-apply</Typography>
+        <Typography variant="h6">Approved for Auto Apply</Typography>
         <Typography color="text.secondary" variant="body2">
-          The planner selects the active version in the matching category.
+          Tags help us match the right resume to a job (for example a mobile-tagged resume for a
+          mobile design role).
         </Typography>
 
         {approvedLoading ? (
@@ -261,6 +288,13 @@ export function ResumeVersionsTab() {
                   <Typography color="text.secondary" variant="body2">
                     {version.category}
                   </Typography>
+                  {(version.tags?.length ?? 0) > 0 && (
+                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mt: 0.5 }}>
+                      {version.tags.map((tag) => (
+                        <Chip key={tag} label={tag} size="small" variant="outlined" />
+                      ))}
+                    </Box>
+                  )}
                 </Box>
                 <Chip
                   color={version.isActive ? 'success' : 'default'}
@@ -280,6 +314,54 @@ export function ResumeVersionsTab() {
           </Box>
         )}
       </Paper>
+
+      <Dialog
+        fullWidth
+        maxWidth="sm"
+        onClose={() => !approving && setPendingResume(null)}
+        open={Boolean(pendingResume)}
+      >
+        <DialogTitle>Approve resume</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+          <Typography color="text.secondary" variant="body2">
+            {pendingResume?.title}
+          </Typography>
+          <Autocomplete
+            freeSolo
+            multiple
+            onChange={(_event, value) =>
+              setPendingTags(
+                value
+                  .map((item) => (typeof item === 'string' ? item : item).trim().toLowerCase())
+                  .filter(Boolean),
+              )
+            }
+            options={TAG_SUGGESTIONS}
+            renderInput={(params) => (
+              <TextField
+                {...params}
+                helperText="Add tags so we know when to use this resume"
+                label="Tags"
+              />
+            )}
+            renderTags={(value, getTagProps) =>
+              value.map((option, index) => {
+                const { key, ...tagProps } = getTagProps({ index });
+                return <Chip key={key} label={option} size="small" {...tagProps} />;
+              })
+            }
+            value={pendingTags}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button disabled={approving} onClick={() => setPendingResume(null)} variant="outline">
+            Cancel
+          </Button>
+          <Button isLoading={approving} onClick={() => void handleConfirmApprove()}>
+            Approve
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 }

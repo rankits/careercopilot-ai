@@ -1,14 +1,16 @@
 import { useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { Box, Tab, Tabs, Typography } from '@/lib/material';
+import { useCandidateProfile } from '@/features/auto-apply/hooks/useCandidateProfile';
+import { useConsents } from '@/features/auto-apply/hooks/useConsents';
+import { useResumeVersions } from '@/features/auto-apply/hooks/useResumeVersions';
+
+import { getAutoApplySetupGaps } from '@/features/auto-apply/utils/setupCompleteness';
+import { Alert, Box, MuiButton, Tab, Tabs, Typography } from '@/lib/material';
 
 import { AnswersTab } from './AnswersTab';
 import { ConsentsTab } from './ConsentsTab';
-import {
-  answerKeyForMissingField,
-  type AutoApplyTabId,
-} from './missingFieldNavigation';
+import { answerKeyForMissingField, type AutoApplyTabId } from './missingFieldNavigation';
 import { ProfileTab } from './ProfileTab';
 import { ResumeVersionsTab } from './ResumeVersionsTab';
 import { RulesTab } from './RulesTab';
@@ -39,6 +41,11 @@ export function AutoApplyPage() {
     tabFromSearchParam(searchParams.get('tab')),
   );
   const [suggestedAnswerKey, setSuggestedAnswerKey] = useState<string | undefined>();
+
+  const { data: profile } = useCandidateProfile();
+  const { data: resumes } = useResumeVersions();
+  const { data: consents } = useConsents();
+  const setupGaps = getAutoApplySetupGaps({ profile, resumes, consents });
 
   const selectTab = (tab: AutoApplyTabId) => {
     setSuggestedAnswerKey(undefined);
@@ -72,11 +79,25 @@ export function AutoApplyPage() {
       <Typography sx={{ mb: 0.5 }} variant="h4">
         Auto Apply
       </Typography>
-      <Typography color="text.secondary" sx={{ mb: 3 }} variant="body1">
-        Set up your profile, verified answers, and rules, then track jobs and review generated
-        application plans. Nothing is ever submitted without your review — full autopilot is not
-        enabled yet.
+      <Typography color="text.secondary" sx={{ mb: 2 }} variant="body1">
+        Finish your setup once, then track jobs. We prepare each application review automatically —
+        nothing is submitted without your approval.
       </Typography>
+
+      {setupGaps.length > 0 && (
+        <Alert
+          action={
+            <MuiButton color="inherit" onClick={() => selectTab(setupGaps[0]!.tab)} size="small">
+              Fix next
+            </MuiButton>
+          }
+          severity="warning"
+          sx={{ mb: 2 }}
+        >
+          Complete these before Assisted Apply or tracking:{' '}
+          {setupGaps.map((gap) => gap.label).join(' · ')}
+        </Alert>
+      )}
 
       <Tabs
         aria-label="Auto Apply sections"

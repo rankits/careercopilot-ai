@@ -193,10 +193,37 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
   async queueAtomically(userId: string, id: string) {
     const record = this.findLiveRow(userId, id);
     if (record.status !== 'APPROVED' && record.status !== 'SUBMISSION_FAILED') {
-      throw Object.assign(new Error('invalid'), { code: 'INVALID_STATUS_TRANSITION', statusCode: 409 });
+      throw Object.assign(new Error('invalid'), {
+        code: 'INVALID_STATUS_TRANSITION',
+        statusCode: 409,
+      });
     }
     record.status = 'QUEUED';
     record.queuedAt = new Date();
+    return this.copy(record);
+  }
+  async delete(userId: string, id: string) {
+    const index = this.rows.findIndex((r) => r.userId === userId && r.id === id);
+    if (index < 0) {
+      throw Object.assign(new Error('not found'), {
+        code: 'APPLICATION_NOT_FOUND',
+        statusCode: 404,
+      });
+    }
+    this.rows.splice(index, 1);
+    return true;
+  }
+  async reopenFromWithdrawn(userId: string, id: string) {
+    const record = this.findLiveRow(userId, id);
+    if (record.status !== 'WITHDRAWN') {
+      throw Object.assign(new Error('invalid'), {
+        code: 'INVALID_STATUS_TRANSITION',
+        statusCode: 409,
+      });
+    }
+    record.status = 'DISCOVERED';
+    record.planVersion += 1;
+    record.updatedAt = new Date();
     return this.copy(record);
   }
 }
@@ -344,6 +371,7 @@ describe('Assisted-Apply (EXTERNAL_MANUAL) end-to-end happy path — AJA-QA-002'
         desiredRoles: ['Backend Engineer'],
         preferredLocations: [],
         remotePreference: 'ANY',
+        remotePreferences: ['REMOTE', 'HYBRID', 'ONSITE'],
         requiresSponsorship: false,
         willingToRelocate: false,
       },
@@ -586,7 +614,9 @@ describe('Assisted-Apply (EXTERNAL_MANUAL) end-to-end happy path — AJA-QA-002'
 
     await consentRepo.revoke(USER_ID, grantedConsent.id);
 
-    await expect(orchestrationService.queueForSubmission(USER_ID, applicationId)).rejects.toMatchObject({
+    await expect(
+      orchestrationService.queueForSubmission(USER_ID, applicationId),
+    ).rejects.toMatchObject({
       statusCode: 403,
       code: 'READINESS_CONSENT_REQUIRED',
     });

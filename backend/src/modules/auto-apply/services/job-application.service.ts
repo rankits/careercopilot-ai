@@ -51,11 +51,15 @@ export class JobApplicationService implements IJobApplicationService {
 
     const existingByJobId = await this.repository.findByUserIdAndJobId(userId, jobId);
     if (existingByJobId) {
+      if (existingByJobId.status === 'WITHDRAWN') {
+        const application = await this.reopen(userId, existingByJobId.id);
+        return { application, possibleDuplicates: [] };
+      }
       throw new AppError(
         'An auto-apply submission already exists for this job.',
         409,
         'APPLICATION_EXISTS',
-        { existingApplicationId: existingByJobId.id },
+        { existingApplicationId: existingByJobId.id, status: existingByJobId.status },
       );
     }
 
@@ -64,11 +68,15 @@ export class JobApplicationService implements IJobApplicationService {
       job.canonicalJobId,
     );
     if (existingByCanonicalId) {
+      if (existingByCanonicalId.status === 'WITHDRAWN') {
+        const application = await this.reopen(userId, existingByCanonicalId.id);
+        return { application, possibleDuplicates: [] };
+      }
       throw new AppError(
         'An auto-apply submission already exists for this job (matched via a different listing of the same posting).',
         409,
         'APPLICATION_EXISTS',
-        { existingApplicationId: existingByCanonicalId.id },
+        { existingApplicationId: existingByCanonicalId.id, status: existingByCanonicalId.status },
       );
     }
 
@@ -151,5 +159,13 @@ export class JobApplicationService implements IJobApplicationService {
 
   async withdraw(userId: string, id: string): Promise<JobApplicationDto> {
     return this.transitionStatus(userId, id, 'WITHDRAWN');
+  }
+
+  async delete(userId: string, id: string): Promise<boolean> {
+    return this.repository.delete(userId, id);
+  }
+
+  async reopen(userId: string, id: string): Promise<JobApplicationDto> {
+    return this.repository.reopenFromWithdrawn(userId, id);
   }
 }

@@ -40,6 +40,7 @@ describe('ApplicationReadinessService', () => {
       desiredRoles: ['Engineer'],
       preferredLocations: ['Remote'],
       remotePreference: 'ANY' as const,
+      remotePreferences: ['REMOTE', 'HYBRID', 'ONSITE'] as const,
       requiresSponsorship: false,
       willingToRelocate: false,
     },
@@ -125,6 +126,7 @@ describe('ApplicationReadinessService', () => {
           resumeId: 'r1',
           label: 'Primary',
           category: 'general',
+          tags: [],
           isActive: true,
           createdAt: new Date(),
           updatedAt: new Date(),
@@ -217,9 +219,9 @@ describe('ApplicationReadinessService', () => {
     });
     const result = await service.evaluate({ userId, jobId, stage: 'QUEUE' });
     expect(result.decision).toBe('FEATURE_DISABLED');
-    expect(result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.AUTO_APPLY_PAUSED)).toBe(
-      true,
-    );
+    expect(
+      result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.AUTO_APPLY_PAUSED),
+    ).toBe(true);
   });
 
   it('requires work authorization answer', async () => {
@@ -229,7 +231,9 @@ describe('ApplicationReadinessService', () => {
     const result = await service.evaluate({ userId, jobId, stage: 'PLAN' });
     expect(result.decision).toBe('INFORMATION_REQUIRED');
     expect(
-      result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.WORK_AUTHORIZATION_MISSING),
+      result.blockingReasons.some(
+        (r) => r.code === READINESS_REASON_CODES.WORK_AUTHORIZATION_MISSING,
+      ),
     ).toBe(true);
   });
 
@@ -261,9 +265,9 @@ describe('ApplicationReadinessService', () => {
     matchScore.findOverallScore.mockResolvedValue(null);
     const result = await service.evaluate({ userId, jobId, stage: 'PLAN' });
     expect(result.decision).toBe('READY');
-    expect(
-      result.warnings.some((r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_MISSING),
-    ).toBe(true);
+    expect(result.warnings.some((r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_MISSING)).toBe(
+      true,
+    );
     expect(
       result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_MISSING),
     ).toBe(false);
@@ -284,15 +288,17 @@ describe('ApplicationReadinessService', () => {
     expect(result.warnings.some((r) => r.code === READINESS_REASON_CODES.DAILY_LIMIT_REACHED)).toBe(
       true,
     );
-    expect(result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.DAILY_LIMIT_REACHED)).toBe(
-      false,
-    );
+    expect(
+      result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.DAILY_LIMIT_REACHED),
+    ).toBe(false);
   });
 
   it('requires consent at APPROVE but warns at PLAN', async () => {
     consentRepo.findActiveByType.mockResolvedValue(null);
     const plan = await service.evaluate({ userId, jobId, stage: 'PLAN' });
-    expect(plan.warnings.some((r) => r.code === READINESS_REASON_CODES.CONSENT_REQUIRED)).toBe(true);
+    expect(plan.warnings.some((r) => r.code === READINESS_REASON_CODES.CONSENT_REQUIRED)).toBe(
+      true,
+    );
 
     const approve = await service.evaluate({ userId, jobId, stage: 'APPROVE' });
     expect(approve.decision).toBe('CONSENT_REQUIRED');

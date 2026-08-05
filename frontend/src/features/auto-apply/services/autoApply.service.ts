@@ -152,6 +152,17 @@ export const autoApplyService = {
     return unwrapData(data, 'Missing submission data in API response');
   },
 
+  async deleteSubmission(id: string): Promise<void> {
+    await httpClient.delete(`/auto-apply/submissions/${id}`);
+  },
+
+  async reopenSubmission(id: string): Promise<JobApplicationDto> {
+    const { data } = await httpClient.post<BackendSuccessResponse<JobApplicationDto>>(
+      `/auto-apply/submissions/${id}/reopen`,
+    );
+    return unwrapData(data, 'Missing submission data in API response');
+  },
+
   async approveSubmission(id: string): Promise<JobApplicationDto> {
     const { data } = await httpClient.post<BackendSuccessResponse<JobApplicationDto>>(
       `/auto-apply/submissions/${id}/approve`,
