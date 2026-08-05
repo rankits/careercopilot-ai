@@ -31,6 +31,11 @@ describe('Sidebar', () => {
       'href',
       '/applications',
     );
+    expect(screen.getByRole('link', { name: /^Application Setup$/i })).toHaveAttribute(
+      'href',
+      '/auto-apply',
+    );
+    expect(screen.queryByRole('link', { name: /^Auto Apply$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /download latest/i })).toBeInTheDocument();
     expect(screen.getByText(/no resume uploaded yet/i)).toBeInTheDocument();
   });
