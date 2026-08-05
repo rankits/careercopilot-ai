@@ -9,6 +9,7 @@ import { globalRateLimiter } from '@/shared/middlewares/rateLimiter.js';
 import securityMiddlewares from '@/securityMiddlewares.js';
 import { prisma } from '@/shared/config/db.conf.js';
 import { cacheService } from '@/infrastructure/cache/index.js';
+import { messageBus } from '@/infrastructure/messaging/index.js';
 import { env } from '@/shared/config/env.conf.js';
 import { swaggerSpec } from '@/shared/config/swagger.conf.js';
 
@@ -22,18 +23,27 @@ app.disable('x-powered-by');
 /**
  * Combined liveness/readiness probe: verifies Postgres and the caching
  * layer are actually reachable, not just that the HTTP server is up.
+ * RabbitMQ is included when the API uses messaging in-process
+ * (ENABLE_EMAIL_WORKER) or when HEALTH_CHECK_RABBITMQ is explicitly enabled.
  * Suitable for both a Docker HEALTHCHECK and a Kubernetes readinessProbe.
  */
 app.get('/health', async (_req, res) => {
-  const [database, cache] = await Promise.allSettled([
+  const includeRabbitMq = env.ENABLE_EMAIL_WORKER || env.HEALTH_CHECK_RABBITMQ;
+
+  const [database, cache, messaging] = await Promise.allSettled([
     prisma.$queryRaw`SELECT 1`,
     cacheService.ping(),
+    includeRabbitMq ? messageBus.ping() : Promise.resolve(null),
   ]);
 
-  const checks = {
+  const checks: Record<string, 'ok' | 'down'> = {
     database: database.status === 'fulfilled' ? 'ok' : 'down',
     cache: cache.status === 'fulfilled' && cache.value ? 'ok' : 'down',
-  } as const;
+  };
+
+  if (includeRabbitMq) {
+    checks.rabbitmq = messaging.status === 'fulfilled' && messaging.value === true ? 'ok' : 'down';
+  }
 
   const healthy = Object.values(checks).every((status) => status === 'ok');
 

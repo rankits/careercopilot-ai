@@ -28,6 +28,8 @@ STATE_DIR="$BASE_DIR/state"
 LOGS_DIR="$BASE_DIR/logs"
 RELEASE_DIR="$RELEASES_DIR/$RELEASE_SHA"
 ENV_FILE="$SHARED_DIR/.env"
+# Keep one compose project across release dirs so host port 5001 is not contended.
+COMPOSE_PROJECT="career-copilot-backend"
 
 # Ensure required state and log directories exist
 mkdir -p "$STATE_DIR" "$LOGS_DIR" "$RELEASES_DIR"
@@ -88,36 +90,120 @@ NGINX_BACKUP="$STATE_DIR/nginx.conf.bak"
 NGINX_CHANGED="false"
 
 DEPLOY_SUCCESS="false"
+CURRENT_STEP="startup"
+FAILURE_EXIT_CODE=""
+FAILURE_LINE=""
+FAILURE_COMMAND=""
+FAILURE_REASON=""
+
+compose_in() {
+  local release_dir="$1"
+  local image_tag="$2"
+  shift 2
+  (
+    cd "$release_dir"
+    export BACKEND_IMAGE="$image_tag"
+    docker compose -p "$COMPOSE_PROJECT" -f compose.yaml "$@"
+  )
+}
+
+# Tear down a release stack. Also clears legacy project names that used the
+# release directory basename (those left 127.0.0.1:5001 allocated across deploys).
+stop_release_stack() {
+  local release_dir="$1"
+  local image_tag="${2:-$IMAGE_TAG}"
+  if [[ -z "$release_dir" || ! -d "$release_dir" || ! -f "$release_dir/compose.yaml" ]]; then
+    return 0
+  fi
+  local legacy_project
+  legacy_project="$(basename "$release_dir")"
+  (
+    cd "$release_dir"
+    export BACKEND_IMAGE="${image_tag:-placeholder}"
+    docker compose -p "$COMPOSE_PROJECT" -f compose.yaml down --remove-orphans || true
+    if [[ "$legacy_project" != "$COMPOSE_PROJECT" ]]; then
+      docker compose -p "$legacy_project" -f compose.yaml down --remove-orphans || true
+    fi
+  ) || true
+}
+
+on_error() {
+  local exit_code=$?
+  FAILURE_EXIT_CODE="$exit_code"
+  FAILURE_LINE="${BASH_LINENO[0]:-unknown}"
+  FAILURE_COMMAND="${BASH_COMMAND:-unknown}"
+  FAILURE_REASON="Step '${CURRENT_STEP}' failed (exit ${exit_code}) at line ${FAILURE_LINE}: ${FAILURE_COMMAND}"
+  echo "!!! FAILURE DETECTED: ${FAILURE_REASON}" >&2
+}
+
+print_failure_diagnostics() {
+  echo "!!! -------------------- DEPLOYMENT FAILURE DETAILS --------------------" >&2
+  echo "!!! Reason: ${FAILURE_REASON:-unknown failure (script exited before success)}" >&2
+  echo "!!! Failed step: ${CURRENT_STEP}" >&2
+  echo "!!! Target image: ${IMAGE_TAG}" >&2
+  echo "!!! Target release: ${RELEASE_SHA}" >&2
+  echo "!!! Release dir: ${RELEASE_DIR}" >&2
+  if [[ -n "${CURRENT_IMAGE}" ]]; then
+    echo "!!! Rolling back toward: release=${CURRENT_RELEASE} image=${CURRENT_IMAGE}" >&2
+  else
+    echo "!!! No previous stable release recorded — rollback may be limited." >&2
+  fi
+  echo "!!! -------------------------------------------------------------------" >&2
+
+  echo ">>> Container status at failure:" >&2
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" ps -a >&2 || true
+
+  echo ">>> Recent api logs:" >&2
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=80 api >&2 || true
+
+  echo ">>> Recent outbox-relay logs:" >&2
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=40 outbox-relay >&2 || true
+
+  echo ">>> Recent job-embedding-worker logs:" >&2
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=40 job-embedding-worker >&2 || true
+
+  echo ">>> Local health probe:" >&2
+  curl -sS -m 5 "http://127.0.0.1:5001/health" >&2 || echo "(health endpoint unreachable)" >&2
+  echo >&2
+}
 
 rollback() {
   echo "!!! Deployment failed! Initiating automatic rollback..." >&2
+  print_failure_diagnostics
+
+  echo ">>> Stopping failed release stack ($RELEASE_SHA) to free host ports..." >&2
+  stop_release_stack "$RELEASE_DIR" "$IMAGE_TAG"
+
   if [[ -n "$CURRENT_IMAGE" && -n "$CURRENT_RELEASE" && -d "$RELEASES_DIR/$CURRENT_RELEASE" ]]; then
-    echo ">>> Rolling back to previous stable release ($CURRENT_RELEASE) with image $CURRENT_IMAGE..."
-    (
-      cd "$RELEASES_DIR/$CURRENT_RELEASE"
-      export BACKEND_IMAGE="$CURRENT_IMAGE"
-      docker compose -f compose.yaml down --remove-orphans || true
-      docker compose -f compose.yaml up -d --remove-orphans || true
-    ) || true
+    echo ">>> Rolling back to previous stable release ($CURRENT_RELEASE) with image $CURRENT_IMAGE..." >&2
+    stop_release_stack "$RELEASES_DIR/$CURRENT_RELEASE" "$CURRENT_IMAGE"
+    compose_in "$RELEASES_DIR/$CURRENT_RELEASE" "$CURRENT_IMAGE" up -d --remove-orphans || true
+    echo ">>> Rollback containers restarted for release ${CURRENT_RELEASE}." >&2
+  else
+    echo "!!! Unable to roll back automatically: missing previous release/image state." >&2
   fi
 
   if [[ "$NGINX_CHANGED" == "true" && -f "$NGINX_BACKUP" ]]; then
-    echo ">>> Restoring previous Nginx configuration..."
+    echo ">>> Restoring previous Nginx configuration..." >&2
     sudo cp -f "$NGINX_BACKUP" "$NGINX_TARGET"
     sudo nginx -t && sudo systemctl reload nginx || true
   fi
-  echo "!!! Rollback completed." >&2
+  echo "!!! Rollback finished. See FAILURE DETAILS above for the root cause." >&2
 }
 
+trap on_error ERR
 trap 'if [[ "$DEPLOY_SUCCESS" != "true" ]]; then rollback; fi' EXIT
 
+CURRENT_STEP="validate-compose"
 echo ">>> Validating Docker Compose configuration..."
 export BACKEND_IMAGE="$IMAGE_TAG"
-docker compose -f compose.yaml config >/dev/null
+docker compose -p "$COMPOSE_PROJECT" -f compose.yaml config >/dev/null
 
+CURRENT_STEP="pull-image"
 echo ">>> Pulling exact SHA-tagged Docker image: $IMAGE_TAG..."
 docker pull "$IMAGE_TAG"
 
+CURRENT_STEP="prisma-migrate"
 echo ">>> Running Prisma migrations once before replacing healthy services..."
 docker run --rm \
   --env-file "$ENV_FILE" \
@@ -127,13 +213,26 @@ docker run --rm \
   "$IMAGE_TAG" npx prisma migrate deploy
 echo ">>> Prisma migrations completed successfully."
 
-echo ">>> Starting backend services with Docker Compose..."
-docker compose -f compose.yaml up -d --remove-orphans
+CURRENT_STEP="compose-up"
+# Previous releases used the directory name as the compose project, so both
+# stacks tried to bind 127.0.0.1:5001. Stop the live stack (and any half-created
+# target stack) before bringing the new release up under a fixed project name.
+if [[ -n "$CURRENT_RELEASE" && "$CURRENT_RELEASE" != "$RELEASE_SHA" ]]; then
+  echo ">>> Stopping current release ($CURRENT_RELEASE) to free 127.0.0.1:5001..."
+  stop_release_stack "$RELEASES_DIR/$CURRENT_RELEASE" "${CURRENT_IMAGE:-$IMAGE_TAG}"
+fi
+echo ">>> Clearing any leftover containers for project ${COMPOSE_PROJECT}..."
+stop_release_stack "$RELEASE_DIR" "$IMAGE_TAG"
 
+echo ">>> Starting backend services with Docker Compose (project=${COMPOSE_PROJECT})..."
+docker compose -p "$COMPOSE_PROJECT" -f compose.yaml up -d --remove-orphans
+
+CURRENT_STEP="health-check"
 echo ">>> Verifying container-local health endpoint..."
 ./health-check.sh
 
 # Synchronize Nginx configuration if changed
+CURRENT_STEP="nginx-sync"
 if [[ -f "$NGINX_TARGET" ]] && cmp -s "nginx.conf" "$NGINX_TARGET"; then
   echo ">>> Nginx configuration is unchanged. Skipping reload."
 else
@@ -151,11 +250,13 @@ else
     sudo systemctl reload nginx
     NGINX_CHANGED="true"
   else
-    echo "Error: Nginx validation failed! Aborting deployment." >&2
+    FAILURE_REASON="Nginx validation failed after copying nginx.conf (step=nginx-sync)"
+    echo "Error: ${FAILURE_REASON}" >&2
     exit 1
   fi
 fi
 
+CURRENT_STEP="record-state"
 echo ">>> Recording successful deployment state..."
 if [[ -n "$CURRENT_IMAGE" ]]; then
   echo "$CURRENT_IMAGE" > "$STATE_DIR/PREVIOUS_IMAGE"
@@ -172,6 +273,7 @@ ln -sfn "$RELEASE_DIR" "$BASE_DIR/current"
 DEPLOY_SUCCESS="true"
 echo ">>> Backend deployment completed successfully for release $RELEASE_SHA!"
 
+CURRENT_STEP="cleanup"
 echo ">>> Safely cleaning up old release directories (retaining 3 most recent)..."
 (
   cd "$RELEASES_DIR"

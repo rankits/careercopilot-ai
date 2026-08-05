@@ -15,6 +15,7 @@ describe('DefineRoleStep', () => {
     selectedResume: {
       id: 'r1',
       originalName: 'resume.pdf',
+      fileName: 'resume.pdf',
       storedName: 'resume.pdf',
       mimeType: 'application/pdf',
       sizeBytes: 1024,
