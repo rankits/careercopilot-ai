@@ -8,9 +8,10 @@ import { JobNotFoundError } from '@/features/jobs/services/jobs.service';
 
 import { JobDetailPage } from './JobDetailPage';
 
-const { getJobMock, similarMock } = vi.hoisted(() => ({
+const { getJobMock, similarMock, trackAndOpenApplyMock } = vi.hoisted(() => ({
   getJobMock: vi.fn(),
   similarMock: vi.fn(),
+  trackAndOpenApplyMock: vi.fn(),
 }));
 
 vi.mock('@/features/jobs/services/jobs.service', async () => {
@@ -28,6 +29,13 @@ vi.mock('@/features/recommendations/services/recommendations.service', () => ({
   recommendationsService: {
     getSimilarJobs: similarMock,
   },
+}));
+
+vi.mock('@/features/auto-apply/hooks/useTrackAndOpenApply', () => ({
+  useTrackAndOpenApply: () => ({
+    trackAndOpenApply: trackAndOpenApplyMock,
+    isPending: false,
+  }),
 }));
 
 function renderDetail(jobId = 'job-1') {
@@ -49,6 +57,8 @@ function renderDetail(jobId = 'job-1') {
 beforeEach(() => {
   getJobMock.mockReset();
   similarMock.mockReset();
+  trackAndOpenApplyMock.mockReset();
+  trackAndOpenApplyMock.mockResolvedValue(undefined);
 });
 
 const baseJob = {
@@ -96,6 +106,71 @@ describe('JobDetailPage', () => {
     expect(screen.getByText(/build apis/i)).toBeInTheDocument();
     expect(document.body.innerHTML).not.toMatch(/<script>/i);
     expect(screen.getByRole('button', { name: /apply now/i })).toBeDisabled();
+  });
+
+  it('shows Apply Now and Assisted Apply without Prepare Application (AA-003)', async () => {
+    getJobMock.mockResolvedValue({
+      ...baseJob,
+      applyUrl: 'https://careers.acme.test/apply/1',
+    });
+
+    renderDetail();
+    await screen.findByRole('heading', { name: /backend engineer/i });
+
+    expect(screen.getByRole('button', { name: /^Apply Now$/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', {
+        name: /Assisted Apply\. We'll help you prepare and track this application/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Prepare Application/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/Prepare Application/i)).not.toBeInTheDocument();
+  });
+
+  it('calls trackAndOpenApply with ASSISTED mode when Assisted Apply is clicked (AA-003)', async () => {
+    const user = userEvent.setup();
+    getJobMock.mockResolvedValue({
+      ...baseJob,
+      applyUrl: 'https://careers.acme.test/apply/1',
+    });
+
+    renderDetail();
+    await screen.findByRole('heading', { name: /backend engineer/i });
+
+    await user.click(
+      screen.getByRole('button', {
+        name: /Assisted Apply\. We'll help you prepare and track this application/i,
+      }),
+    );
+
+    expect(trackAndOpenApplyMock).toHaveBeenCalledTimes(1);
+    expect(trackAndOpenApplyMock).toHaveBeenCalledWith({
+      jobId: 'job-1',
+      applyUrl: 'https://careers.acme.test/apply/1',
+      openExternal: false,
+      applyMode: 'ASSISTED',
+    });
+  });
+
+  it('does not call tracking when Apply Now is clicked (AA-003)', async () => {
+    const user = userEvent.setup();
+    const openSpy = vi.spyOn(window, 'open').mockReturnValue({ opener: window } as Window);
+    getJobMock.mockResolvedValue({
+      ...baseJob,
+      applyUrl: 'https://careers.acme.test/apply/1',
+    });
+
+    renderDetail();
+    await screen.findByRole('heading', { name: /backend engineer/i });
+    await user.click(screen.getByRole('button', { name: /^Apply Now$/i }));
+
+    expect(trackAndOpenApplyMock).not.toHaveBeenCalled();
+    expect(openSpy).toHaveBeenCalledWith(
+      'https://careers.acme.test/apply/1',
+      '_blank',
+      'noopener,noreferrer',
+    );
+    openSpy.mockRestore();
   });
 
   it('hides empty structured sections when backend returns unstructured prose', async () => {
