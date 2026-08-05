@@ -4,9 +4,23 @@
  */
 
 const SHORT_ALLOWED = new Set(
-  ['c', 'c++', 'c#', 'r', 'go', 'ai', 'ml', 'ui', 'ux', 'sql', 'aws', 'gcp', 'jvm', 'jpa', 'jwt'].map(
-    (item) => item.toLowerCase(),
-  ),
+  [
+    'c',
+    'c++',
+    'c#',
+    'r',
+    'go',
+    'ai',
+    'ml',
+    'ui',
+    'ux',
+    'sql',
+    'aws',
+    'gcp',
+    'jvm',
+    'jpa',
+    'jwt',
+  ].map((item) => item.toLowerCase()),
 );
 
 const SKILL_CATALOG = [
@@ -128,7 +142,7 @@ const ALIASES: Record<string, string> = {
   rest: 'REST API',
   restful: 'REST API',
   reactjs: 'React',
-  'react.js': 'React.js',
+  'react.js': 'React',
   react: 'React',
   nodejs: 'Node.js',
   'node js': 'Node.js',
@@ -260,7 +274,7 @@ const BLACKLIST = new Set(
 );
 
 const LABEL_NOISE =
-  /^(frontend|backend|tools|others|other|build tools|tech used|technologies|technical skills|skills|api|libraries|frameworks|languages|soft skills|core competencies|matched|missing|recommended)[:\s/-]*$/i;
+  /^(frontend|backend|tools|others|other|build tools|tech used|technologies|technical skills|skills|api|libraries|frameworks|languages|soft skills|core competencies|matched|missing|recommended|state\s*mgmt|backend\s*&\s*api|cloud\s*&\s*ai|practices|testing|build\s*tools)[:\s/-]*$/i;
 
 const catalogByKey = new Map(SKILL_CATALOG.map((skill) => [skill.toLowerCase(), skill] as const));
 
