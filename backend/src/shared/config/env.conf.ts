@@ -138,6 +138,8 @@ const envSchema = z
     ENABLE_SWAGGER: booleanFromString(true),
     // Global Auto Apply kill switch — when false, PLAN/APPROVE/QUEUE/SUBMIT all fail closed.
     ENABLE_AUTO_APPLY: booleanFromString(true),
+    // AA-070: direct external handoff (no RabbitMQ). Default on; set false to kill-switch.
+    ASSISTED_APPLY_DIRECT_HANDOFF: booleanFromString(true),
     // Chromium snapshot for JS-heavy job pages (Ashby etc). Set false to skip.
     ENABLE_AUTO_APPLY_HEADLESS_SNAPSHOT: booleanFromString(true),
     // Optional path to system Chromium (Alpine docker: /usr/bin/chromium-browser).

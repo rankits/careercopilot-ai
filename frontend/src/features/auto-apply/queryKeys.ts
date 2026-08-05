@@ -15,4 +15,6 @@ export const autoApplyQueryKeys = {
   analysis: (jobId: string) => ['auto-apply', 'analysis', jobId] as const,
   readiness: (jobId: string, stage: string) =>
     ['auto-apply', 'readiness', jobId, stage] as const,
+  resumeAnalysis: (jobApplicationId: string) =>
+    ['auto-apply', 'resume-analysis', jobApplicationId] as const,
 };

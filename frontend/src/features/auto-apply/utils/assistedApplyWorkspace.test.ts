@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
+
+import type { WorkspaceStepStatusDto } from '@/features/auto-apply/types/autoApply.types';
 import {
   isWorkspaceStepEnabled,
   resolveInitialWorkspaceStep,
 } from '@/features/auto-apply/utils/assistedApplyWorkspace';
-import type { WorkspaceStepStatusDto } from '@/features/auto-apply/types/autoApply.types';
 
 const steps: WorkspaceStepStatusDto[] = [
   { id: 'analysis', label: 'Analysis', complete: true },

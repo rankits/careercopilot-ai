@@ -9,6 +9,7 @@ import {
 import type { NavigateFunction } from 'react-router-dom';
 
 import { ROUTES } from '@/constants/routes';
+import { navigateAfterAssistedApplyExit } from '@/features/auto-apply/utils/returnToNavigation';
 import type {
   AnalysisResult,
   KeywordsResponse,
@@ -73,6 +74,7 @@ export function useResumeBuilderActions({
   selectedTemplate,
   setSelectedTemplate,
   hydrateFromExistingAnalysis,
+  returnTo,
 }: {
   resumeId: string;
   setResumeId: Dispatch<SetStateAction<string>>;
@@ -110,6 +112,7 @@ export function useResumeBuilderActions({
   selectedTemplate: ResumeTemplateId;
   setSelectedTemplate: Dispatch<SetStateAction<ResumeTemplateId>>;
   hydrateFromExistingAnalysis: (id: string, options?: { force?: boolean }) => Promise<void>;
+  returnTo?: string | null;
 }) {
   const [existingResumes, setExistingResumes] = useState<UploadedResume[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -470,7 +473,9 @@ export function useResumeBuilderActions({
     setExperienceLevel('mid');
     setSkills([]);
     setStep(1);
-    void navigate(ROUTES.RESUME_BUILDER, { replace: true });
+    if (!navigateAfterAssistedApplyExit(navigate, returnTo, false)) {
+      void navigate(ROUTES.RESUME_BUILDER, { replace: true });
+    }
   };
 
   const mergeRecheckIntoAnalysis = (
@@ -764,7 +769,9 @@ export function useResumeBuilderActions({
           message: 'Resume saved successfully',
           severity: 'success',
         });
-        void navigate(ROUTES.SAVED_RESUMES);
+        if (!navigateAfterAssistedApplyExit(navigate, returnTo, true)) {
+          void navigate(ROUTES.SAVED_RESUMES);
+        }
       }
     } catch (error) {
       showToast({
