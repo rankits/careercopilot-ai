@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { ApprovedResumeVersionService } from '@/modules/auto-apply/services/resume-version.service.js';
 import {
+  DeleteApprovedResumeVersionResult,
   IApprovedResumeVersionRepository,
   IResumeOwnershipLookup,
 } from '@/modules/auto-apply/contracts/resume-version.contract.js';
@@ -30,7 +31,11 @@ describe('ApprovedResumeVersionService', () => {
       findById: vi.fn().mockResolvedValue(mockVersion),
       create: vi.fn().mockResolvedValue(mockVersion),
       update: vi.fn().mockResolvedValue(mockVersion),
-      delete: vi.fn().mockResolvedValue(true),
+      delete: vi.fn().mockResolvedValue({
+        deleted: true,
+        newDefaultResumeVersionId: null,
+        newDefaultLabel: null,
+      } satisfies DeleteApprovedResumeVersionResult),
     };
     mockOwnership = { belongsToUser: vi.fn().mockResolvedValue(true) };
     service = new ApprovedResumeVersionService(mockRepo, mockOwnership);
@@ -65,5 +70,24 @@ describe('ApprovedResumeVersionService', () => {
     ).rejects.toThrow(new AppError('Resume not found', 404, 'RESUME_NOT_FOUND'));
 
     expect(mockRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('sets default via update', async () => {
+    await service.updateVersion('user-1', 'version-2', { isActive: true });
+
+    expect(mockRepo.update).toHaveBeenCalledWith('user-1', 'version-2', { isActive: true });
+  });
+
+  it('returns auto-promotion metadata when deleting the default resume', async () => {
+    vi.mocked(mockRepo.delete).mockResolvedValue({
+      deleted: true,
+      newDefaultResumeVersionId: 'version-2',
+      newDefaultLabel: 'Frontend Resume',
+    });
+
+    const result = await service.deleteVersion('user-1', 'version-1');
+
+    expect(result.newDefaultResumeVersionId).toBe('version-2');
+    expect(result.newDefaultLabel).toBe('Frontend Resume');
   });
 });

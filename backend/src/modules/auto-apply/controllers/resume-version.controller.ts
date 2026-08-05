@@ -71,8 +71,13 @@ export const deleteApprovedResumeVersionController = async (
   try {
     const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');
-    await approvedResumeVersionService.deleteVersion(userId, id);
-    return res.status(200).json(successResponse('Approved resume version deleted successfully'));
+    const result = await approvedResumeVersionService.deleteVersion(userId, id);
+    return res.status(200).json(
+      successResponse('Approved resume version deleted successfully', {
+        newDefaultResumeVersionId: result.newDefaultResumeVersionId,
+        newDefaultLabel: result.newDefaultLabel,
+      }),
+    );
   } catch (error) {
     return next(error);
   }
