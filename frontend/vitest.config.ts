@@ -1,18 +1,22 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
+
+/** Directory of this config file — ESM-safe replacement for `__dirname`. */
+const configDir = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@core': path.resolve(__dirname, './src/core'),
-      '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@lib': path.resolve(__dirname, './src/lib'),
-      '@styles': path.resolve(__dirname, './src/styles'),
+      '@': path.resolve(configDir, './src'),
+      '@components': path.resolve(configDir, './src/components'),
+      '@core': path.resolve(configDir, './src/core'),
+      '@hooks': path.resolve(configDir, './src/hooks'),
+      '@lib': path.resolve(configDir, './src/lib'),
+      '@styles': path.resolve(configDir, './src/styles'),
     },
   },
   test: {
