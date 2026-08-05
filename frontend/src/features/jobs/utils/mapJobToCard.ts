@@ -3,7 +3,7 @@ import type { JobCardData } from '@/components/molecules';
 import type { JobListDto } from '@/features/jobs/types/job.types';
 import { formatPostedAt } from '@/features/jobs/utils/formatPostedAt';
 import { toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
-import { resolveCompanyLogoUrl } from '@/features/jobs/utils/resolveCompanyLogoUrl';
+import { decodeDisplayText } from '@/lib/decodeHtmlEntities';
 
 const PROVIDER_OR_MODE_TAG =
   /^(remote|hybrid|onsite|on-site|full[-_]?time|part[-_]?time|contract|internship|temporary|arbeitnow|remotive|jobicy|himalayas|remoteok|greenhouse|lever|ashby|recruitee|personio|public[-_]?feed)$/i;
@@ -102,22 +102,17 @@ export function mapJobListDtoToCard(job: JobListDto, index = 0): JobCardData {
     id: job.id,
     accent: index % 2 === 0 ? 'primary' : 'danger',
     applyUrl: toSafeApplyUrl(job.applyUrl),
-    company: job.company.name || 'Company not listed',
+    company: decodeDisplayText(job.company.name) || 'Company not listed',
     experience: '',
     experienceBand: 'all',
-    logo: companyInitial(job.company.name || '?'),
-    logoUrl: resolveCompanyLogoUrl({
-      logoUrl: job.company.logoUrl,
-      companySlug: job.company.slug,
-      companyName: job.company.name,
-    }),
+    logo: companyInitial(decodeDisplayText(job.company.name) || '?'),
     location: formatLocation(job.location.formatted),
     postedAt: formatPostedAt(job.publishedAt),
     salary: formatSalary(job.salary),
     salaryBand: 'all',
     skills: filterDisplaySkills(job.skills, type),
     tags,
-    title: job.title,
+    title: decodeDisplayText(job.title) || 'Untitled role',
     type,
     verified: job.company.verified,
   };

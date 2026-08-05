@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
+import type * as UseSaveJobNS from '@/features/applications/hooks/useSaveJob';
+
 import type { ApplicationDto } from '@/features/applications/types/application.types';
 
 import { SavedJobsPage } from './SavedJobsPage';
@@ -24,7 +26,7 @@ vi.mock('@/features/applications/services/applications.service', () => ({
 }));
 
 vi.mock('@/features/applications/hooks/useSaveJob', async () => {
-  const actual = await vi.importActual<typeof import('@/features/applications/hooks/useSaveJob')>(
+  const actual = await vi.importActual<typeof UseSaveJobNS>(
     '@/features/applications/hooks/useSaveJob',
   );
   return {
