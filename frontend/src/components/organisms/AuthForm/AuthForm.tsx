@@ -5,6 +5,13 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 
 import {
+  AUTH_FORM_ARIA,
+  AUTH_FORM_CONTENT,
+  AUTH_FORM_FIELDS,
+  AUTH_FORM_STATIC_COPY,
+  AUTH_FORM_VALIDATION_SCHEMAS,
+} from '@/constants/ui';
+import {
   ArrowForwardIcon,
   Box,
   Checkbox,
@@ -22,7 +29,6 @@ import {
 
 import { SocialConnectButton } from '../SocialConnectButton';
 
-import { AUTH_FORM_CONTENT, AUTH_FORM_FIELDS, AUTH_FORM_VALIDATION_SCHEMAS } from './constants';
 import type { AuthFieldIcon, AuthFieldIconMap, AuthFormField, AuthFormProps } from './interfaces';
 import { authFormSx } from './styles';
 
@@ -101,7 +107,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           </Box>
 
           <Box aria-hidden="true" sx={authFormSx.divider}>
-            <span>or</span>
+            <span>{AUTH_FORM_STATIC_COPY.dividerLabel}</span>
           </Box>
         </>
       ) : null}
@@ -143,7 +149,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               endAdornment={
                 isPasswordField ? (
                   <button
-                    aria-label={isVisible ? `Hide ${field.label}` : `Show ${field.label}`}
+                    aria-label={AUTH_FORM_ARIA.visibilityToggle(isVisible, field.label)}
                     onClick={(event) => {
                       event.preventDefault();
                       setVisibleFields((current) => ({
@@ -178,10 +184,10 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           <Box sx={authFormSx.actions}>
             <FormControlLabel
               control={<Checkbox defaultChecked {...register('rememberMe' as Path<TFormValues>)} />}
-              label="Remember me"
+              label={AUTH_FORM_STATIC_COPY.rememberMeLabel}
             />
             <Link href={forgotPasswordHref} onClick={onForgotPasswordClick} sx={authFormSx.link}>
-              Forgot password?
+              {AUTH_FORM_STATIC_COPY.forgotPasswordLabel}
             </Link>
           </Box>
         ) : null}
