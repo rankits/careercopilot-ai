@@ -78,15 +78,17 @@ function PlanPanel({
   onNavigateFix?: NavigateFixAction;
   isRefreshing?: boolean;
 }) {
-  const readinessReasons = [
-    ...(plan.readiness?.blockingReasons ?? []),
-    ...(plan.readiness?.warnings ?? []),
-  ];
+  const blocking = plan.readiness?.blockingReasons ?? [];
+  const warnings = plan.readiness?.warnings ?? [];
+  const readinessReasons = [...blocking, ...warnings];
   const fixActions = resolveReadinessFixActions(readinessReasons, plan.unresolvedQuestions);
   const warningOnly =
-    (plan.readiness?.blockingReasons.length ?? 0) === 0 &&
-    (plan.readiness?.warnings.length ?? 0) > 0 &&
-    plan.decision === 'READY_FOR_REVIEW';
+    blocking.length === 0 && warnings.length > 0 && plan.decision === 'READY_FOR_REVIEW';
+
+  const evidenceQuote = (reason: (typeof readinessReasons)[number]): string | null => {
+    const evidence = reason.metadata?.evidence;
+    return typeof evidence === 'string' && evidence.trim() ? evidence.trim() : null;
+  };
 
   return (
     <Box sx={{ mt: 1, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
@@ -112,6 +114,68 @@ function PlanPanel({
             ? ` · ${plan.selectedResumeVersion.tags.join(', ')}`
             : ''}
         </Typography>
+      )}
+
+      {(blocking.length > 0 || warnings.length > 0) && (
+        <Box sx={{ mt: 1.5 }}>
+          <Typography fontWeight={600} sx={{ mb: 0.75 }} variant="body2">
+            Job page findings
+          </Typography>
+          {blocking.map((reason) => {
+            const quote = evidenceQuote(reason);
+            return (
+              <Box key={`block-${reason.code}-${reason.field ?? ''}`} sx={{ mb: 1 }}>
+                <Typography color="error.main" variant="body2">
+                  {reason.message}
+                </Typography>
+                {quote ? (
+                  <Typography
+                    color="text.secondary"
+                    component="blockquote"
+                    sx={{
+                      m: 0,
+                      mt: 0.35,
+                      pl: 1.25,
+                      borderLeft: '2px solid',
+                      borderColor: 'divider',
+                      fontStyle: 'italic',
+                    }}
+                    variant="caption"
+                  >
+                    “{quote}”
+                  </Typography>
+                ) : null}
+              </Box>
+            );
+          })}
+          {warnings.map((reason) => {
+            const quote = evidenceQuote(reason);
+            return (
+              <Box key={`warn-${reason.code}-${reason.field ?? ''}`} sx={{ mb: 1 }}>
+                <Typography color="text.secondary" variant="body2">
+                  {reason.message}
+                </Typography>
+                {quote ? (
+                  <Typography
+                    color="text.secondary"
+                    component="blockquote"
+                    sx={{
+                      m: 0,
+                      mt: 0.35,
+                      pl: 1.25,
+                      borderLeft: '2px solid',
+                      borderColor: 'divider',
+                      fontStyle: 'italic',
+                    }}
+                    variant="caption"
+                  >
+                    “{quote}”
+                  </Typography>
+                ) : null}
+              </Box>
+            );
+          })}
+        </Box>
       )}
 
       {(plan.contentWarnings?.length ?? 0) > 0 && (

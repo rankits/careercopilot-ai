@@ -39,6 +39,10 @@ import {
 } from '@/modules/auto-apply/utils/remote-preferences.util.js';
 import type { IApplicationPageAnalysisRepository } from '@/modules/auto-apply/contracts/application-page-analysis.contract.js';
 import { evaluateAnalysisAgainstCandidate } from '@/modules/auto-apply/services/analysis-requirement-evaluation.util.js';
+import {
+  recordReadinessChangedByAnalysis,
+  recordStaleAnalysis,
+} from '@/modules/auto-apply/observability/analysis.metrics.js';
 
 const BASELINE_REQUIRED_ANSWER_KEYS = ['work_authorization', 'notice_period_days'] as const;
 
@@ -406,6 +410,17 @@ export class ApplicationReadinessService implements IApplicationReadinessService
       } else {
         blockingReasons.push({ ...reason, severity: 'BLOCKING' });
       }
+    }
+    if (analysisEval.reasons.some((r) => r.code === READINESS_REASON_CODES.ANALYSIS_STALE)) {
+      recordStaleAnalysis();
+    }
+    if (
+      analysisEval.reasons.some(
+        (r) =>
+          r.rule?.startsWith('analysis') && r.code !== READINESS_REASON_CODES.ANALYSIS_UNAVAILABLE,
+      )
+    ) {
+      recordReadinessChangedByAnalysis();
     }
 
     const eligibility = await this.eligibilityService.evaluateForJob(userId, jobId);
