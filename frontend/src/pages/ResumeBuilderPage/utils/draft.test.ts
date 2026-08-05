@@ -23,6 +23,7 @@ describe('draft utils', () => {
   it('detects preview content and serializes draft', () => {
     const empty = createEmptyDraft();
     expect(hasPreviewContent(empty)).toBe(false);
+    expect(hasPreviewContent({ ...empty, originalText: 'raw only' })).toBe(false);
 
     const draft = {
       ...createEmptyDraft('Engineer'),

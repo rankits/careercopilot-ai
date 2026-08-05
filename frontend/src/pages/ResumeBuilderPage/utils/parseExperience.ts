@@ -5,26 +5,47 @@ const JOB_DATE_LINE =
   /^((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}|\d{1,2}[/.-]\d{4}|\d{4})\s*[-–—−to]+\s*((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}|\d{1,2}[/.-]\d{4}|\d{4}|present|current|now)/i;
 
 const COMPANY_TITLE_LINE =
-  /^([A-Z][^|\n]{2,90}?)\s[-–—−]\s+((?:Senior|Junior|Lead|Sr\.?|Jr\.?|Intern|Associate)?\s*(?:Full[\s-]?Stack|Frontend|Backend|Software|Web|Mobile|UI\/UX|React|Node)?\s*(?:Developer|Engineer|Architect|Manager|Consultant|Designer)[^|\n]*)$/i;
+  /^([A-Z][^|\n]{2,90}?)\s[-–—−]\s+((?:Senior|Junior|Lead|Sr\.?|Jr\.?|Intern|Associate|Principal|Staff)?\s*(?:Full[\s-]?Stack|Frontend|Backend|Software|Web|Mobile|UI\/UX|React|Node|Product|Project|Sales|Marketing|Data|Business)?\s*(?:Developer|Engineer|Architect|Manager|Consultant|Designer|Analyst|Specialist|Executive|Officer|Lead|Intern|Associate)[^|\n]*)$/i;
+
+const TITLE_KEYWORDS =
+  /developer|engineer|architect|manager|consultant|designer|analyst|lead|specialist|executive|officer|intern|associate|director|coordinator|administrator|scientist|teacher|instructor|recruiter|accountant|nurse|therapist|technician/i;
 
 function parseCompanyTitle(line: string): { company: string; title: string } | null {
   const cleaned = line.replace(/^\|\s*/, '').trim();
-  if (cleaned.length < 8 || cleaned.length > 140) return null;
+  if (cleaned.length < 6 || cleaned.length > 160) return null;
 
   const match = cleaned.match(COMPANY_TITLE_LINE);
   if (match && match[1] && match[2]) return { company: match[1].trim(), title: match[2].trim() };
+
+  // Title | Company  OR  Company | Title
+  const pipe = cleaned.match(/^(.+?)\s*\|\s*(.+)$/);
+  if (pipe && pipe[1] && pipe[2]) {
+    const left = pipe[1].trim();
+    const right = pipe[2].trim();
+    if (TITLE_KEYWORDS.test(left) && !TITLE_KEYWORDS.test(right)) {
+      return { company: right, title: left };
+    }
+    if (TITLE_KEYWORDS.test(right) && !TITLE_KEYWORDS.test(left)) {
+      return { company: left, title: right };
+    }
+  }
 
   const dash = cleaned.match(/^(.+?)\s[-–—−]\s+(.+)$/);
   if (!dash || !dash[1] || !dash[2]) return null;
   const left = dash[1].trim();
   const right = dash[2].trim();
   if (/https?:\/\//i.test(left) || /https?:\/\//i.test(right)) return null;
-  if (!/(developer|engineer|architect|manager|consultant|designer|analyst|lead)/i.test(right)) {
+  if (!TITLE_KEYWORDS.test(right) && !TITLE_KEYWORDS.test(left)) {
     return null;
   }
+  if (TITLE_KEYWORDS.test(left) && !TITLE_KEYWORDS.test(right)) {
+    return { company: right, title: left };
+  }
   if (
-    !/(ltd|llc|inc|pvt|technologies|infotech|solutions|systems|labs|company|corp)/i.test(left) &&
-    left.length < 8
+    !/(ltd|llc|inc|pvt|technologies|infotech|solutions|systems|labs|company|corp|university|college|school|hospital|clinic|bank|group)/i.test(
+      left,
+    ) &&
+    left.length < 6
   ) {
     return null;
   }
@@ -66,6 +87,31 @@ function explodeGluedBullets(line: string): string[] {
     }
     return cleanBulletText(part);
   });
+}
+
+function hasLeadingBullet(line: string): boolean {
+  return /^[\s|]*[-*•●·▪▸►]/.test(line);
+}
+
+function shouldAppendContinuation(
+  prevDetails: string,
+  nextBullet: string,
+  rawLine: string,
+): boolean {
+  if (!prevDetails || hasLeadingBullet(rawLine)) return false;
+  if (/^[a-z]/.test(nextBullet)) return true;
+  const last = (prevDetails.split('\n').pop() ?? '').trim();
+  if (/[,;:/-]$/.test(last)) return true;
+  // Soft-wrapped PDF lines often capitalize the next word but the sentence is unfinished.
+  if (
+    !/[.!?]$/.test(last) &&
+    last.length > 30 &&
+    !/^(Location:|Tech used:)/i.test(nextBullet) &&
+    !TITLE_KEYWORDS.test(nextBullet.split(/\s+/).slice(0, 3).join(' '))
+  ) {
+    return true;
+  }
+  return false;
 }
 
 export function parseExperienceBlocks(text: string): ExperienceEntry[] {
@@ -186,7 +232,7 @@ export function parseExperienceBlocks(text: string): ExperienceEntry[] {
 
     if (
       current?.details &&
-      /^[a-z]/.test(bullet) &&
+      shouldAppendContinuation(current.details, bullet, line) &&
       !parseCompanyTitle(bullet) &&
       !parseJobDate(bullet)
     ) {

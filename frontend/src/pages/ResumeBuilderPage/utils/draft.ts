@@ -41,14 +41,16 @@ export function createEmptyDraft(targetRole = ''): ResumeDraft {
 }
 
 export function hasPreviewContent(draft: ResumeDraft): boolean {
+  // Require structured fields — originalText alone must not show a hollow "Your Name" sheet.
   return Boolean(
-    draft.originalText.trim() ||
     draft.fullName ||
     draft.summary ||
     draft.skillsList.length ||
     draft.experiences.some((item) => item.company || item.title || item.details) ||
     draft.projectsList.some((item) => item.title || item.company || item.details) ||
-    draft.education,
+    draft.education ||
+    draft.certifications ||
+    draft.achievements,
   );
 }
 
@@ -231,9 +233,10 @@ function applyToEntryDetails(
   }
 
   // No matching entry — apply to the first entry with details (or first entry).
-  const targetIndex = entries.findIndex((entry) => entry.details.trim()) >= 0
-    ? entries.findIndex((entry) => entry.details.trim())
-    : 0;
+  const targetIndex =
+    entries.findIndex((entry) => entry.details.trim()) >= 0
+      ? entries.findIndex((entry) => entry.details.trim())
+      : 0;
 
   return entries.map((entry, index) => {
     if (index !== targetIndex) return entry;
@@ -256,9 +259,7 @@ export function applyTextReplaceToDraft(
   if (target === 'skills') {
     // Only add skill chips — never dump summary/experience prose into Skills.
     const suggestedSkills = splitSkillTokens(suggested);
-    const originalSkills = new Set(
-      splitSkillTokens(original).map((skill) => skill.toLowerCase()),
-    );
+    const originalSkills = new Set(splitSkillTokens(original).map((skill) => skill.toLowerCase()));
 
     let toAdd = suggestedSkills;
     if (originalSkills.size > 0 && suggestedSkills.length > 1) {
@@ -268,7 +269,10 @@ export function applyTextReplaceToDraft(
 
     // Single-token / short suggestions: trust the suggested text as one skill name.
     if (toAdd.length === 0 && suggested.length > 0 && suggested.length <= 48) {
-      const single = suggested.replace(/^add\s+/i, '').replace(/\s+to\s+skills$/i, '').trim();
+      const single = suggested
+        .replace(/^add\s+/i, '')
+        .replace(/\s+to\s+skills$/i, '')
+        .trim();
       if (single && !/\n/.test(single)) toAdd = [single];
     }
 
