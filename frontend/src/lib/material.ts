@@ -110,3 +110,4 @@ export { default as useMediaQuery } from '@mui/material/useMediaQuery';
 export { default as Slide } from '@mui/material/Slide';
 export type { TransitionProps } from '@mui/material/transitions';
 export type { SystemStyleObject } from '@mui/system';
+export { default as Tooltip } from '@mui/material/Tooltip';
