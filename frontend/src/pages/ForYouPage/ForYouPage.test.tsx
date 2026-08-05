@@ -105,7 +105,7 @@ const scoreResult = (overallScore: number) => ({
   reasons: [],
 });
 
-function renderPage(isProfileComplete = true, route = '/for-you') {
+function renderPage(isProfileComplete = true, route = '/ai-match') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -232,7 +232,7 @@ describe('ForYouPage', () => {
 
   it('opens the Saved tab without loading profile recommendations', async () => {
     const user = userEvent.setup();
-    renderPage(true, '/for-you?mode=saved');
+    renderPage(true, '/ai-match?mode=saved');
 
     expect(await screen.findByText(/no saved searches yet/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create saved search/i })).toBeDisabled();
@@ -268,7 +268,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=text-career');
+    renderPage(true, '/ai-match?mode=text-career');
 
     const textarea = await screen.findByLabelText(/target role text/i);
     await user.type(textarea, 'Remote Node.js backend role');
@@ -334,7 +334,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=career');
+    renderPage(true, '/ai-match?mode=career');
 
     const textarea = await screen.findByLabelText(/career goal/i);
     await user.type(textarea, 'Move from manual testing into automation QA');
@@ -402,7 +402,7 @@ describe('ForYouPage', () => {
     ]);
     deleteSavedSearchMock.mockResolvedValue(undefined);
 
-    renderPage(true, '/for-you?mode=saved');
+    renderPage(true, '/ai-match?mode=saved');
 
     expect(await screen.findByText(/remote typescript platform engineer/i)).toBeInTheDocument();
     await user.type(screen.getByLabelText(/saved search name/i), 'Backend');
@@ -421,7 +421,7 @@ describe('ForYouPage', () => {
   });
 
   it('blocks text generation when target text exceeds the API limit', async () => {
-    renderPage(true, '/for-you?mode=text-career');
+    renderPage(true, '/ai-match?mode=text-career');
 
     fireEvent.change(await screen.findByLabelText(/target role text/i), {
       target: { value: 'x'.repeat(20_001) },
@@ -468,7 +468,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=resume');
+    renderPage(true, '/ai-match?mode=resume');
 
     expect(await screen.findByText(/confirmed resume/i)).toBeInTheDocument();
     const generateButton = screen.getByRole('button', { name: /generate from resume/i });
@@ -484,7 +484,7 @@ describe('ForYouPage', () => {
   it('shows a resume CTA when no completed resume source is available', async () => {
     profileMock.mockResolvedValue(null);
 
-    renderPage(true, '/for-you?mode=resume');
+    renderPage(true, '/ai-match?mode=resume');
 
     expect(await screen.findByRole('status')).toHaveTextContent(/upload and confirm/i);
     expect(screen.getByRole('link', { name: /add resume/i })).toHaveAttribute('href', '/profile');
@@ -531,7 +531,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=similar&jobId=source-job');
+    renderPage(true, '/ai-match?mode=similar&jobId=source-job');
 
     expect(await screen.findByText(/design systems engineer/i)).toBeInTheDocument();
     expect(screen.getByText(/91% Match/i)).toBeInTheDocument();
