@@ -45,7 +45,6 @@ export const visibleAddApplicationEntryModes = addApplicationEntryModes.filter(
 export const MAX_APPLICATION_NOTE_LENGTH = 10_000;
 
 const addApplicationStatusValues = new Set([
-  'saved',
   'preparing',
   'applied',
   'screening',
@@ -119,7 +118,7 @@ export function createDefaultAddApplicationForm() {
     appliedDate: getTodayDateInputValue(),
     companyName: '',
     currency: 'USD',
-    initialStatus: 'saved',
+    initialStatus: 'preparing',
     interest: 0,
     jobTitle: '',
     jobUrl: '',

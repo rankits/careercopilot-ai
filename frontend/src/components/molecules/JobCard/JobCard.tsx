@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 
@@ -19,8 +19,12 @@ import {
   ExpandMoreIcon,
   HistoryOutlinedIcon,
   LocationOnOutlinedIcon,
+  Menu,
+  MenuItem,
+  MoreVertIcon,
   PersonOutlineIcon,
   SmartToyOutlinedIcon,
+  Tooltip,
   Typography,
   WorkOutlineOutlinedIcon,
 } from '@/lib/material';
@@ -35,6 +39,7 @@ import {
   MatchPill,
   MatchRing,
   OpenJobButton,
+  OverflowButton,
   RecommendationDetails,
   RecommendationDetailsGrid,
   RecommendationDetailSkillGroup,
@@ -92,9 +97,20 @@ export interface JobCardData {
   verified?: boolean;
 }
 
+export interface JobCardOverflowItem {
+  id: string;
+  label: string;
+  onSelect: () => void;
+}
+
 export interface JobCardProps {
   job: JobCardData;
   isSaved?: boolean;
+  /** Soft hover elevation + primary border (Saved Jobs). */
+  premiumHover?: boolean;
+  /** Renders a primary View Job button that calls `onOpen`. */
+  showViewJob?: boolean;
+  overflowItems?: JobCardOverflowItem[];
   onApply?: (job: JobCardData) => void;
   onOpen?: (job: JobCardData) => void;
   onSave?: (job: JobCardData) => void;
@@ -110,6 +126,9 @@ const toDomId = (value: string) => value.replace(/[^a-zA-Z0-9_-]+/g, '-').replac
 export function JobCard({
   job,
   isSaved = false,
+  premiumHover = false,
+  showViewJob = false,
+  overflowItems,
   onApply,
   onOpen,
   onSave,
@@ -121,11 +140,20 @@ export function JobCard({
 }: JobCardProps) {
   const showMatch = typeof job.match === 'number';
   const showWiredActions = Boolean(
-    onApply || onSave || onDismiss || onMoreLikeThis || onLessLikeThis || onNotRelevant,
+    onApply ||
+      onSave ||
+      onDismiss ||
+      onMoreLikeThis ||
+      onLessLikeThis ||
+      onNotRelevant ||
+      (showViewJob && onOpen) ||
+      (overflowItems && overflowItems.length > 0),
   );
   const canApply = Boolean(job.applyUrl);
+  const canViewJob = Boolean(showViewJob && onOpen && job.id);
   const { src: logoSrc, failed: logoFailed, onLogoError } = useCachedCompanyLogo(job.logoUrl);
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
   const showLogoImage = Boolean(logoSrc) && !logoFailed;
   const details = job.recommendationDetails;
   const detailsId = `${toDomId(job.recommendationId ?? job.id ?? `${job.company}-${job.title}`)}-recommendation-details`;
@@ -135,13 +163,24 @@ export function JobCard({
   const hasDetails = Boolean(
     details && (details.summary || details.bullets.length > 0 || hasSkillGap),
   );
-  const showActions = showWiredActions || hasDetails;
+  const showActions = showWiredActions || hasDetails || showMatch;
   const hasExperience = Boolean(job.experience.trim());
   const hasLocation = Boolean(job.location.trim());
+  const visibleSkills = job.skills.slice(0, 4);
+
+  const handleOpenMenu = (event: MouseEvent<HTMLButtonElement>) => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+  };
+
+  const handleCloseMenu = () => {
+    setMenuAnchor(null);
+  };
 
   return (
     <JobCardRoot
       onClick={onOpen ? () => onOpen(job) : undefined}
+      premiumHover={premiumHover}
       sx={onOpen ? { cursor: 'pointer' } : undefined}
     >
       <Accent tone={job.accent} />
@@ -209,16 +248,16 @@ export function JobCard({
           </span>
         </JobMeta>
 
-        {job.skills.length > 0 ? (
+        {visibleSkills.length > 0 ? (
           <SkillList>
-            {job.skills.map((skill) => (
+            {visibleSkills.map((skill) => (
               <SkillPill key={skill}>{skill}</SkillPill>
             ))}
           </SkillList>
         ) : null}
       </JobDetails>
 
-      {showMatch || showActions ? (
+      {showActions ? (
         <JobActions>
           {showMatch ? (
             <MatchPill aria-label={JOB_CARD_ARIA.match(job.match, job.matchSubtitle)}>
@@ -282,20 +321,69 @@ export function JobCard({
             </Button>
           ) : null}
           {onSave ? (
-            <SaveButton
-              aria-label={JOB_CARD_ARIA.save(isSaved, job.title)}
-              aria-pressed={isSaved}
+            <Tooltip
+              disableInteractive
+              placement="top"
+              title={isSaved ? JOB_CARD_COPY.unsaveJob : JOB_CARD_COPY.saveJob}
+            >
+              <span>
+                <SaveButton
+                  aria-label={JOB_CARD_ARIA.save(isSaved, job.title)}
+                  aria-pressed={isSaved}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onSave(job);
+                  }}
+                >
+                  {isSaved ? (
+                    <BookmarkOutlinedIcon fontSize="small" />
+                  ) : (
+                    <BookmarkBorderOutlinedIcon fontSize="small" />
+                  )}
+                </SaveButton>
+              </span>
+            </Tooltip>
+          ) : null}
+          {overflowItems && overflowItems.length > 0 ? (
+            <>
+              <OverflowButton
+                aria-haspopup="menu"
+                aria-label={JOB_CARD_ARIA.moreActions(job.title)}
+                onClick={handleOpenMenu}
+              >
+                <MoreVertIcon fontSize="small" />
+              </OverflowButton>
+              <Menu
+                anchorEl={menuAnchor}
+                onClick={(event) => event.stopPropagation()}
+                onClose={handleCloseMenu}
+                open={Boolean(menuAnchor)}
+              >
+                {overflowItems.map((item) => (
+                  <MenuItem
+                    key={item.id}
+                    onClick={() => {
+                      handleCloseMenu();
+                      item.onSelect();
+                    }}
+                  >
+                    {item.label}
+                  </MenuItem>
+                ))}
+              </Menu>
+            </>
+          ) : null}
+          {canViewJob ? (
+            <Button
+              aria-label={JOB_CARD_ARIA.viewJob(job.title)}
               onClick={(event) => {
                 event.stopPropagation();
-                onSave(job);
+                onOpen?.(job);
               }}
+              size="small"
             >
-              {isSaved ? (
-                <BookmarkOutlinedIcon fontSize="small" />
-              ) : (
-                <BookmarkBorderOutlinedIcon fontSize="small" />
-              )}
-            </SaveButton>
+              {APP_ACTIONS.VIEW_JOB}
+            </Button>
           ) : null}
           {onApply ? (
             <Button

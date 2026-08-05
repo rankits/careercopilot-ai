@@ -9,7 +9,9 @@ import {
   spacing,
 } from '@/tokens';
 
-export const JobCardRoot = styled('article')({
+export const JobCardRoot = styled('article', {
+  shouldForwardProp: (prop) => prop !== 'premiumHover',
+})<{ premiumHover?: boolean }>(({ premiumHover }) => ({
   alignItems: 'center',
   background: colorTokens.backgroundCard,
   border: `0.0625rem solid ${colorTokens.borderDefault}`,
@@ -20,6 +22,17 @@ export const JobCardRoot = styled('article')({
   gridTemplateColumns: '0.125rem 4.5rem minmax(0, 1fr) auto',
   minHeight: '7.75rem',
   padding: `${spacing[3]} ${spacing[4]} ${spacing[3]} 0`,
+  transition: 'border-color 160ms ease, box-shadow 160ms ease, transform 160ms ease',
+
+  ...(premiumHover
+    ? {
+        '&:hover': {
+          borderColor: colorTokens.actionPrimary,
+          boxShadow: shadows.focus,
+          transform: 'translateY(-0.0625rem)',
+        },
+      }
+    : null),
 
   '@media (max-width: 64rem)': {
     gridTemplateColumns: '0.125rem 4.5rem minmax(0, 1fr)',
@@ -34,7 +47,7 @@ export const JobCardRoot = styled('article')({
   '@media (max-width: 30rem)': {
     gridTemplateColumns: '0.125rem minmax(0, 1fr)',
   },
-});
+}));
 
 export const Accent = styled('span', {
   shouldForwardProp: (prop) => prop !== 'tone',
@@ -229,7 +242,21 @@ export const MatchRing = styled('span')({
   width: spacing[4],
 });
 
+/** Bookmark control — matches Saved Jobs card save icon. */
 export const SaveButton = styled(IconButton)({
+  background: colorTokens.actionPrimarySurface,
+  border: `0.0625rem solid ${colorTokens.borderSubtle}`,
+  borderRadius: borderRadius.lg,
+  color: colorTokens.actionPrimary,
+  height: spacing[9],
+  width: spacing[9],
+
+  '&:hover': {
+    background: colorTokens.actionPrimarySubtle,
+  },
+});
+
+export const OverflowButton = styled(IconButton)({
   border: `0.0625rem solid ${colorTokens.borderDefault}`,
   borderRadius: borderRadius.lg,
   color: colorTokens.textSecondary,

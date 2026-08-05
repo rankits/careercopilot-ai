@@ -25,6 +25,7 @@ export { default as EmailOutlinedIcon } from '@mui/icons-material/EmailOutlined'
 export { default as ErrorOutlineIcon } from '@mui/icons-material/ErrorOutline';
 export { default as EventOutlinedIcon } from '@mui/icons-material/EventOutlined';
 export { default as ExpandMoreIcon } from '@mui/icons-material/ExpandMore';
+export { default as FavoriteBorderOutlinedIcon } from '@mui/icons-material/FavoriteBorderOutlined';
 export { default as FileDownloadOutlinedIcon } from '@mui/icons-material/FileDownloadOutlined';
 export { default as FolderOutlinedIcon } from '@mui/icons-material/FolderOutlined';
 export { default as GoogleIcon } from '@mui/icons-material/Google';
@@ -100,6 +101,7 @@ export { ThemeProvider, createTheme, styled } from '@mui/material/styles';
 export type { SxProps, Theme } from '@mui/material/styles';
 export { default as TextField } from '@mui/material/TextField';
 export type { TextFieldProps } from '@mui/material/TextField';
+export { default as Tooltip } from '@mui/material/Tooltip';
 export { default as Typography } from '@mui/material/Typography';
 export { default as useMediaQuery } from '@mui/material/useMediaQuery';
 export { default as Slide } from '@mui/material/Slide';

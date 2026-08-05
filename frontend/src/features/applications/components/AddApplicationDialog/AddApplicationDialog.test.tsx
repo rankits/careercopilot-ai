@@ -123,7 +123,7 @@ describe('AddApplicationDialog', () => {
       expect(mutateAsyncMock).toHaveBeenCalledWith(
         expect.objectContaining({
           companyName: 'Acme Corp',
-          currentStatus: 'SAVED',
+          currentStatus: 'PREPARING',
           jobTitle: 'Senior Full Stack Engineer',
           location: 'San Francisco, CA',
           originalJobUrl: 'https://acme.com/jobs/123',

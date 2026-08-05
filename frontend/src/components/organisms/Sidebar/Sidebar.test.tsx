@@ -35,14 +35,26 @@ describe('Sidebar', () => {
     );
   });
 
-  it('collapses labels for icon-only mode', () => {
+  it('collapses labels for icon-only mode and exposes names via aria-label', () => {
     renderSidebar(<Sidebar variant="collapsed" />);
 
     expect(screen.getByRole('img', { name: /career copilot/i })).toHaveAttribute(
       'src',
       expect.stringContaining('penguin'),
     );
+    expect(screen.getByRole('link', { name: /^dashboard$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^jobs feed$/i })).toBeInTheDocument();
     expect(screen.queryByText(/upload resume/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^applications$/i })).toBeInTheDocument();
+  });
+
+  it('does not render the duplicate non-linking Applications item', () => {
+    renderSidebar(<Sidebar />);
+
+    const applicationLinks = screen.getAllByRole('link', { name: /^applications$/i });
+    expect(applicationLinks).toHaveLength(1);
+    expect(applicationLinks[0]).toHaveAttribute('href', '/applications');
+    expect(screen.queryByRole('button', { name: /^applications$/i })).not.toBeInTheDocument();
   });
 
   it('notifies when a navigation item is selected', async () => {
