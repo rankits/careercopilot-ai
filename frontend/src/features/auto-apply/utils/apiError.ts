@@ -6,18 +6,21 @@ export const STATUS_CONFLICT_USER_MESSAGE =
 export class AutoApplyClientError extends Error {
   readonly code?: string;
   readonly statusCode?: number;
+  readonly data?: unknown;
 
   constructor(
     message: string,
     options?: {
       code?: string;
       statusCode?: number;
+      data?: unknown;
     },
   ) {
     super(message);
     this.name = 'AutoApplyClientError';
     this.code = options?.code;
     this.statusCode = options?.statusCode;
+    this.data = options?.data;
   }
 }
 
@@ -35,8 +38,9 @@ export function normalizeAutoApplyError(error: unknown, fallbackMessage: string)
           : fallbackMessage;
       const message =
         code === 'INVALID_STATUS_TRANSITION' ? STATUS_CONFLICT_USER_MESSAGE : rawMessage;
+      const data = 'data' in payload ? payload.data : undefined;
 
-      return new AutoApplyClientError(message, { code, statusCode });
+      return new AutoApplyClientError(message, { code, statusCode, data });
     }
 
     if (!error.response) {
@@ -64,4 +68,11 @@ export function isStatusConflictError(error: unknown): boolean {
     error.code === 'INVALID_STATUS_TRANSITION' &&
     error.statusCode === 409
   );
+}
+
+export function existingApplicationIdFromError(error: unknown): string | null {
+  if (!isAutoApplyClientError(error) || error.code !== 'APPLICATION_EXISTS') return null;
+  if (typeof error.data !== 'object' || error.data === null) return null;
+  const id = (error.data as { existingApplicationId?: unknown }).existingApplicationId;
+  return typeof id === 'string' ? id : null;
 }

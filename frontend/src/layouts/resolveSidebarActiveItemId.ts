@@ -17,6 +17,9 @@ export function resolveSidebarActiveItemId(pathname: string): string {
   if (pathname === ROUTES.AUTO_APPLY) {
     return 'auto-apply';
   }
+  if (pathname.startsWith('/assisted-apply/')) {
+    return 'applications';
+  }
   if (pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')) {
     return 'jobs-feed';
   }

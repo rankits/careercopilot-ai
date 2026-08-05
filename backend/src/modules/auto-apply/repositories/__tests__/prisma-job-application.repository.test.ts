@@ -56,6 +56,8 @@ const baseRecord = {
   failureMessage: null,
   planInputsHash: null,
   planVersion: 1,
+    progressStep: null,
+    reopenedAt: null,
   createdAt: new Date('2026-01-01'),
   updatedAt: new Date('2026-01-01'),
 };
