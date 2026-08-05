@@ -19,6 +19,7 @@ import {
   destinationToSetupHref,
   resolveSetupGapFixActions,
 } from '@/pages/AutoApplyPage/missingFieldNavigation';
+import { trackEvent } from '@/shared/analytics/trackEvent';
 
 const WORKSPACE_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_WORKSPACE !== 'false';
 
@@ -72,6 +73,8 @@ export function useTrackAndOpenApply() {
         });
         return { tracked: false, alreadyTracked: false, openedExternal: false };
       }
+
+      trackEvent('assisted_apply_cta_clicked', { job_id: input.jobId });
 
       const applyMode = input.applyMode ?? 'ASSISTED';
       const setupStatus = setupStatusQuery.data;
@@ -140,6 +143,11 @@ export function useTrackAndOpenApply() {
         goToWorkspace(result.application.id, {
           possibleDuplicateCount: result.possibleDuplicates?.length ?? 0,
           wasReopened: result.wasReopened === true,
+        });
+
+        trackEvent('assisted_apply_started', {
+          job_id: input.jobId,
+          job_application_id: result.application.id,
         });
 
         if (prepareFailed) {

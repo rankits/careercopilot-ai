@@ -14,6 +14,9 @@ import {
   Stack,
   Typography,
 } from '@/lib/material';
+import { trackEvent } from '@/shared/analytics/trackEvent';
+
+import { assistedApplyTouchTargetSx, WorkspaceStickyActions } from './WorkspaceStickyActions';
 
 function CategoryCard({
   title,
@@ -81,6 +84,17 @@ export function ResumeAnalysisStep({
     next.delete('resumeReturned');
     setSearchParams(next, { replace: true });
   }, [returnedSaved, searchParams, setSearchParams]);
+
+  useEffect(() => {
+    const analysis = analysisQuery.data;
+    if (!analysis) return;
+    const degraded = analysis.confidence === 'LOW' || analysis.strengths.length === 0;
+    trackEvent(degraded ? 'resume_analysis_degraded' : 'resume_analysis_viewed', {
+      job_application_id: jobApplicationId,
+      confidence: analysis.confidence,
+      cached: Boolean(analysis.cached),
+    });
+  }, [analysisQuery.data, jobApplicationId]);
 
   const hasResumeConsent =
     consentsQuery.data?.some(
@@ -163,29 +177,37 @@ export function ResumeAnalysisStep({
 
       {continueError ? <Alert severity="error">{continueError}</Alert> : null}
 
-      <Stack direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" spacing={1}>
-        <MuiButton
-          component={RouterLink}
-          disabled={!selectedVersion}
-          to={
-            selectedVersion
-              ? buildImproveResumeHref({
-                  resumeId: selectedVersion.resumeId,
-                  jobApplicationId,
-                })
-              : '#'
-          }
-          variant="outlined"
-        >
-          Improve resume
-        </MuiButton>
-        <MuiButton onClick={onSelectAnother} variant="outlined">
-          Select another resume
-        </MuiButton>
-        <MuiButton disabled={continuePending} onClick={onContinue} variant="contained">
-          {continuePending ? 'Continuing…' : 'Continue with this resume'}
-        </MuiButton>
-      </Stack>
+      <WorkspaceStickyActions>
+        <Stack direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" spacing={1}>
+          <MuiButton
+            component={RouterLink}
+            disabled={!selectedVersion}
+            sx={assistedApplyTouchTargetSx}
+            to={
+              selectedVersion
+                ? buildImproveResumeHref({
+                    resumeId: selectedVersion.resumeId,
+                    jobApplicationId,
+                  })
+                : '#'
+            }
+            variant="outlined"
+          >
+            Improve resume
+          </MuiButton>
+          <MuiButton onClick={onSelectAnother} sx={assistedApplyTouchTargetSx} variant="outlined">
+            Select another resume
+          </MuiButton>
+          <MuiButton
+            disabled={continuePending}
+            onClick={onContinue}
+            sx={assistedApplyTouchTargetSx}
+            variant="contained"
+          >
+            {continuePending ? 'Continuing…' : 'Continue with this resume'}
+          </MuiButton>
+        </Stack>
+      </WorkspaceStickyActions>
     </Stack>
   );
 }

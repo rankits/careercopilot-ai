@@ -29,6 +29,7 @@ import {
   Tooltip,
   Typography,
 } from '@/lib/material';
+import { trackEvent } from '@/shared/analytics/trackEvent';
 
 import { AbandonApplicationModal } from './AbandonApplicationModal';
 import { ActivityTimelinePanel } from './ActivityTimelinePanel';
@@ -37,6 +38,7 @@ import { FitStep } from './FitStep';
 import { OpenApplicationStep } from './OpenApplicationStep';
 import { ResumeAnalysisStep } from './ResumeAnalysisStep';
 import { ResumeSelectionStep } from './ResumeSelectionStep';
+import { assistedApplyTouchTargetSx } from './WorkspaceStickyActions';
 
 const WORKSPACE_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_WORKSPACE !== 'false';
 
@@ -74,6 +76,14 @@ export function AssistedApplyWorkspacePage() {
       void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`, { replace: true });
     }
   }, [navigate]);
+
+  useEffect(() => {
+    if (!jobApplicationId || !workspaceQuery.data) return;
+    trackEvent('workspace_step_viewed', {
+      job_application_id: jobApplicationId,
+      step: activeStep,
+    });
+  }, [jobApplicationId, activeStep, workspaceQuery.data]);
 
   const selectStep = (stepId: WorkspaceStepId) => {
     if (!isWorkspaceStepEnabled(steps, stepId)) return;
@@ -182,7 +192,14 @@ export function AssistedApplyWorkspacePage() {
   };
 
   return (
-    <Box sx={{ p: { xs: 2, md: 4 } }}>
+    <Box
+      sx={{
+        p: { xs: 2, md: 4 },
+        maxWidth: '100%',
+        overflowX: 'hidden',
+        pb: { xs: 10, md: 4 },
+      }}
+    >
       <Stack
         alignItems={{ xs: 'flex-start', sm: 'center' }}
         direction={{ xs: 'column', sm: 'row' }}
@@ -208,6 +225,7 @@ export function AssistedApplyWorkspacePage() {
           <IconButton
             aria-label="More application actions"
             onClick={(event) => setMenuAnchor(event.currentTarget)}
+            sx={assistedApplyTouchTargetSx}
           >
             <MoreVertIcon />
           </IconButton>
@@ -261,9 +279,22 @@ export function AssistedApplyWorkspacePage() {
       ) : null}
 
       <Tabs
+        allowScrollButtonsMobile
         aria-label="Assisted Apply steps"
         onChange={(_e, value: WorkspaceStepId) => selectStep(value)}
-        sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
+        scrollButtons="auto"
+        sx={{
+          mb: 3,
+          borderBottom: 1,
+          borderColor: 'divider',
+          maxWidth: '100%',
+          '& .MuiTab-root': {
+            minHeight: 48,
+            minWidth: 72,
+            px: { xs: 1, sm: 2 },
+            fontSize: { xs: '0.8rem', sm: '0.875rem' },
+          },
+        }}
         value={activeStep}
         variant="scrollable"
       >
@@ -297,10 +328,12 @@ export function AssistedApplyWorkspacePage() {
             border: 1,
             borderColor: 'divider',
             borderRadius: 1,
-            p: 3,
+            p: { xs: 2, sm: 3 },
             minHeight: 200,
             flex: 1,
             minWidth: 0,
+            maxWidth: '100%',
+            overflowX: 'hidden',
           }}
         >
           {renderStepBody()}
