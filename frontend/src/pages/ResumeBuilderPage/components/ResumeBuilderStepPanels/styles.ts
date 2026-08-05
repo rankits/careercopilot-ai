@@ -25,7 +25,19 @@ export const Panel = styled(Box)({
   ...panel,
   gap: spacing[5],
   margin: spacing[8],
+  maxWidth: '100%',
+  minWidth: 0,
+  overflowX: 'hidden',
   padding: spacing[8],
+  '@media (max-width: 64rem)': {
+    margin: spacing[5],
+    padding: spacing[6],
+  },
+  '@media (max-width: 40rem)': {
+    gap: spacing[4],
+    margin: spacing[3],
+    padding: spacing[4],
+  },
 });
 
 export const OptimizeStatus = styled(Box, {
@@ -85,9 +97,16 @@ export const KeywordChip = styled(Box, {
 export const AnalysisShell = styled(Box)({
   display: 'grid',
   gap: spacing[4],
-  gridTemplateColumns: 'minmax(0, 1fr) 24rem',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 24rem)',
+  minWidth: 0,
+  overflowX: 'hidden',
   padding: `${spacing[4]} ${spacing[6]} ${spacing[6]}`,
+  width: '100%',
   '@media (max-width: 76rem)': { gridTemplateColumns: '1fr' },
+  '@media (max-width: 48rem)': {
+    gap: spacing[3],
+    padding: `${spacing[3]} ${spacing[3]} ${spacing[5]}`,
+  },
 
   '& .aside': { alignSelf: 'start', display: 'grid', gap: spacing[4] },
   '& .aside-card': { ...panel, background: 'rgba(255,255,255,0.96)' },
@@ -202,11 +221,21 @@ export const AnalysisMain = styled(Box, {
   },
   '& .score-summary': { alignContent: 'center', display: 'grid', gap: '1.75rem' },
   '& .score-topline': {
-    alignItems: 'start',
+    alignItems: 'flex-start',
     display: 'flex',
-    gap: spacing[4],
+    gap: spacing[3],
     justifyContent: 'space-between',
-    '@media (max-width: 48rem)': { flexDirection: 'column' },
+    minWidth: 0,
+    '& > div:first-of-type': { flex: '1 1 auto', minWidth: 0 },
+    '& > button': {
+      flex: '0 0 auto',
+      whiteSpace: 'nowrap',
+    },
+    '@media (max-width: 48rem)': {
+      alignItems: 'stretch',
+      flexDirection: 'column',
+      '& > button': { alignSelf: 'flex-start' },
+    },
   },
   '& .summary-title': { ...title, fontSize: fontSize.base },
   '& .range': { display: 'grid', gap: spacing[3] },
@@ -399,7 +428,37 @@ export const AnalysisMain = styled(Box, {
     gap: spacing[4],
     gridTemplateColumns: 'auto minmax(0, 1fr) auto',
     padding: spacing[4],
-    '@media (max-width: 56rem)': { gridTemplateColumns: 'auto minmax(0, 1fr)' },
+    '& > button': { whiteSpace: 'nowrap' },
+    '@media (max-width: 56rem)': {
+      gridTemplateColumns: 'auto minmax(0, 1fr)',
+      '& > button': { gridColumn: '1 / -1', justifySelf: 'stretch' },
+    },
+  },
+  '& .invalid-target-banner': {
+    background: tone.error.background,
+    border: `1px solid ${tone.error.border}`,
+    borderRadius: borderRadius['2xl'],
+    color: tone.error.color,
+    display: 'grid',
+    gap: spacing[3],
+    padding: spacing[4],
+    position: 'relative',
+    zIndex: 2,
+    '& .invalid-title': {
+      fontSize: fontSize.lg,
+      fontWeight: fontWeight.extraBold,
+      lineHeight: 1.25,
+    },
+    '& .invalid-body': {
+      fontSize: fontSize.sm,
+      lineHeight: 1.5,
+      opacity: 0.95,
+    },
+    '& .invalid-actions': {
+      display: 'flex',
+      flexWrap: 'wrap',
+      gap: spacing[2],
+    },
   },
 }));
 

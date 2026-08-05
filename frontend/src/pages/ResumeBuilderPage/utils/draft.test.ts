@@ -104,6 +104,57 @@ describe('draft utils', () => {
     ).toBe('Used React and TypeScript');
   });
 
+  it('applies experience suggestions despite bullet/whitespace drift', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      experiences: [
+        {
+          id: 'e1',
+          company: 'Acme',
+          title: 'Dev',
+          startDate: '',
+          endDate: '',
+          details: '- Built UI components\n- Shipped features',
+        },
+      ],
+    };
+
+    const next = applyTextReplaceToDraft(
+      draft,
+      'experience',
+      'Built UI components',
+      'Built accessible UI components in React',
+    );
+    expect(next.experiences[0].details).toContain('Built accessible UI components in React');
+    expect(next.experiences[0].details).toContain('Shipped features');
+  });
+
+  it('adds JD skills from prose skill suggestions without dumping narrative', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      skillsList: ['React'],
+    };
+
+    const next = applyTextReplaceToDraft(
+      draft,
+      'skills',
+      'React',
+      'Add Java, Spring Boot, and Hibernate for ATS keyword match',
+    );
+    expect(next.skillsList).toEqual(expect.arrayContaining(['React', 'Java', 'Spring Boot']));
+    expect(next.skillsList.some((skill) => /keyword|match|for|ATS/i.test(skill))).toBe(false);
+  });
+
+  it('adds only the selected single skill', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      skillsList: ['React'],
+    };
+
+    const next = applyTextReplaceToDraft(draft, 'skills', 'Java', 'Java');
+    expect(next.skillsList).toEqual(['React', 'Java']);
+  });
+
   it('normalizes suggestion categories', () => {
     expect(normalizeSuggestionCategory('Profile Summary')).toBe('summary');
     expect(normalizeSuggestionCategory('work experience')).toBe('experience');

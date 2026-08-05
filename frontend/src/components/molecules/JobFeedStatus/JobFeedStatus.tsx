@@ -1,7 +1,16 @@
 import { Button } from '@/components/atoms/Button';
 
-import { Alert, Box, CircularProgress, RefreshIcon, Typography } from '@/lib/material';
-import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
+import {
+  Box,
+  CircularProgress,
+  ErrorOutlineIcon,
+  InfoOutlinedIcon,
+  RefreshIcon,
+  Typography,
+} from '@/lib/material';
+import { colorTokens } from '@/tokens';
+
+import { jobFeedStatusSx } from './styles';
 
 interface JobFeedStatusProps {
   message: string;
@@ -11,24 +20,38 @@ interface JobFeedStatusProps {
   tone?: 'info' | 'error';
 }
 
+function toFriendlyMessage(message: string): string {
+  const normalized = message.trim();
+  if (!normalized) {
+    return 'Something went wrong. Please try again.';
+  }
+
+  if (/status code 404|not found/i.test(normalized)) {
+    return 'We couldn’t find matching results right now. Try again in a moment.';
+  }
+  if (/status code 401|unauthorized|session/i.test(normalized)) {
+    return 'Your session may have expired. Sign in again, then retry.';
+  }
+  if (/status code 403|forbidden/i.test(normalized)) {
+    return 'You don’t have access to this content.';
+  }
+  if (
+    /status code 5\d\d|unavailable|network|timeout|failed to fetch|network error/i.test(normalized)
+  ) {
+    return 'The service is temporarily unavailable. Please try again.';
+  }
+  if (/request failed with status code/i.test(normalized)) {
+    return 'We couldn’t complete this request. Please try again.';
+  }
+
+  return normalized;
+}
+
 export function JobFeedLoadingState({ label = 'Loading jobs…' }: { label?: string }) {
   return (
-    <Box
-      aria-busy="true"
-      aria-label={label}
-      sx={{
-        alignItems: 'center',
-        display: 'grid',
-        gap: spacing[3],
-        justifyItems: 'center',
-        minHeight: '16rem',
-        padding: spacing[6],
-      }}
-    >
+    <Box aria-busy="true" aria-label={label} sx={jobFeedStatusSx.loadingRoot}>
       <CircularProgress size={36} />
-      <Typography sx={{ color: colorTokens.textSecondary, fontSize: fontSize.sm }}>
-        {label}
-      </Typography>
+      <Typography sx={jobFeedStatusSx.loadingLabel}>{label}</Typography>
     </Box>
   );
 }
@@ -40,43 +63,44 @@ export function JobFeedStatus({
   title,
   tone = 'info',
 }: JobFeedStatusProps) {
+  const isError = tone === 'error';
+  const friendlyMessage = toFriendlyMessage(message);
+  const Icon = isError ? ErrorOutlineIcon : InfoOutlinedIcon;
+  const iconBackground = isError
+    ? colorTokens.actionDangerSurface
+    : colorTokens.actionPrimarySurface;
+  const iconColor = isError ? colorTokens.actionDanger : colorTokens.actionPrimary;
+
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gap: spacing[2],
-        justifyItems: 'start',
-        minHeight: 0,
-        padding: `${spacing[2]} 0`,
-      }}
-    >
-      <Alert
-        role={tone === 'error' ? 'alert' : 'status'}
-        severity={tone === 'error' ? 'error' : 'info'}
-        sx={{ width: '100%' }}
-        action={
-          onRetry ? (
-            <Button
-              onClick={onRetry}
-              size="small"
-              startIcon={<RefreshIcon fontSize="small" />}
-              variant="outline"
-            >
-              {retryLabel}
-            </Button>
-          ) : undefined
-        }
+    <Box role={isError ? 'alert' : 'status'} sx={jobFeedStatusSx.root}>
+      <Box
+        aria-hidden="true"
+        sx={{
+          ...jobFeedStatusSx.iconWrap,
+          background: iconBackground,
+          color: iconColor,
+        }}
       >
-        <Typography
-          component="h2"
-          sx={{ display: 'block', fontSize: fontSize.sm, fontWeight: fontWeight.bold, m: 0 }}
-        >
+        <Icon fontSize="medium" />
+      </Box>
+
+      <Box sx={jobFeedStatusSx.copy}>
+        <Typography component="h2" sx={jobFeedStatusSx.title}>
           {title}
         </Typography>
-        <Typography component="span" sx={{ fontSize: fontSize.sm }}>
-          {message}
-        </Typography>
-      </Alert>
+        <Typography sx={jobFeedStatusSx.message}>{friendlyMessage}</Typography>
+      </Box>
+
+      {onRetry ? (
+        <Button
+          onClick={onRetry}
+          size="small"
+          startIcon={<RefreshIcon fontSize="small" />}
+          variant="outline"
+        >
+          {retryLabel}
+        </Button>
+      ) : null}
     </Box>
   );
 }

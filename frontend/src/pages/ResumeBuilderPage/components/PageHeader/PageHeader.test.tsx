@@ -31,20 +31,26 @@ describe('PageHeader', () => {
     expect(onSaveDraft).toHaveBeenCalled();
   });
 
-  it('shows target role and edit role action', () => {
-    const onEditRole = vi.fn();
+  it('shows Back when onBack is provided', () => {
+    const onBack = vi.fn();
+    render(<PageHeader canContinue current={2} onBack={onBack} onNext={vi.fn()} />);
+    fireEvent.click(screen.getByRole('button', { name: /Back/i }));
+    expect(onBack).toHaveBeenCalled();
+  });
+
+  it('hides Next and Save Draft on export step', () => {
     render(
       <PageHeader
         canContinue
-        current={5}
+        current={10}
+        onBack={vi.fn()}
         onNext={vi.fn()}
-        targetRole="Java Developer"
-        onEditRole={onEditRole}
+        onSaveDraft={vi.fn()}
       />,
     );
 
-    expect(screen.getByText(/Java Developer/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /Edit role/i }));
-    expect(onEditRole).toHaveBeenCalled();
+    expect(screen.queryByRole('button', { name: /Next/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Save Draft/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
   });
 });

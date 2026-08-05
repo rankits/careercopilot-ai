@@ -16,14 +16,18 @@ import {
 export const OptimizeShell = styled(Box)({
   display: 'grid',
   gap: spacing[4],
-  gridTemplateColumns: 'minmax(0, 1.05fr) minmax(20rem, 0.95fr)',
+  gridTemplateColumns: 'minmax(0, 1.05fr) minmax(0, 0.95fr)',
+  minWidth: 0,
+  overflowX: 'hidden',
   padding: `${spacing[4]} ${spacing[6]} ${spacing[6]}`,
+  width: '100%',
   '@media (max-width: 76rem)': {
     gridTemplateColumns: '1fr',
   },
   '@media (max-width: 48rem)': {
     gap: spacing[3],
     padding: `${spacing[3]} ${spacing[3]} ${spacing[5]}`,
+    '& > *': { minWidth: 0, maxWidth: '100%' },
   },
 });
 
@@ -32,7 +36,11 @@ export const OptimizeMain = styled(Box)({
   background: colorTokens.backgroundCard,
   gap: spacing[4],
   minWidth: 0,
+  overflowX: 'hidden',
   padding: spacing[5],
+  '@media (max-width: 48rem)': {
+    padding: spacing[3],
+  },
 });
 
 export const OptimizeHeader = styled(Box)({
@@ -53,9 +61,15 @@ export const ScoreStrip = styled(Box)({
   border,
   borderRadius: borderRadius['2xl'],
   display: 'grid',
-  gap: spacing[4],
-  gridTemplateColumns: '1fr auto 1fr auto',
+  gap: spacing[3],
+  gridTemplateColumns: 'auto auto minmax(0, 1fr) auto',
+  minWidth: 0,
   padding: spacing[4],
+  width: '100%',
+  '@media (max-width: 64rem)': {
+    gridTemplateColumns: 'auto auto minmax(0, 1fr)',
+    '& > :last-child': { gridColumn: '1 / -1' },
+  },
   '@media (max-width: 48rem)': {
     gridTemplateColumns: '1fr',
   },
@@ -95,6 +109,7 @@ export const SectionNav = styled(Box)({
   display: 'grid',
   gap: spacing[2],
   height: 'fit-content',
+  minWidth: 0,
   padding: spacing[3],
 
   '& .nav-title': {
@@ -103,6 +118,13 @@ export const SectionNav = styled(Box)({
     fontWeight: fontWeight.extraBold,
     letterSpacing: '0.04em',
     textTransform: 'uppercase',
+  },
+
+  '@media (max-width: 64rem)': {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    '& .nav-title': { width: '100%' },
   },
 });
 
@@ -121,10 +143,15 @@ export const SectionNavButton = styled('button', {
   fontWeight: fontWeight.semiBold,
   gap: spacing[2],
   justifyContent: 'space-between',
+  maxWidth: '100%',
   minHeight: '2.75rem',
+  minWidth: 0,
   padding: `${spacing[2]} ${spacing[3]}`,
   textAlign: 'left',
   transition: 'background 140ms ease, border-color 140ms ease, color 140ms ease',
+  '@media (max-width: 64rem)': {
+    flex: '1 1 auto',
+  },
   '&:hover': {
     background: t.primarySofter,
     borderColor: 'rgba(37, 99, 235, 0.28)',
@@ -185,8 +212,14 @@ export const SuggestionCard = styled(Box, {
   boxShadow: selected ? t.purpleShadow : 'none',
   display: 'grid',
   gap: spacing[3],
+  maxWidth: '100%',
+  minWidth: 0,
+  overflow: 'hidden',
   padding: spacing[4],
   transition: 'border-color 140ms ease, box-shadow 140ms ease, background 140ms ease',
+  '@media (max-width: 48rem)': {
+    padding: spacing[3],
+  },
 }));
 
 export const SuggestionMeta = styled(Box)({
@@ -195,10 +228,13 @@ export const SuggestionMeta = styled(Box)({
   flexWrap: 'wrap',
   gap: spacing[2],
   justifyContent: 'space-between',
+  minWidth: 0,
 
   '& .title': {
     ...title,
     fontSize: fontSize.sm,
+    minWidth: 0,
+    overflowWrap: 'anywhere',
   },
 });
 
@@ -257,7 +293,10 @@ export const DiffBlock = styled(Box)({
   '& .body': {
     fontSize: fontSize.sm,
     lineHeight: 1.55,
+    minWidth: 0,
+    overflowWrap: 'anywhere',
     whiteSpace: 'pre-wrap',
+    wordBreak: 'break-word',
   },
 });
 
@@ -265,11 +304,14 @@ export const EditorArea = styled('textarea')({
   background: colorTokens.backgroundCard,
   border,
   borderRadius: borderRadius.xl,
+  boxSizing: 'border-box',
   color: t.text,
   fontFamily: 'inherit',
   fontSize: fontSize.sm,
   lineHeight: 1.65,
+  maxWidth: '100%',
   minHeight: '12rem',
+  minWidth: 0,
   padding: spacing[4],
   resize: 'vertical',
   width: '100%',
@@ -286,6 +328,13 @@ export const ActionBar = styled(Box)({
   flexWrap: 'wrap',
   gap: spacing[3],
   justifyContent: 'space-between',
+  minWidth: 0,
+  '@media (max-width: 40rem)': {
+    '& > button': {
+      flex: '1 1 auto',
+      minWidth: 0,
+    },
+  },
 });
 
 export const PreviewPanel = styled(Box)({
@@ -390,16 +439,19 @@ export const EmptyHint = styled(Typography)({
 });
 
 export const AiBanner = styled(Box)({
-  alignItems: 'center',
+  alignItems: 'flex-start',
   background: `linear-gradient(135deg, ${t.primarySoft}, ${colorTokens.backgroundCard})`,
   border: '1px solid rgba(37, 99, 235, 0.2)',
   borderRadius: borderRadius['2xl'],
   display: 'grid',
   gap: spacing[4],
-  gridTemplateColumns: 'auto minmax(0, 1fr) auto',
+  gridTemplateColumns: 'auto minmax(0, 1fr)',
+  maxWidth: '100%',
+  minWidth: 0,
   padding: spacing[4],
   '@media (max-width: 48rem)': {
-    gridTemplateColumns: 'auto minmax(0, 1fr)',
+    gap: spacing[3],
+    padding: spacing[3],
   },
 
   '& .icon': iconBox('2.75rem'),
