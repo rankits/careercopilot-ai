@@ -192,7 +192,7 @@ describe('recommendationsService', () => {
       expect.objectContaining({ params: { limit: 5 } }),
     );
     expect(result).toHaveLength(1);
-    expect(result[0].displayScore).toBe(84);
+    expect(result[0]?.displayScore).toBe(84);
   });
 
   it('creates a career target from goal text', async () => {

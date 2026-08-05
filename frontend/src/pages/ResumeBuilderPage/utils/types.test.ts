@@ -7,7 +7,7 @@ describe('types / constants', () => {
     expect(RESUME_TEMPLATES.map((item) => item.label)).toEqual(
       expect.arrayContaining(['Default', 'Classic', 'Modern']),
     );
-    expect(RESUME_TEMPLATES[0].id).toBe('original');
+    expect(RESUME_TEMPLATES[0]?.id).toBe('original');
   });
 
   it('lists all editable resume sections', () => {
