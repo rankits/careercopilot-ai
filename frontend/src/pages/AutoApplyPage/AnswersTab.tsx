@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
@@ -23,15 +23,25 @@ import {
   Typography,
 } from '@/lib/material';
 
-export function AnswersTab() {
+export function AnswersTab({
+  suggestedQuestionKey,
+}: {
+  suggestedQuestionKey?: string;
+} = {}) {
   const { data: answers, isLoading } = useApplicationAnswers();
   const createAnswer = useCreateApplicationAnswer();
   const deleteAnswer = useDeleteApplicationAnswer();
   const { showToast } = useToast();
 
-  const [questionKey, setQuestionKey] = useState('');
+  const [questionKey, setQuestionKey] = useState(suggestedQuestionKey ?? '');
   const [answerValue, setAnswerValue] = useState('');
   const [autoSubmitAllowed, setAutoSubmitAllowed] = useState(false);
+
+  useEffect(() => {
+    if (suggestedQuestionKey) {
+      setQuestionKey(suggestedQuestionKey);
+    }
+  }, [suggestedQuestionKey]);
 
   const handleAdd = async () => {
     try {
@@ -71,6 +81,13 @@ export function AnswersTab() {
           Demographic, disability, and veteran-status questions are always rejected — never stored,
           per platform policy.
         </Typography>
+
+        {suggestedQuestionKey && (
+          <Alert severity="info">
+            Question key prefilled from your application plan. Enter the answer and save, then return
+            to Submissions and click Refresh plan.
+          </Alert>
+        )}
 
         <TextField
           fullWidth

@@ -20,6 +20,9 @@ import type {
 } from '@/features/auto-apply/types/autoApply.types';
 import { Alert, Box, Chip, CircularProgress, Paper, TextField, Typography } from '@/lib/material';
 
+import type { AutoApplyTabId } from './missingFieldNavigation';
+import { resolveReadinessFixActions } from './missingFieldNavigation';
+
 const DECISION_COLOR: Record<
   ApplicationPlanResult['decision'],
   'success' | 'warning' | 'error' | 'default'
@@ -42,7 +45,28 @@ function StatusChip({ status }: { status: JobApplicationDto['status'] }) {
   return <Chip color={color} label={status.replace(/_/g, ' ')} size="small" />;
 }
 
-function PlanPanel({ plan }: { plan: ApplicationPlanResult }) {
+export type NavigateFixAction = (action: {
+  destination: { kind: 'tab'; tab: AutoApplyTabId } | { kind: 'route'; href: string };
+  field?: string;
+}) => void;
+
+function PlanPanel({
+  plan,
+  onNavigateFix,
+}: {
+  plan: ApplicationPlanResult;
+  onNavigateFix?: NavigateFixAction;
+}) {
+  const readinessReasons = [
+    ...(plan.readiness?.blockingReasons ?? []),
+    ...(plan.readiness?.warnings ?? []),
+  ];
+  const fixActions = resolveReadinessFixActions(readinessReasons, plan.unresolvedQuestions);
+  const warningOnly =
+    (plan.readiness?.blockingReasons.length ?? 0) === 0 &&
+    (plan.readiness?.warnings.length ?? 0) > 0 &&
+    plan.decision === 'READY_FOR_REVIEW';
+
   return (
     <Box sx={{ mt: 2, p: 2, bgcolor: 'action.hover', borderRadius: 1 }}>
       <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
@@ -63,15 +87,110 @@ function PlanPanel({ plan }: { plan: ApplicationPlanResult }) {
         <Typography variant="body2">Resume: {plan.selectedResumeVersion.label}</Typography>
       )}
 
-      {plan.unresolvedQuestions.length > 0 && (
-        <Typography color="warning.main" variant="body2">
-          Unresolved answers needed: {plan.unresolvedQuestions.join(', ')}
+      {(plan.contentWarnings?.length ?? 0) > 0 && (
+        <Box sx={{ mt: 1 }}>
+          {plan.contentWarnings!.map((warning) => (
+            <Typography color="text.secondary" key={warning} sx={{ display: 'block' }} variant="caption">
+              {warning}
+            </Typography>
+          ))}
+        </Box>
+      )}
+
+      {(plan.coverLetter || plan.application.coverLetterContent) && (
+        <Box sx={{ mt: 1.5 }}>
+          <Typography fontWeight={600} variant="body2">
+            Cover letter (review before approve)
+          </Typography>
+          <Typography
+            component="pre"
+            sx={{
+              mt: 0.5,
+              whiteSpace: 'pre-wrap',
+              fontFamily: 'inherit',
+              typography: 'body2',
+              color: 'text.secondary',
+            }}
+          >
+            {plan.coverLetter ?? plan.application.coverLetterContent}
+          </Typography>
+        </Box>
+      )}
+
+      {(plan.screeningAnswers?.length ?? 0) > 0 && (
+        <Box sx={{ mt: 1.5 }}>
+          <Typography fontWeight={600} sx={{ mb: 0.5 }} variant="body2">
+            Screening answers
+          </Typography>
+          {plan.screeningAnswers!.map((answer) => (
+            <Box key={answer.questionKey} sx={{ mb: 0.75 }}>
+              <Typography variant="caption" fontWeight={600}>
+                {answer.questionLabel}
+                {answer.requiresUserReview ? ' · review required' : ''}
+                {answer.status === 'REQUIRES_USER_ACTION' ? ' · missing' : ''}
+              </Typography>
+              <Typography color="text.secondary" sx={{ display: 'block' }} variant="caption">
+                {answer.answer ?? 'Not filled — add in Verified Answers, then Refresh plan.'}
+              </Typography>
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      {fixActions.length > 0 && (
+        <Box sx={{ mt: 1.5 }}>
+          <Typography
+            color={warningOnly ? 'text.secondary' : 'warning.main'}
+            sx={{ mb: 1 }}
+            variant="body2"
+          >
+            {plan.decision === 'INFORMATION_REQUIRED'
+              ? 'Missing or incomplete — fix these, then click Refresh plan:'
+              : warningOnly
+                ? 'Notes (plan can continue):'
+                : 'Related items:'}
+          </Typography>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25 }}>
+            {fixActions.map((action) => (
+              <Box key={action.id}>
+                {(action.message || action.hint) && (
+                  <Typography
+                    color="text.secondary"
+                    sx={{ display: 'block', mb: 0.5 }}
+                    variant="caption"
+                  >
+                    {action.message ?? action.hint}
+                  </Typography>
+                )}
+                <Button
+                  onClick={() =>
+                    onNavigateFix?.({
+                      destination: action.destination,
+                      field: action.field,
+                    })
+                  }
+                  size="small"
+                  variant="outline"
+                >
+                  {action.label}
+                </Button>
+              </Box>
+            ))}
+          </Box>
+        </Box>
+      )}
+
+      {plan.decision === 'INFORMATION_REQUIRED' && fixActions.length === 0 && (
+        <Typography color="warning.main" sx={{ mt: 1 }} variant="body2">
+          Information is still required, but no specific fix actions were returned. Click Refresh
+          plan again after updating profile, answers, or resumes.
         </Typography>
       )}
 
       {!plan.contentGenerationAvailable && (
-        <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="caption">
-          AI-generated cover letter / screening answers are not available yet.
+        <Typography color="text.secondary" sx={{ mt: 1, display: 'block' }} variant="caption">
+          No cover letter / screening package yet — approve a resume, grant Content Generation
+          consent, add verified answers, then Refresh plan.
         </Typography>
       )}
 
@@ -97,7 +216,13 @@ const TERMINAL_STATUSES: JobApplicationDto['status'][] = [
   'CONFIRMATION_RECEIVED',
 ];
 
-function SubmissionRow({ submission }: { submission: JobApplicationDto }) {
+function SubmissionRow({
+  submission,
+  onNavigateFix,
+}: {
+  submission: JobApplicationDto;
+  onNavigateFix?: NavigateFixAction;
+}) {
   const createPlan = useCreatePlan();
   const approveSubmission = useApproveSubmission();
   const queueSubmission = useQueueSubmission();
@@ -138,6 +263,13 @@ function SubmissionRow({ submission }: { submission: JobApplicationDto }) {
 
   const isProcessing = submission.status === 'QUEUED' || submission.status === 'SUBMITTING';
   const isTerminal = TERMINAL_STATUSES.includes(submission.status);
+  const canRefreshPlan =
+    submission.status === 'DISCOVERED' ||
+    submission.status === 'MATCHED' ||
+    submission.status === 'APPLICATION_PLANNING' ||
+    submission.status === 'INFORMATION_REQUIRED' ||
+    submission.status === 'READY_FOR_REVIEW' ||
+    submission.status === 'NOT_ELIGIBLE';
 
   return (
     <Box sx={{ p: 2 }}>
@@ -238,7 +370,7 @@ function SubmissionRow({ submission }: { submission: JobApplicationDto }) {
           </Button>
         )}
 
-        {!isTerminal && (
+        {canRefreshPlan && (
           <Button
             isLoading={createPlan.isPending}
             onClick={() => void handleGeneratePlan()}
@@ -274,12 +406,16 @@ function SubmissionRow({ submission }: { submission: JobApplicationDto }) {
         </Typography>
       )}
 
-      {plan && <PlanPanel plan={plan} />}
+      {plan && <PlanPanel onNavigateFix={onNavigateFix} plan={plan} />}
     </Box>
   );
 }
 
-export function SubmissionsTab() {
+export function SubmissionsTab({
+  onNavigateFix,
+}: {
+  onNavigateFix?: NavigateFixAction;
+} = {}) {
   const { data: submissions, isLoading } = useSubmissions();
   const initiateSubmission = useInitiateSubmission();
   const { showToast } = useToast();
@@ -342,7 +478,7 @@ export function SubmissionsTab() {
               key={submission.id}
               sx={{ borderTop: index === 0 ? 'none' : '1px solid', borderColor: 'divider' }}
             >
-              <SubmissionRow submission={submission} />
+              <SubmissionRow onNavigateFix={onNavigateFix} submission={submission} />
             </Box>
           ))}
         </Paper>

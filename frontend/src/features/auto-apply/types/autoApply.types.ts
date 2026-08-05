@@ -155,6 +155,22 @@ export interface InitiateSubmissionResult {
 export type ApplicationPlanDecision =
   'NOT_ELIGIBLE' | 'UNSUPPORTED_CHANNEL' | 'INFORMATION_REQUIRED' | 'READY_FOR_REVIEW';
 
+export interface ApplicationReadinessReasonDto {
+  code: string;
+  message: string;
+  field?: string;
+  rule?: string;
+  severity: 'BLOCKING' | 'WARNING';
+  collectionMode?: 'ONBOARDING' | 'PROGRESSIVE' | 'JOB_SPECIFIC';
+}
+
+export interface ApplicationReadinessDto {
+  decision: string;
+  ready: boolean;
+  blockingReasons: ApplicationReadinessReasonDto[];
+  warnings: ApplicationReadinessReasonDto[];
+}
+
 export interface ApplicationPlanResult {
   application: JobApplicationDto;
   decision: ApplicationPlanDecision;
@@ -162,5 +178,20 @@ export interface ApplicationPlanResult {
   eligibility: EligibilityResult;
   selectedResumeVersion: ApprovedResumeVersionDto | null;
   unresolvedQuestions: string[];
-  contentGenerationAvailable: false;
+  contentGenerationAvailable: boolean;
+  coverLetter?: string | null;
+  screeningAnswers?: PreparedScreeningAnswerDto[];
+  contentWarnings?: string[];
+  readiness?: ApplicationReadinessDto;
+}
+
+export interface PreparedScreeningAnswerDto {
+  questionKey: string;
+  questionLabel: string;
+  answer: string | null;
+  status: 'READY' | 'REQUIRES_USER_ACTION';
+  source: 'USER_VERIFIED' | 'AI_GENERATED' | null;
+  confidence: number;
+  evidence: string[];
+  requiresUserReview: boolean;
 }
