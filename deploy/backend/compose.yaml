@@ -64,6 +64,8 @@ services:
       RUN_MIGRATIONS: 'false'
       RUN_SEEDS_ON_STARTUP: 'false'
     restart: unless-stopped
+    # Exceeds APPLICATION_SUBMISSION_WORKER_DRAIN_TIMEOUT_MS default (30s) so SIGTERM drain can finish (AA-008).
+    stop_grace_period: 45s
     mem_limit: 192m
     depends_on:
       api:
