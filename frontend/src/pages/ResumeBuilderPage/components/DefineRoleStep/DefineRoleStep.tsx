@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState, type KeyboardEvent } from 'react';
 
 import { Button, Input } from '@/components/atoms';
 
@@ -22,8 +22,15 @@ import type {
   ResumeVersion,
   UploadedResume,
 } from '@/services/resumeBuilder.service';
+import { resumeBuilderService } from '@/services/resumeBuilder.service';
+import { colorTokens } from '@/tokens';
 
-import { formatFileSize, formatResumeDate, getResumeExtension } from '../../utils';
+import {
+  extractKeywordsFromText,
+  formatFileSize,
+  formatResumeDate,
+  getResumeExtension,
+} from '../../utils';
 
 import {
   DefineRoleNextButtonSx,
@@ -66,6 +73,10 @@ const nextItems = [
   { icon: DownloadIcon, title: 'Resume download' },
 ];
 
+function skillKey(value: string) {
+  return value.trim().toLowerCase();
+}
+
 export function DefineRoleStep({
   targetRole,
   industry,
@@ -87,9 +98,42 @@ export function DefineRoleStep({
   onStartAnalysis,
 }: DefineRoleStepProps) {
   const [skillInput, setSkillInput] = useState('');
+  const [resumeSkills, setResumeSkills] = useState<string[]>([]);
+  const [showValidation, setShowValidation] = useState(false);
+
   const selectedResumeExtension = getResumeExtension(selectedResume?.originalName ?? '');
   const selectedResumeSize = formatFileSize(selectedResume?.sizeBytes);
   const atsScore = analysis?.status === 'COMPLETED' ? analysis.atsScore : null;
+
+  const targetRoleError = showValidation && !targetRole.trim();
+  const jobDescriptionError = showValidation && !jobDescription.trim();
+
+  useEffect(() => {
+    let cancelled = false;
+    if (!selectedResume?.id) {
+      setResumeSkills([]);
+      return undefined;
+    }
+
+    void resumeBuilderService.getResumeSkillHints(selectedResume.id).then((hints) => {
+      if (!cancelled) setResumeSkills(hints);
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedResume?.id]);
+
+  const jdSkillPreview = useMemo(() => {
+    const jdSkills = extractKeywordsFromText(jobDescription);
+    const present = new Set(
+      [...resumeSkills, ...skills].map(skillKey).filter(Boolean),
+    );
+    return jdSkills.map((skill) => ({
+      skill,
+      matched: present.has(skillKey(skill)),
+    }));
+  }, [jobDescription, resumeSkills, skills]);
 
   const addSkill = () => {
     const value = skillInput.trim().replace(/,$/, '');
@@ -109,6 +153,14 @@ export function DefineRoleStep({
     }
   };
 
+  const handleNext = () => {
+    if (!targetRole.trim() || !jobDescription.trim() || !selectedResume) {
+      setShowValidation(true);
+      return;
+    }
+    onStartAnalysis();
+  };
+
   return (
     <DefineRoleShell>
       <Box className="main">
@@ -117,20 +169,20 @@ export function DefineRoleStep({
             Step 2: <Box component="span">Define Your Target Role</Box>
           </Typography>
           <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-            Add role details, skills, and an optional job description so ATS scoring matches the
-            real JD.
+            Add role details and paste the job description so ATS scoring matches the real JD.
           </Typography>
         </Box>
 
         <Box className="role-card">
           <Box className="form-group">
-            <FormLabel>Target job title</FormLabel>
+            <FormLabel>Target job title *</FormLabel>
             <Input
               value={targetRole}
               onChange={(event) => onTargetRoleChange(event.target.value)}
               placeholder="e.g. Senior Frontend Developer"
               size="medium"
               sx={FormInputSx}
+              errorMessage={targetRoleError ? 'Target role is required.' : undefined}
             />
           </Box>
 
@@ -218,7 +270,7 @@ export function DefineRoleStep({
           </Box>
 
           <Box className="form-group">
-            <FormLabel>Job description (for ATS match)</FormLabel>
+            <FormLabel>Job description *</FormLabel>
             <Input
               value={jobDescription}
               onChange={(event) => onJobDescriptionChange(event.target.value)}
@@ -227,38 +279,62 @@ export function DefineRoleStep({
               multiline
               minRows={6}
               sx={FormInputSx}
+              errorMessage={jobDescriptionError ? 'Job description is required.' : undefined}
             />
           </Box>
 
-          <Box className="role-tip">
-            <AutoAwesomeOutlinedIcon fontSize="small" />
-            <Box>
-              <Typography className="tip-title">Tip</Typography>
-              <Typography className="tip-text">
-                Paste the real JD for strongest keyword/skill-gap analysis. Skills chips help target
-                role matching even without a JD.
+          {jdSkillPreview.length > 0 ? (
+            <Box className="form-group">
+              <FormLabel>JD skill preview</FormLabel>
+              <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem', mb: 1 }}>
+                Green chips are already on your resume or preferred skills. Others are likely gaps.
               </Typography>
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
+                {jdSkillPreview.map(({ skill, matched }) => (
+                  <Chip
+                    key={skill}
+                    label={skill}
+                    size="small"
+                    sx={
+                      matched
+                        ? {
+                            backgroundColor: colorTokens.actionSuccessSurface,
+                            border: `1px solid ${colorTokens.actionSuccess}`,
+                            color: colorTokens.actionSuccessHover,
+                            fontWeight: 600,
+                          }
+                        : {
+                            backgroundColor: colorTokens.backgroundCard,
+                            border: `1px solid ${colorTokens.borderDefault}`,
+                            color: colorTokens.textSecondary,
+                          }
+                    }
+                    variant="outlined"
+                  />
+                ))}
+              </Box>
             </Box>
-            <Box className="tip-actions">
-              <Button
-                size="medium"
-                startIcon={<NavigateBeforeIcon fontSize="small" />}
-                onClick={onBack}
-                variant="outline"
-              >
-                Back
-              </Button>
-              <Button
-                disabled={startingAnalysis || !targetRole.trim() || !selectedResume}
-                endIcon={<NavigateNextIcon fontSize="small" />}
-                isLoading={startingAnalysis}
-                onClick={onStartAnalysis}
-                size="medium"
-                sx={DefineRoleNextButtonSx}
-              >
-                Next
-              </Button>
-            </Box>
+          ) : null}
+
+          <Box className="role-actions">
+            <Button
+              size="medium"
+              startIcon={<NavigateBeforeIcon fontSize="small" />}
+              onClick={onBack}
+              variant="outline"
+            >
+              Back
+            </Button>
+            <Button
+              disabled={startingAnalysis || !selectedResume}
+              endIcon={<NavigateNextIcon fontSize="small" />}
+              isLoading={startingAnalysis}
+              onClick={handleNext}
+              size="medium"
+              sx={DefineRoleNextButtonSx}
+            >
+              Next
+            </Button>
           </Box>
         </Box>
       </Box>

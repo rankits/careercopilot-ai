@@ -77,6 +77,9 @@ export interface AnalysisDetails {
   missingKeywordReasons: Record<string, string>;
   /** Original ATS from first analysis — used for export increase display. */
   baselineAtsScore?: number;
+  /** True when AI rejected targetRole / jobDescription before scoring. */
+  invalidTarget?: boolean;
+  invalidTargetMessage?: string;
 }
 
 export interface AnalysisResult {
@@ -103,6 +106,9 @@ export interface AnalysisResult {
   analysisDetails: AnalysisDetails | null;
   baselineAtsScore?: number;
   optimizedSummary?: string;
+  /** AI gate rejected Target Role / JD — show Oops, ATS is 0. */
+  invalidTarget?: boolean;
+  invalidTargetMessage?: string;
 }
 
 export interface AiAnalysisOutput {
@@ -157,6 +163,7 @@ export interface RecheckResult {
   readability?: number;
   formattingScore?: number;
   sectionScores?: SectionScores;
+  skillAnalysis?: SkillAnalysis;
 }
 
 export interface ExportResult {

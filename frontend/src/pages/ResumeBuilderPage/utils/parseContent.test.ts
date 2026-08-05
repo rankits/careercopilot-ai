@@ -79,4 +79,9 @@ Java, Python
 
     expect(draft.role).toBe('Backend Engineer');
   });
+
+  it('prefers target role over resume headline for cross-field JD', () => {
+    const draft = parseResumeContent(SAMPLE_RESUME, 'Business Development Executive');
+    expect(draft.role).toBe('Business Development Executive');
+  });
 });

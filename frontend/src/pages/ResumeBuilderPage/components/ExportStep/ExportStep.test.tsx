@@ -10,6 +10,7 @@ vi.mock('../OptimizeStep/ResumeTemplatePreview', () => ({
 describe('ExportStep', () => {
   it('shows recheck improvement and export actions', () => {
     const onExport = vi.fn();
+    const onDone = vi.fn();
     render(
       <ExportStep
         analysis={
@@ -27,7 +28,7 @@ describe('ExportStep', () => {
           } as never
         }
         editedContent="PROFESSIONAL SUMMARY\nJava developer\nSKILLS\nJava"
-        exporting={false}
+        exportingFormat={null}
         jobDescription="Java"
         preferredSkills={['Java']}
         recheckResult={{
@@ -45,17 +46,21 @@ describe('ExportStep', () => {
         savingVersion={false}
         targetRole="Java Developer"
         template="original"
-        versions={[]}
         onBack={vi.fn()}
-        onDone={vi.fn()}
+        onDone={onDone}
         onExport={onExport}
-        onSaveVersion={vi.fn()}
         onTemplateChange={vi.fn()}
       />,
     );
 
     expect(screen.getByText(/improved by \+16/i)).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /pdf/i }));
-    expect(onExport).toHaveBeenCalled();
+    expect(screen.queryByText(/Version History/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /txt/i })).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Download PDF/i }));
+    expect(onExport).toHaveBeenCalledWith('pdf', null);
+
+    fireEvent.click(screen.getByRole('button', { name: /Save Resume/i }));
+    expect(onDone).toHaveBeenCalled();
   });
 });

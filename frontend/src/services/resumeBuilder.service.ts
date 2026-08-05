@@ -53,6 +53,8 @@ export interface EnterpriseOptimization {
 
 export interface AnalysisDetails {
   enterpriseOptimization?: EnterpriseOptimization;
+  invalidTarget?: boolean;
+  invalidTargetMessage?: string;
 }
 
 export interface AnalysisResult {
@@ -81,6 +83,9 @@ export interface AnalysisResult {
   optimizedSummary?: string;
   /** Present when status === FAILED — real AI/provider error text. */
   failureReason?: string;
+  /** Backend AI rejected Target Role / JD — ATS forced to 0. */
+  invalidTarget?: boolean;
+  invalidTargetMessage?: string;
   analysisDetails?: AnalysisDetails | null;
 }
 
@@ -120,6 +125,7 @@ export interface RecheckResult {
   readability?: number;
   formattingScore?: number;
   sectionScores?: SectionScores;
+  skillAnalysis?: SkillAnalysis;
 }
 
 export interface ExportResult {
@@ -168,6 +174,61 @@ export const resumeBuilderService = {
   async listResumes(): Promise<UploadedResume[]> {
     const res = await httpClient.get<{ data: UploadedResume[] }>(`${BASE}/resumes`);
     return unwrap(res) ?? [];
+  },
+
+  /**
+   * Best-effort skill hints from prior parse / analysis so Define Role can
+   * preview JD skill coverage before a full ATS run.
+   */
+  async getResumeSkillHints(resumeId: string): Promise<string[]> {
+    const skills = new Set<string>();
+
+    try {
+      const analysis = await this.getAnalysis(resumeId);
+      for (const skill of analysis?.skillAnalysis?.matchedSkills ?? []) {
+        if (skill.trim()) skills.add(skill.trim());
+      }
+      for (const skill of analysis?.skillAnalysis?.missingSkills ?? []) {
+        // missing from JD perspective — still may appear in resume text later
+        void skill;
+      }
+      const content = analysis?.editedContent?.trim() ?? '';
+      if (content) {
+        const { extractKeywordsFromText } = await import(
+          '@/pages/ResumeBuilderPage/utils/skills'
+        );
+        for (const skill of extractKeywordsFromText(content)) skills.add(skill);
+      }
+    } catch {
+      // ignore — analysis may not exist yet
+    }
+
+    try {
+      const res = await httpClient.get<{
+        data: { extractedData?: Record<string, unknown> | null };
+      }>(`${BASE}/resumes/${resumeId}/parsed-data`);
+      const extracted = res.data?.data?.extractedData;
+      if (extracted && typeof extracted === 'object') {
+        const rawSkills = extracted.skills ?? extracted.Skills;
+        if (Array.isArray(rawSkills)) {
+          for (const item of rawSkills) {
+            if (typeof item === 'string' && item.trim()) skills.add(item.trim());
+            else if (item && typeof item === 'object' && 'name' in item) {
+              const rawName = (item as { name?: unknown }).name;
+              const name = typeof rawName === 'string' ? rawName.trim() : '';
+              if (name) skills.add(name);
+            }
+          }
+        } else if (typeof rawSkills === 'string' && rawSkills.trim()) {
+          const { splitSkillTokens } = await import('@/pages/ResumeBuilderPage/utils/skills');
+          for (const skill of splitSkillTokens(rawSkills)) skills.add(skill);
+        }
+      }
+    } catch {
+      // ignore — parse may not be ready
+    }
+
+    return Array.from(skills);
   },
 
   // ─── Analysis ───────────────────────────────────────────────────────────
@@ -219,10 +280,14 @@ export const resumeBuilderService = {
     return unwrap(res) ?? [];
   },
 
-  async applySuggestion(resumeId: string, suggestionId: number): Promise<SuggestionItem> {
+  async applySuggestion(
+    resumeId: string,
+    suggestionId: number,
+    options?: { preserveContent?: boolean },
+  ): Promise<SuggestionItem> {
     const res = await httpClient.post<{ data: SuggestionItem }>(
       `${BASE}/resume-analysis/${resumeId}/suggestions/${suggestionId}/apply`,
-      {},
+      { preserveContent: Boolean(options?.preserveContent) },
     );
     return unwrap(res);
   },
@@ -277,6 +342,13 @@ export const resumeBuilderService = {
 
   async getSavedVersion(versionId: number): Promise<SavedResumeVersion> {
     const res = await httpClient.get<{ data: SavedResumeVersion }>(
+      `${BASE}/resume-analysis/saved-versions/${versionId}`,
+    );
+    return unwrap(res);
+  },
+
+  async deleteSavedVersion(versionId: number): Promise<{ id: number }> {
+    const res = await httpClient.delete<{ data: { id: number } }>(
       `${BASE}/resume-analysis/saved-versions/${versionId}`,
     );
     return unwrap(res);
