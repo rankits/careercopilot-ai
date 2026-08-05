@@ -16,6 +16,7 @@ import {
   updateContentController,
   updateStepController,
 } from '@/modules/resume-analysis/controllers/resume-analysis.controller.js';
+import { resumeAnalysisRateLimiter } from '@/shared/middlewares/rateLimiter.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
 import {
   analyzeResumeSchema,
@@ -29,6 +30,10 @@ import {
 } from '@/modules/resume-analysis/validations/resume-analysis.schema.js';
 
 const router = express.Router();
+
+// These routes have no auth middleware in front of them, so this limiter is
+// the only abuse guardrail in the chain - keyed by IP, applied to every route.
+router.use(resumeAnalysisRateLimiter);
 
 // Static paths first (before /:resumeId)
 router.get('/saved-versions', listSavedVersionsController);
