@@ -30,6 +30,7 @@ export function useCreateApplicationAnswer() {
     mutationKey: ['auto-apply', 'answers', 'create'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.answers });
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.setupStatus });
     },
   });
 }
@@ -42,6 +43,34 @@ export function useDeleteApplicationAnswer() {
     mutationKey: ['auto-apply', 'answers', 'delete'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.answers });
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.setupStatus });
+    },
+  });
+}
+
+export function useUpsertApplicationAnswer() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (payload: CreateAnswerPayload) => {
+      const answers = await autoApplyService.listAnswers();
+      const existing = answers.find((answer) => answer.questionKey === payload.questionKey);
+      if (existing) {
+        return autoApplyService.updateAnswer(existing.id, {
+          answer: payload.answer,
+          autoSubmitAllowed: payload.autoSubmitAllowed,
+        });
+      }
+      try {
+        return await autoApplyService.createAnswer(payload);
+      } catch (error) {
+        throw normalizeAutoApplyError(error, 'Unable to save this answer.');
+      }
+    },
+    mutationKey: ['auto-apply', 'answers', 'upsert'],
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.answers });
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.setupStatus });
     },
   });
 }

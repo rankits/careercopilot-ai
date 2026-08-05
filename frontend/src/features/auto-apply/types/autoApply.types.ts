@@ -18,7 +18,9 @@ export interface CandidateApplicationPreferences {
   expectedSalary?: { min?: number; max?: number; currency?: string };
   noticePeriodDays?: number;
   willingToRelocate?: boolean;
-  requiresSponsorship?: boolean;
+  requiresSponsorship?: boolean | null;
+  currentLocation?: string;
+  currentCountry?: string;
 }
 
 export interface CandidateApplicationLinks {
@@ -64,6 +66,18 @@ export interface ApprovedResumeVersionDto {
   category: string;
   tags: string[];
   isActive: boolean;
+}
+
+export interface DeleteResumeVersionResult {
+  newDefaultResumeVersionId: string | null;
+  newDefaultLabel: string | null;
+}
+
+export interface UpdateResumeVersionPayload {
+  label?: string;
+  category?: string;
+  tags?: string[];
+  isDefault?: boolean;
 }
 
 export interface CreateResumeVersionPayload {
@@ -282,4 +296,44 @@ export interface PrepareApplicationPayload {
   resumeVersionId?: string;
   allowMatchCompute?: boolean;
   forceRefreshAnalysis?: boolean;
+}
+
+export type SetupSectionId =
+  | 'personal'
+  | 'work-auth'
+  | 'preferences'
+  | 'links'
+  | 'answers'
+  | 'resumes'
+  | 'exclusions'
+  | 'consents';
+
+export interface SetupGapDto {
+  code: string;
+  label: string;
+  section: SetupSectionId;
+}
+
+export interface SetupSectionStatusDto {
+  id: SetupSectionId;
+  label: string;
+  complete: boolean;
+  required: boolean;
+}
+
+export interface SetupStatusDto {
+  complete: boolean;
+  percent: number;
+  readyForAssistedApply: boolean;
+  gaps: SetupGapDto[];
+  sections: SetupSectionStatusDto[];
+}
+
+export interface PrivacyAcknowledgementDto {
+  policyVersion: string;
+  acknowledgedAt: string;
+}
+
+export interface PrivacyAcknowledgementPayload {
+  policyVersion: string;
 }
