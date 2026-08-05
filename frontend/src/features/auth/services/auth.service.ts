@@ -42,16 +42,48 @@ function parseAuthResponse(data: AuthApiResponse): AuthResponse {
   };
 }
 
+function getAuthErrorMessage(error: unknown, fallback: string): string {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    'response' in error &&
+    typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message ===
+      'string'
+  ) {
+    const message = (
+      error as { response: { data: { message: string } } }
+    ).response.data.message.trim();
+    if (message) return message;
+  }
+
+  if (
+    error instanceof Error &&
+    /network|timeout|failed to fetch|ECONNREFUSED/i.test(error.message)
+  ) {
+    return 'Unable to reach the server. Please try again.';
+  }
+
+  return fallback;
+}
+
 export const authService = {
   async register(payload: RegisterPayload): Promise<AuthResponse> {
-    const { data } = await httpClient.post<AuthApiResponse>('/auth/register', payload);
-
+    let data: AuthApiResponse;
+    try {
+      ({ data } = await httpClient.post<AuthApiResponse>('/auth/register', payload));
+    } catch (error) {
+      throw new Error(getAuthErrorMessage(error, 'Unable to create account. Please try again.'));
+    }
     return parseAuthResponse(data);
   },
 
   async login(payload: LoginPayload): Promise<AuthResponse> {
-    const { data } = await httpClient.post<AuthApiResponse>('/auth/login', payload);
-
+    let data: AuthApiResponse;
+    try {
+      ({ data } = await httpClient.post<AuthApiResponse>('/auth/login', payload));
+    } catch (error) {
+      throw new Error(getAuthErrorMessage(error, 'Unable to log in. Please try again.'));
+    }
     return parseAuthResponse(data);
   },
 

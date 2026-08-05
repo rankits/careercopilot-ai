@@ -24,11 +24,14 @@ const records = (value: unknown) => (Array.isArray(value) ? value.filter(isRecor
 const texts = (value: unknown) =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string') : [];
 
-const formatRecord = (record: Record<string, unknown>, keys: string[]) =>
-  keys
+/** Prefers structured keys, then falls back to `raw` (RULE_BASED parser). */
+const formatRecord = (record: Record<string, unknown>, keys: string[]) => {
+  const structured = keys
     .map((key) => text(record[key]))
     .filter(Boolean)
     .join(' — ');
+  return structured || text(record.raw);
+};
 
 export function mapResumeToProfile(value: unknown): ResumeProfileFormValues {
   if (!isRecord(value)) throw new Error('Resume parser returned an invalid response.');
@@ -36,6 +39,7 @@ export function mapResumeToProfile(value: unknown): ResumeProfileFormValues {
 
   const legacyPersonal = isRecord(value.personalDetails) ? value.personalDetails : {};
   const personal = isRecord(value.personalInformation) ? value.personalInformation : legacyPersonal;
+  const professionalProfile = isRecord(value.professionalProfile) ? value.professionalProfile : {};
   const experienceRecords = records(value.employmentHistory).length
     ? records(value.employmentHistory)
     : records(value.experience);
@@ -48,6 +52,14 @@ export function mapResumeToProfile(value: unknown): ResumeProfileFormValues {
         texts(skills[key]),
       )
     : texts(value.skills);
+  const totalExperienceYears =
+    typeof value.totalExperienceYears === 'number'
+      ? value.totalExperienceYears
+      : typeof professionalProfile.totalExperienceYears === 'number'
+        ? professionalProfile.totalExperienceYears
+        : typeof personal.totalExperience === 'number'
+          ? personal.totalExperience
+          : null;
 
   return {
     ...EMPTY_PROFILE,
@@ -55,30 +67,48 @@ export function mapResumeToProfile(value: unknown): ResumeProfileFormValues {
       .map((item) => formatRecord(item, ['name', 'issuer']))
       .filter(Boolean)
       .join('\n'),
-    currentCompany: text(current.company) || text(current.companyName),
-    designation: text(current.title) || text(current.designation),
+    currentCompany:
+      text(current.company) ||
+      text(current.companyName) ||
+      text(personal.currentCompany) ||
+      text(value.currentCompany),
+    designation:
+      text(current.title) ||
+      text(current.designation) ||
+      text(personal.designation) ||
+      text(personal.currentTitle) ||
+      text(professionalProfile.currentTitle),
     education: records(value.education)
       .map((item) => formatRecord(item, ['qualification', 'institution']))
       .filter(Boolean)
       .join('\n'),
-    email: text(personal.email),
-    fullName: text(personal.fullName) || text(personal.name),
+    email: text(personal.email) || text(value.email),
+    fullName: text(personal.fullName) || text(personal.name) || text(value.fullName),
     location:
       ['city', 'state', 'country']
         .map((key) => text(location[key]))
         .filter(Boolean)
-        .join(', ') || text(personal.location),
-    phone: text(personal.phone),
-    projects: records(value.projects)
-      .map((item) => formatRecord(item, ['name', 'description']))
-      .filter(Boolean)
-      .join('\n'),
+        .join(', ') ||
+      text(personal.location) ||
+      text(value.location),
+    phone: text(personal.phone) || text(value.phone),
+    projects: records(value.projects).length
+      ? records(value.projects)
+          .map((item) => formatRecord(item, ['name', 'description']))
+          .filter(Boolean)
+          .join('\n')
+      : records(legacyPersonal.projects)
+          .map((item) => formatRecord(item, ['name', 'description']))
+          .filter(Boolean)
+          .join('\n'),
     skills: [...new Set(skillValues)].join(', '),
     summary:
       text(value.professionalSummary) ||
-      (isRecord(value.professionalProfile) ? text(value.professionalProfile.summary) : ''),
+      text(professionalProfile.summary) ||
+      text(personal.summary) ||
+      text(value.summary),
     totalExperience:
-      typeof value.totalExperienceYears === 'number' ? String(value.totalExperienceYears) : '',
+      totalExperienceYears !== null ? String(totalExperienceYears) : text(personal.totalExperience),
     workExperience: experienceRecords
       .map((item) => formatRecord(item, ['title', 'designation', 'company', 'companyName']))
       .filter(Boolean)
