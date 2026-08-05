@@ -45,6 +45,18 @@ export const listResumesController = async (req: Request, res: Response, next: N
   }
 };
 
+export const deleteResumeController = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = await resumeService.deleteResume(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
+    return res.status(200).json(successResponse('Resume deleted successfully', result));
+  } catch (error) {
+    return next(error);
+  }
+};
+
 export const downloadResumeController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const file = await resumeService.downloadResume(
