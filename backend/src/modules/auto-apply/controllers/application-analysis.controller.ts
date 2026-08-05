@@ -2,9 +2,11 @@ import { NextFunction, Request, Response } from 'express';
 import { successResponse } from '@/shared/utils/response.js';
 import { requireUserPrincipalId, getParam } from '@/modules/auto-apply/utils/require-user.util.js';
 import {
+  jobApplicationRepository,
   jobPageAnalyzerService,
   prepareApplicationService,
 } from '@/modules/auto-apply/wiring/analysis.wiring.js';
+import { redactAnalysisJobApplicationId } from '@/modules/auto-apply/utils/redact-analysis-job-application-id.js';
 
 export const createJobAnalysisController = async (
   req: Request,
@@ -31,10 +33,19 @@ export const getLatestJobAnalysisController = async (
   next: NextFunction,
 ) => {
   try {
-    requireUserPrincipalId(req);
+    const userId = requireUserPrincipalId(req);
     const jobId = getParam(req.params.jobId, 'jobId');
     const analysis = await jobPageAnalyzerService.getLatest(jobId);
-    return res.status(200).json(successResponse('Latest job page analysis', analysis));
+
+    if (!analysis) {
+      return res.status(200).json(successResponse('Latest job page analysis', null));
+    }
+
+    // AA-012: never leak another user's jobApplicationId through shared analysis.
+    const ownApplication = await jobApplicationRepository.findByUserIdAndJobId(userId, jobId);
+    const safeAnalysis = redactAnalysisJobApplicationId(analysis, ownApplication?.id ?? null);
+
+    return res.status(200).json(successResponse('Latest job page analysis', safeAnalysis));
   } catch (error) {
     return next(error);
   }
