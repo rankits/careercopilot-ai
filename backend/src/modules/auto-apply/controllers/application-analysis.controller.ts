@@ -7,6 +7,10 @@ import {
   prepareApplicationService,
 } from '@/modules/auto-apply/wiring/analysis.wiring.js';
 import { redactAnalysisJobApplicationId } from '@/modules/auto-apply/utils/redact-analysis-job-application-id.js';
+import {
+  getOperationId,
+  getOperationLogger,
+} from '@/modules/auto-apply/middlewares/operation-id.middleware.js';
 
 export const createJobAnalysisController = async (
   req: Request,
@@ -16,11 +20,20 @@ export const createJobAnalysisController = async (
   try {
     const userId = requireUserPrincipalId(req);
     const jobId = getParam(req.params.jobId, 'jobId');
+    const operationId = getOperationId() ?? req.operationId;
+    getOperationLogger().info(
+      { operationId, userId, jobId },
+      'Job page analysis requested',
+    );
     const analysis = await jobPageAnalyzerService.analyzeOrGetFresh({
       userId,
       jobId,
       forceRefresh: req.body?.forceRefresh === true,
     });
+    getOperationLogger().info(
+      { operationId, userId, jobId, analysisId: analysis.id },
+      'Job page analysis ready',
+    );
     return res.status(200).json(successResponse('Job page analysis ready', analysis));
   } catch (error) {
     return next(error);
@@ -59,6 +72,11 @@ export const prepareApplicationController = async (
   try {
     const userId = requireUserPrincipalId(req);
     const jobId = getParam(req.params.jobId, 'jobId');
+    const operationId = getOperationId() ?? req.operationId;
+    getOperationLogger().info(
+      { operationId, userId, jobId },
+      'Application preparation requested',
+    );
     const result = await prepareApplicationService.prepare({
       userId,
       jobId,
@@ -68,6 +86,15 @@ export const prepareApplicationController = async (
       allowMatchCompute: req.body?.allowMatchCompute === true,
       forceRefreshAnalysis: req.body?.forceRefreshAnalysis === true,
     });
+    getOperationLogger().info(
+      {
+        operationId,
+        userId,
+        jobId,
+        jobApplicationId: result.application?.id,
+      },
+      'Application preparation complete',
+    );
     return res.status(200).json(successResponse('Application preparation complete', result));
   } catch (error) {
     return next(error);

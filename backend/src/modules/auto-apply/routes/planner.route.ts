@@ -8,6 +8,7 @@ import {
   createPlanController,
   getPlanController,
 } from '@/modules/auto-apply/controllers/planner.controller.js';
+import { operationIdMiddleware } from '@/modules/auto-apply/middlewares/operation-id.middleware.js';
 
 const router = express.Router();
 
@@ -17,6 +18,7 @@ router.post(
   '/',
   ...requireUser,
   requirePermission(AUTO_APPLY_PERMISSIONS.PLAN_CREATE_OWN),
+  operationIdMiddleware,
   validateResource(
     z.object({ body: z.object({ jobId: z.string().uuid('Invalid job ID format') }) }),
   ),

@@ -14,6 +14,10 @@ import { autoApplyEventService } from '@/modules/auto-apply/controllers/audit-ev
 import { applicationReadinessService } from '@/modules/auto-apply/wiring/readiness.wiring.js';
 import { PrismaApplicationPageAnalysisRepository } from '@/modules/auto-apply/repositories/prisma-application-page-analysis.repository.js';
 import { requireUserPrincipalId, getParam } from '@/modules/auto-apply/utils/require-user.util.js';
+import {
+  getOperationId,
+  getOperationLogger,
+} from '@/modules/auto-apply/middlewares/operation-id.middleware.js';
 
 const answerRepository = new PrismaApplicationAnswerRepository();
 const consentRepository = new PrismaApplicationConsentRepository();
@@ -39,7 +43,22 @@ export const applicationPlannerService = new ApplicationPlannerService(
 export const createPlanController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = requireUserPrincipalId(req);
+    const operationId = getOperationId() ?? req.operationId;
+    getOperationLogger().info(
+      { operationId, userId, jobId: req.body.jobId },
+      'Application plan requested',
+    );
     const plan = await applicationPlannerService.createPlan(userId, req.body.jobId);
+    getOperationLogger().info(
+      {
+        operationId,
+        userId,
+        jobId: req.body.jobId,
+        jobApplicationId: plan.application.id,
+        decision: plan.decision,
+      },
+      'Application plan generated',
+    );
     void autoApplyEventService.record({
       userId,
       eventType: 'PLAN_CREATED',
@@ -49,6 +68,7 @@ export const createPlanController = async (req: Request, res: Response, next: Ne
         channel: plan.channel,
         readinessDecision: plan.readiness?.decision,
         blockingCodes: plan.readiness?.blockingReasons.map((r) => r.code) ?? [],
+        ...(operationId ? { operationId } : {}),
       },
     });
     return res.status(200).json(successResponse('Application plan generated successfully', plan));

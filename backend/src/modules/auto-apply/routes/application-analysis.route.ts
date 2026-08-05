@@ -9,6 +9,7 @@ import {
   getLatestJobAnalysisController,
   prepareApplicationController,
 } from '@/modules/auto-apply/controllers/application-analysis.controller.js';
+import { operationIdMiddleware } from '@/modules/auto-apply/middlewares/operation-id.middleware.js';
 
 const router = express.Router({ mergeParams: true });
 const requireUser = [authMiddleware, requirePrincipalType('USER')] as const;
@@ -37,6 +38,7 @@ router.post(
   '/analysis',
   ...requireUser,
   requirePermission(AUTO_APPLY_PERMISSIONS.PLAN_CREATE_OWN),
+  operationIdMiddleware,
   validateResource(AnalyzeBodySchema),
   createJobAnalysisController,
 );
@@ -52,6 +54,7 @@ router.post(
   '/prepare',
   ...requireUser,
   requirePermission(AUTO_APPLY_PERMISSIONS.PLAN_CREATE_OWN),
+  operationIdMiddleware,
   validateResource(PrepareBodySchema),
   prepareApplicationController,
 );
