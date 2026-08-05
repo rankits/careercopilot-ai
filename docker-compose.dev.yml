@@ -230,6 +230,8 @@ services:
       dockerfile: docker/Dockerfile.dev
     container_name: career_copilot_application_submission_worker_dev
     restart: unless-stopped
+    # Exceeds APPLICATION_SUBMISSION_WORKER_DRAIN_TIMEOUT_MS default (30s) so SIGTERM drain can finish (AA-008).
+    stop_grace_period: 45s
     command: npm run worker:application-submission
     environment:
       NODE_ENV: '${NODE_ENV:-development}'

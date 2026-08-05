@@ -27,6 +27,8 @@ export interface MessageEnvelope<T = unknown> {
 
 export type MessageHandler<T = unknown> = (message: MessageEnvelope<T>) => Promise<void>;
 
+export type InFlightWaitResult = 'idle' | 'timeout';
+
 export interface IMessageBusDriver {
   connect(): Promise<void>;
   ping(): Promise<boolean>;
@@ -49,6 +51,10 @@ export interface IMessageBusDriver {
     routingKey: string,
     options?: SubscribeOptions,
   ): Promise<void>;
+  /** Stop new deliveries for all active consumers (channel.cancel). */
+  cancelConsumers(): Promise<void>;
+  /** Await in-flight handler completions, or resolve `'timeout'` when `timeoutMs` elapses. */
+  waitForInFlight(timeoutMs: number): Promise<InFlightWaitResult>;
   close(): Promise<void>;
 }
 
