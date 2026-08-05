@@ -10,6 +10,7 @@ import { IApprovedResumeVersionRepository } from '@/modules/auto-apply/contracts
 import { IApplicationAnswerRepository } from '@/modules/auto-apply/contracts/application-answer.contract.js';
 import { IApplicationPlannerService } from '@/modules/auto-apply/contracts/planner.contract.js';
 import { IApplicationReadinessService } from '@/modules/auto-apply/contracts/application-readiness.contract.js';
+import type { IApplicationPageAnalysisRepository } from '@/modules/auto-apply/contracts/application-page-analysis.contract.js';
 import {
   ApplicationPlanDecision,
   ApplicationPlanResult,
@@ -19,6 +20,7 @@ import { isValidTransition } from '@/modules/auto-apply/utils/state-machine.util
 import { readinessToPlannerDecision } from '@/modules/auto-apply/services/application-readiness.service.js';
 import { ApplicationContentPreparationService } from '@/modules/auto-apply/services/application-content-preparation.service.js';
 import { PreparedScreeningAnswer } from '@/modules/auto-apply/types/application-content.types.js';
+import { toApplicationPageAnalysisSummary } from '@/modules/auto-apply/types/application-page-analysis-summary.types.js';
 
 /**
  * AJA-PLAN-001 — orchestrates duplicate check, eligibility, readiness, and
@@ -34,8 +36,14 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
     private readonly answerRepository: IApplicationAnswerRepository,
     private readonly readinessService: IApplicationReadinessService,
     private readonly contentPreparation?: ApplicationContentPreparationService,
+    private readonly analysisRepository?: IApplicationPageAnalysisRepository,
   ) {}
 
+  private async loadPageAnalysisSummary(jobId: string) {
+    if (!this.analysisRepository) return null;
+    const latest = await this.analysisRepository.findLatestByJobId(jobId);
+    return toApplicationPageAnalysisSummary(latest);
+  }
   async createPlan(userId: string, jobId: string): Promise<ApplicationPlanResult> {
     let application = await this.jobApplicationRepository.findByUserIdAndJobId(userId, jobId);
     if (!application) {
@@ -68,6 +76,7 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
         selectedResumeVersion: null,
         unresolvedQuestions: [],
         readiness: undefined,
+        pageAnalysis: await this.loadPageAnalysisSummary(jobId),
       });
     }
 
@@ -77,7 +86,7 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
       jobApplicationId: application.id,
       stage: 'PLAN',
     });
-
+    const pageAnalysis = await this.loadPageAnalysisSummary(jobId);
     if (readiness.decision === 'FEATURE_DISABLED') {
       throw new AppError(
         'Auto Apply is disabled or paused — planning is unavailable.',
@@ -121,6 +130,7 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
         selectedResumeVersion,
         unresolvedQuestions,
         readiness,
+        pageAnalysis,
       });
     }
 
@@ -164,6 +174,7 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
       screeningAnswers: content.screeningAnswers,
       contentWarnings: content.warnings,
       readiness,
+      pageAnalysis,
     };
   }
 
@@ -192,6 +203,8 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
       preferStoredCoverLetter: true,
     });
 
+    const pageAnalysis = await this.loadPageAnalysisSummary(jobId);
+
     return {
       application,
       decision,
@@ -203,6 +216,7 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
       coverLetter: content.coverLetter,
       screeningAnswers: content.screeningAnswers,
       contentWarnings: content.warnings,
+      pageAnalysis,
     };
   }
 

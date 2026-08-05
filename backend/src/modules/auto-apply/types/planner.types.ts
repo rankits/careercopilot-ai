@@ -9,6 +9,7 @@ import {
   ApplicationContentPackage,
   PreparedScreeningAnswer,
 } from '@/modules/auto-apply/types/application-content.types.js';
+import type { ApplicationPageAnalysisSummary } from '@/modules/auto-apply/types/application-page-analysis-summary.types.js';
 
 export type ApplicationPlanDecision =
   | 'NOT_ELIGIBLE'
@@ -30,6 +31,8 @@ export interface ApplicationPlanResult {
   contentWarnings: string[];
   /** Present when the central readiness gate evaluated this plan. */
   readiness?: ApplicationReadinessResult;
+  /** Latest job-page analysis summary for Prepare UI (null if not analyzed yet). */
+  pageAnalysis?: ApplicationPageAnalysisSummary | null;
 }
 
-export type { ApplicationContentPackage, PreparedScreeningAnswer };
+export type { ApplicationContentPackage, PreparedScreeningAnswer, ApplicationPageAnalysisSummary };
