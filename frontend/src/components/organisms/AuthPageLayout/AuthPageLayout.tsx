@@ -69,6 +69,21 @@ function LoginHero() {
   );
 }
 
+function MobileLoginIntro() {
+  return (
+    <Styled.MobileLoginIntro aria-label="Career Copilot mobile introduction" as="section">
+      <Styled.AiBadge>
+        <AutoAwesomeOutlinedIcon fontSize="small" />
+        AI-powered career platform
+      </Styled.AiBadge>
+      <Styled.MobileLoginHeading as="h2">
+        Find the right opportunities.{' '}
+        <Styled.AccentText as="span">Build your dream career.</Styled.AccentText>
+      </Styled.MobileLoginHeading>
+    </Styled.MobileLoginIntro>
+  );
+}
+
 function TrustPanel() {
   return (
     <Styled.TrustPanel aria-label={AUTH_PAGE_COPY.securityAria}>
@@ -137,6 +152,7 @@ export function AuthPageLayout({ children, mode }: AuthPageLayoutProps) {
         {isRegister ? <RegisterPanel /> : <LoginHero />}
         <Styled.FormColumn mode={mode}>
           <Styled.FormStack mode={mode}>
+            {!isRegister ? <MobileLoginIntro /> : null}
             {children}
             {!isRegister ? <TrustPanel /> : null}
           </Styled.FormStack>
