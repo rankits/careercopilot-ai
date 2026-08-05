@@ -30,7 +30,26 @@ describe('auto-apply audit events IDOR / authz', () => {
     const res = await request(app).get(API).set(authHeader(token)).set('x-user-id', 'other-user');
 
     expect(res.status).toBe(200);
-    expect(spy).toHaveBeenCalledWith(String(user.id));
+    expect(spy).toHaveBeenCalledWith(String(user.id), undefined, undefined);
     expect(spy).not.toHaveBeenCalledWith('other-user');
+  });
+
+  it('combines jobApplicationId filter with caller userId (IDOR fail-closed)', async () => {
+    const user = await seedVerifiedUser({ email: 'events-filter@example.com' });
+    const token = accessTokenForUser(user);
+    const foreignAppId = '00000000-0000-4000-8000-000000000099';
+
+    const spy = vi.spyOn(autoApplyEventService, 'listForUser').mockResolvedValue([]);
+
+    const res = await request(app)
+      .get(API)
+      .query({ jobApplicationId: foreignAppId })
+      .set(authHeader(token));
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual([]);
+    expect(spy).toHaveBeenCalledWith(String(user.id), undefined, {
+      jobApplicationId: foreignAppId,
+    });
   });
 });

@@ -15,7 +15,17 @@ export const listAutoApplyEventsController = async (
 ) => {
   try {
     const userId = requireUserPrincipalId(req);
-    const events = await autoApplyEventService.listForUser(userId);
+    const jobApplicationId =
+      typeof req.query.jobApplicationId === 'string' && req.query.jobApplicationId.trim()
+        ? req.query.jobApplicationId.trim()
+        : undefined;
+    // Always scope by authenticated userId — jobApplicationId alone must never
+    // return another user's events (empty list when the id belongs elsewhere).
+    const events = await autoApplyEventService.listForUser(
+      userId,
+      undefined,
+      jobApplicationId ? { jobApplicationId } : undefined,
+    );
     return res.status(200).json(successResponse('Activity history fetched successfully', events));
   } catch (error) {
     return next(error);

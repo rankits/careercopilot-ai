@@ -2,6 +2,7 @@ import { AutoApplyEventType, Prisma } from '@prisma/client';
 import { prisma } from '@/shared/config/db.conf.js';
 import {
   IAutoApplyEventRepository,
+  ListAuditEventsFilter,
   RecordAuditEventData,
 } from '@/modules/auto-apply/contracts/audit-event.contract.js';
 import { AutoApplyAuditEventDto } from '@/modules/auto-apply/types/audit-event.types.js';
@@ -34,9 +35,16 @@ export class PrismaAutoApplyEventRepository implements IAutoApplyEventRepository
     return toDto(record);
   }
 
-  async findManyByUserId(userId: string, limit: number): Promise<AutoApplyAuditEventDto[]> {
+  async findManyByUserId(
+    userId: string,
+    limit: number,
+    filter?: ListAuditEventsFilter,
+  ): Promise<AutoApplyAuditEventDto[]> {
     const records = await prisma.autoApplyAuditEvent.findMany({
-      where: { userId },
+      where: {
+        userId,
+        ...(filter?.jobApplicationId ? { jobApplicationId: filter.jobApplicationId } : {}),
+      },
       orderBy: { createdAt: 'desc' },
       take: limit,
     });
