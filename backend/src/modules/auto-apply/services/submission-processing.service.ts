@@ -76,7 +76,6 @@ export class SubmissionProcessingService {
       await this.fail(
         userId,
         jobApplicationId,
-        1,
         'FAILED_DO_NOT_RETRY',
         'NO_LINKED_JOB',
         'This submission has no linked platform job.',
@@ -110,7 +109,6 @@ export class SubmissionProcessingService {
       await this.fail(
         userId,
         jobApplicationId,
-        1,
         'FAILED_DO_NOT_RETRY',
         errorCode,
         message,
@@ -123,7 +121,6 @@ export class SubmissionProcessingService {
       await this.fail(
         userId,
         jobApplicationId,
-        1,
         'FAILED_DO_NOT_RETRY',
         'JOB_NO_LONGER_ACTIVE',
         'The job is no longer active — it may have been filled or removed.',
@@ -137,7 +134,6 @@ export class SubmissionProcessingService {
       await this.fail(
         userId,
         jobApplicationId,
-        1,
         'FAILED_DO_NOT_RETRY',
         'CONSENT_REVOKED',
         'Required consent was revoked before submission could complete.',
@@ -150,7 +146,6 @@ export class SubmissionProcessingService {
       await this.fail(
         userId,
         jobApplicationId,
-        1,
         'FAILED_DO_NOT_RETRY',
         'CHANNEL_UNSUPPORTED',
         `No submission adapter is registered for channel ${claimed.channel}.`,
@@ -176,7 +171,6 @@ export class SubmissionProcessingService {
       await this.fail(
         userId,
         jobApplicationId,
-        1,
         'FAILED_DO_NOT_RETRY',
         'VALIDATION_FAILED',
         error instanceof Error ? error.message : 'Validation failed',
@@ -187,7 +181,6 @@ export class SubmissionProcessingService {
       await this.fail(
         userId,
         jobApplicationId,
-        1,
         'FAILED_DO_NOT_RETRY',
         'VALIDATION_FAILED',
         validation.issues.join('; '),
@@ -248,18 +241,16 @@ export class SubmissionProcessingService {
   private async fail(
     userId: string,
     jobApplicationId: string,
-    attemptNumber: number,
     outcome: 'FAILED_DO_NOT_RETRY' | 'FAILED_SAFE_TO_RETRY',
     errorCode: string,
     errorMessage: string,
   ): Promise<void> {
-    await this.submissionAttemptRepository.create({
+    const attemptNumber = await this.createFailureAttemptWithUniqueRetry(
       jobApplicationId,
-      attemptNumber,
       outcome,
       errorCode,
       errorMessage,
-    });
+    );
     await this.jobApplicationRepository.finalizeSubmission(userId, jobApplicationId, {
       status: 'SUBMISSION_FAILED',
       failureCode: errorCode,
@@ -271,5 +262,43 @@ export class SubmissionProcessingService {
       jobApplicationId,
       metadata: { attemptNumber, errorCode },
     });
+  }
+
+  /**
+   * Mirror the success-path `count + 1` numbering. Retry once on P2002 so a
+   * second early failure never leaves the application stuck in SUBMITTING.
+   */
+  private async createFailureAttemptWithUniqueRetry(
+    jobApplicationId: string,
+    outcome: 'FAILED_DO_NOT_RETRY' | 'FAILED_SAFE_TO_RETRY',
+    errorCode: string,
+    errorMessage: string,
+  ): Promise<number> {
+    let attemptNumber =
+      (await this.submissionAttemptRepository.countByJobApplicationId(jobApplicationId)) + 1;
+    try {
+      await this.submissionAttemptRepository.create({
+        jobApplicationId,
+        attemptNumber,
+        outcome,
+        errorCode,
+        errorMessage,
+      });
+      return attemptNumber;
+    } catch (error) {
+      if ((error as { code?: string }).code !== 'P2002') {
+        throw error;
+      }
+      attemptNumber =
+        (await this.submissionAttemptRepository.countByJobApplicationId(jobApplicationId)) + 1;
+      await this.submissionAttemptRepository.create({
+        jobApplicationId,
+        attemptNumber,
+        outcome,
+        errorCode,
+        errorMessage,
+      });
+      return attemptNumber;
+    }
   }
 }
