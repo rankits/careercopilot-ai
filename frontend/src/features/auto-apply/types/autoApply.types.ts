@@ -202,3 +202,58 @@ export interface PreparedScreeningAnswerDto {
   evidence: string[];
   requiresUserReview: boolean;
 }
+
+export type ApplyMode = 'PREPARE' | 'ASSISTED' | 'AUTOPILOT' | 'EXTENSION';
+
+export interface ApplicationPageAnalysisDto {
+  id: string;
+  jobId: string;
+  provider: string;
+  jobPageUrl: string;
+  formStatus: string;
+  submissionCapability: string;
+  outcomeStatus: string;
+  requirements: Array<{
+    code: string;
+    required?: boolean;
+    assertion?: string;
+    sourceText?: string;
+    evidenceStrength?: string;
+    confidence?: number;
+  }>;
+  analyzedAt: string;
+  expiresAt: string;
+}
+
+export interface ApplicationMatchSnapshotDto {
+  status: string;
+  overallScore: number | null;
+  displayScore: number | null;
+  jobId: string;
+  errorCode?: string;
+}
+
+export interface ApplicationPackageStubDto {
+  provider: string;
+  submissionMode: string;
+  finalSubmissionRequiresUser: boolean;
+  analysisId: string;
+  matchStatus: string;
+  overallScore: number | null;
+}
+
+export interface PrepareApplicationResult {
+  analysis: ApplicationPageAnalysisDto;
+  match: ApplicationMatchSnapshotDto;
+  readiness: ApplicationReadinessDto;
+  package: ApplicationPackageStubDto;
+  application: JobApplicationDto | null;
+}
+
+export interface PrepareApplicationPayload {
+  applyMode?: ApplyMode;
+  jobApplicationId?: string;
+  resumeVersionId?: string;
+  allowMatchCompute?: boolean;
+  forceRefreshAnalysis?: boolean;
+}

@@ -8,14 +8,21 @@ import { AutoApplyClientError } from '../utils/apiError';
 
 import { useTrackAndOpenApply } from './useTrackAndOpenApply';
 
-const { initiateMock, createPlanMock, openExternalApplyMock, showToastMock, navigateMock } =
-  vi.hoisted(() => ({
-    initiateMock: vi.fn(),
-    createPlanMock: vi.fn(),
-    openExternalApplyMock: vi.fn(),
-    showToastMock: vi.fn(),
-    navigateMock: vi.fn(),
-  }));
+const {
+  initiateMock,
+  createPlanMock,
+  prepareMock,
+  openExternalApplyMock,
+  showToastMock,
+  navigateMock,
+} = vi.hoisted(() => ({
+  initiateMock: vi.fn(),
+  createPlanMock: vi.fn(),
+  prepareMock: vi.fn(),
+  openExternalApplyMock: vi.fn(),
+  showToastMock: vi.fn(),
+  navigateMock: vi.fn(),
+}));
 
 vi.mock('./useSubmissions', () => ({
   useInitiateSubmission: () => ({
@@ -27,6 +34,13 @@ vi.mock('./useSubmissions', () => ({
 vi.mock('./usePlan', () => ({
   useCreatePlan: () => ({
     mutateAsync: createPlanMock,
+    isPending: false,
+  }),
+}));
+
+vi.mock('./usePrepareApplication', () => ({
+  usePrepareApplication: () => ({
+    mutateAsync: prepareMock,
     isPending: false,
   }),
 }));
@@ -91,14 +105,27 @@ describe('useTrackAndOpenApply', () => {
   beforeEach(() => {
     initiateMock.mockReset();
     createPlanMock.mockReset();
+    prepareMock.mockReset();
     openExternalApplyMock.mockReset();
     showToastMock.mockReset();
     navigateMock.mockReset();
     openExternalApplyMock.mockReturnValue(true);
     createPlanMock.mockResolvedValue({});
+    prepareMock.mockResolvedValue({
+      analysis: { id: 'a1', formStatus: 'NOT_INSPECTED', submissionCapability: 'EXTERNAL_MANUAL' },
+      readiness: {
+        decision: 'INFORMATION_REQUIRED',
+        ready: false,
+        blockingReasons: [],
+        warnings: [],
+      },
+      match: { status: 'CACHED', overallScore: 0.9, displayScore: 90, jobId: 'job-1' },
+      package: { submissionMode: 'EXTERNAL_MANUAL' },
+      application: null,
+    });
   });
 
-  it('initiates tracking, auto-prepares review, and navigates without opening external URL by default', async () => {
+  it('initiates tracking, runs prepare intelligence, auto-reviews, and navigates', async () => {
     initiateMock.mockResolvedValue({
       application: { id: 'app-1', jobId: '157482e4-c26a-427f-a55d-08b330526f39' },
       possibleDuplicates: [],
@@ -114,6 +141,13 @@ describe('useTrackAndOpenApply', () => {
     await waitFor(() => {
       expect(initiateMock).toHaveBeenCalledWith('157482e4-c26a-427f-a55d-08b330526f39');
     });
+    expect(prepareMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        jobId: '157482e4-c26a-427f-a55d-08b330526f39',
+        jobApplicationId: 'app-1',
+        applyMode: 'ASSISTED',
+      }),
+    );
     expect(createPlanMock).toHaveBeenCalledWith('157482e4-c26a-427f-a55d-08b330526f39');
     expect(openExternalApplyMock).not.toHaveBeenCalled();
     expect(navigateMock).toHaveBeenCalledWith('/auto-apply?tab=submissions');
