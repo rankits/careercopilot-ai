@@ -13,6 +13,7 @@ const EVENT_LABELS: Record<string, string> = {
   SUBMISSION_CONFIRMED: 'Confirmed as submitted',
   SUBMISSION_WITHDRAWN: 'Withdrawn',
   SUBMISSION_RECLAIMED: 'Reclaimed a stuck submission',
+  RESUME_CONFIRMED: 'Confirmed resume for this application',
   // Forward-compatible labels for events emitted by later tickets (AA-070+)
   ANALYSIS_COMPLETED: 'Analyzed the job posting',
   HANDOFF_OPENED: "Opened the employer's application page",

@@ -34,7 +34,7 @@ export function resolveInitialWorkspaceStep(input: {
   }
   return (input.steps.find((s) => !s.complete)?.id ??
     input.steps[input.steps.length - 1]?.id ??
-    'analysis') as WorkspaceStepId;
+    'analysis');
 }
 
 export function assistedApplyWorkspacePath(jobApplicationId: string, step?: WorkspaceStepId): string {

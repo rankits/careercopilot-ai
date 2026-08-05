@@ -220,6 +220,8 @@ model JobApplication {
   progressStep           String?               @map("progress_step") @db.VarChar(40)
   /** AA-042: set when reopened from WITHDRAWN so workspace can show banner after refresh. */
   reopenedAt             DateTime?             @map("reopened_at")
+  /** AA-070: set when candidate opens employer apply URL via direct handoff (no queue). */
+  handoffOpenedAt        DateTime?             @map("handoff_opened_at")
 
   createdAt              DateTime              @default(now()) @map("created_at")
   updatedAt              DateTime              @updatedAt @map("updated_at")
@@ -236,6 +238,23 @@ model JobApplication {
   @@index([userId, status])
   @@index([userId, canonicalJobId])
   @@map("job_applications")
+}
+
+// AA-061: cached resume-vs-job analysis
+model JobApplicationResumeAnalysis {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  jobApplicationId String   @map("job_application_id")
+  jobId            String   @map("job_id")
+  resumeVersionId  String   @map("resume_version_id")
+  contentHash      String   @map("content_hash")
+  result           Json
+  analyzedAt       DateTime @default(now()) @map("analyzed_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+
+  @@unique([resumeVersionId, jobId, contentHash])
+  @@index([jobApplicationId])
+  @@map("job_application_resume_analyses")
 }
 
 // ─── Submission attempt log (AJA-DATA-001 / AJA-QUEUE-002) ──────────────────
@@ -277,6 +296,8 @@ enum AutoApplyEventType {
   SUBMISSION_CONFIRMED
   SUBMISSION_WITHDRAWN
   SUBMISSION_RECLAIMED
+  RESUME_CONFIRMED
+  HANDOFF_OPENED
 }
 
 model AutoApplyAuditEvent {

@@ -22,7 +22,11 @@ export interface AssistedApplyWorkspaceDto {
   analysisSummary: { id: string; outcomeStatus: string; analyzedAt: string } | null;
   fit: { matchScore: number | null } | null;
   resume: { resumeVersionId: string } | null;
-  handoff: { externalConfirmationUrl: string | null; submittedAt: string | null } | null;
+  handoff: {
+    externalConfirmationUrl: string | null;
+    submittedAt: string | null;
+    openedAt: string | null;
+  } | null;
 }
 
 export const WORKSPACE_STEP_IDS: WorkspaceStepId[] = [

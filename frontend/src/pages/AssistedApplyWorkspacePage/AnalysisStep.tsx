@@ -4,6 +4,7 @@ import {
   useAnalyzeJobPage,
   useLatestJobAnalysis,
 } from '@/features/auto-apply/hooks/useJobPageAnalysis';
+
 import type { ApplicationPageAnalysisDto } from '@/features/auto-apply/types/autoApply.types';
 import { isAutoApplyClientError } from '@/features/auto-apply/utils/apiError';
 import {

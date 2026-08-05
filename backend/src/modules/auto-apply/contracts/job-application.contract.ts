@@ -102,6 +102,22 @@ export interface IJobApplicationRepository {
     id: string,
     progressStep: string,
   ): Promise<JobApplicationDto>;
+  /** AA-060: persist per-application resume selection. */
+  updateResumeSelection(
+    userId: string,
+    id: string,
+    resumeVersionId: string,
+  ): Promise<JobApplicationDto>;
+  /**
+   * AA-070: CAS handoff — set ACTION_REQUIRED + handoffOpenedAt + confirmation URL
+   * when status matches expectedStatus. Returns null if CAS missed (race).
+   */
+  recordHandoffOpened(
+    userId: string,
+    id: string,
+    data: { applyUrl: string; openedAt: Date },
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto | null>;
 }
 
 export interface InitiateJobApplicationResult {
