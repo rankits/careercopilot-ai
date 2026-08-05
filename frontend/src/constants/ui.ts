@@ -9,6 +9,7 @@ import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
 import * as yup from 'yup';
 
 import type {
@@ -526,6 +527,7 @@ export const CAREER_COPILOT_COPY = {
  * -------------------------------------------------------------------------- */
 
 export const SIDEBAR_NAV_LABELS = {
+  applicationSetup: 'Application Setup',
   applications: 'Applications',
   aiMatch: 'AI Match',
   dashboard: 'Dashboard',
@@ -579,6 +581,12 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     label: SIDEBAR_NAV_LABELS.savedJobs,
   },
   {
+    href: ROUTES.AUTO_APPLY,
+    icon: SmartToyOutlinedIcon,
+    id: 'auto-apply',
+    label: SIDEBAR_NAV_LABELS.applicationSetup,
+  },
+  {
     href: ROUTES.RESUME_BUILDER,
     icon: EditNoteOutlinedIcon,
     id: 'resume-builder',
@@ -595,7 +603,7 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
 export const DEFAULT_SIDEBAR_SECTIONS = [
   {
     id: 'career',
-    itemIds: ['dashboard', 'jobs-feed', 'ai-match', 'applications', 'saved-jobs'],
+    itemIds: ['dashboard', 'jobs-feed', 'ai-match', 'applications', 'saved-jobs', 'auto-apply'],
     label: 'CAREER',
   },
   {
@@ -616,6 +624,7 @@ export const DEFAULT_BOTTOM_NAV_IDS = [
 /** Sidebar destinations that live in the mobile More drawer instead of the bottom bar. */
 export const DEFAULT_MOBILE_DRAWER_NAV_IDS = [
   'saved-jobs',
+  'auto-apply',
   'resume-builder',
   'saved-resumes',
 ] as const;
