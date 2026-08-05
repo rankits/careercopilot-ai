@@ -1,5 +1,6 @@
 import { Button } from '@/components/atoms/Button';
 
+import { APP_ACTIONS, JOB_FEED_STATUS_MESSAGES, JOB_FEED_STATUS_RULES } from '@/constants/ui';
 import {
   Box,
   CircularProgress,
@@ -23,31 +24,15 @@ interface JobFeedStatusProps {
 function toFriendlyMessage(message: string): string {
   const normalized = message.trim();
   if (!normalized) {
-    return 'Something went wrong. Please try again.';
+    return JOB_FEED_STATUS_MESSAGES.defaultError;
   }
 
-  if (/status code 404|not found/i.test(normalized)) {
-    return 'We couldn’t find matching results right now. Try again in a moment.';
-  }
-  if (/status code 401|unauthorized|session/i.test(normalized)) {
-    return 'Your session may have expired. Sign in again, then retry.';
-  }
-  if (/status code 403|forbidden/i.test(normalized)) {
-    return 'You don’t have access to this content.';
-  }
-  if (
-    /status code 5\d\d|unavailable|network|timeout|failed to fetch|network error/i.test(normalized)
-  ) {
-    return 'The service is temporarily unavailable. Please try again.';
-  }
-  if (/request failed with status code/i.test(normalized)) {
-    return 'We couldn’t complete this request. Please try again.';
-  }
+  const rule = JOB_FEED_STATUS_RULES.find(({ pattern }) => pattern.test(normalized));
 
-  return normalized;
+  return rule?.message ?? normalized;
 }
 
-export function JobFeedLoadingState({ label = 'Loading jobs…' }: { label?: string }) {
+export function JobFeedLoadingState({ label = JOB_FEED_STATUS_MESSAGES.loading }: { label?: string }) {
   return (
     <Box aria-busy="true" aria-label={label} sx={jobFeedStatusSx.loadingRoot}>
       <CircularProgress size={36} />
@@ -59,7 +44,7 @@ export function JobFeedLoadingState({ label = 'Loading jobs…' }: { label?: str
 export function JobFeedStatus({
   message,
   onRetry,
-  retryLabel = 'Retry',
+  retryLabel = APP_ACTIONS.RETRY,
   title,
   tone = 'info',
 }: JobFeedStatusProps) {

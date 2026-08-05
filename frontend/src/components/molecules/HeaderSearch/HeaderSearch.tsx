@@ -2,6 +2,7 @@ import type { ChangeEventHandler } from 'react';
 
 import { Input } from '@/components/atoms/Input';
 
+import { HEADER_SEARCH_COPY } from '@/constants/ui';
 import { SearchOutlinedIcon } from '@/lib/material';
 
 import { headerSearchSx } from './styles';
@@ -14,7 +15,7 @@ export interface HeaderSearchProps {
 
 export function HeaderSearch({
   onChange,
-  placeholder = 'Search jobs, companies, skills...',
+  placeholder = HEADER_SEARCH_COPY.placeholder,
   value,
 }: HeaderSearchProps) {
   return (
@@ -24,7 +25,7 @@ export function HeaderSearch({
       onChange={onChange}
       placeholder={placeholder}
       size="small"
-      slotProps={{ htmlInput: { 'aria-label': 'Search' } }}
+      slotProps={{ htmlInput: { 'aria-label': HEADER_SEARCH_COPY.ariaLabel } }}
       startAdornment={<SearchOutlinedIcon fontSize="small" />}
       sx={headerSearchSx}
       value={value}

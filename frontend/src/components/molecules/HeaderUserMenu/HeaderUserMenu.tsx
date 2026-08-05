@@ -1,6 +1,10 @@
 import { useState, type MouseEvent } from 'react';
 
 import {
+  HEADER_USER_MENU_COPY,
+  USER_INITIALS_FALLBACK,
+} from '@/constants/ui';
+import {
   KeyboardArrowDownIcon,
   LogoutIcon,
   Menu,
@@ -53,7 +57,11 @@ export function HeaderUserMenu({
 
   return (
     <>
-      <UserMenuButton aria-label="User menu" onClick={handleOpen} type="button">
+      <UserMenuButton
+        aria-label={HEADER_USER_MENU_COPY.ariaLabel}
+        onClick={handleOpen}
+        type="button"
+      >
         <UserAvatar alt={name} src={avatarUrl}>
           {avatarUrl ? null : initials}
         </UserAvatar>
@@ -67,11 +75,11 @@ export function HeaderUserMenu({
       <Menu anchorEl={anchorElement} onClose={handleClose} open={open}>
         <MenuItem onClick={handleSettingsClick} sx={menuItemSx}>
           <SettingsOutlinedIcon fontSize="small" />
-          Edit Profile
+          {HEADER_USER_MENU_COPY.editProfile}
         </MenuItem>
         <MenuItem onClick={handleLogoutClick} sx={menuItemSx}>
           <LogoutIcon fontSize="small" />
-          Logout
+          {HEADER_USER_MENU_COPY.logout}
         </MenuItem>
       </Menu>
     </>
@@ -81,5 +89,5 @@ export function HeaderUserMenu({
 function getInitials(name: string) {
   const [firstName = '', secondName = ''] = name.trim().split(/\s+/);
 
-  return `${firstName.charAt(0)}${secondName.charAt(0)}`.toUpperCase() || 'U';
+  return `${firstName.charAt(0)}${secondName.charAt(0)}`.toUpperCase() || USER_INITIALS_FALLBACK;
 }
