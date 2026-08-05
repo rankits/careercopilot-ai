@@ -8,26 +8,30 @@ import { useCreatePlan } from '@/features/auto-apply/hooks/usePlan';
 import { usePrepareApplication } from '@/features/auto-apply/hooks/usePrepareApplication';
 import { useInitiateSubmission } from '@/features/auto-apply/hooks/useSubmissions';
 
-import { ROUTES } from '@/constants/routes';
-import { isAutoApplyClientError } from '@/features/auto-apply/utils/apiError';
-import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
+import { ROUTES, assistedApplyWorkspacePath } from '@/constants/routes';
+import {
+  existingApplicationIdFromError,
+  isAutoApplyClientError,
+} from '@/features/auto-apply/utils/apiError';
+import { storeWorkspaceEntrySignals } from '@/features/auto-apply/utils/assistedApplyWorkspace';
 import {
   buildSetupGapToastMessage,
   destinationToSetupHref,
   resolveSetupGapFixActions,
 } from '@/pages/AutoApplyPage/missingFieldNavigation';
 
+const WORKSPACE_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_WORKSPACE !== 'false';
+
 export interface TrackAndOpenApplyInput {
   jobId: string | null | undefined;
   applyUrl?: string | null;
-  /** When false, stay on the current page after tracking (default: navigate to Submissions). */
+  /** @deprecated AA-041 navigates to workspace; ignored when workspace flag is on. */
   navigateToSubmissions?: boolean;
-  /** When true, also open the employer apply URL (default: false for Assisted Apply). */
-  openExternal?: boolean;
   /**
-   * Apply mode for Pre-Application Intelligence.
-   * PREPARE = analyze + readiness; ASSISTED = same path used by Assisted Apply CTA.
+   * Must never be true on the Assisted Apply CTA path (AA-041).
+   * External open belongs to "Apply Now" only.
    */
+  openExternal?: boolean;
   applyMode?: 'PREPARE' | 'ASSISTED';
 }
 
@@ -36,11 +40,12 @@ export interface TrackAndOpenApplyResult {
   alreadyTracked: boolean;
   openedExternal: boolean;
   setupIncomplete?: boolean;
+  jobApplicationId?: string;
 }
 
 /**
- * Starts Auto Apply tracking for a platform job, auto-prepares the application
- * review, and sends the user to Auto Apply → Submissions.
+ * AA-041: start/reopen tracking, prepare (non-blocking on failure), open workspace.
+ * Never opens an external employer tab on this path.
  */
 export function useTrackAndOpenApply() {
   const initiate = useInitiateSubmission();
@@ -52,29 +57,30 @@ export function useTrackAndOpenApply() {
 
   const trackAndOpenApply = useCallback(
     async (input: TrackAndOpenApplyInput): Promise<TrackAndOpenApplyResult> => {
-      const shouldNavigate = input.navigateToSubmissions !== false;
-      const shouldOpenExternal = input.openExternal === true;
-      const applyMode = input.applyMode ?? 'ASSISTED';
-      const goToSubmissions = () => {
-        if (shouldNavigate) {
-          void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`);
+      if (input.openExternal === true) {
+        if (import.meta.env.DEV) {
+          throw new Error(
+            'useTrackAndOpenApply must not be called with openExternal: true (AA-041)',
+          );
         }
-      };
-
-      if (!input.jobId) {
-        const openedExternal = shouldOpenExternal ? openExternalApply(input.applyUrl) : false;
-        showToast({
-          message: 'Unable to start Assisted Apply — this listing has no job ID.',
-          severity: 'warning',
-        });
-        return { tracked: false, alreadyTracked: false, openedExternal };
       }
 
+      if (!input.jobId) {
+        showToast({
+          message: 'Something went wrong. Try again.',
+          severity: 'error',
+        });
+        return { tracked: false, alreadyTracked: false, openedExternal: false };
+      }
+
+      const applyMode = input.applyMode ?? 'ASSISTED';
       const setupStatus = setupStatusQuery.data;
       if (setupStatus && !setupStatus.readyForAssistedApply) {
         const fixActions = resolveSetupGapFixActions(setupStatus.gaps);
         const firstAction = fixActions[0];
-        const href = firstAction ? destinationToSetupHref(firstAction.destination) : ROUTES.AUTO_APPLY;
+        const href = firstAction
+          ? destinationToSetupHref(firstAction.destination)
+          : ROUTES.AUTO_APPLY;
 
         showToast({
           message: buildSetupGapToastMessage(fixActions),
@@ -96,9 +102,22 @@ export function useTrackAndOpenApply() {
         };
       }
 
+      const goToWorkspace = (
+        jobApplicationId: string,
+        signals: { possibleDuplicateCount: number; wasReopened: boolean },
+      ) => {
+        storeWorkspaceEntrySignals(jobApplicationId, signals);
+        if (WORKSPACE_ENABLED) {
+          void navigate(assistedApplyWorkspacePath(jobApplicationId));
+        } else if (input.navigateToSubmissions !== false) {
+          void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`);
+        }
+      };
+
       try {
         const result = await initiate.mutateAsync(input.jobId);
         const trackedJobId = result.application.jobId ?? input.jobId;
+        let prepareFailed = false;
 
         try {
           await prepare.mutateAsync({
@@ -107,49 +126,82 @@ export function useTrackAndOpenApply() {
             applyMode,
           });
         } catch {
-          // Analysis may fail (fetch/SSRF); planner still runs with ANALYSIS_UNAVAILABLE warning.
+          prepareFailed = true;
         }
 
         if (trackedJobId) {
           try {
             await createPlan.mutateAsync(trackedJobId);
           } catch {
-            // Submissions tab will retry auto-review.
+            prepareFailed = true;
           }
         }
-        const openedExternal = shouldOpenExternal ? openExternalApply(input.applyUrl) : false;
-        const hasDuplicates = result.possibleDuplicates.length > 0;
 
-        showToast({
-          message: hasDuplicates
-            ? 'Assisted Apply started — a possible duplicate was detected. Continue in Submissions.'
-            : applyMode === 'PREPARE'
-              ? 'Application prepared. Review analysis and readiness in Submissions.'
-              : 'Assisted Apply started. Application review is ready in Submissions.',
-          severity: hasDuplicates ? 'warning' : 'success',
+        goToWorkspace(result.application.id, {
+          possibleDuplicateCount: result.possibleDuplicates?.length ?? 0,
+          wasReopened: result.wasReopened === true,
         });
-        goToSubmissions();
-        return { tracked: true, alreadyTracked: false, openedExternal };
-      } catch (error) {
-        const openedExternal = shouldOpenExternal ? openExternalApply(input.applyUrl) : false;
-        const alreadyTracked = isAutoApplyClientError(error) && error.code === 'APPLICATION_EXISTS';
 
-        if (alreadyTracked) {
+        if (prepareFailed) {
+          showToast({
+            message:
+              "We started tracking, but couldn't fully analyze this job yet. You can retry from the workspace.",
+            severity: 'warning',
+          });
+        } else {
+          showToast({
+            message: 'Tracking started.',
+            severity: 'success',
+          });
+        }
+
+        return {
+          tracked: true,
+          alreadyTracked: false,
+          openedExternal: false,
+          jobApplicationId: result.application.id,
+        };
+      } catch (error) {
+        const alreadyTracked =
+          isAutoApplyClientError(error) && error.code === 'APPLICATION_EXISTS';
+        const existingId = existingApplicationIdFromError(error);
+
+        if (alreadyTracked && (existingId || input.jobId)) {
+          let prepareFailed = false;
           try {
             await prepare.mutateAsync({
               jobId: input.jobId,
+              jobApplicationId: existingId ?? undefined,
               applyMode,
             });
             await createPlan.mutateAsync(input.jobId);
           } catch {
-            // User can retry from Submissions.
+            prepareFailed = true;
           }
-          showToast({
-            message: 'This job is already tracked — refreshed preparation in Submissions.',
-            severity: 'info',
-          });
-          goToSubmissions();
-          return { tracked: false, alreadyTracked: true, openedExternal };
+
+          if (existingId) {
+            goToWorkspace(existingId, {
+              possibleDuplicateCount: 0,
+              wasReopened: false,
+            });
+          } else {
+            void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`);
+          }
+
+          if (prepareFailed) {
+            showToast({
+              message:
+                "We started tracking, but couldn't fully analyze this job yet. You can retry from the workspace.",
+              severity: 'warning',
+            });
+          }
+
+          return {
+            tracked: false,
+            alreadyTracked: true,
+            openedExternal: false,
+            jobApplicationId: existingId ?? undefined,
+          };
         }
 
         showToast({
@@ -157,7 +209,7 @@ export function useTrackAndOpenApply() {
             error instanceof Error ? error.message : 'Unable to start Assisted Apply for this job.',
           severity: 'error',
         });
-        return { tracked: false, alreadyTracked: false, openedExternal };
+        return { tracked: false, alreadyTracked: false, openedExternal: false };
       }
     },
     [createPlan, initiate, navigate, prepare, setupStatusQuery.data, showToast],

@@ -96,6 +96,12 @@ export interface IJobApplicationRepository {
   delete(userId: string, id: string): Promise<boolean>;
   /** Resets a withdrawn submission so the same job can be applied again. */
   reopenFromWithdrawn(userId: string, id: string): Promise<JobApplicationDto>;
+  /** AA-043: persist last-viewed workspace step. */
+  updateProgressStep(
+    userId: string,
+    id: string,
+    progressStep: string,
+  ): Promise<JobApplicationDto>;
 }
 
 export interface InitiateJobApplicationResult {
@@ -103,6 +109,8 @@ export interface InitiateJobApplicationResult {
   /** Fuzzy company+title matches among the caller's other active
    * submissions — a warning, never a block (AJA-PROD-007 / AJA-DATA-003). */
   possibleDuplicates: JobApplicationDto[];
+  /** AA-042: true when this initiate call reopened a withdrawn application. */
+  wasReopened?: boolean;
 }
 
 export interface IJobApplicationService {

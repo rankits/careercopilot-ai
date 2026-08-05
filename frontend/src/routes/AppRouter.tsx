@@ -6,6 +6,7 @@ import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
 import { ApplicationsPage } from '@/pages/ApplicationsPage';
 import { AutoApplyPage } from '@/pages/AutoApplyPage';
+import { AssistedApplyWorkspacePage } from '@/pages/AssistedApplyWorkspacePage/AssistedApplyWorkspacePage';
 import { EditProfilePage } from '@/pages/EditProfilePage';
 import { ForYouPage } from '@/pages/ForYouPage';
 import { HomePage } from '@/pages/HomePage';
@@ -52,6 +53,7 @@ export const appRouteObjects: RouteObject[] = [
           { path: ROUTES.SAVED_JOBS, element: <SavedJobsPage /> },
           { path: ROUTES.APPLICATIONS, element: <ApplicationsPage /> },
           { path: ROUTES.AUTO_APPLY, element: <AutoApplyPage /> },
+          { path: ROUTES.ASSISTED_APPLY_WORKSPACE, element: <AssistedApplyWorkspacePage /> },
           { path: ROUTES.SAVED_RESUMES, element: <SavedResumesPage /> },
           { path: ROUTES.RESUME_BUILDER, element: <ResumeBuilderPage /> },
           { path: `${ROUTES.RESUME_BUILDER}/:resumeId`, element: <ResumeBuilderPage /> },

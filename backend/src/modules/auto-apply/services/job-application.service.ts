@@ -53,7 +53,7 @@ export class JobApplicationService implements IJobApplicationService {
     if (existingByJobId) {
       if (existingByJobId.status === 'WITHDRAWN') {
         const application = await this.reopen(userId, existingByJobId.id);
-        return { application, possibleDuplicates: [] };
+        return { application, possibleDuplicates: [], wasReopened: true };
       }
       throw new AppError(
         'An auto-apply submission already exists for this job.',
@@ -70,7 +70,7 @@ export class JobApplicationService implements IJobApplicationService {
     if (existingByCanonicalId) {
       if (existingByCanonicalId.status === 'WITHDRAWN') {
         const application = await this.reopen(userId, existingByCanonicalId.id);
-        return { application, possibleDuplicates: [] };
+        return { application, possibleDuplicates: [], wasReopened: true };
       }
       throw new AppError(
         'An auto-apply submission already exists for this job (matched via a different listing of the same posting).',
@@ -100,12 +100,8 @@ export class JobApplicationService implements IJobApplicationService {
       jobTitle: job.title,
     });
 
-    return { application, possibleDuplicates };
+    return { application, possibleDuplicates, wasReopened: false };
   }
-
-  /** Runs the hard eligibility engine for this submission's linked job and
-   * records the result, moving status to MATCHED or NOT_ELIGIBLE. Never
-   * substitutes recommendation match score for this check (AJA-RULE-001). */
   async evaluateEligibility(userId: string, id: string): Promise<JobApplicationDto> {
     const application = await this.getApplication(userId, id);
     if (!application.jobId) {

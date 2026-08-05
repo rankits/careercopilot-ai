@@ -21,6 +21,8 @@ import type {
   PrivacyAcknowledgementDto,
   PrivacyAcknowledgementPayload,
   SetupStatusDto,
+  AssistedApplyWorkspaceDto,
+  WorkspaceStepId,
   UpdateResumeVersionPayload,
   UpsertCandidateProfilePayload,
   UpsertRulePayload,
@@ -314,5 +316,24 @@ export const autoApplyService = {
       payload,
     );
     return unwrapData(data, 'Missing privacy acknowledgement data in API response');
+  },
+
+  async getAssistedApplyWorkspace(
+    jobApplicationId: string,
+  ): Promise<AssistedApplyWorkspaceDto> {
+    const { data } = await httpClient.get<BackendSuccessResponse<AssistedApplyWorkspaceDto>>(
+      `/auto-apply/submissions/${jobApplicationId}/workspace`,
+    );
+    return unwrapData(data, 'Missing Assisted Apply workspace data in API response');
+  },
+
+  async updateWorkspaceProgressStep(
+    jobApplicationId: string,
+    progressStep: WorkspaceStepId,
+  ): Promise<{ progressStep: WorkspaceStepId }> {
+    const { data } = await httpClient.patch<
+      BackendSuccessResponse<{ progressStep: WorkspaceStepId }>
+    >(`/auto-apply/submissions/${jobApplicationId}/progress-step`, { progressStep });
+    return unwrapData(data, 'Missing progress-step data in API response');
   },
 };
