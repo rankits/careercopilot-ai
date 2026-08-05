@@ -1,5 +1,9 @@
+import type { ReactNode } from 'react';
+
 import { Button } from '@/components/atoms/Button';
 
+import { APP_ACTIONS, JOB_UI } from '@/constants/ui';
+import { DASHBOARD_JOB_ROW_COPY, DASHBOARD_JOB_ROW_LIMITS } from '@/constants/ui';
 import {
   BookmarkBorderOutlinedIcon,
   CheckCircleIcon,
@@ -38,48 +42,73 @@ export function DashboardJobRow({ featured = false, job, onApply, onSave }: Dash
   const showMatch = typeof job.match === 'number';
   const showActions = Boolean(onApply || onSave);
 
+  const renderTitleLine = () => (
+    <TitleLine>
+      <Typography component="h3">{job.title}</Typography>
+      <VerifiedIcon as={CheckCircleIcon} fontSize="small" />
+    </TitleLine>
+  );
+
+  const renderMetaLine = (extra?: ReactNode) => (
+    <MetaLine>
+      <span>
+        <LocationOnOutlinedIcon fontSize="small" /> {job.location}
+      </span>
+      <span>{job.experience}</span>
+      {extra}
+    </MetaLine>
+  );
+
+  const renderSkillList = (maxSkills: number) =>
+    job.skills.length ? (
+      <SkillList>
+        {job.skills.slice(0, maxSkills).map((skill) => (
+          <SkillChip key={skill}>{skill}</SkillChip>
+        ))}
+      </SkillList>
+    ) : null;
+
+  const renderActions = () =>
+    showActions ? (
+      <ActionGroup>
+        {onSave ? (
+          <SaveAction aria-label={DASHBOARD_JOB_ROW_COPY.saveJobAria(job.title)} onClick={() => onSave(job)}>
+            <BookmarkBorderOutlinedIcon fontSize="small" />
+            {APP_ACTIONS.SAVE}
+          </SaveAction>
+        ) : null}
+        {onApply ? (
+          <Button onClick={() => onApply(job)} size="small">
+            {APP_ACTIONS.APPLY_NOW}
+          </Button>
+        ) : null}
+      </ActionGroup>
+    ) : null;
+
+  const renderMatchBadge = () =>
+    showMatch ? (
+      <MatchBadge>
+        {job.match}
+        {JOB_UI.MATCH_SUFFIX}
+      </MatchBadge>
+    ) : null;
+
   if (featured) {
     return (
       <FeaturedJobRoot>
         <CompanyLogoBox>{job.logo}</CompanyLogoBox>
 
         <JobCopy>
-          <TitleLine>
-            <Typography component="h3">{job.title}</Typography>
-            <VerifiedIcon as={CheckCircleIcon} fontSize="small" />
-          </TitleLine>
+          {renderTitleLine()}
           <Typography component="p">{job.company}</Typography>
-          <MetaLine>
-            <span>
-              <LocationOnOutlinedIcon fontSize="small" /> {job.location}
-            </span>
-            <span>{job.experience}</span>
-          </MetaLine>
-          <SkillList>
-            {job.skills.slice(0, 5).map((skill) => (
-              <SkillChip key={skill}>{skill}</SkillChip>
-            ))}
-          </SkillList>
+          {renderMetaLine()}
+          {renderSkillList(DASHBOARD_JOB_ROW_LIMITS.featuredMaxSkills)}
         </JobCopy>
 
         <FeaturedSide>
-          {showMatch ? <MatchBadge>{job.match}% Match</MatchBadge> : null}
+          {renderMatchBadge()}
           <SalaryText>{job.salary}</SalaryText>
-          {showActions ? (
-            <ActionGroup>
-              {onSave ? (
-                <SaveAction aria-label={`Save ${job.title}`} onClick={() => onSave(job)}>
-                  <BookmarkBorderOutlinedIcon fontSize="small" />
-                  Save
-                </SaveAction>
-              ) : null}
-              {onApply ? (
-                <Button onClick={() => onApply(job)} size="small">
-                  Apply Now
-                </Button>
-              ) : null}
-            </ActionGroup>
-          ) : null}
+          {renderActions()}
         </FeaturedSide>
       </FeaturedJobRoot>
     );
@@ -90,51 +119,22 @@ export function DashboardJobRow({ featured = false, job, onApply, onSave }: Dash
       <CompanyLogoBox>{job.logo}</CompanyLogoBox>
 
       <JobCopy>
-        <TitleLine>
-          <Typography component="h3">{job.title}</Typography>
-          <VerifiedIcon as={CheckCircleIcon} fontSize="small" />
-        </TitleLine>
+        {renderTitleLine()}
         <Typography component="p">{job.company}</Typography>
-        <MetaLine>
-          <span>
-            <LocationOnOutlinedIcon fontSize="small" /> {job.location}
-          </span>
-          <span>{job.experience}</span>
-          <span>{job.type}</span>
-        </MetaLine>
+        {renderMetaLine(<span>{job.type}</span>)}
       </JobCopy>
 
       <SalaryText>{job.salary}</SalaryText>
 
       <PostedText>
-        {job.postedAt.replace('Posted ', '')}
+        {job.postedAt.replace(DASHBOARD_JOB_ROW_COPY.postedPrefix, '')}
         <br />
         {job.type}
       </PostedText>
 
-      {showMatch ? <MatchBadge>{job.match}% Match</MatchBadge> : null}
-
-      <SkillList>
-        {job.skills.slice(0, 4).map((skill) => (
-          <SkillChip key={skill}>{skill}</SkillChip>
-        ))}
-      </SkillList>
-
-      {showActions ? (
-        <ActionGroup>
-          {onSave ? (
-            <SaveAction aria-label={`Save ${job.title}`} onClick={() => onSave(job)}>
-              <BookmarkBorderOutlinedIcon fontSize="small" />
-              Save
-            </SaveAction>
-          ) : null}
-          {onApply ? (
-            <Button onClick={() => onApply(job)} size="small">
-              Apply Now
-            </Button>
-          ) : null}
-        </ActionGroup>
-      ) : null}
+      {renderMatchBadge()}
+      {renderSkillList(DASHBOARD_JOB_ROW_LIMITS.maxSkills)}
+      {renderActions()}
     </DashboardJobRowRoot>
   );
 }

@@ -4,19 +4,10 @@ import aiPlatformIllustration from '@/assets/illustrations/ai-platform-illustrat
 import careerBoyIllustration from '@/assets/illustrations/career-boy-illustration.png';
 import careerCopilotLogo from '@/assets/logo/career-copilot-logo.png';
 import { ROUTES } from '@/constants/routes';
-import {
-  AutoAwesomeOutlinedIcon,
-  BookmarkBorderOutlinedIcon,
-  Box,
-  CheckCircleOutlineIcon,
-  InsightsOutlinedIcon,
-  LockOutlinedIcon,
-  SearchOutlinedIcon,
-  SecurityOutlinedIcon,
-  type SvgIconComponent,
-} from '@/lib/material';
-import type { IconTone } from '@/tokens';
+import { AUTH_PAGE_COPY, LOGIN_FEATURES, TRUST_ITEMS } from '@/constants/ui';
+import { AutoAwesomeOutlinedIcon, Box } from '@/lib/material';
 
+import type { AuthPageFeature } from './interfaces';
 import * as Styled from './styles';
 
 interface AuthPageLayoutProps {
@@ -24,56 +15,7 @@ interface AuthPageLayoutProps {
   mode: Styled.AuthPageMode;
 }
 
-interface Feature {
-  description: string;
-  icon: SvgIconComponent;
-  title: string;
-  tone: IconTone;
-}
-
-const LOGIN_FEATURES: Feature[] = [
-  {
-    description: 'Opportunities aligned with your experience.',
-    icon: SearchOutlinedIcon,
-    title: 'Smart Job Matching',
-    tone: 'primary',
-  },
-  {
-    description: 'Stronger applications with focused insights.',
-    icon: InsightsOutlinedIcon,
-    title: 'AI-powered guidance',
-    tone: 'success',
-  },
-  {
-    description: 'Every application organized in one place.',
-    icon: BookmarkBorderOutlinedIcon,
-    title: 'Application tracking',
-    tone: 'warning',
-  },
-];
-
-const TRUST_ITEMS: Feature[] = [
-  {
-    description: 'Advanced encryption',
-    icon: SecurityOutlinedIcon,
-    title: 'Your data is safe',
-    tone: 'primary',
-  },
-  {
-    description: 'Your data stays private',
-    icon: LockOutlinedIcon,
-    title: 'Privacy first',
-    tone: 'success',
-  },
-  {
-    description: 'Transparent recommendations',
-    icon: CheckCircleOutlineIcon,
-    title: 'AI you can trust',
-    tone: 'warning',
-  },
-];
-
-function LoginFeatureRow({ description, icon: Icon, title, tone }: Feature) {
+function LoginFeatureRow({ description, icon: Icon, title, tone }: AuthPageFeature) {
   return (
     <Styled.LoginFeatureItem>
       <Styled.FeatureIcon size="small" tone={tone}>
@@ -87,7 +29,7 @@ function LoginFeatureRow({ description, icon: Icon, title, tone }: Feature) {
   );
 }
 
-function RegisterFeatureCard({ description, icon: Icon, title, tone }: Feature) {
+function RegisterFeatureCard({ description, icon: Icon, title, tone }: AuthPageFeature) {
   return (
     <Styled.RegisterFeatureCard>
       <Styled.FeatureIcon size="large" tone={tone}>
@@ -101,20 +43,17 @@ function RegisterFeatureCard({ description, icon: Icon, title, tone }: Feature) 
 
 function LoginHero() {
   return (
-    <Styled.LoginHeroSection aria-label="Career Copilot product overview" as="section">
+    <Styled.LoginHeroSection aria-label={AUTH_PAGE_COPY.productOverviewAria} as="section">
       <Styled.HeroCopy>
         <Styled.AiBadge>
           <AutoAwesomeOutlinedIcon fontSize="small" />
-          AI-powered career platform
+          {AUTH_PAGE_COPY.aiBadge}
         </Styled.AiBadge>
         <Styled.HeroHeading as="h2">
-          Find the right opportunities.{' '}
-          <Styled.AccentText as="span">Build your dream career.</Styled.AccentText>
+          {AUTH_PAGE_COPY.heroHeadingText}{' '}
+          <Styled.AccentText as="span">{AUTH_PAGE_COPY.heroHeadingAccent}</Styled.AccentText>
         </Styled.HeroHeading>
-        <Styled.Description>
-          Discover roles, optimize your resume, track applications, and prepare for interviews with
-          one intelligent career workspace.
-        </Styled.Description>
+        <Styled.Description>{AUTH_PAGE_COPY.heroDescription}</Styled.Description>
       </Styled.HeroCopy>
 
       <Styled.LoginFeatureList>
@@ -124,7 +63,7 @@ function LoginHero() {
       </Styled.LoginFeatureList>
 
       <Styled.LoginVisual>
-        <Styled.LoginIllustration alt="AI platform illustration" src={aiPlatformIllustration} />
+        <Styled.LoginIllustration alt={AUTH_PAGE_COPY.aiPlatformAlt} src={aiPlatformIllustration} />
       </Styled.LoginVisual>
     </Styled.LoginHeroSection>
   );
@@ -147,7 +86,7 @@ function MobileLoginIntro() {
 
 function TrustPanel() {
   return (
-    <Styled.TrustPanel aria-label="Security and trust">
+    <Styled.TrustPanel aria-label={AUTH_PAGE_COPY.securityAria}>
       {TRUST_ITEMS.map(({ description, icon: Icon, title, tone }) => (
         <Styled.TrustItem key={title}>
           <Styled.FeatureIcon size="small" tone={tone}>
@@ -169,14 +108,14 @@ function RegisterPanel() {
       <Styled.RegisterHeroTop>
         <Styled.RegisterCopy>
           <Styled.RegisterHeading as="h2">
-            Start your <Styled.AccentText as="span">smarter career</Styled.AccentText> journey today
+            {AUTH_PAGE_COPY.registerHeadingText}
+            <Styled.AccentText as="span">{AUTH_PAGE_COPY.registerHeadingAccent}</Styled.AccentText>
+            {AUTH_PAGE_COPY.registerHeadingSuffix}
           </Styled.RegisterHeading>
-          <Styled.Description>
-            Build a stronger profile and make every career move with confidence.
-          </Styled.Description>
+          <Styled.Description>{AUTH_PAGE_COPY.registerDescription}</Styled.Description>
         </Styled.RegisterCopy>
         <Styled.RegisterIllustration
-          alt="Career journey illustration"
+          alt={AUTH_PAGE_COPY.careerJourneyAlt}
           src={careerBoyIllustration}
         />
       </Styled.RegisterHeroTop>
@@ -195,12 +134,15 @@ export function AuthPageLayout({ children, mode }: AuthPageLayoutProps) {
   return (
     <Styled.AuthRoot as="main" mode={mode}>
       <Styled.AuthHeader mode={mode}>
-        <Styled.LogoImage alt="CareerCopilot" mode={mode} src={careerCopilotLogo} />
+        <Styled.LogoImage alt={AUTH_PAGE_COPY.logoAlt} mode={mode} src={careerCopilotLogo} />
         {isRegister ? (
           <Styled.HeaderLoginText>
-            Already have an account?{' '}
-            <Styled.HeaderLoginLink aria-label="Login from header" href={ROUTES.LOGIN}>
-              Login
+            {AUTH_PAGE_COPY.alreadyHaveAccount}{' '}
+            <Styled.HeaderLoginLink
+              aria-label={AUTH_PAGE_COPY.loginAria}
+              href={ROUTES.LOGIN}
+            >
+              {AUTH_PAGE_COPY.loginLink}
             </Styled.HeaderLoginLink>
           </Styled.HeaderLoginText>
         ) : null}

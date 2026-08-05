@@ -35,7 +35,7 @@ export function useRegister() {
     }
 
     try {
-      const phone = values.phone.replace(/[^\d+]/g, '');
+      const phone = values.phone.replace(/\D/g, '');
       await registerMutation.mutateAsync({
         email: values.email.trim().toLowerCase(),
         firstName: values.firstName.trim(),
