@@ -58,6 +58,20 @@ export interface ISecurePageFetcher {
   fetchPublicPage(url: string): Promise<SecurePageFetchResult>;
 }
 
+export interface HeadlessPageSnapshotResult extends SecurePageFetchResult {
+  renderMethod: 'HEADLESS_CHROMIUM';
+}
+
+/**
+ * Optional Chromium snapshot for JS-rendered job boards.
+ * Must enforce the same SSRF rules as ISecurePageFetcher.
+ * Does not submit forms or persist cookies.
+ */
+export interface IHeadlessPageSnapshot {
+  readonly enabled: boolean;
+  snapshot(url: string): Promise<HeadlessPageSnapshotResult | null>;
+}
+
 export interface DeterministicExtractionInput {
   sanitizedText: string;
   sourceUrl: string;

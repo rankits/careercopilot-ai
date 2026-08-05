@@ -7,6 +7,7 @@ import type {
   ISecurePageFetcher,
   SecurePageFetchResult,
 } from '@/modules/auto-apply/contracts/application-page-analysis.contract.js';
+import { stripHtmlToText } from '@/modules/auto-apply/services/page-text-sanitize.util.js';
 
 const MAX_REDIRECTS = 5;
 const MAX_BYTES = 1_500_000;
@@ -18,7 +19,7 @@ const ALLOWED_CONTENT_TYPES = [
   'application/json',
 ];
 
-function isPrivateOrBlockedIp(ip: string): boolean {
+export function isPrivateOrBlockedIp(ip: string): boolean {
   const normalized = ip.toLowerCase().replace(/^\[|\]$/g, '');
 
   if (normalized === '::1' || normalized === '0:0:0:0:0:0:0:1') return true;
@@ -29,13 +30,11 @@ function isPrivateOrBlockedIp(ip: string): boolean {
   ) {
     return true;
   }
-  // IPv4-mapped IPv6
   if (normalized.startsWith('::ffff:')) {
     return isPrivateOrBlockedIp(normalized.slice('::ffff:'.length));
   }
 
   if (isIP(normalized) !== 4) {
-    // Block unspecified / other local-ish forms conservatively for non-v4
     return normalized === '::' || normalized.startsWith('2001:db8:');
   }
 
@@ -46,15 +45,15 @@ function isPrivateOrBlockedIp(ip: string): boolean {
   if (a === 10) return true;
   if (a === 127) return true;
   if (a === 0) return true;
-  if (a === 169 && b === 254) return true; // link-local / cloud metadata 169.254.169.254
+  if (a === 169 && b === 254) return true;
   if (a === 172 && b >= 16 && b <= 31) return true;
   if (a === 192 && b === 168) return true;
-  if (a === 100 && b >= 64 && b <= 127) return true; // CGNAT
-  if (a >= 224) return true; // multicast / reserved
+  if (a === 100 && b >= 64 && b <= 127) return true;
+  if (a >= 224) return true;
   return false;
 }
 
-async function assertHostResolvesPublic(hostname: string): Promise<void> {
+export async function assertHostResolvesPublic(hostname: string): Promise<void> {
   const host = hostname.toLowerCase();
   if (
     host === 'localhost' ||
@@ -85,7 +84,7 @@ async function assertHostResolvesPublic(hostname: string): Promise<void> {
   }
 }
 
-function assertSafeHttpUrl(raw: string): URL {
+export function assertSafeHttpUrl(raw: string): URL {
   let parsed: URL;
   try {
     parsed = new URL(raw);
@@ -97,7 +96,6 @@ function assertSafeHttpUrl(raw: string): URL {
     throw new AppError('Only http(s) job page URLs are allowed', 400, 'ANALYSIS_URL_BLOCKED');
   }
 
-  // Prefer HTTPS; allow http only for local fixtures in tests via env flag
   if (parsed.protocol === 'http:' && process.env.ALLOW_INSECURE_ANALYSIS_FETCH !== 'true') {
     throw new AppError('HTTPS is required for job page analysis', 400, 'ANALYSIS_URL_INSECURE');
   }
@@ -107,23 +105,6 @@ function assertSafeHttpUrl(raw: string): URL {
   }
 
   return parsed;
-}
-
-function stripHtmlToText(html: string): string {
-  return html
-    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<noscript[\s\S]*?<\/noscript>/gi, ' ')
-    .replace(/<!--[\s\S]*?-->/g, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/gi, ' ')
-    .replace(/&amp;/gi, '&')
-    .replace(/&lt;/gi, '<')
-    .replace(/&gt;/gi, '>')
-    .replace(/&quot;/gi, '"')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .slice(0, 200_000);
 }
 
 function contentHashOf(text: string): string {

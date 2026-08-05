@@ -4,6 +4,7 @@ import { AppError } from '@/shared/utils/errors/AppError.js';
 import { prisma } from '@/shared/config/db.conf.js';
 import type {
   IApplicationPageAnalysisRepository,
+  IHeadlessPageSnapshot,
   IJobPageAnalyzerService,
   IRequirementExtractor,
   ISecurePageFetcher,
@@ -22,6 +23,14 @@ import {
 } from '@/modules/auto-apply/services/provider-detection.util.js';
 import { buildAnalysisIdempotencyKey } from '@/modules/auto-apply/repositories/prisma-application-page-analysis.repository.js';
 import { pickPrimaryApplyUrl } from '@/modules/job-listing/utils/safe-apply-url.js';
+import {
+  recordAnalysisCompleted,
+  recordAnalysisFetch,
+} from '@/modules/auto-apply/observability/analysis.metrics.js';
+import {
+  NoopHeadlessPageSnapshot,
+  shouldAttemptHeadlessSnapshot,
+} from '@/modules/auto-apply/services/headless-page-snapshot.service.js';
 
 /** Requirements TTL (longer). Status/url freshness tracked separately. */
 const REQUIREMENTS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -45,6 +54,7 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
     private readonly fetcher: ISecurePageFetcher,
     private readonly deterministicExtractor: IRequirementExtractor,
     private readonly aiExtractor: IAiRequirementExtractor,
+    private readonly headlessSnapshot: IHeadlessPageSnapshot = new NoopHeadlessPageSnapshot(),
   ) {}
 
   async getLatest(jobId: string): Promise<ApplicationPageAnalysisDto | null> {
@@ -66,10 +76,20 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
   }
 
   private async runAnalysis(input: AnalyzeJobPageInput): Promise<ApplicationPageAnalysisDto> {
+    const started = Date.now();
     const now = new Date();
     if (!input.forceRefresh) {
       const latest = await this.repository.findLatestByJobId(input.jobId);
       if (latest && isRequirementsFresh(latest, now)) {
+        recordAnalysisCompleted({
+          durationMs: Date.now() - started,
+          provider: latest.provider,
+          requirementCount: latest.requirements.length,
+          reviewRequiredCount: latest.requirements.filter(
+            (r) => r.reviewStatus === 'REVIEW_REQUIRED',
+          ).length,
+          fromCache: true,
+        });
         return latest;
       }
     }
@@ -97,8 +117,11 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
     let jobPageStatus: ApplicationPageAnalysisDto['jobPageStatus'] = 'PARTIAL';
 
     if (applyUrl) {
+      const fetchStarted = Date.now();
+      let httpSanitizedLength = 0;
       try {
         const fetched = await this.fetcher.fetchPublicPage(applyUrl);
+        httpSanitizedLength = fetched.sanitizedText.length;
         if (fetched.sanitizedText.length > 80) {
           sanitizedText = fetched.sanitizedText;
         } else if (!sanitizedText) {
@@ -112,7 +135,17 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
         jobPageStatus =
           fetched.httpStatus >= 200 && fetched.httpStatus < 300 ? 'COMPLETE' : 'PARTIAL';
         outcomeStatus = 'JOB_PAGE_ANALYZED';
+        recordAnalysisFetch({
+          success: true,
+          provider,
+          durationMs: Date.now() - fetchStarted,
+        });
       } catch (error) {
+        recordAnalysisFetch({
+          success: false,
+          provider,
+          durationMs: Date.now() - fetchStarted,
+        });
         if (!sanitizedText) {
           throw error;
         }
@@ -120,6 +153,28 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
         jobPageStatus = 'PARTIAL';
         outcomeStatus = 'JOB_PAGE_ANALYZED';
         httpStatus = 0;
+      }
+
+      // Controlled Chromium snapshot for JS-heavy / thin HTTP shells (not AI URL explore).
+      if (
+        shouldAttemptHeadlessSnapshot({
+          enabled: this.headlessSnapshot.enabled,
+          applyUrl,
+          provider,
+          httpSanitizedLength,
+        })
+      ) {
+        const snap = await this.headlessSnapshot.snapshot(applyUrl);
+        if (snap && snap.sanitizedText.length > sanitizedText.length) {
+          sanitizedText = snap.sanitizedText;
+          contentHash = snap.contentHash;
+          httpStatus = snap.httpStatus || httpStatus;
+          finalUrl = snap.finalUrl;
+          contentType = snap.contentType;
+          fetchedAt = snap.fetchedAt;
+          jobPageStatus =
+            snap.httpStatus >= 200 && snap.httpStatus < 300 ? 'COMPLETE' : jobPageStatus;
+        }
       }
     } else if (!sanitizedText) {
       throw new AppError(
@@ -141,6 +196,7 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
     });
 
     // AI path is optional and must never override deterministic explicit facts for same code.
+    // AI receives sanitized text only — never a live URL to browse.
     let aiRequirements: typeof deterministic.requirements = [];
     try {
       aiRequirements = await this.aiExtractor.extract({
@@ -155,7 +211,6 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
     const byCode = new Map(deterministic.requirements.map((item) => [item.code, item]));
     for (const aiItem of aiRequirements) {
       if (!byCode.has(aiItem.code)) {
-        // Only accept weak/strong inference additions — never channel/authorization mutations.
         if (aiItem.code === 'SUBMISSION_CAPABILITY' || aiItem.code === 'PROVIDER') continue;
         byCode.set(aiItem.code, aiItem);
       }
@@ -171,6 +226,15 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
 
     const existingSame = await this.repository.findByIdempotencyKey(idempotencyKey);
     if (existingSame) {
+      recordAnalysisCompleted({
+        durationMs: Date.now() - started,
+        provider,
+        requirementCount: existingSame.requirements.length,
+        reviewRequiredCount: existingSame.requirements.filter(
+          (r) => r.reviewStatus === 'REVIEW_REQUIRED',
+        ).length,
+        fromCache: true,
+      });
       return existingSame;
     }
 
@@ -178,7 +242,7 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
     const expiresAt = new Date(analyzedAt.getTime() + REQUIREMENTS_TTL_MS);
     const statusCheckedAt = analyzedAt.toISOString();
 
-    return this.repository.create({
+    const created = await this.repository.create({
       id: randomUUID(),
       jobId: input.jobId,
       jobApplicationId: input.jobApplicationId ?? null,
@@ -213,6 +277,16 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
       expiresAt: expiresAt.toISOString(),
       sanitizedText,
     });
+
+    recordAnalysisCompleted({
+      durationMs: Date.now() - started,
+      provider,
+      requirementCount: requirements.length,
+      reviewRequiredCount: requirements.filter((r) => r.reviewStatus === 'REVIEW_REQUIRED').length,
+      fromCache: false,
+    });
+
+    return created;
   }
 }
 

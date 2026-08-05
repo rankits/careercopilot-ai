@@ -169,6 +169,7 @@ export interface ApplicationReadinessReasonDto {
   rule?: string;
   severity: 'BLOCKING' | 'WARNING';
   collectionMode?: 'ONBOARDING' | 'PROGRESSIVE' | 'JOB_SPECIFIC';
+  metadata?: Record<string, unknown>;
 }
 
 export interface ApplicationReadinessDto {

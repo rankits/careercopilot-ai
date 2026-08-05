@@ -1,16 +1,9 @@
 import { ROUTES } from '@/constants/routes';
 
 export type AutoApplyTabId =
-  | 'profile'
-  | 'answers'
-  | 'resumes'
-  | 'rules'
-  | 'consents'
-  | 'submissions';
+  'profile' | 'answers' | 'resumes' | 'rules' | 'consents' | 'submissions';
 
-export type FixDestination =
-  | { kind: 'tab'; tab: AutoApplyTabId }
-  | { kind: 'route'; href: string };
+export type FixDestination = { kind: 'tab'; tab: AutoApplyTabId } | { kind: 'route'; href: string };
 
 export interface MissingFieldFixAction {
   /** Stable id for React keys (field or reason code) */
@@ -32,6 +25,7 @@ export interface ReadinessReasonLike {
   message: string;
   field?: string;
   severity: 'BLOCKING' | 'WARNING';
+  metadata?: Record<string, unknown>;
 }
 
 const FIELD_FIX_MAP: Record<string, Omit<MissingFieldFixAction, 'id' | 'field' | 'message'>> = {
@@ -106,6 +100,31 @@ const FIELD_FIX_MAP: Record<string, Omit<MissingFieldFixAction, 'id' | 'field' |
     label: 'Add portfolio link',
     destination: { kind: 'tab', tab: 'profile' },
   },
+  portfolio: {
+    label: 'Add portfolio link',
+    destination: { kind: 'tab', tab: 'profile' },
+    hint: 'Add a portfolio URL on your Auto Apply profile',
+  },
+  currentWorkRegion: {
+    label: 'Add work region',
+    destination: { kind: 'tab', tab: 'answers' },
+    hint: 'Add a verified answer with key current_work_region (e.g. India, United States)',
+  },
+  current_work_region: {
+    label: 'Add work region',
+    destination: { kind: 'tab', tab: 'answers' },
+    hint: 'Add a verified answer with key current_work_region',
+  },
+  mobileDesignExperienceYears: {
+    label: 'Add mobile design experience',
+    destination: { kind: 'tab', tab: 'answers' },
+    hint: 'Add a verified answer with key mobile_design_experience',
+  },
+  mobile_design_experience: {
+    label: 'Add mobile design experience',
+    destination: { kind: 'tab', tab: 'answers' },
+    hint: 'Describe mobile product-design background (years or brief summary)',
+  },
   matchScore: {
     label: 'Open For You',
     destination: { kind: 'route', href: ROUTES.FOR_YOU },
@@ -166,6 +185,39 @@ const CODE_FIX_MAP: Record<string, Omit<MissingFieldFixAction, 'id' | 'message'>
     label: 'Complete profile',
     destination: { kind: 'tab', tab: 'profile' },
   },
+  WORK_REGION_VERIFICATION_REQUIRED: {
+    field: 'currentWorkRegion',
+    label: 'Add work region',
+    destination: { kind: 'tab', tab: 'answers' },
+    hint: 'Confirm where you are based (key: current_work_region)',
+  },
+  JOB_LOCATION_REQUIREMENT_NOT_MET: {
+    field: 'currentWorkRegion',
+    label: 'Review work region',
+    destination: { kind: 'tab', tab: 'answers' },
+    hint: 'This role restricts candidate location — update current_work_region if wrong',
+  },
+  EXPERIENCE_REQUIREMENT_UNKNOWN: {
+    field: 'yearsOfExperience',
+    label: 'Add years of experience',
+    destination: { kind: 'tab', tab: 'answers' },
+  },
+  MOBILE_DESIGN_EVIDENCE_REQUIRED: {
+    field: 'mobileDesignExperienceYears',
+    label: 'Add mobile design experience',
+    destination: { kind: 'tab', tab: 'answers' },
+  },
+  PORTFOLIO_EVIDENCE_REQUIRED: {
+    field: 'portfolio',
+    label: 'Add portfolio link',
+    destination: { kind: 'tab', tab: 'profile' },
+  },
+  ANALYSIS_STALE: {
+    field: 'analysis',
+    label: 'Re-prepare application',
+    destination: { kind: 'tab', tab: 'submissions' },
+    hint: 'Refresh Prepare Application so job-page analysis is current',
+  },
 };
 
 /** Maps planner field names to snake_case answer vault keys for form prefill. */
@@ -177,6 +229,11 @@ const ANSWER_KEY_BY_FIELD: Record<string, string> = {
   noticePeriodDays: 'notice_period_days',
   notice_period_days: 'notice_period_days',
   sponsorship_required: 'sponsorship_required',
+  currentWorkRegion: 'current_work_region',
+  current_work_region: 'current_work_region',
+  mobileDesignExperienceYears: 'mobile_design_experience',
+  mobile_design_experience: 'mobile_design_experience',
+  mobile_design_experience_years: 'mobile_design_experience',
 };
 
 export function answerKeyForMissingField(field: string): string | undefined {
