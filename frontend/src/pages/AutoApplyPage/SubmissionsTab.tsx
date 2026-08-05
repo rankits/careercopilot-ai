@@ -25,6 +25,11 @@ import type {
   JobApplicationDto,
 } from '@/features/auto-apply/types/autoApply.types';
 import { isAutoApplyClientError } from '@/features/auto-apply/utils/apiError';
+import {
+  labelForViewState,
+  toAssistedApplyView,
+  tooltipForViewState,
+} from '@/features/auto-apply/utils/assistedApplyView';
 import { isAutoApplySetupComplete } from '@/features/auto-apply/utils/setupCompleteness';
 import {
   Alert,
@@ -37,8 +42,10 @@ import {
   IconButton,
   Paper,
   TextField,
+  Tooltip,
   Typography,
 } from '@/lib/material';
+
 
 import type { AutoApplyTabId } from './missingFieldNavigation';
 import { resolveReadinessFixActions } from './missingFieldNavigation';
@@ -139,15 +146,26 @@ function PageAnalysisPanel({ analysis }: { analysis: ApplicationPageAnalysisSumm
 }
 
 function StatusChip({ status }: { status: JobApplicationDto['status'] }) {
+  const viewState = toAssistedApplyView(status);
+  const label = labelForViewState(viewState);
+  const tooltip = tooltipForViewState(viewState);
+
   const color =
-    status === 'READY_FOR_REVIEW' || status === 'SUBMITTED' || status === 'CONFIRMATION_RECEIVED'
+    viewState === 'READY_TO_OPEN' || viewState === 'OPENED' || viewState === 'APPLIED'
       ? 'success'
-      : status === 'NOT_ELIGIBLE' || status === 'SUBMISSION_FAILED'
+      : viewState === 'BLOCKED' || status === 'SUBMISSION_FAILED'
         ? 'error'
-        : status === 'WITHDRAWN'
+        : viewState === 'ABANDONED'
           ? 'default'
           : 'warning';
-  return <Chip color={color} label={status.replace(/_/g, ' ')} size="small" />;
+
+  const chip = <Chip color={color} label={label} size="small" />;
+
+  if (tooltip) {
+    return <Tooltip title={tooltip}>{chip}</Tooltip>;
+  }
+
+  return chip;
 }
 
 export type NavigateFixAction = (action: {
