@@ -7,6 +7,12 @@ import {
   termAppearsIn,
   uniqSkills,
 } from '@/modules/resume-analysis/utils/text-match.js';
+import {
+  extractProfessionalSkillsFromText,
+  normalizeProfessionalSkills,
+  skillAppearsIn,
+  skillMatchKey,
+} from '@/modules/resumes/utils/skill-normalizer.js';
 
 export type AtsKeyword = { term: string; status: string; importance: string };
 
@@ -40,7 +46,10 @@ export type AtsScoreResult = {
 /** How dense a section body looks (0–25). */
 const sectionSubstance = (content: string, header: RegExp): number => {
   const match = content.match(
-    new RegExp(`${header.source}[:\\s]*([\\s\\S]{0,1200}?)(?=\\n(?:[A-Z][A-Za-z ]{2,40})\\b|$)`, 'i'),
+    new RegExp(
+      `${header.source}[:\\s]*([\\s\\S]{0,1200}?)(?=\\n(?:[A-Z][A-Za-z ]{2,40})\\b|$)`,
+      'i',
+    ),
   );
   const body = (match?.[1] ?? '').replace(/\s+/g, ' ').trim();
   if (!body) return 0;
@@ -91,9 +100,7 @@ export const computeSectionScoresFromContent = (input: {
       ? clampScore(Math.max(skill, Math.round(skill * 0.92 + (skill > 0 ? 6 : 0))))
       : clampScore(skill),
     education: hasEducation
-      ? clampScore(
-          42 + sectionSubstance(content, /\beducation\b/i) + Math.round(kw * 0.12),
-        )
+      ? clampScore(42 + sectionSubstance(content, /\beducation\b/i) + Math.round(kw * 0.12))
       : 0,
     projects: hasProjects
       ? clampScore(
@@ -145,40 +152,65 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
 
   const missingKeywords = input.keywords.filter((item) => /missing/i.test(item.status));
   const matchedKeywords = input.keywords.filter((item) => /matched/i.test(item.status));
-  const allKeywords = input.keywords.filter((item) => item.term?.trim());
+  const storedKeywords = input.keywords.filter((item) => item.term?.trim());
+
+  // When keyword rows are missing, derive them from the JD so scoring still reflects JD ↔ resume.
+  const jdSkillPool = normalizeProfessionalSkills(
+    extractProfessionalSkillsFromText(
+      [input.jobDescription ?? '', input.targetRole ?? ''].join('\n'),
+    ),
+  );
+  const allKeywords: AtsKeyword[] =
+    storedKeywords.length > 0
+      ? storedKeywords
+      : jdSkillPool.map((term) => ({
+          term,
+          status: skillAppearsIn(content, term) ? 'MATCHED' : 'MISSING',
+          importance: 'high',
+        }));
 
   const presentKeywordCount = allKeywords.filter((item) =>
-    termAppearsIn(content, item.term),
+    skillAppearsIn(content, item.term),
   ).length;
   const keywordMatch =
-    allKeywords.length > 0
-      ? clampScore((presentKeywordCount / allKeywords.length) * 100)
-      : baseline;
+    allKeywords.length > 0 ? clampScore((presentKeywordCount / allKeywords.length) * 100) : 0;
 
-  const recoveredMissing = missingKeywords.filter((item) => termAppearsIn(content, item.term));
-  const retainedMatched = matchedKeywords.filter((item) => termAppearsIn(content, item.term));
+  const recoveredMissing = (
+    missingKeywords.length > 0
+      ? missingKeywords
+      : allKeywords.filter((item) => /missing/i.test(item.status))
+  ).filter((item) => skillAppearsIn(content, item.term));
+  const retainedMatched = (
+    matchedKeywords.length > 0
+      ? matchedKeywords
+      : allKeywords.filter((item) => /matched/i.test(item.status))
+  ).filter((item) => skillAppearsIn(content, item.term));
 
   const targetSkills = uniqSkills([
     ...skillAnalysis.matchedSkills,
     ...skillAnalysis.missingSkills,
+    ...jdSkillPool,
   ]);
-  // Fall back to recommended only when matched/missing were empty.
-  const skillUniverse =
-    targetSkills.length > 0
-      ? targetSkills
-      : uniqSkills(skillAnalysis.recommendedSkills);
-  const matchedSkillCount = skillUniverse.filter((skill) => termAppearsIn(content, skill)).length;
+  // Dedupe React/React.js style equivalents in the universe so match % isn't diluted.
+  const skillUniverseMap = new Map<string, string>();
+  for (const skill of targetSkills.length > 0 ? targetSkills : skillAnalysis.recommendedSkills) {
+    const key = skillMatchKey(skill);
+    if (!key) continue;
+    if (!skillUniverseMap.has(key)) skillUniverseMap.set(key, skill);
+  }
+  const skillUniverse = Array.from(skillUniverseMap.values());
+  const matchedSkillCount = skillUniverse.filter((skill) => skillAppearsIn(content, skill)).length;
   const skillMatch =
     skillUniverse.length > 0
       ? clampScore((matchedSkillCount / skillUniverse.length) * 100)
       : keywordMatch;
 
   const newlyMatchedSkills = skillAnalysis.missingSkills.filter((skill) =>
-    termAppearsIn(content, skill),
+    skillAppearsIn(content, skill),
   );
 
   const highImportance = allKeywords.filter((item) => /high/i.test(item.importance));
-  const highMatched = highImportance.filter((item) => termAppearsIn(content, item.term)).length;
+  const highMatched = highImportance.filter((item) => skillAppearsIn(content, item.term)).length;
   const highCoverage =
     highImportance.length > 0
       ? highMatched / highImportance.length
@@ -289,27 +321,30 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
       (skillAnalysis.missingSkills.length > 0 &&
         newlyMatchedSkills.length / skillAnalysis.missingSkills.length >= 0.7));
   const suggestionsAppliedWell =
-    input.appliedSuggestions.length === 0
-      ? false
-      : appliedRatio >= 0.4 || appliedHits.length >= 1;
+    input.appliedSuggestions.length === 0 ? false : appliedRatio >= 0.4 || appliedHits.length >= 1;
   // Trust Optimize "APPLIED" marks even when exact suggestion text drifted after edits.
   const markedApplied = input.appliedSuggestions.length > 0;
   const optimizeSucceeded =
     (skillsRecoveredWell && (suggestionsAppliedWell || markedApplied)) ||
-    (skillMatch >= 90 && (suggestionsAppliedWell || markedApplied || newlyMatchedSkills.length >= 2)) ||
+    (skillMatch >= 90 &&
+      (suggestionsAppliedWell || markedApplied || newlyMatchedSkills.length >= 2)) ||
     (skillMatch >= 95 && keywordMatch >= 65) ||
     (skillMatch >= 100 && markedApplied);
 
   let atsScore: number;
+  const hasJdSignals = skillUniverse.length > 0 || allKeywords.length > 0;
+
   if (improvementPoints >= 2 || optimizeSucceeded) {
     // Guaranteed uplift when the edited resume recovers keywords/skills or lands applied text.
-    const uplift = Math.max(
-      optimizeSucceeded ? 18 : 2,
-      Math.round(improvementPoints * 0.75),
-    );
+    const uplift = Math.max(optimizeSucceeded ? 18 : 2, Math.round(improvementPoints * 0.75));
     atsScore = clampScore(Math.max(absoluteScore, baseline + uplift - retentionPenalty));
+  } else if (hasJdSignals) {
+    // Real JD ↔ resume coverage: prefer absolute score so different resumes don't all stick at ~45.
+    atsScore = clampScore(
+      Math.round(absoluteScore * 0.78 + Math.max(0, baseline - retentionPenalty) * 0.22),
+    );
   } else {
-    // No meaningful edits: stay near baseline unless matched keywords were removed.
+    // No meaningful edits and no JD signals: stay near baseline unless matched keywords were removed.
     atsScore = clampScore(
       Math.max(
         absoluteScore,
