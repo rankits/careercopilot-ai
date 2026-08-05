@@ -5,7 +5,12 @@ import { resumeAnalysisAiClient } from '@/modules/resume-analysis/ai/resume-anal
 import { scoreEditedResume } from '@/modules/resume-analysis/utils/ats-score.js';
 import { buildWorkingResumeContent } from '@/modules/resume-analysis/utils/merge-resume-content.js';
 import { buildJdCoverageExtras } from '@/modules/resume-analysis/utils/suggestion-coverage.js';
-import { clampScore, replaceTextFuzzy, termAppearsIn, uniqSkills } from '@/modules/resume-analysis/utils/text-match.js';
+import {
+  clampScore,
+  replaceTextFuzzy,
+  termAppearsIn,
+  uniqSkills,
+} from '@/modules/resume-analysis/utils/text-match.js';
 import { normalizeProfessionalSkills } from '@/modules/resumes/utils/skill-normalizer.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import type {
@@ -39,6 +44,30 @@ const EMPTY_SECTION_SCORES: SectionScores = {
 
 const getErrorMessage = (err: unknown): string =>
   err instanceof Error ? err.message : String(err);
+
+/** Throws (as a 404, indistinguishable from a non-existent id) unless `resumeId`
+ * belongs to `userId` - callers must never branch on "exists but not mine" vs.
+ * "doesn't exist" to avoid leaking resume existence via IDOR probing. */
+const assertOwnedResume = async (resumeId: string, userId: string) => {
+  const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
+  if (!resume || resume.userId !== userId) {
+    throw new AppError('Resume not found', 404, 'RESUME_NOT_FOUND');
+  }
+  return resume;
+};
+
+/** Same ownership guard as `assertOwnedResume`, but for saved-version routes that
+ * are keyed by `versionId` rather than `resumeId` - walks version -> analysis -> resume. */
+const assertOwnedVersion = async (versionId: number, userId: string) => {
+  const version = await prisma.resumeVersion.findUnique({
+    where: { id: versionId },
+    include: { analysis: { select: { resume: { select: { userId: true } } } } },
+  });
+  if (!version || version.analysis.resume.userId !== userId) {
+    throw new AppError('Saved resume version not found', 404, 'VERSION_NOT_FOUND');
+  }
+  return version;
+};
 
 const buildExportContent = (input: {
   baseName: string;
@@ -149,9 +178,7 @@ const parseAnalysisDetails = (value: unknown): AnalysisDetails | null => {
         : undefined,
     invalidTarget: details.invalidTarget === true,
     invalidTargetMessage:
-      typeof details.invalidTargetMessage === 'string'
-        ? details.invalidTargetMessage
-        : undefined,
+      typeof details.invalidTargetMessage === 'string' ? details.invalidTargetMessage : undefined,
   };
 };
 
@@ -256,10 +283,7 @@ const runAnalysisJob = async (analysisId: number, input: AnalysisInput): Promise
     logger.info({ resumeId, analysisId, targetRole }, 'Resume analysis job started');
 
     // AI gate: nonsense / non-JD English / fake role → ATS 0 + Oops, no full analysis.
-    const gate = await resumeAnalysisAiClient.validateTargetRoleAndJd(
-      targetRole,
-      jobDescription,
-    );
+    const gate = await resumeAnalysisAiClient.validateTargetRoleAndJd(targetRole, jobDescription);
     if (!gate.valid) {
       const message =
         gate.message?.trim() ||
@@ -379,12 +403,7 @@ const runAnalysisJob = async (analysisId: number, input: AnalysisInput): Promise
       await prisma.resumeKeyword.createMany({ data: keywordData });
     }
 
-    const suggestionData = ensureFallbackSuggestions(
-      analysisId,
-      aiResult,
-      resumeText,
-      targetRole,
-    );
+    const suggestionData = ensureFallbackSuggestions(analysisId, aiResult, resumeText, targetRole);
     if (suggestionData.length > 0) {
       await prisma.resumeSuggestion.createMany({ data: suggestionData });
     }
@@ -458,11 +477,10 @@ const shapeAnalysisResponse = <
 };
 
 export const resumeAnalysisService = {
-  async startAnalysis(input: AnalysisInput) {
+  async startAnalysis(input: AnalysisInput, userId: string) {
     const { resumeId, targetRole, experienceLevel, jobDescription } = input;
 
-    const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
-    if (!resume) throw new AppError('Resume not found', 404);
+    await assertOwnedResume(resumeId, userId);
 
     const existingAnalysis = await prisma.resumeAnalysis.findFirst({ where: { resumeId } });
     const analysis = await prisma.resumeAnalysis.upsert({
@@ -501,7 +519,9 @@ export const resumeAnalysisService = {
     return { analysisId: analysis.id, status: 'ANALYZING' };
   },
 
-  async getAnalysis(resumeId: string) {
+  async getAnalysis(resumeId: string, userId: string) {
+    await assertOwnedResume(resumeId, userId);
+
     let analysis = await prisma.resumeAnalysis.findFirst({
       where: { resumeId },
       include: {
@@ -538,7 +558,9 @@ export const resumeAnalysisService = {
     return shapeAnalysisResponse(analysis);
   },
 
-  async updateStep(resumeId: string, step: number) {
+  async updateStep(resumeId: string, step: number, userId: string) {
+    await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({ where: { resumeId } });
     // Step tracking only applies after analyze has created a row.
     if (!analysis) return null;
@@ -549,7 +571,9 @@ export const resumeAnalysisService = {
     });
   },
 
-  async getKeywords(resumeId: string) {
+  async getKeywords(resumeId: string, userId: string) {
+    await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({ where: { resumeId } });
     if (!analysis) throw new AppError('Analysis not found', 404);
 
@@ -573,7 +597,9 @@ export const resumeAnalysisService = {
     };
   },
 
-  async getSuggestions(resumeId: string) {
+  async getSuggestions(resumeId: string, userId: string) {
+    await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({
       where: { resumeId },
       orderBy: { createdAt: 'desc' },
@@ -589,8 +615,11 @@ export const resumeAnalysisService = {
   async applySuggestion(
     resumeId: string,
     suggestionId: number,
+    userId: string,
     options?: { preserveContent?: boolean },
   ) {
+    await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({ where: { resumeId } });
     if (!analysis) throw new AppError('Analysis not found', 404);
 
@@ -643,7 +672,9 @@ export const resumeAnalysisService = {
     });
   },
 
-  async ignoreSuggestion(resumeId: string, suggestionId: number) {
+  async ignoreSuggestion(resumeId: string, suggestionId: number, userId: string) {
+    await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({ where: { resumeId } });
     if (!analysis) throw new AppError('Analysis not found', 404);
 
@@ -658,7 +689,9 @@ export const resumeAnalysisService = {
     });
   },
 
-  async updateContent(resumeId: string, content: string) {
+  async updateContent(resumeId: string, content: string, userId: string) {
+    await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({ where: { resumeId } });
     if (!analysis) throw new AppError('Analysis not found', 404);
 
@@ -668,7 +701,9 @@ export const resumeAnalysisService = {
     });
   },
 
-  async recheckAts(resumeId: string): Promise<RecheckResult> {
+  async recheckAts(resumeId: string, userId: string): Promise<RecheckResult> {
+    await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({
       where: { resumeId },
       include: {
@@ -778,7 +813,9 @@ export const resumeAnalysisService = {
     };
   },
 
-  async saveVersion(resumeId: string, label: string, contentOverride?: string) {
+  async saveVersion(resumeId: string, label: string, userId: string, contentOverride?: string) {
+    await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({
       where: { resumeId },
       include: { resume: { select: { originalName: true } } },
@@ -803,7 +840,9 @@ export const resumeAnalysisService = {
     });
   },
 
-  async getVersions(resumeId: string) {
+  async getVersions(resumeId: string, userId: string) {
+    await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({ where: { resumeId } });
     if (!analysis) return [];
 
@@ -820,8 +859,9 @@ export const resumeAnalysisService = {
     }));
   },
 
-  async listSavedVersions() {
+  async listSavedVersions(userId: string) {
     const versions = await prisma.resumeVersion.findMany({
+      where: { analysis: { resume: { userId } } },
       orderBy: { createdAt: 'desc' },
       include: {
         analysis: {
@@ -848,7 +888,9 @@ export const resumeAnalysisService = {
     }));
   },
 
-  async getSavedVersion(versionId: number) {
+  async getSavedVersion(versionId: number, userId: string) {
+    await assertOwnedVersion(versionId, userId);
+
     const version = await prisma.resumeVersion.findUnique({
       where: { id: versionId },
       include: {
@@ -877,21 +919,24 @@ export const resumeAnalysisService = {
     };
   },
 
-  async deleteSavedVersion(versionId: number) {
-    const version = await prisma.resumeVersion.findUnique({ where: { id: versionId } });
-    if (!version) throw new AppError('Saved resume version not found', 404);
+  async deleteSavedVersion(versionId: number, userId: string) {
+    await assertOwnedVersion(versionId, userId);
+
     await prisma.resumeVersion.delete({ where: { id: versionId } });
     return { id: versionId };
   },
 
-  async exportResume(resumeId: string, format: 'pdf' | 'docx' | 'txt'): Promise<ExportResult> {
+  async exportResume(
+    resumeId: string,
+    format: 'pdf' | 'docx' | 'txt',
+    userId: string,
+  ): Promise<ExportResult> {
+    const resume = await assertOwnedResume(resumeId, userId);
+
     const analysis = await prisma.resumeAnalysis.findFirst({
       where: { resumeId },
       include: { keywords: true },
     });
-
-    const resume = await prisma.resume.findUnique({ where: { id: resumeId } });
-    if (!resume) throw new AppError('Resume not found', 404);
 
     const resumeText = await getResumeText(resumeId);
     const baseName = resume.originalName.replace(/\.[^.]+$/, '');

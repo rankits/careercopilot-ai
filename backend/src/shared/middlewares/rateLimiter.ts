@@ -124,11 +124,12 @@ export const jobsIngestionRateLimiter = buildLimiter({
   prefix: 'jobs-ingestion',
 });
 
-/** Router-wide guardrail for resume-analysis (AI analysis/ATS scoring, no auth middleware yet). */
+/** Guards the AI-cost resume-analysis endpoints (/analyze, /recheck). */
 export const resumeAnalysisRateLimiter = buildLimiter({
   windowMinutes: RESUME_ANALYSIS_RATE_LIMIT.windowMinutes,
   max: RESUME_ANALYSIS_RATE_LIMIT.max,
   prefix: 'resume-analysis',
+  keyGenerator: authenticatedUserKeyGenerator,
 });
 
 /** Resume upload/parse/reparse - file storage + AI extraction. */

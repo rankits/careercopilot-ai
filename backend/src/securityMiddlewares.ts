@@ -14,7 +14,23 @@ const parseOrigins = (value: string | undefined): string[] =>
 const defaultOrigins = ['http://localhost:3000', 'http://localhost:4173', 'http://localhost:5001'];
 const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN);
 
-router.use(helmet({ contentSecurityPolicy: false }));
+// 'unsafe-inline' on style/script and data: on img/font are here only for
+// swagger-ui-express's bundled assets at /api-docs (gated behind
+// ENABLE_SWAGGER) - the JSON API responses this app otherwise returns
+// aren't rendered documents, so CSP has no effect on them either way.
+router.use(
+  helmet({
+    contentSecurityPolicy: {
+      directives: {
+        defaultSrc: ["'self'"],
+        styleSrc: ["'self'", "'unsafe-inline'"],
+        scriptSrc: ["'self'", "'unsafe-inline'"],
+        imgSrc: ["'self'", 'data:'],
+        fontSrc: ["'self'", 'data:'],
+      },
+    },
+  }),
+);
 
 router.use(
   cors({

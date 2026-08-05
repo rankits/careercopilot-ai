@@ -16,8 +16,11 @@ import {
   updateContentController,
   updateStepController,
 } from '@/modules/resume-analysis/controllers/resume-analysis.controller.js';
+import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
 import { resumeAnalysisRateLimiter } from '@/shared/middlewares/rateLimiter.js';
+import { requirePermission, requirePrincipalType } from '@/shared/middlewares/rbac.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
+import { RESUME_PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
 import {
   analyzeResumeSchema,
   exportResumeQuerySchema,
@@ -31,70 +34,112 @@ import {
 
 const router = express.Router();
 
-// These routes have no auth middleware in front of them, so this limiter is
-// the only abuse guardrail in the chain - keyed by IP, applied to every route.
-router.use(resumeAnalysisRateLimiter);
+const requireUser = [authMiddleware, requirePrincipalType('USER')] as const;
+const canRead = requirePermission(RESUME_PERMISSIONS.READ_ANALYSIS_OWN);
+const canWrite = requirePermission(RESUME_PERMISSIONS.UPDATE_OWN);
 
 // Static paths first (before /:resumeId)
-router.get('/saved-versions', listSavedVersionsController);
+router.get('/saved-versions', ...requireUser, canRead, listSavedVersionsController);
 router.get(
   '/saved-versions/:versionId',
+  ...requireUser,
+  canRead,
   validateResource(savedVersionIdParamsSchema),
   getSavedVersionController,
 );
 router.delete(
   '/saved-versions/:versionId',
+  ...requireUser,
+  canWrite,
   validateResource(savedVersionIdParamsSchema),
   deleteSavedVersionController,
 );
 
-router.post('/:resumeId/analyze', validateResource(analyzeResumeSchema), startAnalysisController);
+router.post(
+  '/:resumeId/analyze',
+  ...requireUser,
+  canWrite,
+  resumeAnalysisRateLimiter,
+  validateResource(analyzeResumeSchema),
+  startAnalysisController,
+);
 router.get(
   '/:resumeId/analysis',
+  ...requireUser,
+  canRead,
   validateResource(resumeAnalysisIdParamsSchema),
   getAnalysisController,
 );
-router.patch('/:resumeId/step', validateResource(updateAnalysisStepSchema), updateStepController);
+router.patch(
+  '/:resumeId/step',
+  ...requireUser,
+  canWrite,
+  validateResource(updateAnalysisStepSchema),
+  updateStepController,
+);
 router.get(
   '/:resumeId/keywords',
+  ...requireUser,
+  canRead,
   validateResource(resumeAnalysisIdParamsSchema),
   getKeywordsController,
 );
 router.get(
   '/:resumeId/suggestions',
+  ...requireUser,
+  canRead,
   validateResource(resumeAnalysisIdParamsSchema),
   getSuggestionsController,
 );
 router.post(
   '/:resumeId/suggestions/:suggestionId/apply',
+  ...requireUser,
+  canWrite,
   validateResource(suggestionActionSchema),
   applySuggestionController,
 );
 router.post(
   '/:resumeId/suggestions/:suggestionId/ignore',
+  ...requireUser,
+  canWrite,
   validateResource(suggestionActionSchema),
   ignoreSuggestionController,
 );
 router.patch(
   '/:resumeId/content',
+  ...requireUser,
+  canWrite,
   validateResource(updateAnalysisContentSchema),
   updateContentController,
 );
 router.post(
   '/:resumeId/recheck',
+  ...requireUser,
+  canWrite,
+  resumeAnalysisRateLimiter,
   validateResource(resumeAnalysisIdParamsSchema),
   recheckAtsController,
 );
 router.post(
   '/:resumeId/versions',
+  ...requireUser,
+  canWrite,
   validateResource(saveResumeVersionSchema),
   saveVersionController,
 );
 router.get(
   '/:resumeId/versions',
+  ...requireUser,
+  canRead,
   validateResource(resumeAnalysisIdParamsSchema),
   getVersionsController,
 );
-router.get('/:resumeId/export', validateResource(exportResumeQuerySchema), exportResumeController);
+router.get(
+  '/:resumeId/export',
+  ...requireUser,
+  canRead,
+  validateResource(exportResumeQuerySchema),
+  exportResumeController,
+);
 
 export default router;
