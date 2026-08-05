@@ -159,6 +159,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'ACTION_REQUIRED' }),
+      'SUBMITTING',
     );
     expect(eventService.record).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -182,6 +183,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMITTED', markSubmittedNow: true }),
+      'SUBMITTING',
     );
   });
 
@@ -199,6 +201,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMISSION_FAILED', failureCode: 'JOB_NO_LONGER_ACTIVE' }),
+      'SUBMITTING',
     );
     expect(eventService.record).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'SUBMISSION_FAILED' }),
@@ -215,6 +218,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ failureCode: 'CONSENT_REVOKED' }),
+      'SUBMITTING',
     );
   });
 
@@ -227,6 +231,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ failureCode: 'CHANNEL_UNSUPPORTED' }),
+      'SUBMITTING',
     );
   });
 
@@ -240,6 +245,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ failureCode: 'VALIDATION_FAILED' }),
+      'SUBMITTING',
     );
   });
 
@@ -255,6 +261,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'ACTION_REQUIRED' }),
+      'SUBMITTING',
     );
     expect(eventService.record).toHaveBeenCalledWith(
       expect.objectContaining({ eventType: 'SUBMISSION_OUTCOME_UNKNOWN' }),
@@ -279,6 +286,7 @@ describe('SubmissionProcessingService', () => {
         'user-1',
         'jobapp-1',
         expect.objectContaining({ status: 'ACTION_REQUIRED' }),
+        'SUBMITTING',
       );
     } finally {
       vi.useRealTimers();
@@ -307,6 +315,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
+      'SUBMITTING',
     );
     expect(eventService.record).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -329,6 +338,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
+      'SUBMITTING',
     );
 
     // Second early failure after re-claim — prior attempt #1 already exists.
@@ -342,6 +352,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMISSION_FAILED', failureCode: 'CONSENT_REVOKED' }),
+      'SUBMITTING',
     );
     expect(eventService.record).toHaveBeenLastCalledWith(
       expect.objectContaining({
@@ -370,6 +381,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
+      'SUBMITTING',
     );
   });
 
@@ -406,6 +418,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
+      'SUBMITTING',
     );
     expect(eventService.record).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -428,6 +441,7 @@ describe('SubmissionProcessingService', () => {
       'user-1',
       'jobapp-1',
       expect.objectContaining({ status: 'SUBMISSION_FAILED' }),
+      'SUBMITTING',
     );
   });
 

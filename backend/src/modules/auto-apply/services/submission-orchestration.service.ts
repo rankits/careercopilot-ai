@@ -81,10 +81,14 @@ export class SubmissionOrchestrationService implements ISubmissionOrchestrationS
         'Auto-apply submission published to APPLICATION_SUBMIT queue',
       );
     } catch (error) {
-      await this.jobApplicationRepository.updateStatus(userId, jobApplicationId, {
-        status: previousStatus === 'SUBMISSION_FAILED' ? 'SUBMISSION_FAILED' : 'APPROVED',
-      });
-      throw new AppError(
+      await this.jobApplicationRepository.updateStatus(
+        userId,
+        jobApplicationId,
+        {
+          status: previousStatus === 'SUBMISSION_FAILED' ? 'SUBMISSION_FAILED' : 'APPROVED',
+        },
+        'QUEUED',
+      );      throw new AppError(
         "We couldn't queue this application. Try again.",
         503,
         'QUEUE_PUBLISH_FAILED',

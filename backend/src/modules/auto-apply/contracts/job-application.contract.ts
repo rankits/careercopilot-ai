@@ -35,6 +35,10 @@ export interface FinalizeSubmissionData {
   markSubmittedNow?: boolean;
 }
 
+/** User-safe message for optimistic-lock / stale-status conflicts (AA-010). */
+export const STATUS_CONFLICT_MESSAGE =
+  'This application was already updated. Refresh to see its current state.';
+
 export interface IJobApplicationRepository {
   findManyByUserId(userId: string): Promise<JobApplicationDto[]>;
   findById(userId: string, id: string): Promise<JobApplicationDto | null>;
@@ -44,10 +48,15 @@ export interface IJobApplicationRepository {
     canonicalJobId: string,
   ): Promise<JobApplicationDto | null>;
   create(data: CreateJobApplicationData): Promise<JobApplicationDto>;
+  /**
+   * CAS status update: `WHERE id AND userId AND status = expectedStatus`.
+   * Throws 404 APPLICATION_NOT_FOUND or 409 INVALID_STATUS_TRANSITION (AA-010).
+   */
   updateStatus(
     userId: string,
     id: string,
     data: UpdateJobApplicationStatusData,
+    expectedStatus: JobApplicationStatusValue,
   ): Promise<JobApplicationDto>;
   /** Persists planner output (channel, selected resume, inputs hash) —
    * bumps `planVersion` only when `planInputsHash` actually changes from
@@ -59,13 +68,15 @@ export interface IJobApplicationRepository {
    * the application isn't currently QUEUED, so redelivered/duplicate queue
    * messages never double-process the same submission. */
   claimForSubmission(userId: string, id: string): Promise<JobApplicationDto | null>;
-  /** Writes the final outcome of a submission attempt (status + external
-   * ids/failure info). Called exactly once per attempt by the submission
-   * processing service, after the attempt has already been logged. */
+  /**
+   * CAS finalize: `WHERE id AND userId AND status = expectedStatus` (typically
+   * SUBMITTING). Throws 404 / 409 INVALID_STATUS_TRANSITION (AA-010).
+   */
   finalizeSubmission(
     userId: string,
     id: string,
     data: FinalizeSubmissionData,
+    expectedStatus: JobApplicationStatusValue,
   ): Promise<JobApplicationDto>;
   /** Counts submissions in consumed statuses (queued/submitting/submitted/…)
    * created or queued since `since` — used by the readiness limit gate. */
