@@ -39,12 +39,19 @@ describe('AutoApplyEventService', () => {
 
   it('lists events scoped to the requesting user', async () => {
     const result = await service.listForUser('user-1');
-    expect(repository.findManyByUserId).toHaveBeenCalledWith('user-1', 50);
+    expect(repository.findManyByUserId).toHaveBeenCalledWith('user-1', 50, undefined);
     expect(result).toEqual([sampleEvent]);
   });
 
   it('honors a custom limit', async () => {
     await service.listForUser('user-1', 10);
-    expect(repository.findManyByUserId).toHaveBeenCalledWith('user-1', 10);
+    expect(repository.findManyByUserId).toHaveBeenCalledWith('user-1', 10, undefined);
+  });
+
+  it('passes jobApplicationId filter with userId scope (AA-044)', async () => {
+    await service.listForUser('user-1', 50, { jobApplicationId: 'jobapp-1' });
+    expect(repository.findManyByUserId).toHaveBeenCalledWith('user-1', 50, {
+      jobApplicationId: 'jobapp-1',
+    });
   });
 });

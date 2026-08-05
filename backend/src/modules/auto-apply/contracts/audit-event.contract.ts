@@ -10,9 +10,17 @@ export interface RecordAuditEventData {
   metadata?: Record<string, unknown>;
 }
 
+export interface ListAuditEventsFilter {
+  jobApplicationId?: string;
+}
+
 export interface IAutoApplyEventRepository {
   record(data: RecordAuditEventData): Promise<AutoApplyAuditEventDto>;
-  findManyByUserId(userId: string, limit: number): Promise<AutoApplyAuditEventDto[]>;
+  findManyByUserId(
+    userId: string,
+    limit: number,
+    filter?: ListAuditEventsFilter,
+  ): Promise<AutoApplyAuditEventDto[]>;
 }
 
 export interface IAutoApplyEventService {
@@ -20,5 +28,9 @@ export interface IAutoApplyEventService {
    * action it's recording. Callers should not `await` a rejection out of
    * this in a way that surfaces to the user. */
   record(data: RecordAuditEventData): Promise<void>;
-  listForUser(userId: string, limit?: number): Promise<AutoApplyAuditEventDto[]>;
+  listForUser(
+    userId: string,
+    limit?: number,
+    filter?: ListAuditEventsFilter,
+  ): Promise<AutoApplyAuditEventDto[]>;
 }
