@@ -9,41 +9,31 @@ import { IChannelDetectionService } from '@/modules/auto-apply/contracts/channel
 import { IApprovedResumeVersionRepository } from '@/modules/auto-apply/contracts/resume-version.contract.js';
 import { IApplicationAnswerRepository } from '@/modules/auto-apply/contracts/application-answer.contract.js';
 import { IApplicationPlannerService } from '@/modules/auto-apply/contracts/planner.contract.js';
+import { IApplicationReadinessService } from '@/modules/auto-apply/contracts/application-readiness.contract.js';
 import {
   ApplicationPlanDecision,
   ApplicationPlanResult,
 } from '@/modules/auto-apply/types/planner.types.js';
 import { JobApplicationDto } from '@/modules/auto-apply/types/job-application.types.js';
 import { isValidTransition } from '@/modules/auto-apply/utils/state-machine.util.js';
+import { readinessToPlannerDecision } from '@/modules/auto-apply/services/application-readiness.service.js';
+import { ApplicationContentPreparationService } from '@/modules/auto-apply/services/application-content-preparation.service.js';
+import { PreparedScreeningAnswer } from '@/modules/auto-apply/types/application-content.types.js';
 
 /**
- * Implements AJA-PLAN-001. Orchestrates the shared services built in
- * Wave 2/3 (duplicate check, eligibility, channel detection, resume
- * selection, verified answers) into one idempotent `createPlan()` call —
- * without doing any AI content generation itself. Cover-letter and
- * screening-answer generation (AJA-AI-001, gated by AJA-AI-002's safety
- * checks) is a separate, not-yet-built capability; this planner reports
- * `contentGenerationAvailable: false` rather than fabricating content or
- * silently pretending the step ran.
- *
- * "Required questions" are checked against a small baseline catalog
- * (`BASELINE_REQUIRED_QUESTION_KEYS`), not job-specific extracted
- * questions — extracting real per-job screening questions needs AI-driven
- * job-description parsing that doesn't exist yet either. This is a
- * deliberately honest simplification, not a stand-in for the real thing.
+ * AJA-PLAN-001 — orchestrates duplicate check, eligibility, readiness, and
+ * optional grounded content preparation (AJA-AI-001) into one idempotent
+ * `createPlan()` call. Content generation failures never hard-block the plan.
  */
 export class ApplicationPlannerService implements IApplicationPlannerService {
-  private static readonly BASELINE_REQUIRED_QUESTION_KEYS = [
-    'work_authorization',
-    'notice_period_days',
-  ];
-
   constructor(
     private readonly jobApplicationRepository: IJobApplicationRepository,
     private readonly jobApplicationService: IJobApplicationService,
     private readonly channelDetectionService: IChannelDetectionService,
     private readonly resumeVersionRepository: IApprovedResumeVersionRepository,
     private readonly answerRepository: IApplicationAnswerRepository,
+    private readonly readinessService: IApplicationReadinessService,
+    private readonly contentPreparation?: ApplicationContentPreparationService,
   ) {}
 
   async createPlan(userId: string, jobId: string): Promise<ApplicationPlanResult> {
@@ -70,50 +60,95 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
     }
 
     if (application.status === 'NOT_ELIGIBLE') {
-      return {
+      return this.emptyContentResult({
         application,
         decision: 'NOT_ELIGIBLE',
         channel: application.channel,
         eligibility: application.eligibilityResult!,
         selectedResumeVersion: null,
         unresolvedQuestions: [],
-        contentGenerationAvailable: false,
-      };
+        readiness: undefined,
+      });
+    }
+
+    const readiness = await this.readinessService.evaluate({
+      userId,
+      jobId,
+      jobApplicationId: application.id,
+      stage: 'PLAN',
+    });
+
+    if (readiness.decision === 'FEATURE_DISABLED') {
+      throw new AppError(
+        'Auto Apply is disabled or paused — planning is unavailable.',
+        403,
+        'READINESS_FEATURE_DISABLED',
+        readiness,
+      );
     }
 
     const channelResult = await this.channelDetectionService.detectChannel(jobId);
-
     const versions = await this.resumeVersionRepository.findManyByUserId(userId);
     const selectedResumeVersion = versions.find((version) => version.isActive) ?? null;
 
-    const answers = await this.answerRepository.findManyByUserId(userId);
-    const answeredKeys = new Set(answers.map((answer) => answer.questionKey));
-    const unresolvedQuestions = ApplicationPlannerService.BASELINE_REQUIRED_QUESTION_KEYS.filter(
-      (key) => !answeredKeys.has(key),
-    );
+    const unresolvedQuestions = readiness.blockingReasons
+      .filter((reason) => reason.severity === 'BLOCKING' && reason.field)
+      .map((reason) => reason.field!)
+      .filter((field, index, all) => all.indexOf(field) === index);
 
-    let decision: ApplicationPlanDecision;
-    if (channelResult.channel === 'UNSUPPORTED') {
-      decision = 'UNSUPPORTED_CHANNEL';
-    } else if (!selectedResumeVersion || unresolvedQuestions.length > 0) {
-      decision = 'INFORMATION_REQUIRED';
-    } else {
+    let decision: ApplicationPlanDecision = readinessToPlannerDecision(readiness.decision);
+    if (readiness.ready) {
       decision = 'READY_FOR_REVIEW';
+    } else if (channelResult.channel === 'UNSUPPORTED') {
+      decision = 'UNSUPPORTED_CHANNEL';
+    }
+
+    if (readiness.decision === 'NOT_ELIGIBLE') {
+      decision = 'NOT_ELIGIBLE';
+      if (application.status !== 'NOT_ELIGIBLE') {
+        application = await this.jobApplicationService.transitionStatus(
+          userId,
+          application.id,
+          'NOT_ELIGIBLE',
+        );
+      }
+      return this.emptyContentResult({
+        application,
+        decision,
+        channel: channelResult.channel,
+        eligibility: application.eligibilityResult ?? { eligible: false, checks: [] },
+        selectedResumeVersion,
+        unresolvedQuestions,
+        readiness,
+      });
     }
 
     application = await this.advanceToDecision(userId, application, decision);
+
+    const content = await this.prepareContent({
+      userId,
+      jobId,
+      application,
+      resumeId: selectedResumeVersion?.resumeId ?? null,
+    });
 
     const inputsHash = ApplicationPlannerService.computeInputsHash({
       channel: channelResult.channel,
       resumeVersionId: selectedResumeVersion?.id ?? null,
       unresolvedQuestions,
       eligible: application.eligibilityResult?.eligible ?? null,
+      readinessDecision: readiness.decision,
+      readinessCodes: readiness.blockingReasons.map((r) => r.code),
+      coverLetterHash: content.coverLetter
+        ? createHash('sha256').update(content.coverLetter).digest('hex').slice(0, 16)
+        : null,
     });
 
     application = await this.jobApplicationRepository.updatePlan(userId, application.id, {
       channel: channelResult.channel,
       resumeVersionId: selectedResumeVersion?.id ?? null,
       planInputsHash: inputsHash,
+      coverLetterContent: content.coverLetter,
     });
 
     return {
@@ -123,7 +158,11 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
       eligibility: application.eligibilityResult!,
       selectedResumeVersion,
       unresolvedQuestions,
-      contentGenerationAvailable: false,
+      contentGenerationAvailable: content.contentGenerationAvailable,
+      coverLetter: content.coverLetter,
+      screeningAnswers: content.screeningAnswers,
+      contentWarnings: content.warnings,
+      readiness,
     };
   }
 
@@ -144,6 +183,14 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
         ) ?? null)
       : null;
 
+    const content = await this.prepareContent({
+      userId,
+      jobId,
+      application,
+      resumeId: selectedResumeVersion?.resumeId ?? null,
+      preferStoredCoverLetter: true,
+    });
+
     return {
       application,
       decision,
@@ -151,15 +198,79 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
       eligibility: application.eligibilityResult ?? { eligible: false, checks: [] },
       selectedResumeVersion,
       unresolvedQuestions: [],
-      contentGenerationAvailable: false,
+      contentGenerationAvailable: content.contentGenerationAvailable,
+      coverLetter: content.coverLetter,
+      screeningAnswers: content.screeningAnswers,
+      contentWarnings: content.warnings,
     };
   }
 
-  /** Walks the validated state machine forward from MATCHED toward the
-   * computed decision. Never moves backward (e.g. READY_FOR_REVIEW back to
-   * INFORMATION_REQUIRED) — that direction is an explicitly unsupported
-   * regeneration case for this pass; withdrawing and re-initiating is the
-   * supported path until a dedicated re-planning edge is added. */
+  private async prepareContent(args: {
+    userId: string;
+    jobId: string;
+    application: JobApplicationDto;
+    resumeId: string | null;
+    preferStoredCoverLetter?: boolean;
+  }): Promise<{
+    coverLetter: string | null;
+    screeningAnswers: PreparedScreeningAnswer[];
+    contentGenerationAvailable: boolean;
+    warnings: string[];
+  }> {
+    if (!this.contentPreparation) {
+      return {
+        coverLetter: args.preferStoredCoverLetter
+          ? (args.application.coverLetterContent ?? null)
+          : null,
+        screeningAnswers: [],
+        contentGenerationAvailable: Boolean(args.application.coverLetterContent),
+        warnings: [],
+      };
+    }
+
+    try {
+      const prepared = await this.contentPreparation.prepare({
+        userId: args.userId,
+        jobId: args.jobId,
+        jobTitle: args.application.jobTitle,
+        companySlug: args.application.companySlug,
+        resumeId: args.resumeId,
+      });
+
+      if (args.preferStoredCoverLetter && args.application.coverLetterContent?.trim()) {
+        return {
+          ...prepared,
+          coverLetter: args.application.coverLetterContent,
+          contentGenerationAvailable: true,
+        };
+      }
+
+      return prepared;
+    } catch {
+      return {
+        coverLetter: args.application.coverLetterContent ?? null,
+        screeningAnswers: [],
+        contentGenerationAvailable: Boolean(args.application.coverLetterContent),
+        warnings: ['Content preparation failed — plan continues without generated materials.'],
+      };
+    }
+  }
+
+  private emptyContentResult(
+    partial: Omit<
+      ApplicationPlanResult,
+      'contentGenerationAvailable' | 'coverLetter' | 'screeningAnswers' | 'contentWarnings'
+    >,
+  ): ApplicationPlanResult {
+    return {
+      ...partial,
+      contentGenerationAvailable: false,
+      coverLetter: null,
+      screeningAnswers: [],
+      contentWarnings: [],
+    };
+  }
+
   private async advanceToDecision(
     userId: string,
     application: JobApplicationDto,
@@ -179,10 +290,25 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
       return current;
     }
 
+    if (decision === 'NOT_ELIGIBLE') {
+      if (current.status === 'NOT_ELIGIBLE') return current;
+      if (isValidTransition(current.status as JobApplicationStatus, 'NOT_ELIGIBLE')) {
+        return this.jobApplicationService.transitionStatus(userId, current.id, 'NOT_ELIGIBLE');
+      }
+      return current;
+    }
+
     const targetStatus: JobApplicationStatus =
       decision === 'INFORMATION_REQUIRED' ? 'INFORMATION_REQUIRED' : 'READY_FOR_REVIEW';
 
     if (current.status === targetStatus) {
+      return current;
+    }
+
+    if (
+      decision === 'READY_FOR_REVIEW' &&
+      ApplicationPlannerService.isPastReadyForReview(current.status as JobApplicationStatus)
+    ) {
       return current;
     }
 
@@ -195,6 +321,19 @@ export class ApplicationPlannerService implements IApplicationPlannerService {
     }
 
     return this.jobApplicationService.transitionStatus(userId, current.id, targetStatus);
+  }
+
+  private static isPastReadyForReview(status: JobApplicationStatus): boolean {
+    return (
+      status === 'READY_FOR_AUTOPILOT' ||
+      status === 'APPROVED' ||
+      status === 'QUEUED' ||
+      status === 'SUBMITTING' ||
+      status === 'SUBMITTED' ||
+      status === 'CONFIRMATION_RECEIVED' ||
+      status === 'SUBMISSION_FAILED' ||
+      status === 'ACTION_REQUIRED'
+    );
   }
 
   private static statusToDecision(status: JobApplicationStatus): ApplicationPlanDecision | null {

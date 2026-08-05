@@ -17,7 +17,17 @@ describe('ApplicationPlannerService', () => {
   let channelService: IChannelDetectionService;
   let resumeVersionRepo: IApprovedResumeVersionRepository;
   let answerRepo: IApplicationAnswerRepository;
+  let readinessService: { evaluate: ReturnType<typeof vi.fn> };
   let planner: ApplicationPlannerService;
+
+  const readyReadiness = {
+    decision: 'READY' as const,
+    ready: true,
+    blockingReasons: [] as [],
+    warnings: [] as [],
+    evaluatedRules: {},
+    evaluatedAt: new Date(),
+  };
 
   const baseApplication: JobApplicationDto = {
     id: 'jobapp-1',
@@ -104,6 +114,9 @@ describe('ApplicationPlannerService', () => {
       ),
       claimForSubmission: vi.fn(),
       finalizeSubmission: vi.fn(),
+      countConsumedSince: vi.fn().mockResolvedValue(0),
+      updateMatchScore: vi.fn(),
+      queueAtomically: vi.fn(),
     };
 
     jobAppService = {
@@ -142,12 +155,17 @@ describe('ApplicationPlannerService', () => {
       delete: vi.fn(),
     };
 
+    readinessService = {
+      evaluate: vi.fn().mockResolvedValue(readyReadiness),
+    };
+
     planner = new ApplicationPlannerService(
       jobAppRepo,
       jobAppService,
       channelService,
       resumeVersionRepo,
       answerRepo,
+      readinessService,
     );
   });
 
@@ -190,6 +208,18 @@ describe('ApplicationPlannerService', () => {
       channel: 'UNSUPPORTED',
       reason: 'no apply url',
     });
+    readinessService.evaluate.mockResolvedValue({
+      ...readyReadiness,
+      ready: false,
+      decision: 'CHANNEL_UNSUPPORTED',
+      blockingReasons: [
+        {
+          code: 'CHANNEL_UNSUPPORTED',
+          message: 'unsupported',
+          severity: 'BLOCKING',
+        },
+      ],
+    });
 
     const result = await planner.createPlan('user-1', 'job-1');
 
@@ -208,6 +238,19 @@ describe('ApplicationPlannerService', () => {
 
   it('returns INFORMATION_REQUIRED when no active resume version is approved', async () => {
     vi.mocked(resumeVersionRepo.findManyByUserId).mockResolvedValue([]);
+    readinessService.evaluate.mockResolvedValue({
+      ...readyReadiness,
+      ready: false,
+      decision: 'INFORMATION_REQUIRED',
+      blockingReasons: [
+        {
+          code: 'RESUME_MISSING',
+          message: 'resume required',
+          field: 'resumeVersionId',
+          severity: 'BLOCKING',
+        },
+      ],
+    });
 
     const result = await planner.createPlan('user-1', 'job-1');
 
@@ -217,11 +260,24 @@ describe('ApplicationPlannerService', () => {
 
   it('returns INFORMATION_REQUIRED and lists unresolved baseline questions when answers are missing', async () => {
     vi.mocked(answerRepo.findManyByUserId).mockResolvedValue([workAuthAnswer]);
+    readinessService.evaluate.mockResolvedValue({
+      ...readyReadiness,
+      ready: false,
+      decision: 'INFORMATION_REQUIRED',
+      blockingReasons: [
+        {
+          code: 'NOTICE_PERIOD_MISSING',
+          message: 'notice required',
+          field: 'noticePeriodDays',
+          severity: 'BLOCKING',
+        },
+      ],
+    });
 
     const result = await planner.createPlan('user-1', 'job-1');
 
     expect(result.decision).toBe('INFORMATION_REQUIRED');
-    expect(result.unresolvedQuestions).toEqual(['notice_period_days']);
+    expect(result.unresolvedQuestions).toEqual(['noticePeriodDays']);
   });
 
   it('returns READY_FOR_REVIEW when eligible, channeled, resumed, and answered', async () => {
@@ -231,11 +287,80 @@ describe('ApplicationPlannerService', () => {
     expect(result.selectedResumeVersion).toEqual(activeResumeVersion);
     expect(result.unresolvedQuestions).toEqual([]);
     expect(result.contentGenerationAvailable).toBe(false);
+    expect(result.coverLetter).toBeNull();
+    expect(result.screeningAnswers).toEqual([]);
   });
 
-  it('never fabricates cover-letter content', async () => {
+  it('never fabricates cover-letter content without a content preparation service', async () => {
     const result = await planner.createPlan('user-1', 'job-1');
     expect(result.contentGenerationAvailable).toBe(false);
+    expect(result.coverLetter).toBeNull();
+  });
+
+  it('attaches prepared cover letter and screening answers when content preparation succeeds', async () => {
+    const contentPreparation = {
+      prepare: vi.fn().mockResolvedValue({
+        coverLetter: 'Dear Hiring Team,\n\nI am interested.',
+        screeningAnswers: [
+          {
+            questionKey: 'work_authorization',
+            questionLabel: 'Work authorization',
+            answer: 'Authorized',
+            status: 'READY',
+            source: 'USER_VERIFIED',
+            confidence: 1,
+            evidence: ['Verified answer vault (work_authorization)'],
+            requiresUserReview: true,
+          },
+        ],
+        contentGenerationAvailable: true,
+        warnings: [],
+      }),
+    };
+
+    planner = new ApplicationPlannerService(
+      jobAppRepo,
+      jobAppService,
+      channelService,
+      resumeVersionRepo,
+      answerRepo,
+      readinessService,
+      contentPreparation as never,
+    );
+
+    const result = await planner.createPlan('user-1', 'job-1');
+
+    expect(result.contentGenerationAvailable).toBe(true);
+    expect(result.coverLetter).toContain('I am interested');
+    expect(result.screeningAnswers).toHaveLength(1);
+    expect(jobAppRepo.updatePlan).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      expect.objectContaining({
+        coverLetterContent: expect.stringContaining('I am interested'),
+      }),
+    );
+  });
+
+  it('keeps the plan ready when content preparation fails', async () => {
+    const contentPreparation = {
+      prepare: vi.fn().mockRejectedValue(new Error('AI down')),
+    };
+
+    planner = new ApplicationPlannerService(
+      jobAppRepo,
+      jobAppService,
+      channelService,
+      resumeVersionRepo,
+      answerRepo,
+      readinessService,
+      contentPreparation as never,
+    );
+
+    const result = await planner.createPlan('user-1', 'job-1');
+    expect(result.decision).toBe('READY_FOR_REVIEW');
+    expect(result.contentGenerationAvailable).toBe(false);
+    expect(result.contentWarnings[0]).toMatch(/Content preparation failed/i);
   });
 
   it('persists the selected channel and resume version via updatePlan', async () => {
@@ -270,11 +395,42 @@ describe('ApplicationPlannerService', () => {
     vi.mocked(jobAppRepo.findByUserIdAndJobId).mockResolvedValue(
       applyStatusTransition(baseApplication, 'READY_FOR_REVIEW'),
     );
-    vi.mocked(resumeVersionRepo.findManyByUserId).mockResolvedValue([]); // now would compute INFORMATION_REQUIRED
+    vi.mocked(resumeVersionRepo.findManyByUserId).mockResolvedValue([]);
+    readinessService.evaluate.mockResolvedValue({
+      ...readyReadiness,
+      ready: false,
+      decision: 'INFORMATION_REQUIRED',
+      blockingReasons: [
+        {
+          code: 'RESUME_MISSING',
+          message: 'resume required',
+          field: 'resumeVersionId',
+          severity: 'BLOCKING',
+        },
+      ],
+    });
 
     await expect(planner.createPlan('user-1', 'job-1')).rejects.toThrow(
       expect.objectContaining({ code: 'PLAN_REGRESSION_UNSUPPORTED', statusCode: 409 }),
     );
+  });
+
+  it('does not regress a QUEUED submission when createPlan is re-run', async () => {
+    vi.mocked(jobAppRepo.findByUserIdAndJobId).mockResolvedValue(
+      applyStatusTransition(baseApplication, 'QUEUED'),
+    );
+    vi.mocked(jobAppRepo.updatePlan).mockImplementation(async (_userId, _id, patch) =>
+      applyStatusTransition(
+        { ...baseApplication, ...patch, status: 'QUEUED' } as typeof baseApplication,
+        'QUEUED',
+      ),
+    );
+
+    const result = await planner.createPlan('user-1', 'job-1');
+
+    expect(result.decision).toBe('READY_FOR_REVIEW');
+    expect(result.application.status).toBe('QUEUED');
+    expect(jobAppService.transitionStatus).not.toHaveBeenCalled();
   });
 
   describe('getPlan', () => {
