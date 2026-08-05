@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   confirmProfileController,
+  downloadResumeController,
   getCandidateProfileController,
   getMyCandidateProfileController,
   getParseStatusController,
@@ -36,6 +37,12 @@ router.post(
   uploadResumeController,
 );
 router.get(
+  '/',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.READ_OWN),
+  listResumesController,
+);
+router.get(
   '/profile/me',
   authMiddleware,
   requirePermission(RESUME_PERMISSIONS.READ_OWN),
@@ -62,7 +69,13 @@ router.get(
   validateResource(resumeIdParamsSchema),
   getResumeStatusController,
 );
-router.get('/', listResumesController);
+router.get(
+  '/:resumeId/download',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.READ_OWN),
+  validateResource(resumeIdParamsSchema),
+  downloadResumeController,
+);
 router.get(
   '/:resumeId/parsed-data',
   authMiddleware,

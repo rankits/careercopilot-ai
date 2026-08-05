@@ -19,4 +19,9 @@ export class LocalResumeStorage implements ResumeStorage {
       driver: 'LOCAL',
     };
   }
+
+  async retrieve(key: string): Promise<Buffer> {
+    const targetPath = path.join(resumeConfig.localStorageDir, key);
+    return fs.readFile(targetPath);
+  }
 }

@@ -1,7 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/atoms';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
@@ -9,8 +8,13 @@ import {
   ProfileReviewSection,
   type ReviewField,
 } from '@/features/resume/components/ProfileReviewSection';
+import { ResumeSummary } from '@/features/resume/components/ResumeSummary';
+import { ResumeUpload } from '@/features/resume/components/ResumeUpload';
+import { ResumeVersionsDialog } from '@/features/resume/components/ResumeVersionsDialog';
 
-import { ROUTES } from '@/constants/routes';
+import { useResumeParser } from '@/features/resume/hooks/useResumeParser';
+import { useAppSelector } from '@/hooks/redux';
+
 import { resumeService } from '@/features/resume/services/resume.service';
 import {
   OnboardingPage,
@@ -20,24 +24,30 @@ import {
   ProfileStickyActions,
   resumePrimaryActionSx,
 } from '@/features/resume/styles';
-import type { ResumeProfileFormValues } from '@/features/resume/types/resume.types';
+import type {
+  ResumeProfileFormValues,
+  UploadedResumeVersion,
+} from '@/features/resume/types/resume.types';
 import {
   mapFormValuesToProfileUpdate,
   mapProfileToFormValues,
 } from '@/features/resume/utils/profileFormMapper';
-import { getProfileCompletion } from '@/features/resume/utils/resumePresentation';
+import {
+  getProfileCompletion,
+  getResumePresentation,
+} from '@/features/resume/utils/resumePresentation';
 import {
   Alert,
   AutoAwesomeOutlinedIcon,
   AutoGraphOutlinedIcon,
   Box,
-  CloudUploadOutlinedIcon,
   Dialog,
   DialogActions,
   DialogContent,
   DialogContentText,
   DialogTitle,
   FolderOutlinedIcon,
+  HistoryOutlinedIcon,
   LinearProgress,
   PersonOutlineIcon,
   SchoolOutlinedIcon,
@@ -139,21 +149,23 @@ const SECTIONS: Array<{
 type Notice = { message: string; severity: 'error' | 'success' } | null;
 
 /**
- * Edits the caller's already-confirmed candidate profile. Deliberately has
- * no resume-upload/parse state of its own (that belongs to the onboarding
- * flow, `ProfilePage`) - this page only ever reads and writes the single
- * existing `CandidateProfile` row via GET/PATCH `/resumes/profile/me`.
+ * Edits the caller's confirmed candidate profile. Re-uploading a resume parses
+ * and replaces form values on this page (no redirect), while every upload is
+ * kept as a downloadable version in a dedicated versions dialog.
  */
 export function EditProfilePage() {
-  const navigate = useNavigate();
   const { showToast } = useToast();
+  const currentUser = useAppSelector((state) => state.auth.user);
   const [notice, setNotice] = useState<Notice>(null);
   const [expandedSection, setExpandedSection] = useState('Personal Information');
   const [pendingProfile, setPendingProfile] = useState<ResumeProfileFormValues | null>(null);
   const [isLoadingProfile, setIsLoadingProfile] = useState(true);
   const [profileMissing, setProfileMissing] = useState(false);
+  const [uploadedResumes, setUploadedResumes] = useState<UploadedResumeVersion[]>([]);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
+  const [isVersionsOpen, setIsVersionsOpen] = useState(false);
   const {
-    formState: { errors },
+    formState: { errors, isDirty },
     handleSubmit,
     register,
     reset,
@@ -167,7 +179,29 @@ export function EditProfilePage() {
   const hasRequiredManualDetails = REQUIRED_PROFILE_FIELDS.every(
     (field) => values[field].trim().length > 0,
   );
-  const canSubmit = !profileMissing && hasRequiredManualDetails;
+
+  const refreshUploadedResumes = useCallback(async () => {
+    try {
+      const resumes = await resumeService.listResumes();
+      setUploadedResumes(resumes);
+    } catch {
+      // Version history is supplementary - keep the edit form usable if list fails.
+    }
+  }, []);
+
+  const parser = useResumeParser((profile) => {
+    reset(profile);
+    setNotice({
+      message: 'Resume parsed. Review the updated details before saving.',
+      severity: 'success',
+    });
+    void refreshUploadedResumes();
+  });
+  const presentation = getResumePresentation(parser.metadata);
+  // Enable Save only after the user edits fields, or after a new resume parse
+  // that still needs to be confirmed (reset after parse clears isDirty).
+  const canSubmit =
+    !profileMissing && hasRequiredManualDetails && (isDirty || Boolean(parser.resumeId));
 
   useEffect(() => {
     let cancelled = false;
@@ -177,10 +211,6 @@ export function EditProfilePage() {
       .then((profile) => {
         if (cancelled) return;
         if (!profile) {
-          // Routing normally keeps an incomplete-profile user out of this
-          // page entirely (see OnboardingRoute/ProtectedRoute), but the
-          // profile-complete flag can be stale (e.g. a second tab) - guard
-          // against presenting a form that would 404 on save.
           setProfileMissing(true);
           setNotice({
             message: 'No profile found yet. Complete onboarding before editing your profile.',
@@ -201,14 +231,27 @@ export function EditProfilePage() {
         if (!cancelled) setIsLoadingProfile(false);
       });
 
+    void refreshUploadedResumes();
+
     return () => {
       cancelled = true;
     };
-  }, [reset]);
+  }, [refreshUploadedResumes, reset]);
 
   const saveMutation = useMutation({
     mutationFn: async (profile: ResumeProfileFormValues) => {
-      const result = await resumeService.updateProfile(mapFormValuesToProfileUpdate(profile));
+      const payload = mapFormValuesToProfileUpdate(profile);
+      if (parser.resumeId) {
+        if (!currentUser) {
+          throw new Error('You must be signed in to save a newly parsed resume.');
+        }
+        return resumeService.confirmProfile({
+          ...payload,
+          resumeId: parser.resumeId,
+          userId: currentUser.id,
+        });
+      }
+      const result = await resumeService.updateProfile(payload);
       return { message: result.message };
     },
     mutationKey: ['resume', 'update-profile'],
@@ -218,15 +261,32 @@ export function EditProfilePage() {
         severity: 'error',
       });
     },
-    onSuccess: ({ message }) => {
+    onSuccess: ({ message }, profile) => {
       setPendingProfile(null);
+      reset(profile);
+      parser.reset();
       showToast({ message, severity: 'success' });
+      void refreshUploadedResumes();
     },
   });
 
   const sectionStatus = (fields: ReviewField[]) => {
     const completed = fields.filter(({ name }) => values[name].trim()).length;
     return `${completed} / ${fields.length} completed`;
+  };
+
+  const handleDownload = async (resume: UploadedResumeVersion) => {
+    setDownloadingId(resume.id);
+    try {
+      await resumeService.downloadResume(resume.id, resume.originalName);
+    } catch (error) {
+      showToast({
+        message: error instanceof Error ? error.message : 'Unable to download this resume.',
+        severity: 'error',
+      });
+    } finally {
+      setDownloadingId(null);
+    }
   };
 
   return (
@@ -238,18 +298,20 @@ export function EditProfilePage() {
               Update Your Professional Profile
             </Typography>
             <Typography color="text.secondary">
-              Review and update your details to keep your profile accurate and your job matches
-              relevant.
+              Upload a new resume to refresh these fields, or edit them manually. Open your version
+              history anytime to download earlier uploads.
             </Typography>
             <Box mt={spacing[3]}>
               <Button
-                onClick={() => void navigate(ROUTES.PROFILE)}
+                onClick={() => setIsVersionsOpen(true)}
                 size="small"
-                startIcon={<CloudUploadOutlinedIcon />}
+                startIcon={<HistoryOutlinedIcon />}
                 type="button"
                 variant="outline"
               >
-                Upload a new resume
+                {uploadedResumes.length > 0
+                  ? `View resume versions (${uploadedResumes.length})`
+                  : 'View resume versions'}
               </Button>
             </Box>
           </Box>
@@ -270,10 +332,27 @@ export function EditProfilePage() {
           </Box>
         </OnboardingPageHeader>
 
-        {/* Only render the editable profile form after the profile has finished loading.
-            This ensures the form fields are populated via `reset(...)` before they are
-            mounted, avoiding timing issues in tests that assert on the field values. */}
         <ProfileReviewColumn>
+          {!profileMissing ? (
+            <ResumeUpload
+              onRemove={() => parser.reset()}
+              onUpload={parser.parse}
+              parseProgress={parser.parseProgress}
+              summary={
+                <ResumeSummary
+                  presentation={presentation}
+                  totalExperience={values.totalExperience}
+                />
+              }
+            />
+          ) : null}
+
+          {parser.parseProgress?.requiresReview ? (
+            <Alert severity="warning">
+              Some extracted details need extra attention. Please review all information.
+            </Alert>
+          ) : null}
+
           {!isLoadingProfile && !profileMissing ? (
             <Box
               component="form"
@@ -311,26 +390,34 @@ export function EditProfilePage() {
             </Box>
           ) : null}
         </ProfileReviewColumn>
+
+        <ProfileStickyActions>
+          <Box alignItems="center" display="flex" flex={1} gap={spacing[2]}>
+            <SecurityOutlinedIcon color="primary" fontSize="small" />
+            <Typography color="text.secondary" variant="caption">
+              Your data is secure and only used to enhance your job match experience.
+            </Typography>
+          </Box>
+          <Button
+            disabled={isLoadingProfile || !canSubmit}
+            form="profile-review-form"
+            isLoading={saveMutation.isPending}
+            size="medium"
+            sx={resumePrimaryActionSx}
+            type="submit"
+          >
+            Save Changes
+          </Button>
+        </ProfileStickyActions>
       </OnboardingPage>
 
-      <ProfileStickyActions>
-        <Box alignItems="center" display="flex" flex={1} gap={spacing[2]}>
-          <SecurityOutlinedIcon color="primary" fontSize="small" />
-          <Typography color="text.secondary" variant="caption">
-            Your data is secure and only used to enhance your job match experience.
-          </Typography>
-        </Box>
-        <Button
-          disabled={isLoadingProfile || !canSubmit}
-          form="profile-review-form"
-          isLoading={saveMutation.isPending}
-          size="medium"
-          sx={resumePrimaryActionSx}
-          type="submit"
-        >
-          Save Changes
-        </Button>
-      </ProfileStickyActions>
+      <ResumeVersionsDialog
+        downloadingId={downloadingId}
+        onClose={() => setIsVersionsOpen(false)}
+        onDownload={(resume) => void handleDownload(resume)}
+        open={isVersionsOpen}
+        resumes={uploadedResumes}
+      />
 
       <Dialog
         aria-describedby="confirm-profile-description"

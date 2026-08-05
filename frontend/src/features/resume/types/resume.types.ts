@@ -53,6 +53,17 @@ export interface ResumeParserMetadata {
   extractedData: Record<string, unknown>;
 }
 
+export interface UploadedResumeVersion {
+  id: string;
+  mimeType: string;
+  originalName: string;
+  processedAt: string | null;
+  sizeBytes: number;
+  status: string;
+  uploadedAt: string;
+  version: number;
+}
+
 export interface CandidateProfileData {
   certifications: Record<string, unknown>[];
   education: Record<string, unknown>[];

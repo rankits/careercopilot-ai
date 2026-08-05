@@ -150,20 +150,48 @@ const calculateTotalExperienceMonths = (
 export const resumeNormaliserService = {
   normalize(parsedData: ParsedResumeData): ParsedResumeData {
     const experience = normalizeRecordArray(parsedData.experience);
-    const totalExperienceMonths =
-      typeof parsedData.totalExperienceMonths === 'number' && parsedData.totalExperienceMonths >= 0
+    const calculatedMonths = calculateTotalExperienceMonths(experience);
+    const declaredMonths =
+      typeof parsedData.totalExperienceMonths === 'number' && parsedData.totalExperienceMonths > 0
         ? parsedData.totalExperienceMonths
-        : calculateTotalExperienceMonths(experience);
-    const totalExperienceYears =
-      typeof parsedData.totalExperienceYears === 'number' && parsedData.totalExperienceYears >= 0
-        ? Number(parsedData.totalExperienceYears.toFixed(1))
-        : Number((totalExperienceMonths / 12).toFixed(1));
+        : null;
+    const declaredYears =
+      typeof parsedData.totalExperienceYears === 'number' && parsedData.totalExperienceYears > 0
+        ? parsedData.totalExperienceYears
+        : null;
+    const personalDetails = normalizePersonalDetails(parsedData.personalDetails);
+    const professionalProfile = isRecord(parsedData.professionalProfile)
+      ? normalizeRecord(parsedData.professionalProfile)
+      : parsedData.professionalProfile;
+    const summaryText =
+      (isRecord(personalDetails) && typeof personalDetails.summary === 'string'
+        ? personalDetails.summary
+        : '') ||
+      (isRecord(professionalProfile) && typeof professionalProfile.summary === 'string'
+        ? professionalProfile.summary
+        : '');
+    const statedYearsMatch =
+      /(\d+(?:\.\d+)?)\s*\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:experience|exp\b)/i.exec(summaryText);
+    const statedYears = statedYearsMatch ? Number(statedYearsMatch[1]) : null;
+    const totalExperienceMonths = Math.max(
+      calculatedMonths,
+      declaredMonths ?? 0,
+      declaredYears !== null ? Math.round(declaredYears * 12) : 0,
+      statedYears && Number.isFinite(statedYears) && statedYears > 0 && statedYears < 60
+        ? Math.round(statedYears * 12)
+        : 0,
+    );
+    const totalExperienceYears = Number((totalExperienceMonths / 12).toFixed(1));
 
     return {
-      personalDetails: normalizePersonalDetails(parsedData.personalDetails),
-      professionalProfile: isRecord(parsedData.professionalProfile)
-        ? normalizeRecord(parsedData.professionalProfile)
-        : parsedData.professionalProfile,
+      personalDetails,
+      professionalProfile: isRecord(professionalProfile)
+        ? {
+            ...professionalProfile,
+            totalExperienceMonths,
+            totalExperienceYears,
+          }
+        : professionalProfile,
       professionalLabels: Array.isArray(parsedData.professionalLabels)
         ? normalizeRecordArray(parsedData.professionalLabels)
         : undefined,
