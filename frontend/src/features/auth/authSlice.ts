@@ -5,10 +5,10 @@ import { authService } from '@/features/auth/services/auth.service';
 import type { AuthResponse, AuthState, LoginPayload } from '@/features/auth/types/auth.types';
 import { getAuthErrorMessage } from '@/features/auth/utils/apiError';
 import {
-  clearAuthSession,
   getAccessToken,
   getStoredUser,
   hasAuthSession,
+  invalidateAuthSession,
   persistAuthSession,
 } from '@/features/auth/utils/authSession';
 import { storage } from '@/utils/storage';
@@ -53,7 +53,7 @@ const authSlice = createSlice({
       state.isProfileComplete = false;
       state.isSessionResolved = true;
       state.error = null;
-      clearAuthSession();
+      invalidateAuthSession();
       storage.remove(STORAGE_KEYS.PROFILE_COMPLETE);
     },
     setProfileComplete(state, action: PayloadAction<boolean>) {
@@ -68,6 +68,9 @@ const authSlice = createSlice({
       state.isSessionResolved = action.payload;
     },
     setAccessToken(state, action: PayloadAction<string>) {
+      if (!state.user) {
+        return;
+      }
       state.accessToken = action.payload;
       state.isAuthenticated = true;
     },
