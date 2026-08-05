@@ -14,13 +14,13 @@ import { AppError } from '@/shared/utils/errors/AppError.js';
 const userLimiters = [
   ['applicationManagementRateLimiter', applicationManagementRateLimiter, 'application-management'],
   ['copilotRateLimiter', copilotRateLimiter, 'copilot'],
+  ['resumeAnalysisRateLimiter', resumeAnalysisRateLimiter, 'resume-analysis'],
   ['resumeProcessingRateLimiter', resumeProcessingRateLimiter, 'resume-processing'],
   ['userRateLimiter', userRateLimiter, 'user'],
 ] as const;
 
 const ipLimiters = [
   ['jobsIngestionRateLimiter', jobsIngestionRateLimiter, 'jobs-ingestion'],
-  ['resumeAnalysisRateLimiter', resumeAnalysisRateLimiter, 'resume-analysis'],
 ] as const;
 
 describe('module rate limiters', () => {

@@ -1,4 +1,4 @@
-/** Router-wide guardrail: these routes run AI analysis/ATS scoring and currently have no auth middleware in front of them. */
+/** Guards the AI-cost endpoints (/analyze, /recheck) - authenticated + owned, so this is defense-in-depth against a single account hammering the AI provider. */
 export const RESUME_ANALYSIS_RATE_LIMIT = {
   windowMinutes: 15,
   max: 60,
