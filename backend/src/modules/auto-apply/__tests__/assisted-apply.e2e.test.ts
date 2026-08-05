@@ -1,25 +1,24 @@
-import { randomUUID } from 'node:crypto';
-import { describe, expect, it, beforeEach } from 'vitest';
-
+import { ApplicationReadinessService } from '@/modules/auto-apply/services/application-readiness.service.js';
+import { JobApplicationAdapterRegistry } from '@/modules/auto-apply/adapters/adapter-registry.js';
+import { ExternalRedirectAdapter } from '@/modules/auto-apply/adapters/external-redirect.adapter.js';
+import { AutoApplyEventService } from '@/modules/auto-apply/services/audit-event.service.js';
+import { SubmissionOrchestrationService } from '@/modules/auto-apply/services/submission-orchestration.service.js';
+import { SubmissionProcessingService } from '@/modules/auto-apply/services/submission-processing.service.js';
+import { ApplicationPlannerService } from '@/modules/auto-apply/services/application-planner.service.js';
 import { EligibilityService } from '@/modules/auto-apply/services/eligibility.service.js';
 import { ChannelDetectionService } from '@/modules/auto-apply/services/channel-detection.service.js';
 import { JobApplicationService } from '@/modules/auto-apply/services/job-application.service.js';
-import { ApplicationPlannerService } from '@/modules/auto-apply/services/application-planner.service.js';
-import { ApplicationConsentService } from '@/modules/auto-apply/services/application-consent.service.js';
-import { SubmissionOrchestrationService } from '@/modules/auto-apply/services/submission-orchestration.service.js';
-import { SubmissionProcessingService } from '@/modules/auto-apply/services/submission-processing.service.js';
-import { AutoApplyEventService } from '@/modules/auto-apply/services/audit-event.service.js';
-import { JobApplicationAdapterRegistry } from '@/modules/auto-apply/adapters/adapter-registry.js';
-import { ExternalRedirectAdapter } from '@/modules/auto-apply/adapters/external-redirect.adapter.js';
-
+import { ISubmissionQueuePort } from '@/modules/auto-apply/contracts/submission-orchestration.contract.js';
+import { IAutoApplyEventRepository } from '@/modules/auto-apply/contracts/audit-event.contract.js';
 import {
-  IJobEligibilityLookup,
-  JobEligibilitySnapshot,
-} from '@/modules/auto-apply/contracts/eligibility.contract.js';
-import {
-  IChannelDetectionJobLookup,
-  JobChannelSnapshot,
-} from '@/modules/auto-apply/contracts/channel-detection.contract.js';
+  CreateSubmissionAttemptData,
+  ISubmissionAttemptRepository,
+} from '@/modules/auto-apply/contracts/submission-attempt.contract.js';
+import { IApplicationConsentRepository } from '@/modules/auto-apply/contracts/application-consent.contract.js';
+import { IApplicationAnswerRepository } from '@/modules/auto-apply/contracts/application-answer.contract.js';
+import { IApprovedResumeVersionRepository } from '@/modules/auto-apply/contracts/resume-version.contract.js';
+import { IApplicationRuleRepository } from '@/modules/auto-apply/contracts/application-rule.contract.js';
+import { ICandidateApplicationProfileRepository } from '@/modules/auto-apply/contracts/candidate-profile.contract.js';
 import {
   CreateJobApplicationData,
   FinalizeSubmissionData,
@@ -27,18 +26,14 @@ import {
   UpdateJobApplicationStatusData,
   UpdatePlanData,
 } from '@/modules/auto-apply/contracts/job-application.contract.js';
-import { ICandidateApplicationProfileRepository } from '@/modules/auto-apply/contracts/candidate-profile.contract.js';
-import { IApplicationRuleRepository } from '@/modules/auto-apply/contracts/application-rule.contract.js';
-import { IApprovedResumeVersionRepository } from '@/modules/auto-apply/contracts/resume-version.contract.js';
-import { IApplicationAnswerRepository } from '@/modules/auto-apply/contracts/application-answer.contract.js';
-import { IApplicationConsentRepository } from '@/modules/auto-apply/contracts/application-consent.contract.js';
 import {
-  CreateSubmissionAttemptData,
-  ISubmissionAttemptRepository,
-} from '@/modules/auto-apply/contracts/submission-attempt.contract.js';
-import { IAutoApplyEventRepository } from '@/modules/auto-apply/contracts/audit-event.contract.js';
-import { ISubmissionQueuePort } from '@/modules/auto-apply/contracts/submission-orchestration.contract.js';
-
+  IChannelDetectionJobLookup,
+  JobChannelSnapshot,
+} from '@/modules/auto-apply/contracts/channel-detection.contract.js';
+import {
+  IJobEligibilityLookup,
+  JobEligibilitySnapshot,
+} from '@/modules/auto-apply/contracts/eligibility.contract.js';
 import { JobApplicationDto } from '@/modules/auto-apply/types/job-application.types.js';
 import { CandidateApplicationProfileDto } from '@/modules/auto-apply/types/candidate-profile.types.js';
 import { ApprovedResumeVersionDto } from '@/modules/auto-apply/types/resume-version.types.js';
@@ -52,6 +47,8 @@ import {
   AutoApplyAuditEventDto,
   RecordAuditEventData,
 } from '@/modules/auto-apply/types/audit-event.types.js';
+import { randomUUID } from 'node:crypto';
+import { describe, expect, it, beforeEach } from 'vitest';
 
 /**
  * AJA-QA-002 — true end-to-end happy path for the Assisted-Apply flow
@@ -177,6 +174,29 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
     if (data.failureMessage !== undefined) record.failureMessage = data.failureMessage;
     if (data.markSubmittedNow) record.submittedAt = new Date();
     record.updatedAt = new Date();
+    return this.copy(record);
+  }
+  async countConsumedSince(userId: string, _since: Date) {
+    return this.rows.filter(
+      (r) =>
+        r.userId === userId &&
+        ['QUEUED', 'SUBMITTING', 'SUBMITTED', 'CONFIRMATION_RECEIVED', 'ACTION_REQUIRED'].includes(
+          r.status,
+        ),
+    ).length;
+  }
+  async updateMatchScore(userId: string, id: string, matchScore: number) {
+    const record = this.findLiveRow(userId, id);
+    record.matchScore = matchScore;
+    return this.copy(record);
+  }
+  async queueAtomically(userId: string, id: string) {
+    const record = this.findLiveRow(userId, id);
+    if (record.status !== 'APPROVED' && record.status !== 'SUBMISSION_FAILED') {
+      throw Object.assign(new Error('invalid'), { code: 'INVALID_STATUS_TRANSITION', statusCode: 409 });
+    }
+    record.status = 'QUEUED';
+    record.queuedAt = new Date();
     return this.copy(record);
   }
 }
@@ -324,8 +344,10 @@ describe('Assisted-Apply (EXTERNAL_MANUAL) end-to-end happy path — AJA-QA-002'
         desiredRoles: ['Backend Engineer'],
         preferredLocations: [],
         remotePreference: 'ANY',
+        requiresSponsorship: false,
+        willingToRelocate: false,
       },
-      links: {},
+      links: { portfolio: 'https://portfolio.example.com' },
       verification: {},
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -384,6 +406,18 @@ describe('Assisted-Apply (EXTERNAL_MANUAL) end-to-end happy path — AJA-QA-002'
         createdAt: new Date(),
         updatedAt: new Date(),
       },
+      {
+        id: randomUUID(),
+        userId: USER_ID,
+        questionKey: 'years_of_experience',
+        answer: '5',
+        source: 'USER_VERIFIED',
+        sensitive: false,
+        autoSubmitAllowed: true,
+        lastVerifiedAt: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      },
     ];
     answerRepo = {
       findManyByUserId: async () => baselineAnswers,
@@ -406,17 +440,45 @@ describe('Assisted-Apply (EXTERNAL_MANUAL) end-to-end happy path — AJA-QA-002'
       eligibilityService,
       jobEligibilityLookup,
     );
+
+    const adapterRegistry = new JobApplicationAdapterRegistry();
+    adapterRegistry.register(new ExternalRedirectAdapter());
+
+    const readinessService = new ApplicationReadinessService(
+      { isAutoApplyEnabled: () => true },
+      jobEligibilityLookup,
+      jobChannelLookup,
+      channelDetectionService,
+      adapterRegistry,
+      profileRepo,
+      answerRepo,
+      resumeVersionRepo,
+      ruleRepo,
+      consentRepo,
+      jobAppRepo,
+      {
+        findByUserId: async () => ({
+          firstName: 'Test',
+          lastName: 'User',
+          email: 'test@example.com',
+          phone: null,
+        }),
+      },
+      { findOverallScore: async () => 0.92 },
+      { findActiveByUserAndJobId: async () => null },
+      eligibilityService,
+    );
+
     plannerService = new ApplicationPlannerService(
       jobAppRepo,
       jobApplicationService,
       channelDetectionService,
       resumeVersionRepo,
       answerRepo,
+      readinessService,
     );
 
     const eventService = new AutoApplyEventService(eventRepo);
-    const adapterRegistry = new JobApplicationAdapterRegistry();
-    adapterRegistry.register(new ExternalRedirectAdapter());
     const processingService = new SubmissionProcessingService(
       jobAppRepo,
       consentRepo,
@@ -424,13 +486,16 @@ describe('Assisted-Apply (EXTERNAL_MANUAL) end-to-end happy path — AJA-QA-002'
       jobChannelLookup,
       adapterRegistry,
       eventService,
+      readinessService,
     );
     queuePort = new InlineWorkerQueuePort(processingService);
     orchestrationService = new SubmissionOrchestrationService(
       jobApplicationService,
-      consentRepo,
+      jobAppRepo,
       attemptRepo,
       queuePort,
+      readinessService,
+      ruleRepo,
     );
   });
 
@@ -457,10 +522,10 @@ describe('Assisted-Apply (EXTERNAL_MANUAL) end-to-end happy path — AJA-QA-002'
     expect(replanned.decision).toBe('READY_FOR_REVIEW');
     expect(replanned.application.planVersion).toBe(plan.application.planVersion);
 
-    // 3. Approval is consent-gated - must fail before consent is granted.
+    // 3. Approval is readiness-gated - must fail before consent is granted.
     await expect(orchestrationService.approve(USER_ID, applicationId)).rejects.toMatchObject({
       statusCode: 403,
-      code: 'CONSENT_REQUIRED',
+      code: 'READINESS_CONSENT_REQUIRED',
     });
 
     // 4. Grant RESUME_USAGE consent, then approval succeeds.
@@ -510,7 +575,7 @@ describe('Assisted-Apply (EXTERNAL_MANUAL) end-to-end happy path — AJA-QA-002'
     });
   });
 
-  it('halts the submission if consent is revoked after approval but before the worker runs (AJA-PROD-008)', async () => {
+  it('halts queueing if consent is revoked after approval (readiness revalidation at QUEUE)', async () => {
     await jobApplicationService.initiate(USER_ID, JOB_ID);
     await plannerService.createPlan(USER_ID, JOB_ID);
     const application = await jobAppRepo.findByUserIdAndJobId(USER_ID, JOB_ID);
@@ -519,16 +584,14 @@ describe('Assisted-Apply (EXTERNAL_MANUAL) end-to-end happy path — AJA-QA-002'
     const grantedConsent = await consentRepo.grant(USER_ID, 'RESUME_USAGE');
     await orchestrationService.approve(USER_ID, applicationId);
 
-    // Revoke consent before the submission is queued/processed.
     await consentRepo.revoke(USER_ID, grantedConsent.id);
 
-    await orchestrationService.queueForSubmission(USER_ID, applicationId);
+    await expect(orchestrationService.queueForSubmission(USER_ID, applicationId)).rejects.toMatchObject({
+      statusCode: 403,
+      code: 'READINESS_CONSENT_REQUIRED',
+    });
 
-    const afterProcessing = await jobApplicationService.getApplication(USER_ID, applicationId);
-    expect(afterProcessing.status).toBe('SUBMISSION_FAILED');
-    expect(afterProcessing.failureCode).toBe('CONSENT_REVOKED');
-
-    const events = eventRepo.rows.filter((e) => e.jobApplicationId === applicationId);
-    expect(events.map((e) => e.eventType)).toContain('SUBMISSION_FAILED');
+    const after = await jobApplicationService.getApplication(USER_ID, applicationId);
+    expect(after.status).toBe('APPROVED');
   });
 });
