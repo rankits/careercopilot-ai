@@ -130,6 +130,8 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
       failureMessage: null,
       planInputsHash: null,
       planVersion: 1,
+    progressStep: null,
+    reopenedAt: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -249,6 +251,14 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
     }
     record.status = 'DISCOVERED';
     record.planVersion += 1;
+    record.reopenedAt = new Date();
+    record.progressStep = null;
+    record.updatedAt = new Date();
+    return this.copy(record);
+  }
+  async updateProgressStep(userId: string, id: string, progressStep: string) {
+    const record = this.findLiveRow(userId, id);
+    record.progressStep = progressStep;
     record.updatedAt = new Date();
     return this.copy(record);
   }

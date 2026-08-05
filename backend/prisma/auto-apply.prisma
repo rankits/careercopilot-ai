@@ -216,6 +216,11 @@ model JobApplication {
   planInputsHash         String?               @map("plan_inputs_hash")
   planVersion            Int                   @default(1) @map("plan_version")
 
+  /** AA-043: last-viewed Assisted Apply workspace step id. */
+  progressStep           String?               @map("progress_step") @db.VarChar(40)
+  /** AA-042: set when reopened from WITHDRAWN so workspace can show banner after refresh. */
+  reopenedAt             DateTime?             @map("reopened_at")
+
   createdAt              DateTime              @default(now()) @map("created_at")
   updatedAt              DateTime              @updatedAt @map("updated_at")
 

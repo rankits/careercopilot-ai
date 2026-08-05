@@ -18,6 +18,7 @@ import {
   LazyAiMatchPage,
   LazyApplicationDetailPage,
   LazyApplicationsPage,
+  LazyAssistedApplyWorkspacePage,
   LazyAutoApplyPage,
   LazyEditProfilePage,
   LazyHomePage,
@@ -144,6 +145,14 @@ export const appRouteObjects: RouteObject[] = [
             element: (
               <LazyRoute>
                 <LazyAutoApplyPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.ASSISTED_APPLY_WORKSPACE,
+            element: (
+              <LazyRoute>
+                <LazyAssistedApplyWorkspacePage />
               </LazyRoute>
             ),
           },

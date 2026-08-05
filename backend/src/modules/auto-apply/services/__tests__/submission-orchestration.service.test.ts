@@ -46,6 +46,8 @@ describe('SubmissionOrchestrationService', () => {
     failureMessage: null,
     planInputsHash: null,
     planVersion: 1,
+    progressStep: null,
+    reopenedAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   };
@@ -87,6 +89,9 @@ describe('SubmissionOrchestrationService', () => {
       queueAtomically: vi
         .fn()
         .mockImplementation(async () => ({ ...application, status: 'QUEUED' })),
+      delete: vi.fn(),
+      reopenFromWithdrawn: vi.fn(),
+      updateProgressStep: vi.fn(),
     };
     attemptRepo = {
       countByJobApplicationId: vi.fn(),
