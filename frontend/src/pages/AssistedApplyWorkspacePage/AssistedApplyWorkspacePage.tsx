@@ -29,6 +29,10 @@ import {
   Typography,
 } from '@/lib/material';
 
+import { ActivityTimelinePanel } from './ActivityTimelinePanel';
+import { AnalysisStep } from './AnalysisStep';
+import { FitStep } from './FitStep';
+
 const WORKSPACE_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_WORKSPACE !== 'false';
 
 export function AssistedApplyWorkspacePage() {
@@ -95,10 +99,37 @@ export function AssistedApplyWorkspacePage() {
   }
 
   const data = workspaceQuery.data;
+  const jobId = data.application.jobId;
   const showDuplicate =
     !dismissedDuplicate && (entrySignals?.possibleDuplicateCount ?? 0) > 0;
   const showReopened =
     !dismissedReopened && (data.wasReopened || entrySignals?.wasReopened === true);
+
+  const renderStepBody = () => {
+    if (activeStep === 'analysis' && jobId) {
+      return <AnalysisStep jobId={jobId} />;
+    }
+    if (activeStep === 'fit' && jobId) {
+      return (
+        <FitStep
+          jobApplicationId={jobApplicationId}
+          jobId={jobId}
+          onContinue={() => selectStep('resume')}
+        />
+      );
+    }
+    return (
+      <>
+        <Typography sx={{ mb: 1 }} variant="h6">
+          {steps.find((s) => s.id === activeStep)?.label ?? 'Step'}
+        </Typography>
+        <Typography color="text.secondary">
+          This step&apos;s full content ships in a follow-up ticket. You can move between enabled
+          steps here.
+        </Typography>
+      </>
+    );
+  };
 
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
@@ -119,12 +150,8 @@ export function AssistedApplyWorkspacePage() {
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
-          {data.application.jobId ? (
-            <MuiButton
-              component={RouterLink}
-              to={`/jobs/${data.application.jobId}`}
-              variant="outlined"
-            >
+          {jobId ? (
+            <MuiButton component={RouterLink} to={`/jobs/${jobId}`} variant="outlined">
               Back to job
             </MuiButton>
           ) : null}
@@ -187,12 +214,7 @@ export function AssistedApplyWorkspacePage() {
           const enabled = isWorkspaceStepEnabled(steps, step.id);
           const label = `${step.complete ? '✓ ' : ''}${step.label}`;
           const tab = (
-            <Tab
-              disabled={!enabled}
-              key={step.id}
-              label={label}
-              value={step.id}
-            />
+            <Tab disabled={!enabled} key={step.id} label={label} value={step.id} />
           );
           if (enabled) return tab;
           const previous = steps[steps.findIndex((s) => s.id === step.id) - 1];
@@ -207,24 +229,27 @@ export function AssistedApplyWorkspacePage() {
         })}
       </Tabs>
 
-      <Box
-        aria-live="polite"
-        sx={{
-          border: 1,
-          borderColor: 'divider',
-          borderRadius: 1,
-          p: 3,
-          minHeight: 200,
-        }}
+      <Stack
+        direction={{ xs: 'column', md: 'row' }}
+        spacing={2}
+        sx={{ alignItems: 'stretch' }}
       >
-        <Typography sx={{ mb: 1 }} variant="h6">
-          {steps.find((s) => s.id === activeStep)?.label ?? 'Step'}
-        </Typography>
-        <Typography color="text.secondary">
-          This step&apos;s full content ships in a follow-up ticket. You can move between enabled
-          steps here.
-        </Typography>
-      </Box>
+        <Box
+          aria-live="polite"
+          sx={{
+            border: 1,
+            borderColor: 'divider',
+            borderRadius: 1,
+            p: 3,
+            minHeight: 200,
+            flex: 1,
+            minWidth: 0,
+          }}
+        >
+          {renderStepBody()}
+        </Box>
+        {jobApplicationId ? <ActivityTimelinePanel jobApplicationId={jobApplicationId} /> : null}
+      </Stack>
     </Box>
   );
 }

@@ -2,6 +2,7 @@ import { logger } from '@/shared/logger/logger.js';
 import {
   IAutoApplyEventRepository,
   IAutoApplyEventService,
+  ListAuditEventsFilter,
   RecordAuditEventData,
 } from '@/modules/auto-apply/contracts/audit-event.contract.js';
 import { AutoApplyAuditEventDto } from '@/modules/auto-apply/types/audit-event.types.js';
@@ -31,7 +32,8 @@ export class AutoApplyEventService implements IAutoApplyEventService {
   async listForUser(
     userId: string,
     limit: number = DEFAULT_LIST_LIMIT,
+    filter?: ListAuditEventsFilter,
   ): Promise<AutoApplyAuditEventDto[]> {
-    return this.repository.findManyByUserId(userId, limit);
+    return this.repository.findManyByUserId(userId, limit, filter);
   }
 }

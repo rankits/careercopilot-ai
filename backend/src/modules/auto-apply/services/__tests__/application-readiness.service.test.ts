@@ -354,6 +354,122 @@ describe('ApplicationReadinessService', () => {
     ).toBe(true);
   });
 
+  describe('HANDOFF stage (AA-053)', () => {
+    it('never blocks on low match score — warning only', async () => {
+      matchScore.findOverallScore.mockResolvedValue(0.2);
+      const result = await service.evaluate({ userId, jobId, stage: 'HANDOFF' });
+      expect(result.ready).toBe(true);
+      expect(
+        result.warnings.some((r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_BELOW_THRESHOLD),
+      ).toBe(true);
+      expect(
+        result.blockingReasons.some(
+          (r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_BELOW_THRESHOLD,
+        ),
+      ).toBe(false);
+    });
+
+    it('blocks inactive jobs', async () => {
+      jobLookup.findJobSnapshot.mockResolvedValue({
+        id: jobId,
+        title: 'Engineer',
+        companySlug: 'acme',
+        remoteType: 'REMOTE',
+        salaryMax: 150000,
+        status: 'CLOSED',
+        sourceProviders: [],
+        canonicalJobId: 'canon-1',
+      });
+      const result = await service.evaluate({ userId, jobId, stage: 'HANDOFF' });
+      expect(result.ready).toBe(false);
+      expect(
+        result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.JOB_NOT_ACTIVE),
+      ).toBe(true);
+    });
+
+    it('blocks missing apply URL', async () => {
+      channelJobLookup.findJobChannelSnapshot.mockResolvedValue({
+        id: jobId,
+        status: 'ACTIVE',
+        applyUrl: null,
+      });
+      const result = await service.evaluate({ userId, jobId, stage: 'HANDOFF' });
+      expect(result.ready).toBe(false);
+      expect(
+        result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.APPLY_URL_MISSING),
+      ).toBe(true);
+    });
+
+    it('blocks missing RESUME_USAGE consent', async () => {
+      consentRepo.findActiveByType.mockResolvedValue(null);
+      const result = await service.evaluate({ userId, jobId, stage: 'HANDOFF' });
+      expect(result.ready).toBe(false);
+      expect(
+        result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.CONSENT_REQUIRED),
+      ).toBe(true);
+    });
+
+    it('blocks company blacklist / exclusion matches', async () => {
+      eligibility.evaluateForJob.mockResolvedValue({
+        eligible: false,
+        checks: [
+          { check: 'COMPANY_BLACKLIST', status: 'FAILED', reason: 'Excluded company' },
+        ],
+      });
+      const result = await service.evaluate({ userId, jobId, stage: 'HANDOFF' });
+      expect(result.ready).toBe(false);
+      expect(
+        result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.COMPANY_BLACKLISTED),
+      ).toBe(true);
+    });
+
+    it('treats sponsorship-unknown as WARNING never BLOCKING', async () => {
+      profileRepo.findByUserId.mockResolvedValue({
+        ...readyProfile,
+        preferences: { ...readyProfile.preferences, requiresSponsorship: true },
+      });
+      const result = await service.evaluate({ userId, jobId, stage: 'HANDOFF' });
+      expect(
+        result.warnings.some(
+          (r) => r.code === READINESS_REASON_CODES.SPONSORSHIP_UNKNOWN_COMPATIBILITY,
+        ),
+      ).toBe(true);
+      expect(
+        result.blockingReasons.some(
+          (r) => r.code === READINESS_REASON_CODES.SPONSORSHIP_UNKNOWN_COMPATIBILITY,
+        ),
+      ).toBe(false);
+      expect(result.ready).toBe(true);
+    });
+
+    it('skips daily limit at HANDOFF', async () => {
+      jobAppRepo.countConsumedSince.mockResolvedValue(99);
+      const result = await service.evaluate({ userId, jobId, stage: 'HANDOFF' });
+      expect(
+        result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.DAILY_LIMIT_REACHED),
+      ).toBe(false);
+      expect(
+        result.warnings.some((r) => r.code === READINESS_REASON_CODES.DAILY_LIMIT_REACHED),
+      ).toBe(false);
+    });
+
+    it('does not change QUEUE match-score blocking vs HANDOFF', async () => {
+      matchScore.findOverallScore.mockResolvedValue(0.2);
+      const queue = await service.evaluate({ userId, jobId, stage: 'QUEUE' });
+      const handoff = await service.evaluate({ userId, jobId, stage: 'HANDOFF' });
+      expect(
+        queue.blockingReasons.some(
+          (r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_BELOW_THRESHOLD,
+        ),
+      ).toBe(true);
+      expect(
+        handoff.blockingReasons.some(
+          (r) => r.code === READINESS_REASON_CODES.MATCH_SCORE_BELOW_THRESHOLD,
+        ),
+      ).toBe(false);
+    });
+  });
+
   describe('evaluateSetupCompleteness', () => {
     it('returns ready when profile-side PLAN checks pass', async () => {
       const result = await service.evaluateSetupCompleteness(userId);
