@@ -1,5 +1,8 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { ApplicationPlannerService } from '@/modules/auto-apply/services/application-planner.service.js';
+import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
+import {
+  ApplicationPlannerService,
+  toSafeContentPrepLogError,
+} from '@/modules/auto-apply/services/application-planner.service.js';
 import {
   IJobApplicationRepository,
   IJobApplicationService,
@@ -10,6 +13,34 @@ import { IApplicationAnswerRepository } from '@/modules/auto-apply/contracts/app
 import { JobApplicationDto } from '@/modules/auto-apply/types/job-application.types.js';
 import { ApprovedResumeVersionDto } from '@/modules/auto-apply/types/resume-version.types.js';
 import { ApplicationAnswerDto } from '@/modules/auto-apply/types/application-answer.types.js';
+import { logger } from '@/shared/logger/logger.js';
+
+describe('toSafeContentPrepLogError (AA-013)', () => {
+  it('keeps only name, message, code, and stack — strips custom payload props', () => {
+    const err = new Error('provider unavailable') as Error & {
+      code?: string;
+      resumeText?: string;
+      requestBody?: unknown;
+    };
+    err.code = 'AI_PROVIDER_DOWN';
+    err.resumeText = 'SECRET_RESUME_BODY';
+    err.requestBody = { prompt: 'SECRET_COVER_LETTER_PROMPT' };
+
+    expect(toSafeContentPrepLogError(err)).toEqual({
+      type: 'Error',
+      message: 'provider unavailable',
+      code: 'AI_PROVIDER_DOWN',
+      stack: err.stack,
+    });
+  });
+
+  it('maps non-Error values to a generic UnknownError without stringifying payloads', () => {
+    expect(toSafeContentPrepLogError({ resumeText: 'SECRET' })).toEqual({
+      type: 'UnknownError',
+      message: 'Content preparation failed',
+    });
+  });
+});
 
 describe('ApplicationPlannerService', () => {
   let jobAppRepo: IJobApplicationRepository;
@@ -19,6 +50,7 @@ describe('ApplicationPlannerService', () => {
   let answerRepo: IApplicationAnswerRepository;
   let readinessService: { evaluate: ReturnType<typeof vi.fn> };
   let planner: ApplicationPlannerService;
+  let warnSpy: ReturnType<typeof vi.spyOn>;
 
   const readyReadiness = {
     decision: 'READY' as const,
@@ -97,6 +129,7 @@ describe('ApplicationPlannerService', () => {
   }
 
   beforeEach(() => {
+    warnSpy = vi.spyOn(logger, 'warn').mockImplementation(() => logger);
     jobAppRepo = {
       findManyByUserId: vi.fn().mockResolvedValue([]),
       findById: vi.fn(),
@@ -167,6 +200,10 @@ describe('ApplicationPlannerService', () => {
       answerRepo,
       readinessService,
     );
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('initiates a new submission when none exists yet', async () => {
@@ -386,11 +423,23 @@ describe('ApplicationPlannerService', () => {
         coverLetterContent: expect.stringContaining('I am interested'),
       }),
     );
+    expect(warnSpy).not.toHaveBeenCalledWith(
+      expect.anything(),
+      'Content preparation failed',
+    );
   });
 
-  it('keeps the plan ready when content preparation fails', async () => {
+  it('keeps the plan ready when content preparation fails and logs a safe warning (AA-013)', async () => {
+    const sensitiveResume = 'SECRET_RESUME_TEXT_SHOULD_NOT_LOG';
+    const sensitiveAnswer = 'SECRET_ANSWER_TEXT_SHOULD_NOT_LOG';
+    const failure = Object.assign(new Error('AI down'), {
+      resumeText: sensitiveResume,
+      answer: sensitiveAnswer,
+      coverLetter: 'SECRET_COVER_LETTER',
+      requestBody: { prompt: sensitiveResume },
+    });
     const contentPreparation = {
-      prepare: vi.fn().mockRejectedValue(new Error('AI down')),
+      prepare: vi.fn().mockRejectedValue(failure),
     };
 
     planner = new ApplicationPlannerService(
@@ -407,6 +456,26 @@ describe('ApplicationPlannerService', () => {
     expect(result.decision).toBe('READY_FOR_REVIEW');
     expect(result.contentGenerationAvailable).toBe(false);
     expect(result.contentWarnings[0]).toMatch(/Content preparation failed/i);
+
+    expect(warnSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        jobApplicationId: 'jobapp-1',
+        userId: 'user-1',
+        jobId: 'job-1',
+        err: expect.objectContaining({
+          type: 'Error',
+          message: 'AI down',
+        }),
+      }),
+      'Content preparation failed',
+    );
+
+    const logged = JSON.stringify(warnSpy.mock.calls);
+    expect(logged).not.toContain(sensitiveResume);
+    expect(logged).not.toContain(sensitiveAnswer);
+    expect(logged).not.toContain('SECRET_COVER_LETTER');
+    expect(logged).not.toContain('resumeText');
+    expect(logged).not.toContain('requestBody');
   });
 
   it('persists the selected channel and resume version via updatePlan', async () => {
