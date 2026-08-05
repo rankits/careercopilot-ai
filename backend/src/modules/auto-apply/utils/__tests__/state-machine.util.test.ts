@@ -16,9 +16,14 @@ describe('auto-apply job application state machine', () => {
   });
 
   it('never allows a blind retry from SUBMISSION_OUTCOME_UNKNOWN-shaped terminal states', () => {
-    // CONFIRMATION_RECEIVED and WITHDRAWN are terminal — no outbound edges.
+    // CONFIRMATION_RECEIVED is terminal — no outbound edges.
     expect(getAllowedTransitions('CONFIRMATION_RECEIVED')).toEqual([]);
-    expect(getAllowedTransitions('WITHDRAWN')).toEqual([]);
+  });
+
+  it('allows WITHDRAWN to reopen into DISCOVERED (reopenFromWithdrawn / AA-042)', () => {
+    expect(getAllowedTransitions('WITHDRAWN')).toEqual(['DISCOVERED']);
+    expect(isValidTransition('WITHDRAWN', 'DISCOVERED')).toBe(true);
+    expect(isValidTransition('WITHDRAWN', 'SUBMITTED')).toBe(false);
   });
 
   it('only allows SUBMISSION_FAILED to move back to QUEUED (safe-to-retry path)', () => {
