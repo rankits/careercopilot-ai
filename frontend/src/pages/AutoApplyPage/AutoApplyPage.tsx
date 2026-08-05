@@ -77,11 +77,11 @@ export function AutoApplyPage() {
   return (
     <Box sx={{ p: { xs: 2, md: 4 } }}>
       <Typography sx={{ mb: 0.5 }} variant="h4">
-        Auto Apply
+        Application Setup
       </Typography>
       <Typography color="text.secondary" sx={{ mb: 2 }} variant="body1">
-        Finish your setup once, then track jobs. We prepare each application review automatically —
-        nothing is submitted without your approval.
+        Save your profile, resume, and answers once. When you&apos;re ready to apply, use Assisted
+        Apply from any job — nothing is sent to an employer until you open the application yourself.
       </Typography>
 
       {setupGaps.length > 0 && (
@@ -100,7 +100,7 @@ export function AutoApplyPage() {
       )}
 
       <Tabs
-        aria-label="Auto Apply sections"
+        aria-label="Application Setup sections"
         onChange={(_event, value: AutoApplyTabId) => selectTab(value)}
         sx={{ mb: 3, borderBottom: 1, borderColor: 'divider' }}
         value={activeTab}

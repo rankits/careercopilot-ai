@@ -11,8 +11,11 @@ export function resolveSidebarActiveItemId(pathname: string): string {
   if (pathname === ROUTES.AI_MATCH) {
     return 'ai-match';
   }
-  if (pathname === ROUTES.APPLICATIONS) {
+  if (pathname === ROUTES.APPLICATIONS || pathname.startsWith(`${ROUTES.APPLICATIONS}/`)) {
     return 'applications';
+  }
+  if (pathname === ROUTES.AUTO_APPLY) {
+    return 'auto-apply';
   }
   if (pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')) {
     return 'jobs-feed';
