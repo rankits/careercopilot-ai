@@ -15,7 +15,8 @@ export type AutoApplyEventType =
   | 'RESUME_CONFIRMED'
   | 'HANDOFF_OPENED'
   | 'MARKED_APPLIED'
-  | 'BROKEN_LINK_REPORTED';
+  | 'BROKEN_LINK_REPORTED'
+  | 'LEGACY_STATUS_REPAIRED';
 
 export interface AutoApplyAuditEventDto {
   id: string;

@@ -305,6 +305,7 @@ enum AutoApplyEventType {
   HANDOFF_OPENED
   MARKED_APPLIED
   BROKEN_LINK_REPORTED
+  LEGACY_STATUS_REPAIRED
 }
 
 model AutoApplyAuditEvent {
