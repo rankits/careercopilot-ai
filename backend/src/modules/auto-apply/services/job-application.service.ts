@@ -130,10 +130,15 @@ export class JobApplicationService implements IJobApplicationService {
       );
     }
 
-    return this.repository.updateStatus(userId, id, {
-      status: nextStatus,
-      eligibilityResult: result,
-    });
+    return this.repository.updateStatus(
+      userId,
+      id,
+      {
+        status: nextStatus,
+        eligibilityResult: result,
+      },
+      application.status,
+    );
   }
 
   async transitionStatus(
@@ -154,7 +159,7 @@ export class JobApplicationService implements IJobApplicationService {
       );
     }
 
-    return this.repository.updateStatus(userId, id, { status: toStatus });
+    return this.repository.updateStatus(userId, id, { status: toStatus }, from);
   }
 
   async withdraw(userId: string, id: string): Promise<JobApplicationDto> {

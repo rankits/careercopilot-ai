@@ -141,8 +141,21 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
     if (!record) throw new Error('not found');
     return record;
   }
-  async updateStatus(userId: string, id: string, data: UpdateJobApplicationStatusData) {
+  async updateStatus(
+    userId: string,
+    id: string,
+    data: UpdateJobApplicationStatusData,
+    expectedStatus: string,
+  ) {
     const record = this.findLiveRow(userId, id);
+    if (record.status !== expectedStatus) {
+      const err = new Error(
+        'This application was already updated. Refresh to see its current state.',
+      ) as Error & { statusCode: number; code: string };
+      err.statusCode = 409;
+      err.code = 'INVALID_STATUS_TRANSITION';
+      throw err;
+    }
     record.status = data.status;
     if (data.eligibilityResult !== undefined) record.eligibilityResult = data.eligibilityResult;
     record.updatedAt = new Date();
@@ -163,8 +176,21 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
     record.status = 'SUBMITTING';
     return this.copy(record);
   }
-  async finalizeSubmission(userId: string, id: string, data: FinalizeSubmissionData) {
+  async finalizeSubmission(
+    userId: string,
+    id: string,
+    data: FinalizeSubmissionData,
+    expectedStatus: string,
+  ) {
     const record = this.findLiveRow(userId, id);
+    if (record.status !== expectedStatus) {
+      const err = new Error(
+        'This application was already updated. Refresh to see its current state.',
+      ) as Error & { statusCode: number; code: string };
+      err.statusCode = 409;
+      err.code = 'INVALID_STATUS_TRANSITION';
+      throw err;
+    }
     record.status = data.status;
     if (data.externalApplicationId !== undefined)
       record.externalApplicationId = data.externalApplicationId;

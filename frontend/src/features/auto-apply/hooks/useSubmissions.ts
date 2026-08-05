@@ -4,7 +4,7 @@ import { hasAuthSession } from '@/features/auth/utils/authSession';
 
 import { autoApplyQueryKeys } from '../queryKeys';
 import { autoApplyService } from '../services/autoApply.service';
-import { normalizeAutoApplyError } from '../utils/apiError';
+import { handleAutoApplyMutationError } from '../utils/mutationError';
 
 export function useSubmissions() {
   return useQuery({
@@ -23,7 +23,11 @@ export function useInitiateSubmission() {
       try {
         return await autoApplyService.initiateSubmission(jobId);
       } catch (error) {
-        throw normalizeAutoApplyError(error, 'Unable to start tracking this job.');
+        throw handleAutoApplyMutationError(
+          error,
+          'Unable to start tracking this job.',
+          queryClient,
+        );
       }
     },
     mutationKey: ['auto-apply', 'submissions', 'initiate'],
@@ -37,7 +41,17 @@ export function useWithdrawSubmission() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => autoApplyService.withdrawSubmission(id),
+    mutationFn: async (id: string) => {
+      try {
+        return await autoApplyService.withdrawSubmission(id);
+      } catch (error) {
+        throw handleAutoApplyMutationError(
+          error,
+          'Unable to withdraw this submission.',
+          queryClient,
+        );
+      }
+    },
     mutationKey: ['auto-apply', 'submissions', 'withdraw'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.submissions });
@@ -53,7 +67,11 @@ export function useDeleteSubmission() {
       try {
         await autoApplyService.deleteSubmission(id);
       } catch (error) {
-        throw normalizeAutoApplyError(error, 'Unable to delete this submission.');
+        throw handleAutoApplyMutationError(
+          error,
+          'Unable to delete this submission.',
+          queryClient,
+        );
       }
     },
     mutationKey: ['auto-apply', 'submissions', 'delete'],
@@ -71,7 +89,11 @@ export function useReopenSubmission() {
       try {
         return await autoApplyService.reopenSubmission(id);
       } catch (error) {
-        throw normalizeAutoApplyError(error, 'Unable to reopen this submission.');
+        throw handleAutoApplyMutationError(
+          error,
+          'Unable to reopen this submission.',
+          queryClient,
+        );
       }
     },
     mutationKey: ['auto-apply', 'submissions', 'reopen'],
@@ -89,7 +111,11 @@ export function useApproveSubmission() {
       try {
         return await autoApplyService.approveSubmission(id);
       } catch (error) {
-        throw normalizeAutoApplyError(error, 'Unable to approve this submission.');
+        throw handleAutoApplyMutationError(
+          error,
+          'Unable to approve this submission.',
+          queryClient,
+        );
       }
     },
     mutationKey: ['auto-apply', 'submissions', 'approve'],
@@ -103,7 +129,13 @@ export function useQueueSubmission() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => autoApplyService.queueSubmission(id),
+    mutationFn: async (id: string) => {
+      try {
+        return await autoApplyService.queueSubmission(id);
+      } catch (error) {
+        throw handleAutoApplyMutationError(error, 'Unable to queue this submission.', queryClient);
+      }
+    },
     mutationKey: ['auto-apply', 'submissions', 'queue'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.submissions });
@@ -115,7 +147,17 @@ export function useConfirmSubmission() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (id: string) => autoApplyService.confirmSubmission(id),
+    mutationFn: async (id: string) => {
+      try {
+        return await autoApplyService.confirmSubmission(id);
+      } catch (error) {
+        throw handleAutoApplyMutationError(
+          error,
+          'Unable to confirm this submission.',
+          queryClient,
+        );
+      }
+    },
     mutationKey: ['auto-apply', 'submissions', 'confirm'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.submissions });
@@ -131,7 +173,7 @@ export function useRetrySubmission() {
       try {
         return await autoApplyService.retrySubmission(id);
       } catch (error) {
-        throw normalizeAutoApplyError(error, 'Unable to retry this submission.');
+        throw handleAutoApplyMutationError(error, 'Unable to retry this submission.', queryClient);
       }
     },
     mutationKey: ['auto-apply', 'submissions', 'retry'],
