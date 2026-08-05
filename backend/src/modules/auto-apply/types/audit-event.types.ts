@@ -10,7 +10,8 @@ export type AutoApplyEventType =
   | 'SUBMISSION_FAILED'
   | 'SUBMISSION_OUTCOME_UNKNOWN'
   | 'SUBMISSION_CONFIRMED'
-  | 'SUBMISSION_WITHDRAWN';
+  | 'SUBMISSION_WITHDRAWN'
+  | 'SUBMISSION_RECLAIMED';
 
 export interface AutoApplyAuditEventDto {
   id: string;

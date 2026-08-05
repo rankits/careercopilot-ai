@@ -87,6 +87,9 @@ describe('permission catalog constants', () => {
     expect(AUTO_APPLY_PERMISSIONS.DIAGNOSTICS_READ_ANY).toBe(
       'applications.autoapply.diagnostics.read.any',
     );
+    expect(AUTO_APPLY_PERMISSIONS.DIAGNOSTICS_WRITE_ANY).toBe(
+      'applications.autoapply.diagnostics.write.any',
+    );
     expect(AUTO_APPLY_PERMISSIONS.PLAN_CREATE_OWN).toBe('applications.autoapply.plan.create.own');
     expect(AUTO_APPLY_PERMISSIONS.PLAN_READ_OWN).toBe('applications.autoapply.plan.read.own');
     expect(AUTO_APPLY_PERMISSIONS.CONSENT_CREATE_OWN).toBe(
@@ -138,7 +141,7 @@ describe('permission catalog constants', () => {
     // answers, resume-versions, rules, eligibility, channel, plan, consent,
     // submissions, vacancy-email, events, diagnostics).
     expect(moduleCount).toBe(23);
-    expect(PERMISSIONS).toHaveLength(67);
+    expect(PERMISSIONS).toHaveLength(68);
   });
 
   it('grants USER every auto-apply "own" permission but none would-be "any" permission', () => {
@@ -147,7 +150,9 @@ describe('permission catalog constants', () => {
     expect(ROLE_PERMISSION_MAP.USER).toContain(AUTO_APPLY_PERMISSIONS.CHANNEL_READ_OWN);
     expect(ROLE_PERMISSION_MAP.USER).toContain(AUTO_APPLY_PERMISSIONS.PLAN_CREATE_OWN);
     expect(ROLE_PERMISSION_MAP.USER).not.toContain(AUTO_APPLY_PERMISSIONS.DIAGNOSTICS_READ_ANY);
+    expect(ROLE_PERMISSION_MAP.USER).not.toContain(AUTO_APPLY_PERMISSIONS.DIAGNOSTICS_WRITE_ANY);
     expect(ROLE_PERMISSION_MAP.ADMIN).toContain(AUTO_APPLY_PERMISSIONS.DIAGNOSTICS_READ_ANY);
+    expect(ROLE_PERMISSION_MAP.ADMIN).toContain(AUTO_APPLY_PERMISSIONS.DIAGNOSTICS_WRITE_ANY);
     expect(ROLE_PERMISSION_MAP.ADMIN).toContain(AUTO_APPLY_PERMISSIONS.PROFILE_READ_OWN);
   });
 });
