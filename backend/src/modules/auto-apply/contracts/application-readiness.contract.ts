@@ -1,6 +1,7 @@
 import {
   ApplicationReadinessInput,
   ApplicationReadinessResult,
+  SetupCompletenessResult,
 } from '@/modules/auto-apply/types/application-readiness.types.js';
 
 export interface UserContactSnapshot {
@@ -46,6 +47,8 @@ export interface IApplicationLimitCounter {
 
 export interface IApplicationReadinessService {
   evaluate(input: ApplicationReadinessInput): Promise<ApplicationReadinessResult>;
+  /** Profile-side PLAN blocking checks without job context (Assisted Apply setup gate). */
+  evaluateSetupCompleteness(userId: string): Promise<SetupCompletenessResult>;
 }
 
 export interface IFeatureFlagLookup {

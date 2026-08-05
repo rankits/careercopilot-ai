@@ -12,11 +12,16 @@ import type {
   ConsentType,
   CreateAnswerPayload,
   CreateResumeVersionPayload,
+  DeleteResumeVersionResult,
   EligibilityResult,
   InitiateSubmissionResult,
   JobApplicationDto,
   PrepareApplicationPayload,
   PrepareApplicationResult,
+  PrivacyAcknowledgementDto,
+  PrivacyAcknowledgementPayload,
+  SetupStatusDto,
+  UpdateResumeVersionPayload,
   UpsertCandidateProfilePayload,
   UpsertRulePayload,
 } from '../types/autoApply.types';
@@ -61,6 +66,17 @@ export const autoApplyService = {
     return unwrapData(data, 'Missing answer data in API response');
   },
 
+  async updateAnswer(
+    id: string,
+    payload: Partial<Pick<CreateAnswerPayload, 'answer' | 'autoSubmitAllowed'>>,
+  ): Promise<ApplicationAnswerDto> {
+    const { data } = await httpClient.patch<BackendSuccessResponse<ApplicationAnswerDto>>(
+      `/auto-apply/answers/${id}`,
+      payload,
+    );
+    return unwrapData(data, 'Missing answer data in API response');
+  },
+
   async deleteAnswer(id: string): Promise<void> {
     await httpClient.delete(`/auto-apply/answers/${id}`);
   },
@@ -82,8 +98,22 @@ export const autoApplyService = {
     return unwrapData(data, 'Missing resume version data in API response');
   },
 
-  async deleteResumeVersion(id: string): Promise<void> {
-    await httpClient.delete(`/auto-apply/resume-versions/${id}`);
+  async updateResumeVersion(
+    id: string,
+    payload: UpdateResumeVersionPayload,
+  ): Promise<ApprovedResumeVersionDto> {
+    const { data } = await httpClient.patch<BackendSuccessResponse<ApprovedResumeVersionDto>>(
+      `/auto-apply/resume-versions/${id}`,
+      payload,
+    );
+    return unwrapData(data, 'Missing resume version data in API response');
+  },
+
+  async deleteResumeVersion(id: string): Promise<DeleteResumeVersionResult> {
+    const { data } = await httpClient.delete<BackendSuccessResponse<DeleteResumeVersionResult>>(
+      `/auto-apply/resume-versions/${id}`,
+    );
+    return unwrapData(data, 'Missing delete resume version data in API response');
   },
 
   async getRule(): Promise<ApplicationRuleDto | null> {
@@ -261,5 +291,28 @@ export const autoApplyService = {
       if (status === 404) return null;
       throw error;
     }
+  },
+
+  async getSetupStatus(): Promise<SetupStatusDto> {
+    const { data } =
+      await httpClient.get<BackendSuccessResponse<SetupStatusDto>>('/auto-apply/setup-status');
+    return unwrapData(data, 'Missing setup-status data in API response');
+  },
+
+  async getPrivacyAcknowledgement(): Promise<PrivacyAcknowledgementDto | null> {
+    const { data } = await httpClient.get<BackendSuccessResponse<PrivacyAcknowledgementDto | null>>(
+      '/auto-apply/privacy-acknowledgement',
+    );
+    return data.data ?? null;
+  },
+
+  async savePrivacyAcknowledgement(
+    payload: PrivacyAcknowledgementPayload,
+  ): Promise<PrivacyAcknowledgementDto> {
+    const { data } = await httpClient.post<BackendSuccessResponse<PrivacyAcknowledgementDto>>(
+      '/auto-apply/privacy-acknowledgement',
+      payload,
+    );
+    return unwrapData(data, 'Missing privacy acknowledgement data in API response');
   },
 };
