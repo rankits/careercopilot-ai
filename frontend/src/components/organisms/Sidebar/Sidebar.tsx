@@ -8,8 +8,8 @@ import {
   Box,
   ChevronLeftIcon,
   ChevronRightIcon,
-  LinearProgress,
-  StarIcon,
+  DescriptionOutlinedIcon,
+  FileDownloadOutlinedIcon,
   Typography,
 } from '@/lib/material';
 
@@ -63,16 +63,20 @@ function SidebarNavButton({
 export function Sidebar({
   activeItemId = 'dashboard',
   className,
+  isDownloadingLatestResume = false,
   items = DEFAULT_SIDEBAR_ITEMS,
+  latestResumeName = null,
   mobileMode,
+  onDownloadLatestResume,
   onItemSelect,
+  onOpenResumeVersions,
   onVariantChange,
-  onUploadResume,
   tone = 'light',
   variant = 'open',
 }: SidebarProps) {
   const collapsed = variant === 'collapsed';
   const nextVariant = collapsed ? 'open' : 'collapsed';
+  const hasLatestResume = Boolean(latestResumeName);
 
   if (mobileMode === 'bottomNav') {
     return (
@@ -129,11 +133,30 @@ export function Sidebar({
 
       {collapsed ? null : (
         <SidebarPanel>
-          <Typography sx={sidebarTextSx.title}>Upload Resume</Typography>
-          <Typography sx={sidebarTextSx.muted}>Get AI analysis and better job matches</Typography>
-          <Button fullWidth onClick={onUploadResume} size="small">
-            Upload Now
+          <Box alignItems="center" display="flex" gap={1}>
+            <DescriptionOutlinedIcon color="primary" fontSize="small" />
+            <Typography sx={sidebarTextSx.title}>Latest Resume</Typography>
+          </Box>
+          <Typography sx={sidebarTextSx.muted}>
+            {hasLatestResume
+              ? 'Download your most recent uploaded resume.'
+              : 'No resume uploaded yet. Add one from Edit Profile.'}
+          </Typography>
+          <Button
+            disabled={!hasLatestResume}
+            fullWidth
+            isLoading={isDownloadingLatestResume}
+            onClick={onDownloadLatestResume}
+            size="small"
+            startIcon={<FileDownloadOutlinedIcon />}
+          >
+            Download Latest
           </Button>
+          {onOpenResumeVersions ? (
+            <Button fullWidth onClick={onOpenResumeVersions} size="small" variant="ghost">
+              View all versions
+            </Button>
+          ) : null}
         </SidebarPanel>
       )}
     </SidebarRoot>

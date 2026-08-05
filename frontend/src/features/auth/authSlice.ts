@@ -80,10 +80,13 @@ const authSlice = createSlice({
         persistAuthSession(action.payload.accessToken, action.payload.user);
         persistProfileComplete(isProfileComplete);
       })
-      .addCase(login.rejected, (state) => {
+      .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.isSessionResolved = true;
-        state.error = 'Unable to log in. Please try again.';
+        state.error =
+          typeof action.error.message === 'string' && action.error.message.length > 0
+            ? action.error.message
+            : 'Unable to log in. Please try again.';
       });
   },
 });

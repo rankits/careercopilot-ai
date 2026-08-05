@@ -7,12 +7,26 @@ import {
   SubscribeOptions,
 } from '@/infrastructure/messaging/messaging.interface.js';
 import { QoSPresets } from '@/infrastructure/messaging/messaging.topology.js';
+import { logger } from '@/shared/logger/logger.js';
+
+const redactAmqpUrl = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    if (parsed.password) {
+      parsed.password = '***';
+    }
+    return parsed.toString();
+  } catch {
+    return '[invalid-amqp-url]';
+  }
+};
 
 export class RabbitMQBusDriver implements IMessageBusDriver {
   private connection: ChannelModel | null = null;
   private channel: ConfirmChannel | null = null;
   private url: string;
   private isConnecting = false;
+  private readonly log = logger.child({ component: 'rabbitmq' });
 
   constructor(url?: string) {
     this.url = url || process.env.RABBITMQ_URL || 'amqp://localhost:5672';
@@ -28,25 +42,67 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
     }
 
     this.isConnecting = true;
+    const safeUrl = redactAmqpUrl(this.url);
+    this.log.info({ url: safeUrl }, 'Connecting to RabbitMQ');
+
     try {
       this.connection = await amqplib.connect(this.url);
       this.channel = await this.connection.createConfirmChannel();
 
       this.connection.on('error', (err: Error) => {
-        console.error('[RabbitMQ] Connection error:', err.message);
+        this.log.error({ err }, 'RabbitMQ connection error');
         this.connection = null;
         this.channel = null;
       });
 
       this.connection.on('close', () => {
+        this.log.warn({ url: safeUrl }, 'RabbitMQ connection closed');
         this.connection = null;
         this.channel = null;
       });
+
+      this.channel.on('error', (err: Error) => {
+        this.log.error({ err }, 'RabbitMQ channel error');
+        this.channel = null;
+      });
+
+      this.channel.on('close', () => {
+        this.log.warn('RabbitMQ channel closed');
+        this.channel = null;
+      });
+
+      this.log.info({ url: safeUrl }, 'RabbitMQ connected');
     } catch (error) {
       this.isConnecting = false;
+      this.log.error({ err: error, url: safeUrl }, 'RabbitMQ connection failed');
       throw error;
     } finally {
       this.isConnecting = false;
+    }
+  }
+
+  /**
+   * Lightweight readiness probe. Reuses an existing connection when present;
+   * otherwise opens a short-lived connection so /health does not permanently
+   * attach the API process to RabbitMQ unless messaging is already in use.
+   */
+  async ping(): Promise<boolean> {
+    try {
+      if (this.connection && this.channel) {
+        return true;
+      }
+
+      const connection = await amqplib.connect(this.url);
+      try {
+        const channel = await connection.createChannel();
+        await channel.close();
+      } finally {
+        await connection.close();
+      }
+      return true;
+    } catch (error) {
+      this.log.error({ err: error }, 'RabbitMQ ping failed');
+      return false;
     }
   }
 
@@ -86,7 +142,8 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
       });
       await channel.waitForConfirms();
       return true;
-    } catch {
+    } catch (error) {
+      this.log.error({ err: error, exchange, routingKey }, 'RabbitMQ publish failed');
       return false;
     }
   }
@@ -195,20 +252,30 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
                     'x-attempt': nextAttempt,
                   },
                 });
-              } catch {
-                // Ignore transient requeue error
+              } catch (requeueError) {
+                this.log.error(
+                  { err: requeueError, queue, exchange, routingKey, attempt: nextAttempt },
+                  'RabbitMQ requeue failed',
+                );
               }
             }, config.retryDelayMs || 5000);
           } else {
+            this.log.error(
+              { err: error, queue, exchange, routingKey, attempt, maxRetries },
+              'RabbitMQ message handler failed; sending to DLQ/nack',
+            );
             channel.nack(msg, false, false);
           }
         }
       },
       { noAck: config.autoAck ?? false },
     );
+
+    this.log.info({ queue, exchange, routingKey }, 'RabbitMQ consumer subscribed');
   }
 
   async close(): Promise<void> {
+    this.log.info('Disconnecting RabbitMQ');
     try {
       if (this.channel) {
         await this.channel.close();
@@ -218,7 +285,9 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
         await this.connection.close();
         this.connection = null;
       }
-    } catch {
+      this.log.info('RabbitMQ disconnected');
+    } catch (error) {
+      this.log.error({ err: error }, 'RabbitMQ disconnect failed');
       this.channel = null;
       this.connection = null;
     }

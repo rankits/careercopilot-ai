@@ -29,6 +29,7 @@ export type MessageHandler<T = unknown> = (message: MessageEnvelope<T>) => Promi
 
 export interface IMessageBusDriver {
   connect(): Promise<void>;
+  ping(): Promise<boolean>;
   publish<T>(
     exchange: string,
     routingKey: string,

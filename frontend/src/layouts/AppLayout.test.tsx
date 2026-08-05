@@ -13,13 +13,21 @@ import { authReducer } from '@/features/auth/authSlice';
 
 import { AppLayout } from './AppLayout';
 
-const { logoutMock } = vi.hoisted(() => ({
+const { listResumesMock, logoutMock } = vi.hoisted(() => ({
+  listResumesMock: vi.fn(),
   logoutMock: vi.fn(),
 }));
 
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
     logout: logoutMock,
+  },
+}));
+
+vi.mock('@/features/resume/services/resume.service', () => ({
+  resumeService: {
+    downloadResume: vi.fn(),
+    listResumes: listResumesMock,
   },
 }));
 
@@ -72,7 +80,9 @@ function renderLayout() {
 describe('AppLayout logout', () => {
   beforeEach(() => {
     logoutMock.mockReset();
+    listResumesMock.mockReset();
     logoutMock.mockResolvedValue({ message: 'Logged out successfully' });
+    listResumesMock.mockResolvedValue([]);
     localStorage.clear();
     localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, JSON.stringify('token'));
     localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify({ id: '1', email: 'ada@example.com' }));
@@ -93,16 +103,14 @@ describe('AppLayout logout', () => {
     expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
   });
 
-  it('navigates to the upload-resume page when "Upload Resume" is clicked', async () => {
+  it('does not offer Upload Resume in the user menu', async () => {
     const user = userEvent.setup();
     renderLayout();
 
     await user.click(screen.getByRole('button', { name: /user menu/i }));
-    await user.click(screen.getByRole('menuitem', { name: /upload resume/i }));
 
-    expect(
-      await screen.findByRole('heading', { name: /upload resume destination/i }),
-    ).toBeInTheDocument();
+    expect(screen.queryByRole('menuitem', { name: /upload resume/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument();
   });
 
   it('still clears the session and shows an error toast when the logout API fails', async () => {

@@ -1,8 +1,4 @@
 import type { CandidateRetrievalRegistry } from '@/modules/recommendations/providers/candidate-retrieval.registry.js';
-import {
-  RECOMMENDATION_ERROR_CODES,
-  RecommendationError,
-} from '@/modules/recommendations/errors/recommendation.error.js';
 import { recordRetrievalBackendLatency } from '@/modules/recommendations/observability/recommendation.metrics.js';
 import type {
   RecommendationCandidate,
@@ -28,13 +24,8 @@ export class RecommendationRetrievalService {
       excludeJobIds: input.excludeJobIds,
     });
     recordRetrievalBackendLatency(input.backend, Date.now() - start);
-    if (result.jobs.length === 0) {
-      throw new RecommendationError(
-        'No eligible jobs were found for this recommendation context',
-        404,
-        RECOMMENDATION_ERROR_CODES.NO_ELIGIBLE_JOBS_FOUND,
-      );
-    }
+    // Empty retrieval is a valid outcome (no vector matches / cold index).
+    // Callers return an empty recommendation list instead of failing the request.
     return result.jobs.map((job) => ({
       job,
       retrievalScore: result.retrievalScores?.[job.id],
