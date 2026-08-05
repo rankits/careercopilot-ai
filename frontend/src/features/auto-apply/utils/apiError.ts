@@ -1,5 +1,8 @@
 import axios from 'axios';
 
+export const STATUS_CONFLICT_USER_MESSAGE =
+  'This application was already updated. Refresh to see its current state.';
+
 export class AutoApplyClientError extends Error {
   readonly code?: string;
   readonly statusCode?: number;
@@ -24,12 +27,14 @@ export function normalizeAutoApplyError(error: unknown, fallbackMessage: string)
     const statusCode = error.response?.status;
 
     if (typeof payload === 'object' && payload !== null) {
-      const message =
+      const code =
+        'code' in payload && typeof payload.code === 'string' ? payload.code : undefined;
+      const rawMessage =
         'message' in payload && typeof payload.message === 'string'
           ? payload.message
           : fallbackMessage;
-      const code =
-        'code' in payload && typeof payload.code === 'string' ? payload.code : undefined;
+      const message =
+        code === 'INVALID_STATUS_TRANSITION' ? STATUS_CONFLICT_USER_MESSAGE : rawMessage;
 
       return new AutoApplyClientError(message, { code, statusCode });
     }
@@ -50,4 +55,13 @@ export function normalizeAutoApplyError(error: unknown, fallbackMessage: string)
 
 export function isAutoApplyClientError(error: unknown): error is AutoApplyClientError {
   return error instanceof AutoApplyClientError;
+}
+
+/** AA-010: stale-status race loser — refetch and show a refresh toast. */
+export function isStatusConflictError(error: unknown): boolean {
+  return (
+    isAutoApplyClientError(error) &&
+    error.code === 'INVALID_STATUS_TRANSITION' &&
+    error.statusCode === 409
+  );
 }

@@ -151,4 +151,80 @@ describe('PrismaJobApplicationRepository', () => {
       expect(result?.status).toBe('SUBMITTING');
     });
   });
+
+  describe('updateStatus — optimistic lock (AA-010)', () => {
+    it('guards the update with expectedStatus via updateMany', async () => {
+      jobApplicationMock.updateMany.mockResolvedValueOnce({ count: 1 });
+      jobApplicationMock.findFirst.mockResolvedValueOnce({ ...baseRecord, status: 'MATCHED' });
+
+      await repository.updateStatus('user-1', 'app-1', { status: 'MATCHED' }, 'DISCOVERED');
+
+      expect(jobApplicationMock.updateMany).toHaveBeenCalledWith({
+        where: { id: 'app-1', userId: 'user-1', status: 'DISCOVERED' },
+        data: { status: 'MATCHED' },
+      });
+      expect(jobApplicationMock.update).not.toHaveBeenCalled();
+    });
+
+    it('throws 409 INVALID_STATUS_TRANSITION when the expected status no longer matches', async () => {
+      jobApplicationMock.updateMany.mockResolvedValueOnce({ count: 0 });
+      jobApplicationMock.findFirst.mockResolvedValueOnce({ ...baseRecord, status: 'MATCHED' });
+
+      await expect(
+        repository.updateStatus('user-1', 'app-1', { status: 'MATCHED' }, 'DISCOVERED'),
+      ).rejects.toMatchObject({
+        statusCode: 409,
+        code: 'INVALID_STATUS_TRANSITION',
+        message: 'This application was already updated. Refresh to see its current state.',
+      });
+    });
+
+    it('throws 404 when the application is missing on a failed guard', async () => {
+      jobApplicationMock.updateMany.mockResolvedValueOnce({ count: 0 });
+      jobApplicationMock.findFirst.mockResolvedValueOnce(null);
+
+      await expect(
+        repository.updateStatus('user-1', 'missing', { status: 'MATCHED' }, 'DISCOVERED'),
+      ).rejects.toMatchObject({ statusCode: 404, code: 'APPLICATION_NOT_FOUND' });
+    });
+  });
+
+  describe('finalizeSubmission — optimistic lock (AA-010)', () => {
+    it('guards finalize on expectedStatus SUBMITTING', async () => {
+      jobApplicationMock.updateMany.mockResolvedValueOnce({ count: 1 });
+      jobApplicationMock.findFirst.mockResolvedValueOnce({
+        ...baseRecord,
+        status: 'ACTION_REQUIRED',
+      });
+
+      await repository.finalizeSubmission(
+        'user-1',
+        'app-1',
+        { status: 'ACTION_REQUIRED' },
+        'SUBMITTING',
+      );
+
+      expect(jobApplicationMock.updateMany).toHaveBeenCalledWith({
+        where: { id: 'app-1', userId: 'user-1', status: 'SUBMITTING' },
+        data: expect.objectContaining({ status: 'ACTION_REQUIRED' }),
+      });
+    });
+
+    it('throws 409 when finalize loses a race (e.g. reclaim already moved the row)', async () => {
+      jobApplicationMock.updateMany.mockResolvedValueOnce({ count: 0 });
+      jobApplicationMock.findFirst.mockResolvedValueOnce({
+        ...baseRecord,
+        status: 'SUBMISSION_FAILED',
+      });
+
+      await expect(
+        repository.finalizeSubmission(
+          'user-1',
+          'app-1',
+          { status: 'ACTION_REQUIRED' },
+          'SUBMITTING',
+        ),
+      ).rejects.toMatchObject({ statusCode: 409, code: 'INVALID_STATUS_TRANSITION' });
+    });
+  });
 });

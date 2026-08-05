@@ -1,14 +1,19 @@
 import { AutoApplyChannel, ApprovalMode, JobApplicationStatus, Prisma } from '@prisma/client';
 import { prisma } from '@/shared/config/db.conf.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
+import { logger } from '@/shared/logger/logger.js';
 import {
   CreateJobApplicationData,
   FinalizeSubmissionData,
   IJobApplicationRepository,
+  STATUS_CONFLICT_MESSAGE,
   UpdatePlanData,
   UpdateJobApplicationStatusData,
 } from '@/modules/auto-apply/contracts/job-application.contract.js';
-import { JobApplicationDto } from '@/modules/auto-apply/types/job-application.types.js';
+import {
+  JobApplicationDto,
+  JobApplicationStatusValue,
+} from '@/modules/auto-apply/types/job-application.types.js';
 
 type JobApplicationRecord = {
   id: string;
@@ -110,13 +115,10 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
     userId: string,
     id: string,
     data: UpdateJobApplicationStatusData,
+    expectedStatus: JobApplicationStatusValue,
   ): Promise<JobApplicationDto> {
-    const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
-    if (!existing) {
-      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
-    }
-    const record = await prisma.jobApplication.update({
-      where: { id: existing.id },
+    const updated = await prisma.jobApplication.updateMany({
+      where: { id, userId, status: expectedStatus as JobApplicationStatus },
       data: {
         status: data.status as JobApplicationStatus,
         ...(data.eligibilityResult !== undefined && {
@@ -124,6 +126,28 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
         }),
       },
     });
+
+    if (updated.count === 0) {
+      const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
+      if (!existing) {
+        throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+      }
+      logger.warn(
+        {
+          jobApplicationId: id,
+          expectedStatus,
+          actualStatus: existing.status,
+          attemptedStatus: data.status,
+        },
+        'Job application status update lost optimistic lock',
+      );
+      throw new AppError(STATUS_CONFLICT_MESSAGE, 409, 'INVALID_STATUS_TRANSITION');
+    }
+
+    const record = await prisma.jobApplication.findFirst({ where: { id, userId } });
+    if (!record) {
+      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+    }
     return toDto(record);
   }
 
@@ -162,13 +186,10 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
     userId: string,
     id: string,
     data: FinalizeSubmissionData,
+    expectedStatus: JobApplicationStatusValue,
   ): Promise<JobApplicationDto> {
-    const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
-    if (!existing) {
-      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
-    }
-    const record = await prisma.jobApplication.update({
-      where: { id: existing.id },
+    const updated = await prisma.jobApplication.updateMany({
+      where: { id, userId, status: expectedStatus as JobApplicationStatus },
       data: {
         status: data.status as JobApplicationStatus,
         ...(data.externalApplicationId !== undefined && {
@@ -182,6 +203,28 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
         ...(data.markSubmittedNow && { submittedAt: new Date() }),
       },
     });
+
+    if (updated.count === 0) {
+      const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
+      if (!existing) {
+        throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+      }
+      logger.warn(
+        {
+          jobApplicationId: id,
+          expectedStatus,
+          actualStatus: existing.status,
+          attemptedStatus: data.status,
+        },
+        'Job application finalize lost optimistic lock',
+      );
+      throw new AppError(STATUS_CONFLICT_MESSAGE, 409, 'INVALID_STATUS_TRANSITION');
+    }
+
+    const record = await prisma.jobApplication.findFirst({ where: { id, userId } });
+    if (!record) {
+      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+    }
     return toDto(record);
   }
 

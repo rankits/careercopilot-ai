@@ -181,6 +181,12 @@ describe('JobApplicationService', () => {
   it('moves DISCOVERED to MATCHED when eligibility passes', async () => {
     const result = await service.evaluateEligibility('user-1', 'jobapp-1');
     expect(result.status).toBe('MATCHED');
+    expect(mockRepo.updateStatus).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      expect.objectContaining({ status: 'MATCHED' }),
+      'DISCOVERED',
+    );
   });
 
   it('moves DISCOVERED to NOT_ELIGIBLE when eligibility fails, never fabricating MATCHED', async () => {
@@ -210,14 +216,24 @@ describe('JobApplicationService', () => {
 
   it('allows a valid status transition', async () => {
     await service.transitionStatus('user-1', 'jobapp-1', 'MATCHED');
-    expect(mockRepo.updateStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', { status: 'MATCHED' });
+    expect(mockRepo.updateStatus).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      { status: 'MATCHED' },
+      'DISCOVERED',
+    );
   });
 
   it('withdraw transitions to WITHDRAWN from any non-terminal state', async () => {
     await service.withdraw('user-1', 'jobapp-1');
-    expect(mockRepo.updateStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', {
-      status: 'WITHDRAWN',
-    });
+    expect(mockRepo.updateStatus).toHaveBeenCalledWith(
+      'user-1',
+      'jobapp-1',
+      {
+        status: 'WITHDRAWN',
+      },
+      'DISCOVERED',
+    );
   });
 
   it('surfaces 404 for a submission that does not belong to the caller', async () => {
