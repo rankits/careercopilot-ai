@@ -46,7 +46,7 @@ import {
   Typography,
 } from '@/lib/material';
 
-
+import { LegacyAttentionBanner } from './LegacyAttentionBanner';
 import type { AutoApplyTabId } from './missingFieldNavigation';
 import { resolveReadinessFixActions } from './missingFieldNavigation';
 
@@ -78,9 +78,7 @@ function PageAnalysisPanel({ analysis }: { analysis: ApplicationPageAnalysisSumm
       <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 1 }}>
         <Chip label={`Provider: ${analysis.provider}`} size="small" variant="outlined" />
         <Chip
-          color={
-            analysis.submissionCapability === 'EXTERNAL_MANUAL' ? 'warning' : 'default'
-          }
+          color={analysis.submissionCapability === 'EXTERNAL_MANUAL' ? 'warning' : 'default'}
           label={analysis.submissionCapability.replace(/_/g, ' ')}
           size="small"
         />
@@ -425,6 +423,7 @@ function SubmissionRow({
   onNavigateFix?: NavigateFixAction;
   setupComplete: boolean;
 }) {
+  const showLegacyUI = import.meta.env.VITE_ASSISTED_APPLY_PHASE1_UI === 'false';
   const approveSubmission = useApproveSubmission();
   const queueSubmission = useQueueSubmission();
   const confirmSubmission = useConfirmSubmission();
@@ -498,6 +497,8 @@ function SubmissionRow({
   const isTerminal = TERMINAL_STATUSES.includes(submission.status);
   const canDelete = submission.status !== 'QUEUED' && submission.status !== 'SUBMITTING';
   const canShowDetails = Boolean(plan) || loadingDetails || Boolean(submission.jobId);
+  const viewState = toAssistedApplyView(submission.status);
+  const needsLegacyAttention = viewState === 'LEGACY_ATTENTION' && !showLegacyUI;
 
   const guardSetup = (proceed: () => void) => {
     if (!setupComplete) {
@@ -555,7 +556,7 @@ function SubmissionRow({
           </Button>
         )}
 
-        {submission.status === 'READY_FOR_REVIEW' && (
+        {submission.status === 'READY_FOR_REVIEW' && showLegacyUI && (
           <Button
             isLoading={approveSubmission.isPending}
             onClick={() =>
@@ -574,7 +575,7 @@ function SubmissionRow({
           </Button>
         )}
 
-        {submission.status === 'APPROVED' && (
+        {submission.status === 'APPROVED' && showLegacyUI && (
           <Button
             isLoading={queueSubmission.isPending}
             onClick={() =>
@@ -593,7 +594,7 @@ function SubmissionRow({
           </Button>
         )}
 
-        {isProcessing && (
+        {isProcessing && showLegacyUI && (
           <Typography color="text.secondary" variant="caption">
             Processing…
           </Typography>
@@ -630,7 +631,7 @@ function SubmissionRow({
           </>
         )}
 
-        {submission.status === 'SUBMISSION_FAILED' && (
+        {submission.status === 'SUBMISSION_FAILED' && showLegacyUI && (
           <Button
             isLoading={retrySubmission.isPending}
             onClick={() =>
@@ -699,7 +700,30 @@ function SubmissionRow({
         </Typography>
       )}
 
+      {needsLegacyAttention && (
+        <Box sx={{ mt: 2 }}>
+          <LegacyAttentionBanner
+            isPending={withdrawSubmission.isPending}
+            onAbandon={() =>
+              void runAction(
+                () => withdrawSubmission.mutateAsync(submission.id),
+                'Submission abandoned.',
+                "We couldn't abandon this application. Try again.",
+              )
+            }
+          />
+        </Box>
+      )}
+
       <Collapse in={detailsOpen && submission.status !== 'WITHDRAWN'}>
+        {submission.status === 'READY_FOR_REVIEW' && !showLegacyUI && (
+          <Box sx={{ mt: 2, mb: 1 }}>
+            <Typography color="text.secondary" variant="body2">
+              Continue this application from the job page's Assisted Apply workspace.
+            </Typography>
+          </Box>
+        )}
+
         {loadingDetails && !plan && (
           <Typography color="text.secondary" sx={{ mt: 1 }} variant="caption">
             Loading application details…
