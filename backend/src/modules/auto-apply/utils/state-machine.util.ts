@@ -1,13 +1,18 @@
 import { JobApplicationStatus } from '@prisma/client';
 
 /**
- * Validated transition graph for the auto-apply submission lifecycle
+ * Validated **forward** transition graph for the auto-apply submission lifecycle
  * (AJA-LIFE-001 / AJA-PROD-006) — deliberately separate from the
  * recruitment tracker's `ApplicationStatus` graph in application-management,
  * which this module never touches. Wave 4+ (queue/submit) and Wave 6
  * (autopilot) extend how these states get reached; this graph is written
  * now so every later wave calls the same validated `transitionStatus`
  * rather than re-deriving allowed transitions per feature.
+ *
+ * Compensating transitions (NOT forward edges — do not add them here):
+ * - QUEUED → APPROVED | SUBMISSION_FAILED after a failed queue publish
+ *   (`SubmissionOrchestrationService.compensateQueuePublishFailure`, AA-011).
+ *   Uses AA-010's expected-status guard with `expectedStatus: 'QUEUED'`.
  */
 const TRANSITIONS: Record<JobApplicationStatus, JobApplicationStatus[]> = {
   DISCOVERED: ['MATCHED', 'NOT_ELIGIBLE', 'WITHDRAWN'],

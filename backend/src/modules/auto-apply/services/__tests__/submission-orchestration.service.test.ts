@@ -239,6 +239,70 @@ describe('SubmissionOrchestrationService', () => {
     );
   });
 
+  describe('compensateQueuePublishFailure (AA-011)', () => {
+    it('rolls QUEUED back to APPROVED via the guarded updateStatus', async () => {
+      vi.mocked(jobAppRepo.updateStatus).mockResolvedValue({
+        ...application,
+        status: 'APPROVED',
+      });
+
+      await service.compensateQueuePublishFailure('user-1', 'jobapp-1', 'APPROVED');
+
+      expect(jobAppRepo.updateStatus).toHaveBeenCalledWith(
+        'user-1',
+        'jobapp-1',
+        { status: 'APPROVED' },
+        'QUEUED',
+      );
+    });
+
+    it('rolls back to SUBMISSION_FAILED when that was the prior status', async () => {
+      vi.mocked(jobAppRepo.updateStatus).mockResolvedValue({
+        ...application,
+        status: 'SUBMISSION_FAILED',
+      });
+
+      await service.compensateQueuePublishFailure('user-1', 'jobapp-1', 'SUBMISSION_FAILED');
+
+      expect(jobAppRepo.updateStatus).toHaveBeenCalledWith(
+        'user-1',
+        'jobapp-1',
+        { status: 'SUBMISSION_FAILED' },
+        'QUEUED',
+      );
+    });
+
+    it('treats INVALID_STATUS_TRANSITION as a safe no-op (does not throw)', async () => {
+      vi.mocked(jobAppRepo.updateStatus).mockRejectedValue(
+        new AppError(
+          'This application was already updated. Refresh to see its current state.',
+          409,
+          'INVALID_STATUS_TRANSITION',
+        ),
+      );
+
+      await expect(
+        service.compensateQueuePublishFailure('user-1', 'jobapp-1', 'APPROVED'),
+      ).resolves.toBeUndefined();
+    });
+
+    it('publish-failure path still returns QUEUE_PUBLISH_FAILED when compensate is a no-op', async () => {
+      vi.mocked(queue.enqueue).mockRejectedValue(new Error('broker down'));
+      vi.mocked(jobAppRepo.updateStatus).mockRejectedValue(
+        new AppError(
+          'This application was already updated. Refresh to see its current state.',
+          409,
+          'INVALID_STATUS_TRANSITION',
+        ),
+      );
+
+      await expect(service.queueForSubmission('user-1', 'jobapp-1')).rejects.toMatchObject({
+        code: 'QUEUE_PUBLISH_FAILED',
+        statusCode: 503,
+      });
+    });
+  });
+
   it('AA-009: rolls back QUEUED when enqueue throws QueuePublishError (falsy publish path)', async () => {
     const { QueuePublishError } =
       await import('@/modules/auto-apply/errors/queue-publish.error.js');
