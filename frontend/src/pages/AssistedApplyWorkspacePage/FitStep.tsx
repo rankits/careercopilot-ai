@@ -2,11 +2,8 @@ import { Link as RouterLink } from 'react-router-dom';
 
 import { useApplicationReadiness } from '@/features/auto-apply/hooks/useApplicationReadiness';
 import { useLatestJobAnalysis } from '@/features/auto-apply/hooks/useJobPageAnalysis';
+
 import type { ApplicationReadinessReasonDto } from '@/features/auto-apply/types/autoApply.types';
-import {
-  destinationToSetupHref,
-  resolveReadinessFixActions,
-} from '@/pages/AutoApplyPage/missingFieldNavigation';
 import {
   Alert,
   Box,
@@ -16,6 +13,10 @@ import {
   Tooltip,
   Typography,
 } from '@/lib/material';
+import {
+  destinationToSetupHref,
+  resolveReadinessFixActions,
+} from '@/pages/AutoApplyPage/missingFieldNavigation';
 
 /** Warning codes that belong in the neutral "Unknown" section, not "Worth reviewing". */
 const UNKNOWN_REASON_CODES = new Set([

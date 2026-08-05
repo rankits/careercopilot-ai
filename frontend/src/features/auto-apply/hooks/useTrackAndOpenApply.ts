@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
-import { useSetupStatus } from '@/features/auto-apply/hooks/useSetupStatus';
 import { useCreatePlan } from '@/features/auto-apply/hooks/usePlan';
 import { usePrepareApplication } from '@/features/auto-apply/hooks/usePrepareApplication';
+import { useSetupStatus } from '@/features/auto-apply/hooks/useSetupStatus';
 import { useInitiateSubmission } from '@/features/auto-apply/hooks/useSubmissions';
 
 import { ROUTES, assistedApplyWorkspacePath } from '@/constants/routes';

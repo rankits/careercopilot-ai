@@ -47,6 +47,7 @@ export interface JobApplicationDto {
   planVersion: number;
   progressStep: string | null;
   reopenedAt: Date | null;
+  handoffOpenedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }

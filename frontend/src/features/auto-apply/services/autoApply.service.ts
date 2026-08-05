@@ -17,12 +17,14 @@ import type {
   CreateResumeVersionPayload,
   DeleteResumeVersionResult,
   EligibilityResult,
+  HandoffResultDto,
   InitiateSubmissionResult,
   JobApplicationDto,
   PrepareApplicationPayload,
   PrepareApplicationResult,
   PrivacyAcknowledgementDto,
   PrivacyAcknowledgementPayload,
+  ResumeAnalysisDto,
   SetupStatusDto,
   AssistedApplyWorkspaceDto,
   WorkspaceStepId,
@@ -364,5 +366,34 @@ export const autoApplyService = {
       },
     );
     return unwrapData(data, 'Missing readiness data in API response');
+  },
+
+  async updateResumeSelection(
+    jobApplicationId: string,
+    resumeVersionId: string,
+  ): Promise<{ resumeVersionId: string; isDefault: boolean }> {
+    const { data } = await httpClient.patch<
+      BackendSuccessResponse<{ resumeVersionId: string; isDefault: boolean }>
+    >(`/auto-apply/submissions/${jobApplicationId}/resume-selection`, { resumeVersionId });
+    return unwrapData(data, 'Missing resume-selection data in API response');
+  },
+
+  async analyzeResumeForApplication(
+    jobApplicationId: string,
+    options?: { forceRefresh?: boolean },
+  ): Promise<ResumeAnalysisDto> {
+    const { data } = await httpClient.post<BackendSuccessResponse<ResumeAnalysisDto>>(
+      `/auto-apply/submissions/${jobApplicationId}/resume-analysis`,
+      { forceRefresh: options?.forceRefresh === true },
+    );
+    return unwrapData(data, 'Missing resume-analysis data in API response');
+  },
+
+  async handoffApplication(jobApplicationId: string): Promise<HandoffResultDto> {
+    const { data } = await httpClient.post<BackendSuccessResponse<HandoffResultDto>>(
+      `/auto-apply/submissions/${jobApplicationId}/handoff`,
+      {},
+    );
+    return unwrapData(data, 'Missing handoff data in API response');
   },
 };

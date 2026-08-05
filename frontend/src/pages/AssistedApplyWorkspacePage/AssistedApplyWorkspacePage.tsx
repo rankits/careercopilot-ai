@@ -5,6 +5,8 @@ import {
   useAssistedApplyWorkspace,
   useUpdateWorkspaceProgressStep,
 } from '@/features/auto-apply/hooks/useAssistedApplyWorkspace';
+
+import { ROUTES } from '@/constants/routes';
 import type { WorkspaceStepId } from '@/features/auto-apply/types/autoApply.types';
 import {
   clearWorkspaceEntryDuplicateSignal,
@@ -12,7 +14,6 @@ import {
   readWorkspaceEntrySignals,
   resolveInitialWorkspaceStep,
 } from '@/features/auto-apply/utils/assistedApplyWorkspace';
-import { ROUTES } from '@/constants/routes';
 import {
   Alert,
   Box,
@@ -32,6 +33,9 @@ import {
 import { ActivityTimelinePanel } from './ActivityTimelinePanel';
 import { AnalysisStep } from './AnalysisStep';
 import { FitStep } from './FitStep';
+import { OpenApplicationStep } from './OpenApplicationStep';
+import { ResumeAnalysisStep } from './ResumeAnalysisStep';
+import { ResumeSelectionStep } from './ResumeSelectionStep';
 
 const WORKSPACE_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_WORKSPACE !== 'false';
 
@@ -45,6 +49,9 @@ export function AssistedApplyWorkspacePage() {
   const [dismissedDuplicate, setDismissedDuplicate] = useState(false);
   const [dismissedReopened, setDismissedReopened] = useState(false);
 
+  const [continueError, setContinueError] = useState<string | null>(null);
+  const [showSelectionFocus, setShowSelectionFocus] = useState(false);
+
   const entrySignals = useMemo(
     () => (jobApplicationId ? readWorkspaceEntrySignals(jobApplicationId) : null),
     [jobApplicationId],
@@ -52,7 +59,7 @@ export function AssistedApplyWorkspacePage() {
 
   const steps = workspaceQuery.data?.steps ?? [];
   const activeStep = useMemo(() => {
-    if (!workspaceQuery.data) return 'analysis' as WorkspaceStepId;
+    if (!workspaceQuery.data) return 'analysis';
     return resolveInitialWorkspaceStep({
       steps: workspaceQuery.data.steps,
       explicitStep: searchParams.get('step'),
@@ -115,6 +122,46 @@ export function AssistedApplyWorkspacePage() {
           jobApplicationId={jobApplicationId}
           jobId={jobId}
           onContinue={() => selectStep('resume')}
+        />
+      );
+    }
+    if (activeStep === 'resume') {
+      return (
+        <Stack spacing={3}>
+          <Box sx={{ display: showSelectionFocus || !data.resume?.resumeVersionId ? 'block' : 'block' }}>
+            <ResumeSelectionStep
+              jobApplicationId={jobApplicationId}
+              selectedResumeVersionId={data.resume?.resumeVersionId ?? null}
+            />
+          </Box>
+          <ResumeAnalysisStep
+            continueError={continueError}
+            continuePending={progressMutation.isPending}
+            jobApplicationId={jobApplicationId}
+            onContinue={() => {
+              setContinueError(null);
+              progressMutation.mutate('open', {
+                onSuccess: () => {
+                  const next = new URLSearchParams(searchParams);
+                  next.set('step', 'open');
+                  setSearchParams(next, { replace: true });
+                },
+                onError: () => setContinueError("Couldn't continue. Try again."),
+              });
+            }}
+            onSelectAnother={() => setShowSelectionFocus(true)}
+            selectedResumeVersionId={data.resume?.resumeVersionId ?? null}
+          />
+        </Stack>
+      );
+    }
+    if (activeStep === 'open' && jobId) {
+      return (
+        <OpenApplicationStep
+          applyUrl={data.handoff?.externalConfirmationUrl ?? null}
+          jobApplicationId={jobApplicationId}
+          jobId={jobId}
+          openedAt={data.handoff?.openedAt ?? null}
         />
       );
     }

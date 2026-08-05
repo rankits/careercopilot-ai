@@ -71,6 +71,7 @@ describe('auto-apply job application submissions IDOR / authz', () => {
         planVersion: 1,
     progressStep: null,
     reopenedAt: null,
+    handoffOpenedAt: null,
         createdAt: new Date(),
         updatedAt: new Date(),
       },

@@ -25,6 +25,12 @@ import {
   updateWorkspaceProgressStepController,
 } from '@/modules/auto-apply/controllers/assisted-apply-workspace.controller.js';
 import {
+  updateResumeSelectionController,
+  analyzeResumeForApplicationController,
+  handoffApplicationController,
+} from '@/modules/auto-apply/controllers/assisted-apply-resume-handoff.controller.js';
+import { operationIdMiddleware } from '@/modules/auto-apply/middlewares/operation-id.middleware.js';
+import {
   InitiateJobApplicationSchema,
   JobApplicationStatusTransitionSchema,
 } from '@/modules/auto-apply/validations/job-application.validation.js';
@@ -37,6 +43,21 @@ const ProgressStepBodySchema = z.object({
   body: z.object({
     progressStep: z.enum(['analysis', 'fit', 'resume', 'open', 'done']),
   }),
+});
+
+const ResumeSelectionBodySchema = z.object({
+  body: z.object({
+    resumeVersionId: z.string().uuid(),
+  }),
+});
+
+const ResumeAnalysisBodySchema = z.object({
+  body: z
+    .object({
+      forceRefresh: z.boolean().optional(),
+    })
+    .optional()
+    .default({}),
 });
 
 router.get(
@@ -74,6 +95,30 @@ router.patch(
   requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN),
   validateResource(ProgressStepBodySchema),
   updateWorkspaceProgressStepController,
+);
+
+router.patch(
+  '/:id/resume-selection',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN),
+  validateResource(ResumeSelectionBodySchema),
+  updateResumeSelectionController,
+);
+
+router.post(
+  '/:id/resume-analysis',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_READ_OWN),
+  validateResource(ResumeAnalysisBodySchema),
+  analyzeResumeForApplicationController,
+);
+
+router.post(
+  '/:id/handoff',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN),
+  operationIdMiddleware,
+  handoffApplicationController,
 );
 
 router.post(

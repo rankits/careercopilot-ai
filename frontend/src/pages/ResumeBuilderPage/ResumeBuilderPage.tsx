@@ -4,7 +4,7 @@ import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/atoms';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
@@ -28,6 +28,7 @@ import type { ResumeTemplateId } from './utils';
 export function ResumeBuilderPage() {
   const { resumeId: paramResumeId } = useParams<{ resumeId?: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
 
   const [resumeId, setResumeId] = useState<string>(paramResumeId ?? '');
@@ -98,6 +99,7 @@ export function ResumeBuilderPage() {
     selectedTemplate,
     setSelectedTemplate,
     hydrateFromExistingAnalysis: polling.hydrateFromExistingAnalysis,
+    returnTo: searchParams.get('returnTo'),
   });
 
   const navigation = useResumeBuilderNavigation({

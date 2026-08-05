@@ -42,6 +42,7 @@ type JobApplicationRecord = {
   planVersion: number;
   progressStep: string | null;
   reopenedAt: Date | null;
+  handoffOpenedAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 };
@@ -413,5 +414,50 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
       data: { progressStep },
     });
     return toDto(record);
+  }
+
+  async updateResumeSelection(
+    userId: string,
+    id: string,
+    resumeVersionId: string,
+  ): Promise<JobApplicationDto> {
+    const existing = await prisma.jobApplication.findFirst({ where: { id, userId } });
+    if (!existing) {
+      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+    const record = await prisma.jobApplication.update({
+      where: { id: existing.id },
+      data: { resumeVersionId },
+    });
+    return toDto(record);
+  }
+
+  async recordHandoffOpened(
+    userId: string,
+    id: string,
+    data: { applyUrl: string; openedAt: Date },
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto | null> {
+    try {
+      const record = await prisma.jobApplication.update({
+        where: {
+          id,
+          userId,
+          status: expectedStatus as JobApplicationStatus,
+        },
+        data: {
+          status: 'ACTION_REQUIRED',
+          handoffOpenedAt: data.openedAt,
+          externalConfirmationUrl: data.applyUrl,
+          progressStep: 'open',
+        },
+      });
+      return toDto(record);
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+        return null;
+      }
+      throw error;
+    }
   }
 }

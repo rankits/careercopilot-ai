@@ -64,7 +64,8 @@ export function computeWorkspaceSteps(input: {
   const fitComplete = application.matchScore != null || analysisComplete;
   const resumeComplete = Boolean(application.resumeVersionId);
   const openComplete = Boolean(
-    application.externalConfirmationUrl ||
+    application.handoffOpenedAt ||
+      application.externalConfirmationUrl ||
       application.status === 'ACTION_REQUIRED' ||
       application.status === 'SUBMITTED' ||
       application.status === 'CONFIRMATION_RECEIVED',
@@ -119,6 +120,7 @@ export function buildWorkspaceDto(input: {
     handoff: {
       externalConfirmationUrl: input.application.externalConfirmationUrl,
       submittedAt: input.application.submittedAt?.toISOString() ?? null,
+      openedAt: input.application.handoffOpenedAt?.toISOString() ?? null,
     },
   };
 }

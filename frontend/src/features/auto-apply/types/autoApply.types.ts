@@ -215,7 +215,7 @@ export type AutoApplyEventType =
   | 'SUBMISSION_CONFIRMED'
   | 'SUBMISSION_WITHDRAWN'
   | 'SUBMISSION_RECLAIMED'
-  | string;
+  | (string & {});
 
 export interface AutoApplyAuditEventDto {
   id: string;
@@ -387,7 +387,28 @@ export interface AssistedApplyWorkspaceDto {
   analysisSummary: { id: string; outcomeStatus: string; analyzedAt: string } | null;
   fit: { matchScore: number | null } | null;
   resume: { resumeVersionId: string } | null;
-  handoff: { externalConfirmationUrl: string | null; submittedAt: string | null } | null;
+  handoff: {
+    externalConfirmationUrl: string | null;
+    submittedAt: string | null;
+    openedAt?: string | null;
+  } | null;
+}
+
+export interface ResumeAnalysisDto {
+  strengths: string[];
+  concerns: string[];
+  missingEvidence: string[];
+  unknowns: string[];
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  analyzedAt: string;
+  degraded?: boolean;
+  cached?: boolean;
+}
+
+export interface HandoffResultDto {
+  applyUrl: string;
+  openedAt: string;
+  viewState: string;
 }
 
 export interface PrivacyAcknowledgementDto {

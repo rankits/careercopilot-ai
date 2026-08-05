@@ -132,6 +132,7 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
       planVersion: 1,
     progressStep: null,
     reopenedAt: null,
+    handoffOpenedAt: null,
       createdAt: now,
       updatedAt: now,
     };

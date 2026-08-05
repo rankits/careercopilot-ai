@@ -7,6 +7,7 @@ import {
   type WorkspaceStepId,
 } from '@/modules/auto-apply/types/assisted-apply-workspace.types.js';
 import { buildWorkspaceDto } from '@/modules/auto-apply/utils/assisted-apply-workspace.util.js';
+import { autoApplyEventService } from '@/modules/auto-apply/controllers/audit-event.controller.js';
 
 export class AssistedApplyWorkspaceService {
   constructor(
@@ -45,11 +46,31 @@ export class AssistedApplyWorkspaceService {
     if (!WORKSPACE_STEP_IDS.includes(progressStep as WorkspaceStepId)) {
       throw new AppError('Invalid workspace step', 400, 'INVALID_PROGRESS_STEP');
     }
+
+    const existing = await this.applications.findById(userId, jobApplicationId);
+    if (!existing) {
+      throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
+    }
+
+    const previousStep = existing.progressStep;
     const updated = await this.applications.updateProgressStep(
       userId,
       jobApplicationId,
       progressStep,
     );
+
+    // AA-063: emit RESUME_CONFIRMED once when transitioning into "open"
+    if (progressStep === 'open' && previousStep !== 'open') {
+      void autoApplyEventService.record({
+        userId,
+        jobApplicationId,
+        eventType: 'RESUME_CONFIRMED',
+        metadata: {
+          resumeVersionId: existing.resumeVersionId,
+        },
+      });
+    }
+
     return { progressStep: updated.progressStep as WorkspaceStepId };
   }
 }
