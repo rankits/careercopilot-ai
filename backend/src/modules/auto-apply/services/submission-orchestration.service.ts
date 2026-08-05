@@ -85,7 +85,7 @@ export class SubmissionOrchestrationService implements ISubmissionOrchestrationS
         status: previousStatus === 'SUBMISSION_FAILED' ? 'SUBMISSION_FAILED' : 'APPROVED',
       });
       throw new AppError(
-        'Failed to publish submission to the queue. The application was not left in QUEUED.',
+        "We couldn't queue this application. Try again.",
         503,
         'QUEUE_PUBLISH_FAILED',
         { cause: error instanceof Error ? error.message : 'unknown' },
