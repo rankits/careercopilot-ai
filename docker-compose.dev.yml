@@ -192,6 +192,31 @@ services:
     healthcheck:
       disable: true
 
+  application-submission-worker:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.dev
+    container_name: career_copilot_application_submission_worker_dev
+    restart: unless-stopped
+    command: npm run worker:application-submission
+    environment:
+      NODE_ENV: '${NODE_ENV:-development}'
+      DATABASE_URL: '${DATABASE_URL:-postgresql://postgres:postgres_password@postgres:5432/careercopilot_dev?schema=public}'
+      RABBITMQ_URL: '${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}'
+      RUN_MIGRATIONS: 'false'
+      ENABLE_AUTO_APPLY: '${ENABLE_AUTO_APPLY:-true}'
+      LOG_LEVEL: '${LOG_LEVEL:-info}'
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
   job-embedding-worker:
     build:
       context: ./backend

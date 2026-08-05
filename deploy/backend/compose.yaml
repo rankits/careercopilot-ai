@@ -54,6 +54,26 @@ services:
         max-size: '10m'
         max-file: '3'
 
+  application-submission-worker:
+    image: ${BACKEND_IMAGE}
+    command: ['node', 'dist/workers/run-application-submission-worker.js']
+    env_file:
+      - ${SHARED_ENV_FILE:-/opt/career-copilot/backend/shared/.env}
+    environment:
+      NODE_ENV: production
+      RUN_MIGRATIONS: 'false'
+      RUN_SEEDS_ON_STARTUP: 'false'
+    restart: unless-stopped
+    mem_limit: 192m
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
   # Consumes RabbitMQ job-embedding requests (from outbox) and writes pgvector rows.
   # Uses AI_EMBEDDING_* from shared .env (OpenRouter/Google/Groq) — no local model.
   job-embedding-worker:
