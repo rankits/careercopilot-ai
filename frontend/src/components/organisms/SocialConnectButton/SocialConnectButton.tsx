@@ -1,6 +1,7 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import googleBrandIcon from '@/assets/icons/google-brand.svg';
+import { SOCIAL_CONNECT_LABELS } from '@/constants/ui';
 import { LinkedInIcon, MuiButton } from '@/lib/material';
 
 import { socialConnectButtonSx } from './styles';
@@ -14,33 +15,25 @@ export interface SocialConnectButtonProps extends Omit<
   provider: SocialProvider;
 }
 
-const providerContent: Record<SocialProvider, { icon: ReactNode; label: string }> = {
-  google: {
-    icon: (
-      <img
-        alt=""
-        aria-hidden="true"
-        data-testid="GoogleBrandIcon"
-        height="20"
-        src={googleBrandIcon}
-        width="20"
-      />
-    ),
-    label: 'Continue with Google',
-  },
-  linkedin: {
-    icon: <LinkedInIcon aria-hidden="true" color="primary" />,
-    label: 'Continue with LinkedIn',
-  },
+const providerIcons: Record<SocialProvider, ReactNode> = {
+  google: (
+    <img
+      alt=""
+      aria-hidden="true"
+      data-testid="GoogleBrandIcon"
+      height="20"
+      src={googleBrandIcon}
+      width="20"
+    />
+  ),
+  linkedin: <LinkedInIcon aria-hidden="true" color="primary" />,
 };
 
 export function SocialConnectButton({ provider, ...props }: SocialConnectButtonProps) {
-  const content = providerContent[provider];
-
   return (
     <MuiButton {...props} fullWidth type="button" sx={socialConnectButtonSx}>
-      {content.icon}
-      <span>{content.label}</span>
+      {providerIcons[provider]}
+      <span>{SOCIAL_CONNECT_LABELS[provider]}</span>
     </MuiButton>
   );
 }
