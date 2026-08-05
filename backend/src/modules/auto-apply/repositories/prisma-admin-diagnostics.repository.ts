@@ -4,7 +4,10 @@ import {
   IAdminDiagnosticsRepository,
   StuckSubmissionsQuery,
 } from '@/modules/auto-apply/contracts/admin-diagnostics.contract.js';
-import { StuckSubmissionDto } from '@/modules/auto-apply/types/admin-diagnostics.types.js';
+import {
+  StuckSubmissionDto,
+  StuckSubmittingCandidate,
+} from '@/modules/auto-apply/types/admin-diagnostics.types.js';
 
 type JobApplicationRecord = {
   id: string;
@@ -47,6 +50,14 @@ function toStuckDto(
   };
 }
 
+function toCandidate(record: {
+  id: string;
+  userId: string;
+  updatedAt: Date;
+}): StuckSubmittingCandidate {
+  return { id: record.id, userId: record.userId, updatedAt: record.updatedAt };
+}
+
 export class PrismaAdminDiagnosticsRepository implements IAdminDiagnosticsRepository {
   async findStuckSubmissions(query: StuckSubmissionsQuery): Promise<StuckSubmissionDto[]> {
     const now = Date.now();
@@ -70,5 +81,37 @@ export class PrismaAdminDiagnosticsRepository implements IAdminDiagnosticsReposi
       ...stalledQueue.map((record) => toStuckDto(record, 'QUEUE_STALLED')),
       ...awaitingConfirmation.map((record) => toStuckDto(record, 'AWAITING_USER_CONFIRMATION')),
     ];
+  }
+
+  async findSubmittingOlderThan(cutoff: Date): Promise<StuckSubmittingCandidate[]> {
+    const rows = await prisma.jobApplication.findMany({
+      where: { status: 'SUBMITTING', updatedAt: { lt: cutoff } },
+      select: { id: true, userId: true, updatedAt: true },
+      orderBy: { updatedAt: 'asc' },
+    });
+    return rows.map(toCandidate);
+  }
+
+  async reclaimSubmittingIfStuck(
+    id: string,
+    cutoff: Date,
+    failureCode: string,
+    failureMessage: string,
+  ): Promise<StuckSubmittingCandidate | null> {
+    const claimed = await prisma.jobApplication.updateMany({
+      where: { id, status: 'SUBMITTING', updatedAt: { lt: cutoff } },
+      data: {
+        status: 'SUBMISSION_FAILED',
+        failureCode,
+        failureMessage,
+      },
+    });
+    if (claimed.count === 0) return null;
+
+    const record = await prisma.jobApplication.findUnique({
+      where: { id },
+      select: { id: true, userId: true, updatedAt: true },
+    });
+    return record ? toCandidate(record) : null;
   }
 }
