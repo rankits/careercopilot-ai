@@ -17,6 +17,7 @@ import {
   Stack,
   Typography,
 } from '@/lib/material';
+import { trackEvent } from '@/shared/analytics/trackEvent';
 
 import {
   ANALYSIS_STALENESS_DAYS,
@@ -106,6 +107,17 @@ export function AnalysisStep({ jobId }: AnalysisStepProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps -- run once after latest query settles
   }, [autoTriggered, latestQuery.data, latestQuery.isLoading, latestQuery.isFetching, latestQuery.isError]);
 
+  useEffect(() => {
+    if (analysis) {
+      trackEvent('job_analysis_viewed', {
+        job_id: jobId,
+        provider: analysis.provider ?? 'UNKNOWN',
+      });
+    } else if (latestQuery.isError || analyzeMutation.isError) {
+      trackEvent('job_analysis_failed', { job_id: jobId });
+    }
+  }, [analysis, jobId, latestQuery.isError, analyzeMutation.isError]);
+
   const handleRetry = () => {
     setReanalyzeError(null);
     analyzeMutation.mutate({});
@@ -113,6 +125,7 @@ export function AnalysisStep({ jobId }: AnalysisStepProps) {
 
   const handleReanalyze = () => {
     setReanalyzeError(null);
+    trackEvent('job_analysis_reanalyzed', { job_id: jobId });
     analyzeMutation.mutate(
       { forceRefresh: true },
       {

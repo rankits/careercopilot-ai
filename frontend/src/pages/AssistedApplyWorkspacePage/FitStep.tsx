@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { useApplicationReadiness } from '@/features/auto-apply/hooks/useApplicationReadiness';
@@ -13,6 +14,9 @@ import {
   Tooltip,
   Typography,
 } from '@/lib/material';
+import { trackEvent } from '@/shared/analytics/trackEvent';
+
+import { assistedApplyTouchTargetSx, WorkspaceStickyActions } from './WorkspaceStickyActions';
 import {
   destinationToSetupHref,
   resolveReadinessFixActions,
@@ -100,6 +104,22 @@ export function FitStep({ jobId, jobApplicationId, onContinue }: FitStepProps) {
   const readinessQuery = useApplicationReadiness(jobId, 'HANDOFF', jobApplicationId);
   const analysisQuery = useLatestJobAnalysis(jobId);
 
+  useEffect(() => {
+    const data = readinessQuery.data;
+    if (!data) return;
+    const advisory = data.warnings.filter((r) => !UNKNOWN_REASON_CODES.has(r.code));
+    const unknownFromApi = data.warnings.filter((r) => UNKNOWN_REASON_CODES.has(r.code));
+    const formNotInspected =
+      !analysisQuery.data || analysisQuery.data.formStatus === 'NOT_INSPECTED';
+    const unknownCount = unknownFromApi.length + (formNotInspected ? 1 : 0);
+    trackEvent('fit_panel_viewed', {
+      job_id: jobId,
+      blocking_count: data.blockingReasons.length,
+      warning_count: advisory.length,
+      unknown_count: unknownCount,
+    });
+  }, [jobId, readinessQuery.data, analysisQuery.data]);
+
   if (readinessQuery.isLoading) {
     return (
       <Stack alignItems="center" direction="row" spacing={1.5} sx={{ py: 3 }}>
@@ -164,21 +184,21 @@ export function FitStep({ jobId, jobApplicationId, onContinue }: FitStepProps) {
         </>
       )}
 
-      <Box>
+      <WorkspaceStickyActions>
         {continueDisabled ? (
           <Tooltip title="Resolve the items above to continue.">
             <span>
-              <MuiButton disabled variant="contained">
+              <MuiButton disabled sx={assistedApplyTouchTargetSx} variant="contained">
                 Continue
               </MuiButton>
             </span>
           </Tooltip>
         ) : (
-          <MuiButton onClick={onContinue} variant="contained">
+          <MuiButton onClick={onContinue} sx={assistedApplyTouchTargetSx} variant="contained">
             Continue
           </MuiButton>
         )}
-      </Box>
+      </WorkspaceStickyActions>
     </Stack>
   );
 }

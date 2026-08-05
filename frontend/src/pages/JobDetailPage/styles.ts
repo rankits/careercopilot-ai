@@ -186,6 +186,11 @@ export const jobDetailPageSx = {
     display: 'inline-flex',
     maxWidth: '100%',
 
+    '& > button': {
+      minHeight: 44,
+      minWidth: 44,
+    },
+
     [compactBreakpoint]: {
       width: '100%',
 
