@@ -21,9 +21,9 @@ describe('AutoApplyPage', () => {
   it('renders the heading and the profile tab by default', () => {
     renderPage();
 
-    expect(screen.getByRole('heading', { name: /auto apply/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^Auto Apply$/i })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: /profile/i })).toHaveAttribute('aria-selected', 'true');
-    expect(screen.getByText(/candidate application profile/i)).toBeInTheDocument();
+    expect(screen.getByText(/Your Auto Apply preferences/i)).toBeInTheDocument();
   });
 
   it('opens the submissions tab from ?tab=submissions', () => {
@@ -33,12 +33,17 @@ describe('AutoApplyPage', () => {
       'aria-selected',
       'true',
     );
-    expect(screen.getByText(/track a job for auto-apply/i)).toBeInTheDocument();
+    expect(screen.getByText(/Track a job/i)).toBeInTheDocument();
   });
 
-  it('never claims full autopilot is enabled', () => {
-    renderPage();
-    expect(screen.getByText(/full autopilot is not enabled yet/i)).toBeInTheDocument();
+  it('hides premature UI on the submissions tab', () => {
+    // Navigate directly to submissions tab where these UI elements would potentially render
+    renderPage('/auto-apply?tab=submissions');
+
+    expect(screen.queryByRole('button', { name: /^Approve$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Continue to apply$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Retry$/i })).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Processing…$/)).not.toBeInTheDocument();
   });
 
   it('switches to the submissions tab on click', async () => {
@@ -47,7 +52,7 @@ describe('AutoApplyPage', () => {
 
     await user.click(screen.getByRole('tab', { name: /submissions/i }));
 
-    expect(screen.getByText(/track a job for auto-apply/i)).toBeInTheDocument();
+    expect(screen.getByText(/Track a job/i)).toBeInTheDocument();
   });
 
   it('switches to the rules tab and never exposes an autopilot on/off toggle', async () => {
