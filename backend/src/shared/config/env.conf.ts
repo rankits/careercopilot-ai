@@ -136,6 +136,8 @@ const envSchema = z
     // When true, /health probes RabbitMQ even if ENABLE_EMAIL_WORKER is false.
     HEALTH_CHECK_RABBITMQ: booleanFromString(false),
     ENABLE_SWAGGER: booleanFromString(true),
+    // Global Auto Apply kill switch — when false, PLAN/APPROVE/QUEUE/SUBMIT all fail closed.
+    ENABLE_AUTO_APPLY: booleanFromString(true),
     // Run database seeds automatically when the server starts (dev only)
     RUN_SEEDS_ON_STARTUP: booleanFromString(true),
 
