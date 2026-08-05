@@ -51,7 +51,15 @@ function SidebarNavButton({
       aria-current={active ? 'page' : undefined}
       active={active}
       collapsed={collapsed}
-      onClick={() => onSelect?.(item)}
+      onClick={(event) => {
+        // Stay put when the active sidebar item is clicked again (avoids discard modal / remount).
+        if (active) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        onSelect?.(item);
+      }}
       tone={tone}
     >
       <Icon fontSize="small" />
