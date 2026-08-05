@@ -4,7 +4,6 @@ import { createBrowserRouter, useRoutes, type RouteObject } from 'react-router-d
 import { App } from '@/app/App';
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
-import { ApplicationDetailPage } from '@/pages/ApplicationDetailPage';
 import { ApplicationsPage } from '@/pages/ApplicationsPage';
 import { AutoApplyPage } from '@/pages/AutoApplyPage';
 import { EditProfilePage } from '@/pages/EditProfilePage';

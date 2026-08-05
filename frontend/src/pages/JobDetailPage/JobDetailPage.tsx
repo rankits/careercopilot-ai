@@ -9,6 +9,7 @@ import {
   VirtualizedJobList,
 } from '@/components/molecules';
 
+import { useTrackAndOpenApply } from '@/features/auto-apply/hooks/useTrackAndOpenApply';
 import { useCachedCompanyLogo } from '@/features/jobs/hooks/useCachedCompanyLogo';
 import { useJobDetail } from '@/features/jobs/hooks/useJobDetail';
 import { useSimilarJobs } from '@/features/recommendations/hooks/useRecommendations';
@@ -98,6 +99,7 @@ export function JobDetailPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const [showSimilarJobs, setShowSimilarJobs] = useState(false);
+  const { trackAndOpenApply, isPending: isTrackingApply } = useTrackAndOpenApply();
   const feedReturnTo =
     (location.state as { fromFeed?: string } | null)?.fromFeed ?? ROUTES.JOB_FEED;
 
@@ -228,6 +230,21 @@ export function JobDetailPage() {
             <Box sx={jobDetailPageSx.actions}>
               <Button disabled={!applyUrl} onClick={() => openExternalApply(applyUrl)} size="small">
                 Apply Now
+              </Button>
+              <Button
+                disabled={!jobId}
+                isLoading={isTrackingApply}
+                onClick={() =>
+                  void trackAndOpenApply({
+                    jobId,
+                    applyUrl,
+                    openExternal: false,
+                  })
+                }
+                size="small"
+                variant="outline"
+              >
+                Assisted Apply
               </Button>
               <Button
                 disabled={!jobId}
