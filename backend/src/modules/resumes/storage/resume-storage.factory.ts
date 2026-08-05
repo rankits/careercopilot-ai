@@ -1,12 +1,10 @@
 import { resumeConfig } from '@/modules/resumes/config/resume.config.js';
-import { LocalResumeStorage } from '@/modules/resumes/storage/local-resume.storage.js';
-import { ResumeStorage } from '@/modules/resumes/storage/resume-storage.interface.js';
-import { S3ResumeStorage } from '@/modules/resumes/storage/s3-resume.storage.js';
+import { createFileStorage } from '@/infrastructure/storage/storage.factory.js';
+import type { FileStorage } from '@/infrastructure/storage/file-storage.interface.js';
 
-export const createResumeStorage = (): ResumeStorage => {
-  if (resumeConfig.storageDriver === 'S3') {
-    return new S3ResumeStorage();
-  }
-
-  return new LocalResumeStorage();
-};
+export const createResumeStorage = (): FileStorage =>
+  createFileStorage({
+    driver: resumeConfig.storageDriver,
+    localBaseDir: resumeConfig.localStorageDir,
+    s3: { bucket: resumeConfig.s3.bucket, region: resumeConfig.s3.region },
+  });

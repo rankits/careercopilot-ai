@@ -19,6 +19,7 @@ import { resumeProcessingService } from '@/modules/resumes/services/resume-proce
 import { resumeParsingOrchestrator } from '@/modules/resumes/services/resume-parsing.orchestrator.js';
 import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
 import { invalidateUserRecommendationState } from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
+import { logger } from '@/shared/logger/logger.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -172,7 +173,20 @@ export const resumeService = {
   },
 
   async deleteResume(resumeId: string, principalId: string) {
-    await assertOwnedResume(resumeId, principalId);
+    const resume = await assertOwnedResume(resumeId, principalId);
+
+    try {
+      await createResumeStorage().delete(resume.storageKey);
+    } catch (err) {
+      // The DB row is the source of truth for "this resume is gone" from the
+      // user's perspective - an orphaned storage object is a cleanup concern,
+      // not a reason to fail the delete.
+      logger.warn(
+        { err, resumeId, storageKey: resume.storageKey },
+        'Failed to delete resume file from storage',
+      );
+    }
+
     await resumeRepository.deleteResume(resumeId);
     return { id: resumeId };
   },
