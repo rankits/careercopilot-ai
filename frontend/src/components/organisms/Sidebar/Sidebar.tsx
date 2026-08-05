@@ -11,6 +11,7 @@ import {
   ChevronRightIcon,
   DescriptionOutlinedIcon,
   FileDownloadOutlinedIcon,
+  Tooltip,
   Typography,
 } from '@/lib/material';
 
@@ -45,10 +46,11 @@ function SidebarNavButton({
     ? { component: RouterLink, to: item.href }
     : { type: 'button' as const };
 
-  return (
+  const button = (
     <NavButton
       {...navigationProps}
       aria-current={active ? 'page' : undefined}
+      aria-label={item.label}
       active={active}
       collapsed={collapsed}
       onClick={() => onSelect?.(item)}
@@ -57,6 +59,16 @@ function SidebarNavButton({
       <Icon fontSize="small" />
       {collapsed ? null : <span>{item.label}</span>}
     </NavButton>
+  );
+
+  if (!collapsed) {
+    return button;
+  }
+
+  return (
+    <Tooltip disableInteractive placement="right" title={item.label}>
+      <span>{button}</span>
+    </Tooltip>
   );
 }
 

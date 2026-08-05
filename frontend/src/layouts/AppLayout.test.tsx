@@ -122,7 +122,7 @@ describe('AppLayout logout', () => {
     await user.click(screen.getByRole('menuitem', { name: /logout/i }));
 
     await waitFor(() => expect(logoutMock).toHaveBeenCalledTimes(1));
-    expect(await screen.findByText(/unable to log out\. please try again/i)).toBeInTheDocument();
+    expect(await screen.findByText(/signed out locally/i)).toBeInTheDocument();
     expect(store.getState().auth.isAuthenticated).toBe(false);
     expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
   });

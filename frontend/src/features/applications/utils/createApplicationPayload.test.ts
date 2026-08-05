@@ -29,7 +29,7 @@ describe('buildCreateApplicationPayload', () => {
       companyName: 'Acme Corp',
       location: 'San Francisco, CA',
       originalJobUrl: 'https://acme.com/jobs/123',
-      currentStatus: 'SAVED',
+      currentStatus: 'PREPARING',
       priority: 'MEDIUM',
       salaryMin: 150000,
       salaryMax: 180000,
@@ -54,7 +54,7 @@ describe('buildCreateApplicationPayload', () => {
       jobTitle: 'Senior Full Stack Engineer',
       companyName: 'Acme Corp',
       location: 'San Francisco, CA',
-      currentStatus: 'SAVED',
+      currentStatus: 'PREPARING',
       priority: 'MEDIUM',
     });
   });

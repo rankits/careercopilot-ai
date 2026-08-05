@@ -33,6 +33,7 @@ export const APP_ACTIONS = {
   RETRY: 'Retry',
   SAVE: 'Save',
   UPLOAD_RESUME: 'Upload Resume',
+  VIEW_JOB: 'View Job',
 } as const;
 
 export const JOB_UI = {
@@ -97,7 +98,10 @@ export const JOB_CARD_COPY = {
   dismiss: 'Dismiss',
   lessLikeThis: 'Less like this',
   moreLikeThis: 'More like this',
+  moreActions: 'More actions',
   notRelevant: 'Not relevant',
+  saveJob: 'Save job',
+  unsaveJob: 'Unsave job',
   verifiedCompany: 'Verified company',
 } as const;
 
@@ -110,12 +114,14 @@ export const JOB_CARD_ARIA = {
   lessLikeThis: (title: string) => `Show fewer jobs like ${title}`,
   match: (match: number, subtitle?: string) =>
     `${match} percent match${subtitle ? `, ${subtitle}` : ''}`,
+  moreActions: (title: string) => `More actions for ${title}`,
   moreLikeThis: (selected: boolean, title: string) =>
     selected ? `More jobs like ${title} selected` : `Show more jobs like ${title}`,
   notRelevant: (title: string) => `Mark ${title} as not relevant`,
   open: (title: string, company: string) => `Open ${title} at ${company}`,
   recommendationDetails: (title: string) => `${title} recommendation details`,
   save: (saved: boolean, title: string) => `${saved ? 'Unsave' : 'Save'} ${title}`,
+  viewJob: (title: string) => `View ${title}`,
 } as const;
 
 export const JOB_CARD_LIMITS = {
@@ -547,11 +553,6 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     label: SIDEBAR_NAV_LABELS.savedResumes,
   },
   { icon: TuneOutlinedIcon, id: 'ai-match', label: SIDEBAR_NAV_LABELS.aiMatch },
-  {
-    icon: BusinessCenterOutlinedIcon,
-    id: 'applications',
-    label: SIDEBAR_NAV_LABELS.applications,
-  },
 ];
 
 /** Static user-facing copy and defaults for the Sidebar. */

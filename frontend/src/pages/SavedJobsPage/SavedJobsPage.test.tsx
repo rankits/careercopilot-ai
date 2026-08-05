@@ -1,16 +1,19 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type * as ReactQueryNS from '@tanstack/react-query';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
 import type { ApplicationDto } from '@/features/applications/types/application.types';
 
 import { SavedJobsPage } from './SavedJobsPage';
 
-const { listSavedJobsMock, useQueryOverride } = vi.hoisted(() => ({
+const { listSavedJobsMock, unsaveJobMock, useQueryOverride } = vi.hoisted(() => ({
   listSavedJobsMock: vi.fn(),
+  unsaveJobMock: vi.fn(),
   useQueryOverride: { current: null as null | Record<string, unknown> },
 }));
 
@@ -19,6 +22,20 @@ vi.mock('@/features/applications/services/applications.service', () => ({
     listSavedJobs: listSavedJobsMock,
   },
 }));
+
+vi.mock('@/features/applications/hooks/useSaveJob', async () => {
+  const actual = await vi.importActual<typeof import('@/features/applications/hooks/useSaveJob')>(
+    '@/features/applications/hooks/useSaveJob',
+  );
+  return {
+    ...actual,
+    useSaveJob: () => ({
+      isSaving: false,
+      saveJob: vi.fn(),
+      unsaveJob: unsaveJobMock,
+    }),
+  };
+});
 
 vi.mock('@tanstack/react-query', async (importOriginal) => {
   const actual = await importOriginal<typeof ReactQueryNS>();
@@ -53,7 +70,7 @@ function savedJob(overrides: Partial<ApplicationDto> = {}): ApplicationDto {
     originalJobUrl: null,
     primarySourceType: 'MANUAL',
     priority: 'MEDIUM',
-    remoteType: null,
+    remoteType: 'REMOTE',
     salaryCurrency: null,
     salaryMax: null,
     salaryMin: null,
@@ -71,13 +88,15 @@ function renderPage() {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={['/saved-jobs']}>
-        <Routes>
-          <Route path="/saved-jobs" element={<SavedJobsPage />} />
-          <Route path="/jobs-feed" element={<p>Job feed</p>} />
-          <Route path="/jobs/:jobId" element={<p>Job detail</p>} />
-        </Routes>
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={['/saved-jobs']}>
+          <Routes>
+            <Route path="/saved-jobs" element={<SavedJobsPage />} />
+            <Route path="/jobs-feed" element={<p>Job feed</p>} />
+            <Route path="/jobs/:jobId" element={<p>Job detail</p>} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }
@@ -85,6 +104,8 @@ function renderPage() {
 describe('SavedJobsPage', () => {
   beforeEach(() => {
     listSavedJobsMock.mockReset();
+    unsaveJobMock.mockReset();
+    unsaveJobMock.mockResolvedValue(undefined);
     useQueryOverride.current = null;
   });
 
@@ -105,11 +126,11 @@ describe('SavedJobsPage', () => {
     renderPage();
 
     expect(await screen.findByRole('status')).toHaveTextContent(/no saved jobs yet/i);
-    await user.click(screen.getByRole('link', { name: /browse job feed/i }));
+    await user.click(screen.getByRole('link', { name: /browse jobs/i }));
     expect(screen.getByText('Job feed')).toBeInTheDocument();
   });
 
-  it('renders saved jobs and links to detail when jobId exists', async () => {
+  it('renders saved jobs and opens detail with the same navigation as Job Feed', async () => {
     const user = userEvent.setup();
     listSavedJobsMock.mockResolvedValueOnce([
       savedJob({ id: 'a1', jobTitle: 'Frontend Engineer', companyName: 'Acme', jobId: 'job-1' }),
@@ -125,10 +146,23 @@ describe('SavedJobsPage', () => {
     expect(await screen.findByRole('heading', { name: 'Frontend Engineer' })).toBeInTheDocument();
     expect(screen.getByText('Acme')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Manual entry' })).toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /view job/i })).toHaveLength(1);
+    expect(screen.getByRole('button', { name: /view frontend engineer/i })).toBeInTheDocument();
 
-    await user.click(screen.getByRole('link', { name: /view job/i }));
+    await user.click(screen.getByRole('button', { name: /view frontend engineer/i }));
     expect(screen.getByText('Job detail')).toBeInTheDocument();
+  });
+
+  it('unsaves a job optimistically and shows a toast', async () => {
+    const user = userEvent.setup();
+    listSavedJobsMock.mockResolvedValue([savedJob()]);
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: 'Frontend Engineer' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /unsave frontend engineer/i }));
+
+    await waitFor(() => expect(unsaveJobMock).toHaveBeenCalledWith('job-1'));
+    expect(await screen.findByText(/removed from saved jobs/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Frontend Engineer' })).not.toBeInTheDocument();
   });
 
   it('shows Error message and retries', async () => {
@@ -153,7 +187,7 @@ describe('SavedJobsPage', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent(/unable to load saved jobs/i);
   });
 
-  it('disables Retry while isFetching is true', () => {
+  it('hides Retry while isFetching is true', () => {
     useQueryOverride.current = {
       data: undefined,
       error: new Error('temp'),
@@ -164,7 +198,7 @@ describe('SavedJobsPage', () => {
     };
 
     renderPage();
-    expect(screen.getByRole('button', { name: /retry/i })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: /retry/i })).not.toBeInTheDocument();
   });
 
   it('covers empty data length via undefined data', () => {
