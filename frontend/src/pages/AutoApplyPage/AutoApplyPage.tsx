@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 
-import { ROUTES } from '@/constants/routes';
 import { useSetupStatus } from '@/features/auto-apply/hooks/useSetupStatus';
+
+import { ROUTES } from '@/constants/routes';
 import type { SetupSectionId } from '@/features/auto-apply/types/autoApply.types';
 import { focusSetupField } from '@/features/auto-apply/utils/setupFieldFocus';
 import { tabForSetupSection } from '@/features/auto-apply/utils/setupSectionNavigation';
@@ -10,14 +11,14 @@ import { Box, Tab, Tabs, Typography } from '@/lib/material';
 
 import { AnswersTab } from './AnswersTab';
 import { ConsentsTab } from './ConsentsTab';
+import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { answerKeyForMissingField, type AutoApplyTabId } from './missingFieldNavigation';
 import { ProfileTab } from './ProfileTab';
 import { ResumeVersionsTab } from './ResumeVersionsTab';
 import { RulesTab } from './RulesTab';
-import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { SetupChecklist } from './SetupChecklist';
 import { SetupDirtyProvider, useSetupDirtyNavigation } from './SetupDirtyContext';
-import { SubmissionsTab, type NavigateFixAction } from './SubmissionsTab';
+import { AssistedApplicationsList } from './AssistedApplicationsList';
 
 const TABS: { id: AutoApplyTabId; label: string }[] = [
   { id: 'profile', label: 'Profile' },
@@ -25,7 +26,7 @@ const TABS: { id: AutoApplyTabId; label: string }[] = [
   { id: 'resumes', label: 'Resume Versions' },
   { id: 'rules', label: 'Exclusions' },
   { id: 'consents', label: 'Consents' },
-  { id: 'submissions', label: 'Submissions' },
+  { id: 'submissions', label: 'Assisted applications' },
 ];
 
 const TAB_IDS = new Set<string>(TABS.map((tab) => tab.id));
@@ -141,32 +142,6 @@ function AutoApplyPageContent() {
     }
   }, [searchParams]);
 
-  const handleNavigateFix: NavigateFixAction = (action) => {
-    if (action.destination.kind === 'route') {
-      void navigate(action.destination.href);
-      return;
-    }
-
-    if (action.destination.kind === 'section') {
-      confirmIfDirty(() =>
-        selectSection(action.destination.sectionId, action.destination.fieldId ?? action.field ?? null),
-      );
-      return;
-    }
-
-    const tab = action.destination.tab;
-    const fieldId = action.destination.fieldId ?? action.field;
-    confirmIfDirty(() => {
-      if (tab === 'answers' && fieldId) {
-        setSuggestedAnswerKey(answerKeyForMissingField(fieldId) ?? fieldId);
-      } else {
-        setSuggestedAnswerKey(undefined);
-      }
-      applyTab(tab, undefined, fieldId ?? null);
-      focusSetupField(fieldId ?? null);
-    });
-  };
-
   return (
     <Box sx={{ p: { xs: 2, md: 4 }, pb: { xs: 10, md: 4 } }}>
       <Typography component="h1" sx={{ mb: 0.5 }} variant="h4">
@@ -208,7 +183,7 @@ function AutoApplyPageContent() {
         {activeTab === 'resumes' && <ResumeVersionsTab />}
         {activeTab === 'rules' && <RulesTab />}
         {activeTab === 'consents' && <ConsentsTab />}
-        {activeTab === 'submissions' && <SubmissionsTab onNavigateFix={handleNavigateFix} />}
+        {activeTab === 'submissions' && <AssistedApplicationsList />}
       </Box>
     </Box>
   );
