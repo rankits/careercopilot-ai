@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -51,7 +51,7 @@ describe('AuthForm', () => {
 
     expect(handleGoogle).toHaveBeenCalledTimes(1);
     expect(handleLinkedIn).toHaveBeenCalledTimes(1);
-    expect(handleSubmit).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(handleSubmit).toHaveBeenCalledTimes(1));
   });
 
   it('shows validation errors from the active yup schema', async () => {
