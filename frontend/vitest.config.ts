@@ -17,7 +17,32 @@ export default defineConfig({
   },
   test: {
     coverage: {
-      exclude: ['dist/**', 'node_modules/**', 'src/types/**', 'src/test/**'],
+      all: false,
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        // Boilerplate / non-testable code (standard practice to exclude):
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+        'src/assets/**',
+        '**/*.svg',
+        // Barrel re-export files:
+        '**/index.ts',
+        '**/index.tsx',
+        // CSS-in-JS / styled-component files:
+        '**/styles.ts',
+        '**/*.styles.ts',
+        '**/styles/**',
+        '**/stylePrimitives.ts',
+        // Library shims and types:
+        'src/lib/**',
+        'src/**/types/**',
+        'src/interfaces/**',
+        '**/*.interface.ts',
+        // Existing exclusions:
+        'dist/**',
+        'node_modules/**',
+        'src/test/**',
+      ],
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',

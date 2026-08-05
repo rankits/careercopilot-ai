@@ -17,9 +17,16 @@ export { EmptyText, FileTile, ScoreBadge } from '../../styles/shared';
 export const DefineRoleShell = styled(Box)({
   display: 'grid',
   gap: spacing[5],
-  gridTemplateColumns: 'minmax(0, 1fr) 22.5rem',
+  gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 22.5rem)',
+  minWidth: 0,
+  overflowX: 'hidden',
   padding: `${spacing[5]} ${spacing[7]} ${spacing[6]}`,
+  width: '100%',
   '@media (max-width: 72rem)': { gridTemplateColumns: '1fr' },
+  '@media (max-width: 48rem)': {
+    gap: spacing[3],
+    padding: `${spacing[3]} ${spacing[3]} ${spacing[5]}`,
+  },
 
   '& .main': { alignContent: 'start', display: 'grid', gap: spacing[3], minWidth: 0 },
   '& .section-heading': { display: 'grid', gap: spacing[2] },
@@ -73,6 +80,14 @@ export const DefineRoleShell = styled(Box)({
       width: '100%',
       '& > button': { flex: 1 },
     },
+  },
+  '& .role-actions': {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[3],
+    justifyContent: 'flex-end',
+    marginTop: spacing[2],
   },
   '& .aside': { alignSelf: 'start', display: 'grid', gap: spacing[4] },
   '& .aside-card': {

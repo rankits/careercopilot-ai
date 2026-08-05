@@ -37,6 +37,83 @@ export type AtsScoreResult = {
   sectionScores: SectionScores;
 };
 
+/** How dense a section body looks (0–25). */
+const sectionSubstance = (content: string, header: RegExp): number => {
+  const match = content.match(
+    new RegExp(
+      `${header.source}[:\\s]*([\\s\\S]{0,1200}?)(?=\\n(?:[A-Z][A-Za-z ]{2,40})\\b|$)`,
+      'i',
+    ),
+  );
+  const body = (match?.[1] ?? '').replace(/\s+/g, ' ').trim();
+  if (!body) return 0;
+  return Math.min(25, Math.floor(body.length / 35));
+};
+
+/**
+ * Deterministic section scores from resume content + live skill/keyword match.
+ * Do not trust model JSON here — compact models often echo static 20/30/40 values.
+ */
+export const computeSectionScoresFromContent = (input: {
+  resumeText: string;
+  skillMatch: number;
+  keywordMatch: number;
+}): SectionScores => {
+  const content = input.resumeText || '';
+  const skill = clampScore(input.skillMatch);
+  const kw = clampScore(input.keywordMatch);
+
+  const hasSummary = /professional\s+summary|\bsummary\b|\bprofile\b|\bobjective\b/i.test(content);
+  const hasExperience = /work\s+experience|\bexperience\b|\bemployment\b/i.test(content);
+  const hasSkills = /\bskills\b|technologies|tech\s+stack/i.test(content);
+  const hasEducation = /\beducation\b|university|bachelor|master|b\.?\s?tech|\bdegree\b/i.test(
+    content,
+  );
+  const hasProjects = /\bprojects?\b/i.test(content);
+  const hasAchievements = /\bachievements?\b|\bawards?\b/i.test(content);
+
+  return {
+    summary: hasSummary
+      ? clampScore(
+          18 +
+            sectionSubstance(content, /(?:professional\s+)?summary|\bprofile\b|\bobjective\b/i) +
+            Math.round(skill * 0.28) +
+            Math.round(kw * 0.22),
+        )
+      : clampScore(Math.round(kw * 0.12)),
+    experience: hasExperience
+      ? clampScore(
+          22 +
+            sectionSubstance(content, /(?:work\s+)?experience|\bemployment\b/i) +
+            Math.round(skill * 0.38) +
+            Math.round(kw * 0.18),
+        )
+      : clampScore(Math.round(skill * 0.15)),
+    // Skills section tracks live skill match directly (primary signal).
+    skills: hasSkills
+      ? clampScore(Math.max(skill, Math.round(skill * 0.92 + (skill > 0 ? 6 : 0))))
+      : clampScore(skill),
+    education: hasEducation
+      ? clampScore(42 + sectionSubstance(content, /\beducation\b/i) + Math.round(kw * 0.12))
+      : 0,
+    projects: hasProjects
+      ? clampScore(
+          20 +
+            sectionSubstance(content, /\bprojects?\b/i) +
+            Math.round(skill * 0.32) +
+            Math.round(kw * 0.12),
+        )
+      : 0,
+    achievements: hasAchievements
+      ? clampScore(
+          30 +
+            sectionSubstance(content, /\bachievements?\b|\bawards?\b/i) +
+            Math.round(skill * 0.22),
+        )
+      : 0,
+  };
+};
+
 const EMPTY_SKILL_ANALYSIS: SkillAnalysis = {
   matchedSkills: [],
   missingSkills: [],
@@ -82,15 +159,14 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
   const recoveredMissing = missingKeywords.filter((item) => termAppearsIn(content, item.term));
   const retainedMatched = matchedKeywords.filter((item) => termAppearsIn(content, item.term));
 
-  const targetSkills = uniqSkills([
-    ...skillAnalysis.matchedSkills,
-    ...skillAnalysis.missingSkills,
-    ...skillAnalysis.recommendedSkills,
-  ]);
-  const matchedSkillCount = targetSkills.filter((skill) => termAppearsIn(content, skill)).length;
+  const targetSkills = uniqSkills([...skillAnalysis.matchedSkills, ...skillAnalysis.missingSkills]);
+  // Fall back to recommended only when matched/missing were empty.
+  const skillUniverse =
+    targetSkills.length > 0 ? targetSkills : uniqSkills(skillAnalysis.recommendedSkills);
+  const matchedSkillCount = skillUniverse.filter((skill) => termAppearsIn(content, skill)).length;
   const skillMatch =
-    targetSkills.length > 0
-      ? clampScore((matchedSkillCount / targetSkills.length) * 100)
+    skillUniverse.length > 0
+      ? clampScore((matchedSkillCount / skillUniverse.length) * 100)
       : keywordMatch;
 
   const newlyMatchedSkills = skillAnalysis.missingSkills.filter((skill) =>
@@ -139,7 +215,18 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
     const suggested = item.suggestedText?.trim();
     if (!suggested) return false;
     const probe = suggested.length > 80 ? suggested.slice(0, 60) : suggested;
-    return contentLower.includes(probe.toLowerCase()) || termAppearsIn(content, probe);
+    if (contentLower.includes(probe.toLowerCase()) || termAppearsIn(content, probe)) return true;
+    // Skills applies often land as a rewritten list, not the exact suggestion string.
+    if (/skill/i.test(item.category)) {
+      const tokens = suggested
+        .split(/[,|;/\n]+/)
+        .map((token) => token.trim())
+        .filter((token) => token.length > 1);
+      if (tokens.length === 0) return false;
+      const present = tokens.filter((token) => termAppearsIn(content, token)).length;
+      return present / tokens.length >= 0.5;
+    }
+    return false;
   });
 
   const appliedRatio =
@@ -180,7 +267,7 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
     (sum, item) => sum + importanceWeight(item.importance),
     0,
   );
-  const skillRecoveryPoints = newlyMatchedSkills.length * 2.5;
+  const skillRecoveryPoints = newlyMatchedSkills.length * 2.8;
   const suggestionPoints = appliedHits.reduce((sum, item) => sum + impactWeight(item.impact), 0);
   const retentionPenalty =
     matchedKeywords.length > 0
@@ -188,14 +275,30 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
       : 0;
 
   const improvementPoints = Math.min(
-    38,
+    40,
     keywordRecoveryPoints + skillRecoveryPoints + suggestionPoints,
   );
 
+  const skillsRecoveredWell =
+    skillUniverse.length > 0 &&
+    (skillMatch >= 80 ||
+      (skillAnalysis.missingSkills.length > 0 &&
+        newlyMatchedSkills.length / skillAnalysis.missingSkills.length >= 0.7));
+  const suggestionsAppliedWell =
+    input.appliedSuggestions.length === 0 ? false : appliedRatio >= 0.4 || appliedHits.length >= 1;
+  // Trust Optimize "APPLIED" marks even when exact suggestion text drifted after edits.
+  const markedApplied = input.appliedSuggestions.length > 0;
+  const optimizeSucceeded =
+    (skillsRecoveredWell && (suggestionsAppliedWell || markedApplied)) ||
+    (skillMatch >= 90 &&
+      (suggestionsAppliedWell || markedApplied || newlyMatchedSkills.length >= 2)) ||
+    (skillMatch >= 95 && keywordMatch >= 65) ||
+    (skillMatch >= 100 && markedApplied);
+
   let atsScore: number;
-  if (improvementPoints >= 2) {
+  if (improvementPoints >= 2 || optimizeSucceeded) {
     // Guaranteed uplift when the edited resume recovers keywords/skills or lands applied text.
-    const uplift = Math.max(3, Math.round(improvementPoints * 0.75));
+    const uplift = Math.max(optimizeSucceeded ? 18 : 2, Math.round(improvementPoints * 0.75));
     atsScore = clampScore(Math.max(absoluteScore, baseline + uplift - retentionPenalty));
   } else {
     // No meaningful edits: stay near baseline unless matched keywords were removed.
@@ -208,14 +311,55 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
     );
   }
 
-  const sectionScores: SectionScores = {
-    summary: clampScore(hasSummary ? 55 + highCoverage * 30 + appliedRatio * 10 : 25),
-    experience: clampScore(hasExperience ? 55 + skillMatch * 0.25 : 25),
-    skills: clampScore(skillMatch * 0.85 + (hasSkills ? 10 : 0)),
-    education: clampScore(hasEducation ? 75 : 40),
-    projects: clampScore(/projects?/i.test(content) ? 70 + skillMatch * 0.15 : 35),
-    achievements: clampScore(/achievements?|awards?/i.test(content) ? 70 : 40),
-  };
+  // Soft ceiling — strong JD matches land ~88–94; typical good applies ~80–87. Never 99.
+  const overallCoverage =
+    (clampScore(keywordMatch) + clampScore(skillMatch) + clampScore(jdCoverage * 100)) / 300;
+  const softCeiling =
+    overallCoverage >= 0.92 || (skillMatch >= 95 && keywordMatch >= 85)
+      ? 94
+      : overallCoverage >= 0.8 || skillMatch >= 90
+        ? 91
+        : overallCoverage >= 0.65 || skillMatch >= 80
+          ? 87
+          : overallCoverage >= 0.5
+            ? 84
+            : 82;
+  // Low initial ATS (e.g. 35–45) must still be able to climb into the mid/high 70s after Optimize.
+  const maxUpliftFromBaseline = optimizeSucceeded
+    ? 45
+    : overallCoverage >= 0.9
+      ? 36
+      : overallCoverage >= 0.7
+        ? 30
+        : overallCoverage >= 0.5
+          ? 24
+          : 16;
+  atsScore = Math.min(atsScore, softCeiling, baseline + maxUpliftFromBaseline);
+
+  // When skills largely match + suggestions landed, land in a clear “ATS improved” band.
+  if (optimizeSucceeded) {
+    const optimizeFloor =
+      skillMatch >= 95 && keywordMatch >= 80
+        ? 80
+        : skillMatch >= 90 || (skillMatch >= 85 && suggestionsAppliedWell)
+          ? 78
+          : 74;
+    atsScore = Math.max(atsScore, Math.min(optimizeFloor, softCeiling));
+  }
+
+  // Tiny deterministic jitter so identical “perfect” runs don’t always show the same top digit.
+  const jitterSeed =
+    (presentKeywordCount * 7 + matchedSkillCount * 11 + appliedHits.length * 13) % 3;
+  if (atsScore >= softCeiling - 1 && softCeiling >= 90) {
+    atsScore = Math.max(baseline, softCeiling - jitterSeed);
+  }
+  atsScore = clampScore(atsScore);
+
+  const sectionScores = computeSectionScoresFromContent({
+    resumeText: content,
+    skillMatch,
+    keywordMatch,
+  });
 
   return {
     atsScore,
