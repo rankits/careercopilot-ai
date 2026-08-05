@@ -1,6 +1,7 @@
 import { HeaderNotification, HeaderSearch, HeaderUserMenu } from '@/components/molecules';
 
 import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.png';
+import { APP_HEADER_DEFAULTS, BRAND_NAME } from '@/constants/ui';
 
 import { HeaderActions, HeaderRoot, MobileLogo, SearchWrap } from './styles';
 
@@ -17,19 +18,19 @@ export interface AppHeaderProps {
 }
 
 export function AppHeader({
-  notificationCount = 3,
+  notificationCount = APP_HEADER_DEFAULTS.notificationCount,
   onLogoutClick,
   onNotificationClick,
   onSettingsClick,
   onUserMenuClick,
   searchPlaceholder,
   userAvatarUrl,
-  userName = 'User',
+  userName = APP_HEADER_DEFAULTS.userName,
   userRoleLabel,
 }: AppHeaderProps) {
   return (
     <HeaderRoot>
-      <MobileLogo alt="Career Copilot" src={penguinLogoUrl} />
+      <MobileLogo alt={BRAND_NAME} src={penguinLogoUrl} />
 
       <SearchWrap>
         <HeaderSearch placeholder={searchPlaceholder} />

@@ -1,5 +1,6 @@
 import type { KeyboardEvent } from 'react';
 
+import { CHAT_INPUT_COPY } from '@/constants/ui';
 import { CircularProgress } from '@/lib/material';
 
 import { ChatInputRoot, ChatTextField, SendButton, SendIcon } from './styles';
@@ -18,7 +19,7 @@ export function ChatInput({
   isSending = false,
   onChange,
   onSend,
-  placeholder = 'Ask Career Copilot…',
+  placeholder = CHAT_INPUT_COPY.placeholder,
   value,
 }: ChatInputProps) {
   const canSend = value.trim().length > 0 && !disabled && !isSending;
@@ -45,7 +46,7 @@ export function ChatInput({
         variant="outlined"
       />
       <SendButton
-        aria-label="Send message"
+        aria-label={CHAT_INPUT_COPY.sendAriaLabel}
         disabled={!canSend}
         onClick={() => {
           if (canSend) onSend();
