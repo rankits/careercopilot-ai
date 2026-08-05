@@ -32,6 +32,7 @@ import {
   ApplicationReadinessRuleResult,
   ApplicationReadinessStage,
   CONSUMED_APPLICATION_STATUSES,
+  SetupCompletenessResult,
 } from '@/modules/auto-apply/types/application-readiness.types.js';
 import {
   jobMatchesRemotePreferences,
@@ -738,6 +739,202 @@ export class ApplicationReadinessService implements IApplicationReadinessService
       evaluatedRules,
       evaluatedAt,
     );
+  }
+
+  /**
+   * Profile-side PLAN blocking checks without job context.
+   * Used by setup-status `readyForAssistedApply` — same rules as the PLAN gate
+   * for contact, work auth, verified answers, sponsorship requirement, experience,
+   * and resume (excludes job-specific checks such as match score, channel, eligibility).
+   */
+  async evaluateSetupCompleteness(userId: string): Promise<SetupCompletenessResult> {
+    const stage: ApplicationReadinessStage = 'PLAN';
+    const applyMode = 'ASSISTED' as const;
+    const blockingReasons: ApplicationReadinessReason[] = [];
+    const evaluatedAt = new Date();
+
+    const push = (
+      check: Parameters<typeof stageSeverity>[0],
+      reason: ApplicationReadinessReason,
+      ruleStatus: ApplicationReadinessRuleResult['status'],
+    ) => {
+      const severity = stageSeverity(check, stage, applyMode);
+      if (severity === 'SKIP') return;
+      if (severity === 'WARNING') return;
+      if (ruleStatus === 'FAILED') {
+        blockingReasons.push({ ...reason, severity: 'BLOCKING' });
+      }
+    };
+
+    if (!this.featureFlags.isAutoApplyEnabled()) {
+      push(
+        'featureEnabled',
+        {
+          code: READINESS_REASON_CODES.FEATURE_DISABLED,
+          message: 'Auto Apply is currently disabled by configuration.',
+          rule: 'featureEnabled',
+          severity: 'BLOCKING',
+        },
+        'FAILED',
+      );
+      return { ready: false, blockingReasons, evaluatedAt };
+    }
+
+    const resolvedRule = (await this.ruleRepository.findByUserId(userId)) ?? {
+      ...DEFAULT_APPLICATION_RULE,
+    };
+
+    if (resolvedRule.autopilotPausedAt) {
+      push(
+        'pauseStatus',
+        {
+          code: READINESS_REASON_CODES.AUTO_APPLY_PAUSED,
+          message: 'Auto Apply is paused for this account.',
+          rule: 'pauseStatus',
+          severity: 'BLOCKING',
+        },
+        'FAILED',
+      );
+    }
+
+    const profile = await this.profileRepository.findByUserId(userId);
+    if (!profile) {
+      push(
+        'profileComplete',
+        {
+          code: READINESS_REASON_CODES.PROFILE_MISSING,
+          message: 'Candidate application profile has not been set up.',
+          field: 'profile',
+          rule: 'profileComplete',
+          severity: 'BLOCKING',
+          collectionMode: 'ONBOARDING',
+        },
+        'FAILED',
+      );
+    }
+
+    const contact = await this.userContactLookup.findByUserId(userId);
+    if (!contact?.firstName?.trim() || !contact?.lastName?.trim()) {
+      push(
+        'contactIdentity',
+        {
+          code: READINESS_REASON_CODES.CONTACT_NAME_MISSING,
+          message: 'First and last name are required before applying.',
+          field: 'name',
+          rule: 'contactIdentity',
+          severity: 'BLOCKING',
+          collectionMode: 'ONBOARDING',
+        },
+        'FAILED',
+      );
+    } else if (!contact.email?.trim()) {
+      push(
+        'contactIdentity',
+        {
+          code: READINESS_REASON_CODES.CONTACT_EMAIL_MISSING,
+          message: 'A verified account email is required before applying.',
+          field: 'email',
+          rule: 'contactIdentity',
+          severity: 'BLOCKING',
+          collectionMode: 'ONBOARDING',
+        },
+        'FAILED',
+      );
+    }
+
+    const answers = await this.answerRepository.findManyByUserId(userId);
+    const answerByKey = new Map(answers.map((a) => [a.questionKey, a]));
+
+    const missingBaseline = BASELINE_REQUIRED_ANSWER_KEYS.filter((key) => {
+      const answer = answerByKey.get(key);
+      return !answer || !answer.answer.trim() || answer.source !== 'USER_VERIFIED';
+    });
+
+    if (missingBaseline.includes('work_authorization')) {
+      push(
+        'workAuthorization',
+        {
+          code: READINESS_REASON_CODES.WORK_AUTHORIZATION_MISSING,
+          message: 'Work authorization must be verified before this application can continue.',
+          field: 'workAuthorization',
+          rule: 'workAuthorization',
+          severity: 'BLOCKING',
+          collectionMode: 'PROGRESSIVE',
+        },
+        'FAILED',
+      );
+    }
+
+    if (missingBaseline.includes('notice_period_days')) {
+      push(
+        'verifiedAnswers',
+        {
+          code: READINESS_REASON_CODES.NOTICE_PERIOD_MISSING,
+          message: 'Notice period must be verified before this application can continue.',
+          field: 'noticePeriodDays',
+          rule: 'verifiedAnswers',
+          severity: 'BLOCKING',
+          collectionMode: 'ONBOARDING',
+        },
+        'FAILED',
+      );
+    }
+
+    const sponsorshipAnswer = answerByKey.get('sponsorship_required');
+    const requiresSponsorship = profile?.preferences.requiresSponsorship;
+    if (requiresSponsorship === undefined && !sponsorshipAnswer?.answer.trim()) {
+      push(
+        'sponsorship',
+        {
+          code: READINESS_REASON_CODES.SPONSORSHIP_REQUIREMENT_MISSING,
+          message: 'Confirm whether you require employer sponsorship.',
+          field: 'requiresSponsorship',
+          rule: 'sponsorship',
+          severity: 'BLOCKING',
+          collectionMode: 'PROGRESSIVE',
+        },
+        'FAILED',
+      );
+    }
+
+    const experienceAnswer = answerByKey.get('years_of_experience');
+    if (!experienceAnswer?.answer.trim()) {
+      push(
+        'experience',
+        {
+          code: READINESS_REASON_CODES.EXPERIENCE_MISSING,
+          message: 'Years of experience must be verified before this application can continue.',
+          field: 'yearsOfExperience',
+          rule: 'experience',
+          severity: 'BLOCKING',
+          collectionMode: 'PROGRESSIVE',
+        },
+        'FAILED',
+      );
+    }
+
+    const versions = await this.resumeVersionRepository.findManyByUserId(userId);
+    const activeResume = versions.find((v) => v.isActive) ?? null;
+    if (!activeResume) {
+      push(
+        'resumeApproved',
+        {
+          code: READINESS_REASON_CODES.RESUME_MISSING,
+          message: 'An approved active resume version is required.',
+          field: 'resumeVersionId',
+          rule: 'resumeApproved',
+          severity: 'BLOCKING',
+          collectionMode: 'ONBOARDING',
+        },
+        'FAILED',
+      );
+    }
+
+    return {
+      ready: blockingReasons.length === 0,
+      blockingReasons,
+      evaluatedAt,
+    };
   }
 
   private decide(blocking: ApplicationReadinessReason[]): ApplicationReadinessDecision {

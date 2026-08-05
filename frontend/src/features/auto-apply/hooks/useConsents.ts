@@ -23,6 +23,7 @@ export function useGrantConsent() {
     mutationKey: ['auto-apply', 'consents', 'grant'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.consents });
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.setupStatus });
     },
   });
 }
@@ -35,6 +36,7 @@ export function useRevokeConsent() {
     mutationKey: ['auto-apply', 'consents', 'revoke'],
     onSuccess: async () => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.consents });
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.setupStatus });
     },
   });
 }

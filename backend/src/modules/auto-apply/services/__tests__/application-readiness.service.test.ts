@@ -353,4 +353,32 @@ describe('ApplicationReadinessService', () => {
       result.blockingReasons.some((r) => r.code === READINESS_REASON_CODES.RESUME_MISSING),
     ).toBe(true);
   });
+
+  describe('evaluateSetupCompleteness', () => {
+    it('returns ready when profile-side PLAN checks pass', async () => {
+      const result = await service.evaluateSetupCompleteness(userId);
+      expect(result.ready).toBe(true);
+      expect(result.blockingReasons).toHaveLength(0);
+    });
+
+    it('blocks when work authorization is missing', async () => {
+      answerRepo.findManyByUserId.mockResolvedValue(
+        readyAnswers.filter((a) => a.questionKey !== 'work_authorization'),
+      );
+      const result = await service.evaluateSetupCompleteness(userId);
+      expect(result.ready).toBe(false);
+      expect(
+        result.blockingReasons.some(
+          (r) => r.code === READINESS_REASON_CODES.WORK_AUTHORIZATION_MISSING,
+        ),
+      ).toBe(true);
+    });
+
+    it('blocks when feature flag is disabled', async () => {
+      featureFlags.isAutoApplyEnabled.mockReturnValue(false);
+      const result = await service.evaluateSetupCompleteness(userId);
+      expect(result.ready).toBe(false);
+      expect(result.blockingReasons[0]?.code).toBe(READINESS_REASON_CODES.FEATURE_DISABLED);
+    });
+  });
 });

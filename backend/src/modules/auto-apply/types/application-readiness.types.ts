@@ -53,6 +53,13 @@ export interface ApplicationReadinessResult {
   evaluatedAt: Date;
 }
 
+/** Profile-side readiness at PLAN (no job context) — shared by setup-status. */
+export interface SetupCompletenessResult {
+  ready: boolean;
+  blockingReasons: ApplicationReadinessReason[];
+  evaluatedAt: Date;
+}
+
 /** Statuses that consume a daily/weekly application slot (AJA-RULE-002). */
 export const CONSUMED_APPLICATION_STATUSES = [
   'QUEUED',
