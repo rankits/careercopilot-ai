@@ -12,6 +12,7 @@ import { jobApplicationService } from '@/modules/auto-apply/controllers/job-appl
 import { channelDetectionService } from '@/modules/auto-apply/controllers/channel-detection.controller.js';
 import { autoApplyEventService } from '@/modules/auto-apply/controllers/audit-event.controller.js';
 import { applicationReadinessService } from '@/modules/auto-apply/wiring/readiness.wiring.js';
+import { PrismaApplicationPageAnalysisRepository } from '@/modules/auto-apply/repositories/prisma-application-page-analysis.repository.js';
 import { requireUserPrincipalId, getParam } from '@/modules/auto-apply/utils/require-user.util.js';
 
 const answerRepository = new PrismaApplicationAnswerRepository();
@@ -32,6 +33,7 @@ export const applicationPlannerService = new ApplicationPlannerService(
   answerRepository,
   applicationReadinessService,
   contentPreparation,
+  new PrismaApplicationPageAnalysisRepository(),
 );
 
 export const createPlanController = async (req: Request, res: Response, next: NextFunction) => {

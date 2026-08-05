@@ -203,6 +203,52 @@ describe('ApplicationPlannerService', () => {
     expect(resumeVersionRepo.findManyByUserId).not.toHaveBeenCalled();
   });
 
+  it('includes page analysis summary when an analysis repository is wired', async () => {
+    const analysisRepo = {
+      findLatestByJobId: vi.fn().mockResolvedValue({
+        id: 'analysis-1',
+        provider: 'ASHBY',
+        submissionCapability: 'EXTERNAL_MANUAL',
+        formStatus: 'NOT_INSPECTED',
+        outcomeStatus: 'JOB_PAGE_ANALYZED',
+        jobPageUrl: 'https://jobs.ashbyhq.com/linear/x',
+        analyzedAt: new Date().toISOString(),
+        expiresAt: new Date().toISOString(),
+        requirements: [
+          {
+            code: 'WORK_REGION',
+            importance: 'REQUIRED',
+            assertion: 'REQUIRES',
+            required: true,
+            confidence: 0.9,
+            evidenceStrength: 'EXPLICIT_TEXT',
+            sourceText: 'North America',
+            reviewStatus: 'AUTO_ACCEPTED',
+          },
+        ],
+      }),
+      findByIdempotencyKey: vi.fn(),
+      create: vi.fn(),
+    };
+
+    planner = new ApplicationPlannerService(
+      jobAppRepo,
+      jobAppService,
+      channelService,
+      resumeVersionRepo,
+      answerRepo,
+      readinessService,
+      undefined,
+      analysisRepo,
+    );
+
+    const result = await planner.createPlan('user-1', 'job-1');
+    expect(result.pageAnalysis?.provider).toBe('ASHBY');
+    expect(result.pageAnalysis?.submissionCapability).toBe('EXTERNAL_MANUAL');
+    expect(result.pageAnalysis?.formStatus).toBe('NOT_INSPECTED');
+    expect(result.pageAnalysis?.requirements[0]?.code).toBe('WORK_REGION');
+  });
+
   it('returns UNSUPPORTED_CHANNEL and stops at APPLICATION_PLANNING when no channel is available', async () => {
     vi.mocked(channelService.detectChannel).mockResolvedValue({
       channel: 'UNSUPPORTED',
