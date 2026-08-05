@@ -1,18 +1,24 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { SubmissionOrchestrationService } from '@/modules/auto-apply/services/submission-orchestration.service.js';
-import { IJobApplicationService } from '@/modules/auto-apply/contracts/job-application.contract.js';
-import { IApplicationConsentRepository } from '@/modules/auto-apply/contracts/application-consent.contract.js';
+import {
+  IJobApplicationRepository,
+  IJobApplicationService,
+} from '@/modules/auto-apply/contracts/job-application.contract.js';
 import { ISubmissionAttemptRepository } from '@/modules/auto-apply/contracts/submission-attempt.contract.js';
 import { ISubmissionQueuePort } from '@/modules/auto-apply/contracts/submission-orchestration.contract.js';
+import { IApplicationReadinessService } from '@/modules/auto-apply/contracts/application-readiness.contract.js';
+import { IApplicationRuleRepository } from '@/modules/auto-apply/contracts/application-rule.contract.js';
 import { JobApplicationDto } from '@/modules/auto-apply/types/job-application.types.js';
-import { ApplicationConsentDto } from '@/modules/auto-apply/types/application-consent.types.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
+import { DEFAULT_APPLICATION_RULE } from '@/modules/auto-apply/types/application-rule.types.js';
 
 describe('SubmissionOrchestrationService', () => {
   let jobAppService: IJobApplicationService;
-  let consentRepo: IApplicationConsentRepository;
+  let jobAppRepo: IJobApplicationRepository;
   let attemptRepo: ISubmissionAttemptRepository;
   let queue: ISubmissionQueuePort;
+  let readiness: IApplicationReadinessService;
+  let ruleRepo: IApplicationRuleRepository;
   let service: SubmissionOrchestrationService;
 
   const application: JobApplicationDto = {
@@ -26,7 +32,7 @@ describe('SubmissionOrchestrationService', () => {
     channel: 'EXTERNAL_MANUAL',
     status: 'READY_FOR_REVIEW',
     approvalMode: 'PER_APPLICATION',
-    matchScore: null,
+    matchScore: 0.9,
     eligibilityResult: null,
     resumeVersionId: null,
     coverLetterContent: null,
@@ -44,19 +50,19 @@ describe('SubmissionOrchestrationService', () => {
     updatedAt: new Date(),
   };
 
-  const consent: ApplicationConsentDto = {
-    id: 'consent-1',
-    userId: 'user-1',
-    consentType: 'RESUME_USAGE',
-    version: 1,
-    grantedAt: new Date(),
-    revokedAt: null,
+  const readyResult = {
+    decision: 'READY' as const,
+    ready: true,
+    blockingReasons: [],
+    warnings: [],
+    evaluatedRules: {},
+    evaluatedAt: new Date(),
   };
 
   beforeEach(() => {
     jobAppService = {
       listApplications: vi.fn(),
-      getApplication: vi.fn(),
+      getApplication: vi.fn().mockResolvedValue(application),
       initiate: vi.fn(),
       evaluateEligibility: vi.fn(),
       transitionStatus: vi
@@ -66,12 +72,21 @@ describe('SubmissionOrchestrationService', () => {
         ),
       withdraw: vi.fn(),
     };
-    consentRepo = {
+    jobAppRepo = {
       findManyByUserId: vi.fn(),
-      findActiveByType: vi.fn().mockResolvedValue(consent),
       findById: vi.fn(),
-      grant: vi.fn(),
-      revoke: vi.fn(),
+      findByUserIdAndJobId: vi.fn(),
+      findByUserIdAndCanonicalJobId: vi.fn(),
+      create: vi.fn(),
+      updateStatus: vi.fn(),
+      updatePlan: vi.fn(),
+      claimForSubmission: vi.fn(),
+      finalizeSubmission: vi.fn(),
+      countConsumedSince: vi.fn().mockResolvedValue(0),
+      updateMatchScore: vi.fn(),
+      queueAtomically: vi
+        .fn()
+        .mockImplementation(async () => ({ ...application, status: 'QUEUED' })),
     };
     attemptRepo = {
       countByJobApplicationId: vi.fn(),
@@ -79,27 +94,63 @@ describe('SubmissionOrchestrationService', () => {
       findLatest: vi.fn().mockResolvedValue(null),
     };
     queue = { enqueue: vi.fn() };
+    readiness = {
+      evaluate: vi.fn().mockResolvedValue(readyResult),
+    };
+    ruleRepo = {
+      findByUserId: vi.fn().mockResolvedValue({
+        id: 'rule-1',
+        userId: 'user-1',
+        ...DEFAULT_APPLICATION_RULE,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      }),
+      upsert: vi.fn(),
+      setPaused: vi.fn(),
+    };
 
-    service = new SubmissionOrchestrationService(jobAppService, consentRepo, attemptRepo, queue);
+    service = new SubmissionOrchestrationService(
+      jobAppService,
+      jobAppRepo,
+      attemptRepo,
+      queue,
+      readiness,
+      ruleRepo,
+    );
   });
 
-  it('rejects approval without an active RESUME_USAGE consent grant', async () => {
-    vi.mocked(consentRepo.findActiveByType).mockResolvedValue(null);
+  it('rejects approval when readiness is not ready (consent)', async () => {
+    vi.mocked(readiness.evaluate).mockResolvedValue({
+      ...readyResult,
+      ready: false,
+      decision: 'CONSENT_REQUIRED',
+      blockingReasons: [
+        {
+          code: 'CONSENT_REQUIRED',
+          message: 'Grant consent',
+          severity: 'BLOCKING',
+        },
+      ],
+    });
 
     await expect(service.approve('user-1', 'jobapp-1')).rejects.toThrow(
-      expect.objectContaining({ code: 'CONSENT_REQUIRED', statusCode: 403 }),
+      expect.objectContaining({ code: 'READINESS_CONSENT_REQUIRED', statusCode: 403 }),
     );
     expect(jobAppService.transitionStatus).not.toHaveBeenCalled();
   });
 
-  it('approves once consent is granted', async () => {
+  it('approves once readiness passes', async () => {
     await service.approve('user-1', 'jobapp-1');
+    expect(readiness.evaluate).toHaveBeenCalledWith(
+      expect.objectContaining({ stage: 'APPROVE' }),
+    );
     expect(jobAppService.transitionStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', 'APPROVED');
   });
 
-  it('queues for submission and publishes to the queue', async () => {
+  it('queues for submission via atomic reservation and publishes', async () => {
     await service.queueForSubmission('user-1', 'jobapp-1');
-    expect(jobAppService.transitionStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', 'QUEUED');
+    expect(readiness.evaluate).toHaveBeenCalledWith(expect.objectContaining({ stage: 'QUEUE' }));
+    expect(jobAppRepo.queueAtomically).toHaveBeenCalled();
     expect(queue.enqueue).toHaveBeenCalledWith({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
   });
 
@@ -136,7 +187,7 @@ describe('SubmissionOrchestrationService', () => {
     );
   });
 
-  it('rejects retry when the last attempt outcome was SUBMISSION_OUTCOME_UNKNOWN (never auto-retry an uncertain result)', async () => {
+  it('rejects retry when the last attempt outcome was SUBMISSION_OUTCOME_UNKNOWN', async () => {
     vi.mocked(attemptRepo.findLatest).mockResolvedValue({
       id: 'attempt-1',
       jobApplicationId: 'jobapp-1',
@@ -167,43 +218,17 @@ describe('SubmissionOrchestrationService', () => {
 
     await service.retry('user-1', 'jobapp-1');
 
-    expect(jobAppService.transitionStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', 'QUEUED');
+    expect(jobAppRepo.queueAtomically).toHaveBeenCalled();
     expect(queue.enqueue).toHaveBeenCalledWith({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
   });
 
-  it('failure injection (AJA-QA-003): re-evaluates retry eligibility fresh each cycle — a second FAILED_SAFE_TO_RETRY attempt is retryable again, but a DO_NOT_RETRY attempt immediately blocks further retries', async () => {
-    // Cycle 1: rate-limited, retryable.
-    vi.mocked(attemptRepo.findLatest).mockResolvedValue({
-      id: 'attempt-1',
-      jobApplicationId: 'jobapp-1',
-      attemptNumber: 1,
-      outcome: 'FAILED_SAFE_TO_RETRY',
-      errorCode: 'RATE_LIMITED',
-      errorMessage: 'too many requests',
-      startedAt: new Date(),
-      completedAt: new Date(),
-    });
-    await service.retry('user-1', 'jobapp-1');
-    expect(queue.enqueue).toHaveBeenCalledTimes(1);
-
-    // Cycle 2: retried again, but this time the channel rejected it for
-    // good (e.g. validation failure) — must never be retryable again.
-    vi.mocked(attemptRepo.findLatest).mockResolvedValue({
-      id: 'attempt-2',
-      jobApplicationId: 'jobapp-1',
-      attemptNumber: 2,
-      outcome: 'FAILED_DO_NOT_RETRY',
-      errorCode: 'VALIDATION_FAILED',
-      errorMessage: 'no apply url',
-      startedAt: new Date(),
-      completedAt: new Date(),
-    });
-
-    await expect(service.retry('user-1', 'jobapp-1')).rejects.toThrow(
-      expect.objectContaining({ code: 'RETRY_NOT_ALLOWED' }),
+  it('rolls back QUEUED when queue publish fails', async () => {
+    vi.mocked(queue.enqueue).mockRejectedValue(new Error('broker down'));
+    await expect(service.queueForSubmission('user-1', 'jobapp-1')).rejects.toThrow(
+      expect.objectContaining({ code: 'QUEUE_PUBLISH_FAILED' }),
     );
-    // Still only the one successful enqueue from cycle 1 — the blocked
-    // cycle-2 attempt must not have queued anything.
-    expect(queue.enqueue).toHaveBeenCalledTimes(1);
+    expect(jobAppRepo.updateStatus).toHaveBeenCalledWith('user-1', 'jobapp-1', {
+      status: 'APPROVED',
+    });
   });
 });

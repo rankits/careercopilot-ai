@@ -18,12 +18,11 @@ import { DEFAULT_APPLICATION_RULE } from '@/modules/auto-apply/types/application
  *
  * Checks the current `Job` schema genuinely supports (remote type, salary
  * ceiling, company/title/source exclusion) are evaluated for real.
- * Work-authorization, sponsorship, and experience-range checks are always
- * reported NOT_EVALUATED — `Job` carries no structured field for any of
- * them today, and fabricating a pass/fail from unstructured description
- * text would violate the "AI/rules never invent eligibility data" principle
- * this whole feature is built around. A future ingestion-schema ticket, not
- * this one, is what would upgrade those to real checks.
+ * Work-authorization, sponsorship, and experience-range still report
+ * NOT_EVALUATED on the job side (no structured Job fields). Candidate-side
+ * fail-closed requirements for those fields live in
+ * `ApplicationReadinessService` (INFORMATION_REQUIRED), not here — this
+ * service remains the hard incompatibility engine (FAILED → NOT_ELIGIBLE).
  */
 export class EligibilityService implements IEligibilityService {
   constructor(

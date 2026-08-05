@@ -23,6 +23,7 @@ export interface UpdatePlanData {
   channel: AutoApplyChannelValue;
   resumeVersionId: string | null;
   planInputsHash: string;
+  coverLetterContent?: string | null;
 }
 
 export interface FinalizeSubmissionData {
@@ -65,6 +66,21 @@ export interface IJobApplicationRepository {
     userId: string,
     id: string,
     data: FinalizeSubmissionData,
+  ): Promise<JobApplicationDto>;
+  /** Counts submissions in consumed statuses (queued/submitting/submitted/…)
+   * created or queued since `since` — used by the readiness limit gate. */
+  countConsumedSince(userId: string, since: Date): Promise<number>;
+  /** Persists a trusted match score snapshot used by the readiness gate. */
+  updateMatchScore(userId: string, id: string, matchScore: number): Promise<JobApplicationDto>;
+  /**
+   * Atomically re-checks daily/weekly consumed counts under a row lock on
+   * the user's ApplicationRule, then transitions APPROVED|SUBMISSION_FAILED → QUEUED.
+   * Throws LIMIT_REACHED / INVALID_STATUS_TRANSITION / APPLICATION_NOT_FOUND.
+   */
+  queueAtomically(
+    userId: string,
+    id: string,
+    limits: { dailyLimit: number; weeklyLimit: number | null },
   ): Promise<JobApplicationDto>;
 }
 

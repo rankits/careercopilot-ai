@@ -479,12 +479,58 @@ export const autoApplySwagger = {
         config: {
           summary: 'Run the hard eligibility engine for a job against the caller profile and rules',
           description:
-            'Independent of recommendation match scoring — a high-match job can still come back NOT_ELIGIBLE. Work authorization, sponsorship, and experience-range checks are always NOT_EVALUATED until job ingestion carries structured fields for them.',
+            'Independent of recommendation match scoring — a high-match job can still come back NOT_ELIGIBLE. Candidate-side fail-closed checks for work authorization, sponsorship, and experience live on GET /readiness/{jobId}.',
           params: [jobIdParam],
           responses: {
             200: {
               description: 'Eligibility evaluated',
               schema: successSchema('OK', eligibilityResultSchema),
+            },
+            ...commonSecureResponses,
+          },
+        },
+        secure: true,
+      },
+    },
+    TAGS,
+  ),
+
+  ...createApiEndpoint(
+    `${BASE_URL}/readiness/{jobId}`,
+    {
+      get: {
+        config: {
+          summary: 'Evaluate the central Application Readiness Gate for a job',
+          description:
+            'Authoritative safety/eligibility decision used at PLAN, APPROVE, QUEUE, and SUBMIT. Query `stage` (PLAN|APPROVE|QUEUE|SUBMIT) and optional `jobApplicationId`. Returns structured blockingReasons without sensitive answer values.',
+          params: [jobIdParam],
+          responses: {
+            200: {
+              description: 'Readiness evaluated',
+              schema: successSchema('OK', {
+                type: 'object',
+                properties: {
+                  decision: {
+                    type: 'string',
+                    enum: [
+                      'READY',
+                      'INFORMATION_REQUIRED',
+                      'NOT_ELIGIBLE',
+                      'LIMIT_REACHED',
+                      'DUPLICATE',
+                      'CONSENT_REQUIRED',
+                      'CHANNEL_UNSUPPORTED',
+                      'JOB_UNAVAILABLE',
+                      'FEATURE_DISABLED',
+                    ],
+                  },
+                  ready: { type: 'boolean' },
+                  blockingReasons: { type: 'array', items: { type: 'object' } },
+                  warnings: { type: 'array', items: { type: 'object' } },
+                  evaluatedRules: { type: 'object' },
+                  evaluatedAt: { type: 'string', format: 'date-time' },
+                },
+              }),
             },
             ...commonSecureResponses,
           },
