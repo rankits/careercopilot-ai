@@ -8,28 +8,38 @@ import {
 } from '@/features/auto-apply/hooks/useConsents';
 
 import type { ConsentType } from '@/features/auto-apply/types/autoApply.types';
-import { Box, Chip, CircularProgress, Paper, Typography } from '@/lib/material';
+import { Alert, Box, Chip, CircularProgress, Paper, Typography } from '@/lib/material';
 
-const CONSENT_TYPES: { type: ConsentType; label: string; description: string }[] = [
+const CONSENT_TYPES: {
+  type: ConsentType;
+  label: string;
+  description: string;
+  requiredForSetup?: boolean;
+}[] = [
   {
     type: 'RESUME_USAGE',
-    label: 'Use my approved resume',
-    description: 'Allows the planner to attach an approved resume version to a plan.',
+    label: 'Use my resume on applications',
+    description:
+      'Lets Career Copilot attach the resume you approved when preparing an application. Without this, we cannot put your resume on a job for you — even for Assisted Apply.',
+    requiredForSetup: true,
   },
   {
     type: 'CONTENT_GENERATION',
-    label: 'Generate job-specific content',
-    description: 'Allows AI-assisted cover letter / answer generation, once that capability ships.',
+    label: 'Draft cover letters and answers for me',
+    description:
+      'Lets us suggest cover letters and screening answers based on your profile and the job. You always review and can edit before anything is used. Turn this off if you only want to write everything yourself.',
   },
   {
     type: 'EMAIL_SUBMISSION',
-    label: 'Submit applications via my connected email',
-    description: 'Required before any email-channel auto-apply can send on your behalf.',
+    label: 'Send applications from my connected email',
+    description:
+      'Only needed if a job is applied by email. We will never send mail without your approval for that application. You can leave this off for normal website apply links.',
   },
   {
     type: 'AUTOPILOT_SUBMISSION',
-    label: 'Submit under autopilot rules',
-    description: 'Required before full autopilot (Mode C) can act without per-application review.',
+    label: 'Apply automatically under my rules',
+    description:
+      'Full hands-off applying. Not available yet — leave this off. When it ships, it will only run within the daily limits and rules you set, and you can pause it anytime.',
   },
 ];
 
@@ -48,10 +58,10 @@ export function ConsentsTab() {
   const handleGrant = async (type: ConsentType) => {
     try {
       await grantConsent.mutateAsync(type);
-      showToast({ message: 'Consent granted.', severity: 'success' });
+      showToast({ message: 'Permission saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : 'Unable to grant consent.',
+        message: error instanceof Error ? error.message : 'Unable to save this permission.',
         severity: 'error',
       });
     }
@@ -60,10 +70,10 @@ export function ConsentsTab() {
   const handleRevoke = async (id: string) => {
     try {
       await revokeConsent.mutateAsync(id);
-      showToast({ message: 'Consent revoked.', severity: 'success' });
+      showToast({ message: 'Permission turned off.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : 'Unable to revoke consent.',
+        message: error instanceof Error ? error.message : 'Unable to turn off this permission.',
         severity: 'error',
       });
     }
@@ -80,9 +90,14 @@ export function ConsentsTab() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}>
       <Typography color="text.secondary" variant="body2">
-        Nothing is used, generated, or sent on your behalf without an active grant here — revoking
-        takes effect immediately.
+        These are permissions — not technical settings. Turn on only what you are comfortable with.
+        You can change your mind anytime; turning something off takes effect immediately.
       </Typography>
+
+      <Alert severity="info">
+        To start Assisted Apply you need at least &quot;Use my resume on applications&quot;. Other
+        permissions are optional until you use those features.
+      </Alert>
 
       <Paper variant="outlined">
         {CONSENT_TYPES.map((item, index) => {
@@ -92,7 +107,7 @@ export function ConsentsTab() {
               key={item.type}
               sx={{
                 display: 'flex',
-                alignItems: 'center',
+                alignItems: 'flex-start',
                 gap: 2,
                 p: 2,
                 borderTop: index === 0 ? 'none' : '1px solid',
@@ -100,16 +115,21 @@ export function ConsentsTab() {
               }}
             >
               <Box sx={{ flex: 1 }}>
-                <Typography fontWeight={600} variant="body2">
-                  {item.label}
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                  <Typography fontWeight={600} variant="body2">
+                    {item.label}
+                  </Typography>
+                  {item.requiredForSetup && (
+                    <Chip color="warning" label="Required" size="small" variant="outlined" />
+                  )}
+                </Box>
                 <Typography color="text.secondary" variant="body2">
                   {item.description}
                 </Typography>
               </Box>
               <Chip
                 color={active ? 'success' : 'default'}
-                label={active ? 'Granted' : 'Not granted'}
+                label={active ? 'On' : 'Off'}
                 size="small"
                 variant="outlined"
               />
@@ -121,7 +141,7 @@ export function ConsentsTab() {
                   tone="danger"
                   variant="outline"
                 >
-                  Revoke
+                  Turn off
                 </Button>
               ) : (
                 <Button
@@ -129,7 +149,7 @@ export function ConsentsTab() {
                   onClick={() => void handleGrant(item.type)}
                   size="small"
                 >
-                  Grant
+                  Turn on
                 </Button>
               )}
             </Box>

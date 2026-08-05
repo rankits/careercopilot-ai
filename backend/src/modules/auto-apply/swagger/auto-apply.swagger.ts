@@ -55,6 +55,10 @@ const candidateProfileDtoSchema = {
       properties: {
         desiredRoles: { type: 'array', items: { type: 'string' } },
         preferredLocations: { type: 'array', items: { type: 'string' } },
+        remotePreferences: {
+          type: 'array',
+          items: { type: 'string', enum: ['REMOTE', 'HYBRID', 'ONSITE'] },
+        },
         remotePreference: { type: 'string', enum: remotePreferenceEnum },
         expectedSalary: {
           type: 'object',
@@ -100,6 +104,7 @@ const resumeVersionDtoSchema = {
     resumeId: { type: 'string', format: 'uuid' },
     label: { type: 'string', example: 'Backend Resume' },
     category: { type: 'string', example: 'Backend' },
+    tags: { type: 'array', items: { type: 'string' }, example: ['backend', 'nodejs'] },
     isActive: { type: 'boolean' },
   },
 };
@@ -319,6 +324,7 @@ export const autoApplySwagger = {
               resumeId: { type: 'string', format: 'uuid' },
               label: { type: 'string', example: 'Backend Resume' },
               category: { type: 'string', example: 'Backend' },
+              tags: { type: 'array', items: { type: 'string' } },
               isActive: { type: 'boolean' },
             },
           },

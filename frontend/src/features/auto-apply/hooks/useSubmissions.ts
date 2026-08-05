@@ -45,6 +45,42 @@ export function useWithdrawSubmission() {
   });
 }
 
+export function useDeleteSubmission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        await autoApplyService.deleteSubmission(id);
+      } catch (error) {
+        throw normalizeAutoApplyError(error, 'Unable to delete this submission.');
+      }
+    },
+    mutationKey: ['auto-apply', 'submissions', 'delete'],
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.submissions });
+    },
+  });
+}
+
+export function useReopenSubmission() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      try {
+        return await autoApplyService.reopenSubmission(id);
+      } catch (error) {
+        throw normalizeAutoApplyError(error, 'Unable to reopen this submission.');
+      }
+    },
+    mutationKey: ['auto-apply', 'submissions', 'reopen'],
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.submissions });
+    },
+  });
+}
+
 export function useApproveSubmission() {
   const queryClient = useQueryClient();
 

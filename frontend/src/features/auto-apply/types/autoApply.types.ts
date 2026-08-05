@@ -4,12 +4,17 @@ export interface BackendSuccessResponse<T> {
   status: 'success';
 }
 
-export type RemotePreference = 'REMOTE' | 'HYBRID' | 'ONSITE' | 'ANY';
+export type WorkModePreference = 'REMOTE' | 'HYBRID' | 'ONSITE';
+
+/** @deprecated Prefer remotePreferences. */
+export type RemotePreference = WorkModePreference | 'ANY';
 
 export interface CandidateApplicationPreferences {
   desiredRoles: string[];
   preferredLocations: string[];
-  remotePreference: RemotePreference;
+  remotePreferences: WorkModePreference[];
+  /** @deprecated Prefer remotePreferences. */
+  remotePreference?: RemotePreference;
   expectedSalary?: { min?: number; max?: number; currency?: string };
   noticePeriodDays?: number;
   willingToRelocate?: boolean;
@@ -57,6 +62,7 @@ export interface ApprovedResumeVersionDto {
   resumeId: string;
   label: string;
   category: string;
+  tags: string[];
   isActive: boolean;
 }
 
@@ -64,6 +70,7 @@ export interface CreateResumeVersionPayload {
   resumeId: string;
   label: string;
   category: string;
+  tags?: string[];
   isActive?: boolean;
 }
 

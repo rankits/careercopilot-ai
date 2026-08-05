@@ -11,8 +11,31 @@ import { UpsertCandidateApplicationProfileInput } from '@/modules/auto-apply/val
 const DEFAULT_PREFERENCES: CandidateApplicationPreferences = {
   desiredRoles: [],
   preferredLocations: [],
+  remotePreferences: [],
   remotePreference: 'ANY',
 };
+
+function normalizePreferences(raw: unknown): CandidateApplicationPreferences {
+  const prefs = (raw as Partial<CandidateApplicationPreferences>) ?? {};
+  const remotePreferences =
+    prefs.remotePreferences && prefs.remotePreferences.length > 0
+      ? prefs.remotePreferences
+      : prefs.remotePreference && prefs.remotePreference !== 'ANY'
+        ? [prefs.remotePreference]
+        : prefs.remotePreference === 'ANY'
+          ? (['REMOTE', 'HYBRID', 'ONSITE'] as const).slice()
+          : [];
+
+  return {
+    ...DEFAULT_PREFERENCES,
+    ...prefs,
+    remotePreferences: [...remotePreferences],
+    remotePreference:
+      remotePreferences.length === 0 || remotePreferences.length >= 3
+        ? 'ANY'
+        : remotePreferences[0],
+  };
+}
 
 function toDto(record: {
   id: string;
@@ -26,7 +49,7 @@ function toDto(record: {
   return {
     id: record.id,
     userId: record.userId,
-    preferences: (record.preferences as CandidateApplicationPreferences) ?? DEFAULT_PREFERENCES,
+    preferences: normalizePreferences(record.preferences),
     links: (record.links as CandidateApplicationLinks) ?? {},
     verification: (record.verification as CandidateApplicationVerification) ?? {},
     createdAt: record.createdAt,

@@ -98,6 +98,7 @@ export { default as Checkbox } from '@mui/material/Checkbox';
 export { default as CircularProgress } from '@mui/material/CircularProgress';
 export { default as Chip } from '@mui/material/Chip';
 export { default as ClickAwayListener } from '@mui/material/ClickAwayListener';
+export { default as Collapse } from '@mui/material/Collapse';
 export { default as Dialog } from '@mui/material/Dialog';
 export { default as DialogActions } from '@mui/material/DialogActions';
 export { default as DialogContent } from '@mui/material/DialogContent';

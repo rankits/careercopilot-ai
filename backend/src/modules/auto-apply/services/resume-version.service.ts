@@ -32,6 +32,7 @@ export class ApprovedResumeVersionService {
       resumeId: input.resumeId,
       label: input.label,
       category: input.category,
+      tags: input.tags ?? [],
       isActive: input.isActive,
     });
   }

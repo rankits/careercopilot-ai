@@ -1,4 +1,7 @@
-export type RemotePreference = 'REMOTE' | 'HYBRID' | 'ONSITE' | 'ANY';
+export type WorkModePreference = 'REMOTE' | 'HYBRID' | 'ONSITE';
+
+/** @deprecated Prefer `remotePreferences`. Kept for older stored profiles. */
+export type RemotePreference = WorkModePreference | 'ANY';
 
 export interface SalaryRange {
   min?: number;
@@ -9,8 +12,12 @@ export interface SalaryRange {
 export interface CandidateApplicationPreferences {
   desiredRoles: string[];
   preferredLocations: string[];
-  remotePreference: RemotePreference;
+  /** Multi-select workplace modes. Empty = any (same as legacy ANY). */
+  remotePreferences: WorkModePreference[];
+  /** @deprecated Use remotePreferences. Still written for backward compatibility. */
+  remotePreference?: RemotePreference;
   expectedSalary?: SalaryRange;
+  /** Days until available. `0` means immediate joiner. */
   noticePeriodDays?: number;
   willingToRelocate?: boolean;
   requiresSponsorship?: boolean;
