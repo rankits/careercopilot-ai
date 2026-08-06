@@ -2,12 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
+
 import {
   useCandidateProfile,
   useUpsertCandidateProfile,
 } from '@/features/auto-apply/hooks/useCandidateProfile';
 import { useCurrentUser } from '@/features/user/hooks/useCurrentUser';
 import { useUpdateUserProfile } from '@/features/user/hooks/useUpdateUserProfile';
+
 import {
   Box,
   MenuItem,
@@ -16,7 +18,6 @@ import {
   TextField,
 } from '@/lib/material';
 
-import { SetupSectionHeading } from './SetupSectionHeading';
 import { useSetupDirty } from './SetupDirtyContext';
 import {
   COUNTRY_OPTIONS,
@@ -24,6 +25,7 @@ import {
   joinFullName,
   splitFullName,
 } from './setupFormUtils';
+import { SetupSectionHeading } from './SetupSectionHeading';
 
 type FieldErrors = Partial<
   Record<'fullName' | 'phone' | 'currentLocation' | 'currentCountry', string>
