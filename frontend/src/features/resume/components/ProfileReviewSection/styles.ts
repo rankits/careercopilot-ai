@@ -56,6 +56,12 @@ export const reviewSectionSx = {
       color: colorTokens.feedbackError,
     },
   },
+  fieldActionRow: {
+    display: 'flex',
+    justifyContent: 'flex-end',
+    mb: spacing[2],
+    width: '100%',
+  },
   multilineInput: {
     gridColumn: '1 / -1',
     minWidth: 0,

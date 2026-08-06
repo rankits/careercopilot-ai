@@ -94,3 +94,21 @@ export const updateCandidateProfileSchema = z.object({
       message: 'At least one field must be provided',
     }),
 });
+
+export const profileAiSuggestSchema = z.object({
+  body: z.object({
+    fullName: z.string().max(200).optional(),
+    email: z.string().max(320).optional(),
+    phone: z.string().max(40).optional(),
+    location: z.string().max(200).optional(),
+    currentCompany: z.string().max(200).optional(),
+    designation: z.string().max(200).optional(),
+    totalExperience: z.string().max(40).optional(),
+    summary: z.string().max(4000).optional(),
+    skills: z.string().max(4000).optional(),
+    workExperience: z.string().max(8000).optional(),
+    education: z.string().max(4000).optional(),
+    certifications: z.string().max(4000).optional(),
+    projects: z.string().max(8000).optional(),
+  }),
+});

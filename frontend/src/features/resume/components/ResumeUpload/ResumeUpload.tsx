@@ -248,15 +248,7 @@ export function ResumeUpload({ onRemove, onUpload, parseProgress, summary }: Res
               </Button>
             </Box>
           ) : (
-            <Button
-              onClick={(event) => {
-                event.stopPropagation();
-                inputRef.current?.click();
-              }}
-              size="medium"
-              sx={resumePrimaryActionSx}
-              type="button"
-            >
+            <Button disabled size="medium" sx={resumePrimaryActionSx} type="button">
               Parse resume
             </Button>
           )}

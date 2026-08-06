@@ -31,7 +31,13 @@ const toParsedResumeData = (value: unknown): ParsedResumeData => {
   const experience = Array.isArray(data.experience)
     ? (data.experience as Array<Record<string, unknown>>)
     : [];
+  const projects = Array.isArray(data.projects)
+    ? (data.projects as Array<Record<string, unknown>>)
+    : [];
   const firstExperience = isRecord(experience[0]) ? experience[0] : {};
+  const skills = Array.isArray(data.skills)
+    ? data.skills.filter((skill): skill is string => typeof skill === 'string')
+    : [];
 
   // The raw extraction doesn't always carry these under `personalDetails`
   // (the AI parser writes them to `professionalProfile`/top-level instead;
@@ -39,9 +45,32 @@ const toParsedResumeData = (value: unknown): ParsedResumeData => {
   // all). Backfill from wherever the parser actually put them so a
   // first-time confirm still produces a reasonably complete profile even
   // when the caller didn't submit reviewed form values (see `confirmProfile`).
-  if (typeof personalDetails.summary !== 'string') {
-    const summary = professionalProfile.summary ?? data.professionalSummary;
-    if (typeof summary === 'string') personalDetails.summary = summary;
+  if (typeof personalDetails.summary !== 'string' || !personalDetails.summary.trim()) {
+    const summary =
+      (typeof professionalProfile.summary === 'string' && professionalProfile.summary.trim()
+        ? professionalProfile.summary
+        : undefined) ??
+      (typeof data.professionalSummary === 'string' && data.professionalSummary.trim()
+        ? data.professionalSummary
+        : undefined);
+    if (typeof summary === 'string' && summary.trim()) {
+      personalDetails.summary = summary.trim();
+    } else {
+      const role =
+        (typeof firstExperience.title === 'string' && firstExperience.title) ||
+        (typeof firstExperience.raw === 'string' && firstExperience.raw.split(/[-–—|@]/)[0]) ||
+        (typeof personalDetails.designation === 'string' && personalDetails.designation) ||
+        'Professional';
+      const skillHint = skills.slice(0, 6).join(', ');
+      if (skillHint || experience.length) {
+        personalDetails.summary = [
+          `${String(role).trim()} with demonstrated experience across relevant roles.`,
+          skillHint ? `Core skills include ${skillHint}.` : null,
+        ]
+          .filter(Boolean)
+          .join(' ');
+      }
+    }
   }
   if (typeof personalDetails.designation !== 'string') {
     const designation =
@@ -62,12 +91,11 @@ const toParsedResumeData = (value: unknown): ParsedResumeData => {
   return {
     personalDetails,
     experience,
+    projects,
     education: Array.isArray(data.education)
       ? (data.education as Array<Record<string, unknown>>)
       : [],
-    skills: Array.isArray(data.skills)
-      ? data.skills.filter((skill): skill is string => typeof skill === 'string')
-      : [],
+    skills,
     certifications: Array.isArray(data.certifications)
       ? (data.certifications as Array<Record<string, unknown>>)
       : [],
