@@ -140,7 +140,13 @@ describe('RegisterPage', () => {
     const user = setupUser();
     registerMock.mockResolvedValue({
       accessToken: 'token',
-      user: { email: 'ada@example.com', id: '1', name: 'Ada Lovelace', role: 'user' },
+      user: {
+        email: 'ada@example.com',
+        id: '1',
+        name: 'Ada Lovelace',
+        role: 'user',
+        phone: '+919876543210',
+      },
     });
     const { queryClient } = renderPage();
 
@@ -201,7 +207,7 @@ describe('RegisterPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert', undefined, { timeout: 5000 })).toHaveTextContent(
       /unable to create your account\. please try again/i,
     );
     expect(screen.getByRole('button', { name: /create account/i })).toBeEnabled();

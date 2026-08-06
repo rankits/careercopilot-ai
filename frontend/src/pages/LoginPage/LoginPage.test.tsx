@@ -101,6 +101,23 @@ describe('LoginPage', () => {
     expect(screen.getByRole('heading', { name: /register destination/i })).toBeInTheDocument();
   });
 
+  it('opens and closes the forgot password dialog', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('link', { name: /forgot password/i }));
+
+    expect(await screen.findByRole('heading', { name: /forgot password\?/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /email address/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /close dialog/i }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: /forgot password\?/i })).not.toBeInTheDocument(),
+    );
+  });
+
   it('blocks missing and malformed credentials before calling the API', async () => {
     const user = userEvent.setup();
     renderPage();
