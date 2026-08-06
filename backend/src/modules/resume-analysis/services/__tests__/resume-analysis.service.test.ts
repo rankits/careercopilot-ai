@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const h = vi.hoisted(() => {
   const prisma = {
-    resume: { findUnique: vi.fn() },
+    resume: { findUnique: vi.fn(), findFirst: vi.fn() },
     resumeExtraction: { findFirst: vi.fn() },
     resumeAnalysis: {
       findFirst: vi.fn(),
@@ -22,7 +22,13 @@ const h = vi.hoisted(() => {
       deleteMany: vi.fn(),
       createMany: vi.fn(),
     },
-    resumeVersion: { create: vi.fn(), findMany: vi.fn(), findUnique: vi.fn(), delete: vi.fn() },
+    resumeVersion: {
+      create: vi.fn(),
+      findMany: vi.fn(),
+      findFirst: vi.fn(),
+      findUnique: vi.fn(),
+      delete: vi.fn(),
+    },
   };
   return {
     prisma,
@@ -269,7 +275,8 @@ const setupJobHappy = () => {
 /** Starts an analysis and flushes the scheduled runAnalysisJob microtask chain. */
 const flushAnalysisJob = async (input = INPUT) => {
   vi.useFakeTimers();
-  // The caller is responsible for resume.findUnique (used by both startAnalysis and getResumeText).
+  // The caller is responsible for resume.findFirst (assertOwnedResume, used by startAnalysis)
+  // and resume.findUnique (getResumeText).
   h.prisma.resumeAnalysis.findFirst.mockResolvedValue(null);
   h.prisma.resumeAnalysis.upsert.mockResolvedValue({ id: 'a-1' });
   const started = await service.startAnalysis(input);
@@ -287,9 +294,11 @@ beforeEach(() => {
   h.aiValidate.mockReset();
   h.scoreEdited.mockReset();
   h.jdCoverageExtras.current = [];
-  // Most methods begin with assertOwnedResume; default resume.findUnique to an owned row
-  // so these logic tests pass the guard. Ownership itself is covered by
+  // Most methods begin with assertOwnedResume (prisma.resume.findFirst); default it to an
+  // owned row so these logic tests pass the guard. Ownership itself is covered by
   // resume-analysis-ownership.test.ts.
+  h.prisma.resume.findFirst.mockResolvedValue({ id: 'r-1' });
+  // getResumeText still reads the resume row via findUnique (parseRuns / originalName).
   h.prisma.resume.findUnique.mockResolvedValue({ id: 'r-1' });
   // scoreEditedResume is called synchronously (not awaited) in recheckAts.
   h.scoreEdited.mockReturnValue({
@@ -319,7 +328,7 @@ describe('ResumeAnalysisService', () => {
   describe('startAnalysis', () => {
     it('creates an analysis row and schedules the job', async () => {
       vi.useFakeTimers();
-      h.prisma.resume.findUnique.mockResolvedValue({ id: 'r-1' });
+      h.prisma.resume.findFirst.mockResolvedValue({ id: 'r-1' });
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(null);
       h.prisma.resumeAnalysis.upsert.mockResolvedValue({ id: 'a-1' });
 
@@ -335,7 +344,7 @@ describe('ResumeAnalysisService', () => {
     });
 
     it('throws 404 when the resume does not exist', async () => {
-      h.prisma.resume.findUnique.mockResolvedValue(null);
+      h.prisma.resume.findFirst.mockResolvedValue(null);
       await expect(
         service.startAnalysis({
           resumeId: 'x',
@@ -350,7 +359,7 @@ describe('ResumeAnalysisService', () => {
   describe('getAnalysis', () => {
     it('returns null when there is no analysis', async () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(null);
-      await expect(service.getAnalysis('r-1')).resolves.toBeNull();
+      await expect(service.getAnalysis('r-1', 'u-1')).resolves.toBeNull();
     });
 
     it('marks a stale ANALYZING analysis as failed', async () => {
@@ -362,7 +371,7 @@ describe('ResumeAnalysisService', () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(stale);
       h.prisma.resumeAnalysis.update.mockResolvedValue(failed);
 
-      const result = await service.getAnalysis('r-1');
+      const result = await service.getAnalysis('r-1', 'u-1');
       expect(h.prisma.resumeAnalysis.update).toHaveBeenCalled();
       expect(result?.status).toBe('FAILED');
     });
@@ -370,27 +379,33 @@ describe('ResumeAnalysisService', () => {
     it('returns the shaped analysis for a completed one', async () => {
       const complete = analysis();
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(complete);
-      const result = await service.getAnalysis('r-1');
+      const result = await service.getAnalysis('r-1', 'u-1');
       expect(result?.status).toBe('COMPLETED');
       expect(result?.atsScore).toBe(70);
     });
 
-    it('does not fail an old ANALYZING row when the env value is not a number', async () => {
-      process.env.AI_RESUME_ANALYSIS_STALE_MS = 'not-a-number';
+    it('shapes a FAILED row even when the update result lacks analysisDetails', async () => {
+      // config caches env at load and numberFromEnv always yields a finite
+      // threshold, so a stale ANALYZING row is always updated; the update result
+      // may legitimately be missing analysisDetails and must not crash shaping.
       const stale = analysis({
         status: 'ANALYZING',
         updatedAt: new Date(Date.now() - 60 * 60 * 1000),
       });
+      const noDetails = { ...analysis({ status: 'FAILED' }), analysisDetails: undefined };
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(stale);
-      const result = await service.getAnalysis('r-1');
-      expect(h.prisma.resumeAnalysis.update).not.toHaveBeenCalled();
-      expect(result?.status).toBe('ANALYZING');
+      h.prisma.resumeAnalysis.update.mockResolvedValue(noDetails);
+
+      const result = await service.getAnalysis('r-1', 'u-1');
+      expect(h.prisma.resumeAnalysis.update).toHaveBeenCalled();
+      expect(result?.status).toBe('FAILED');
+      expect(result?.atsScore).toBe(70);
     });
 
     it('keeps a recent ANALYZING analysis as-is', async () => {
       const fresh = analysis({ status: 'ANALYZING', updatedAt: new Date(Date.now() - 1000) });
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(fresh);
-      const result = await service.getAnalysis('r-1');
+      const result = await service.getAnalysis('r-1', 'u-1');
       expect(h.prisma.resumeAnalysis.update).not.toHaveBeenCalled();
       expect(result?.status).toBe('ANALYZING');
     });
@@ -399,14 +414,14 @@ describe('ResumeAnalysisService', () => {
   describe('updateStep', () => {
     it('returns null without an analysis', async () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(null);
-      await expect(service.updateStep('r-1', 3)).resolves.toBeNull();
+      await expect(service.updateStep('r-1', 'u-1', 3)).resolves.toBeNull();
     });
 
     it('updates the step when an analysis exists', async () => {
       const a = analysis();
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(a);
       h.prisma.resumeAnalysis.update.mockResolvedValue({ ...a, currentStep: 3 });
-      const result = await service.updateStep('r-1', 3);
+      const result = await service.updateStep('r-1', 'u-1', 3);
       expect(h.prisma.resumeAnalysis.update).toHaveBeenCalledWith({
         where: { id: 'a-1' },
         data: { currentStep: 3 },
@@ -569,13 +584,13 @@ describe('ResumeAnalysisService', () => {
   describe('updateContent', () => {
     it('throws without an analysis', async () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(null);
-      await expect(service.updateContent('r-1', 'x')).rejects.toThrow('Analysis not found');
+      await expect(service.updateContent('r-1', 'u-1', 'x')).rejects.toThrow('Analysis not found');
     });
 
     it('persists edited content', async () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(analysis());
       h.prisma.resumeAnalysis.update.mockResolvedValue({});
-      await service.updateContent('r-1', 'new content');
+      await service.updateContent('r-1', 'u-1', 'new content');
       expect(h.prisma.resumeAnalysis.update).toHaveBeenCalledWith({
         where: { id: 'a-1' },
         data: { editedContent: 'new content' },
@@ -621,13 +636,13 @@ describe('ResumeAnalysisService', () => {
   describe('versions', () => {
     it('saveVersion throws without an analysis', async () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(null);
-      await expect(service.saveVersion('r-1', 'v1')).rejects.toThrow('Analysis not found');
+      await expect(service.saveVersion('r-1', 'u-1', 'v1')).rejects.toThrow('Analysis not found');
     });
 
     it('saveVersion creates a version row', async () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(analysis());
       h.prisma.resumeVersion.create.mockResolvedValue({ id: 1 });
-      const result = await service.saveVersion('r-1', 'v1', undefined, 'override content');
+      const result = await service.saveVersion('r-1', 'u-1', 'v1', 'override content');
       expect(h.prisma.resumeVersion.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({ content: 'override content', label: 'v1' }),
@@ -638,13 +653,13 @@ describe('ResumeAnalysisService', () => {
 
     it('getVersions returns an empty list without an analysis', async () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(null);
-      await expect(service.getVersions('r-1')).resolves.toEqual([]);
+      await expect(service.getVersions('r-1', 'u-1')).resolves.toEqual([]);
     });
 
     it('getVersions maps version rows', async () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(analysis());
       h.prisma.resumeVersion.findMany.mockResolvedValue([{ id: 1, label: 'v', content: 'c' }]);
-      const result = await service.getVersions('r-1');
+      const result = await service.getVersions('r-1', 'u-1');
       expect(result[0].resumeId).toBe('r-1');
     });
 
@@ -667,18 +682,20 @@ describe('ResumeAnalysisService', () => {
           },
         },
       ]);
-      const result = await service.listSavedVersions();
+      const result = await service.listSavedVersions('u-1');
       expect(result[0].resumeId).toBe('r-1');
       expect(result[0].resumeFileName).toBe('n.pdf');
     });
 
     it('getSavedVersion throws when missing', async () => {
-      h.prisma.resumeVersion.findUnique.mockResolvedValue(null);
-      await expect(service.getSavedVersion(9)).rejects.toThrow('Saved resume version not found');
+      h.prisma.resumeVersion.findFirst.mockResolvedValue(null);
+      await expect(service.getSavedVersion(9, 'u-1')).rejects.toThrow(
+        'Saved resume version not found',
+      );
     });
 
     it('getSavedVersion returns the version', async () => {
-      h.prisma.resumeVersion.findUnique.mockResolvedValue({
+      h.prisma.resumeVersion.findFirst.mockResolvedValue({
         id: 1,
         label: 'v',
         content: 'c',
@@ -689,12 +706,12 @@ describe('ResumeAnalysisService', () => {
         resumeFileName: 'n.pdf',
         analysis: { resumeId: 'r-1', resume: { originalName: 'n.pdf' } },
       });
-      const result = await service.getSavedVersion(1);
+      const result = await service.getSavedVersion(1, 'u-1');
       expect(result.resumeId).toBe('r-1');
     });
 
     it('getSavedVersion fills null fields from the analysis', async () => {
-      h.prisma.resumeVersion.findUnique.mockResolvedValue({
+      h.prisma.resumeVersion.findFirst.mockResolvedValue({
         id: 1,
         label: 'v',
         content: 'c',
@@ -710,28 +727,32 @@ describe('ResumeAnalysisService', () => {
           resume: { originalName: 'n.pdf' },
         },
       });
-      const result = await service.getSavedVersion(1);
+      const result = await service.getSavedVersion(1, 'u-1');
       expect(result.targetRole).toBe('T');
       expect(result.jobDescription).toBe('J');
       expect(result.resumeFileName).toBe('n.pdf');
     });
 
     it('deleteSavedVersion throws when missing', async () => {
-      h.prisma.resumeVersion.findUnique.mockResolvedValue(null);
-      await expect(service.deleteSavedVersion(9)).rejects.toThrow('Saved resume version not found');
+      h.prisma.resumeVersion.findFirst.mockResolvedValue(null);
+      await expect(service.deleteSavedVersion(9, 'u-1')).rejects.toThrow(
+        'Saved resume version not found',
+      );
     });
 
     it('deleteSavedVersion deletes and returns the id', async () => {
-      // assertOwnedVersion walks version -> analysis -> resume; the caller's userId is
-      // undefined here, so the nested resume just needs to exist.
-      h.prisma.resumeVersion.findUnique.mockResolvedValue({ id: 5, analysis: { resume: {} } });
+      // deleteSavedVersion walks version -> analysis -> resume via the nested where clause;
+      // the owning user's row just needs to exist.
+      h.prisma.resumeVersion.findFirst.mockResolvedValue({ id: 5, analysis: { resume: {} } });
       h.prisma.resumeVersion.delete.mockResolvedValue({});
-      await expect(service.deleteSavedVersion(5)).resolves.toEqual({ id: 5 });
+      await expect(service.deleteSavedVersion(5, 'u-1')).resolves.toEqual({ id: 5 });
     });
   });
 
   describe('exportResume', () => {
     const setupExport = () => {
+      // assertOwnedResume reads the resume row via findFirst (originalName feeds the filename).
+      h.prisma.resume.findFirst.mockResolvedValue({ id: 'r-1', originalName: 'my-resume.pdf' });
       // getResumeText reads resume.parseRuns[0].parsedData, so include it.
       h.prisma.resume.findUnique.mockResolvedValue({
         id: 'r-1',
@@ -744,7 +765,7 @@ describe('ResumeAnalysisService', () => {
 
     it('exports as txt', async () => {
       setupExport();
-      const result = await service.exportResume('r-1', 'txt');
+      const result = await service.exportResume('r-1', 'u-1', 'txt');
       expect(result.mimeType).toBe('text/plain');
       expect(result.fileName).toBe('my-resume_optimized.txt');
       expect(Buffer.from(result.content, 'base64').toString()).toContain('ATS Score: 0/100');
@@ -752,27 +773,27 @@ describe('ResumeAnalysisService', () => {
 
     it('exports as pdf', async () => {
       setupExport();
-      const result = await service.exportResume('r-1', 'pdf');
+      const result = await service.exportResume('r-1', 'u-1', 'pdf');
       expect(result.mimeType).toBe('application/pdf');
       expect(result.fileName).toBe('my-resume_optimized.pdf');
     });
 
     it('exports as docx', async () => {
       setupExport();
-      const result = await service.exportResume('r-1', 'docx');
+      const result = await service.exportResume('r-1', 'u-1', 'docx');
       expect(result.mimeType).toContain('wordprocessingml');
     });
 
     it('throws on an unsupported format', async () => {
       setupExport();
-      await expect(service.exportResume('r-1', 'xml' as never)).rejects.toThrow(
+      await expect(service.exportResume('r-1', 'u-1', 'xml' as never)).rejects.toThrow(
         'Unsupported export format',
       );
     });
 
     it('throws 404 when the resume is missing', async () => {
-      h.prisma.resume.findUnique.mockResolvedValue(null);
-      await expect(service.exportResume('r-1', 'txt')).rejects.toThrow('Resume not found');
+      h.prisma.resume.findFirst.mockResolvedValue(null);
+      await expect(service.exportResume('r-1', 'u-1', 'txt')).rejects.toThrow('Resume not found');
     });
   });
 
@@ -1229,7 +1250,7 @@ describe('ResumeAnalysisService', () => {
         ],
       });
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(a);
-      const result = (await service.getAnalysis('r-1')) as unknown as {
+      const result = (await service.getAnalysis('r-1', 'u-1')) as unknown as {
         failureReason?: string;
         invalidTarget?: boolean;
         invalidTargetMessage?: string;
@@ -1268,7 +1289,7 @@ describe('ResumeAnalysisService', () => {
         ],
       });
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(a);
-      const result = (await service.getAnalysis('r-1')) as unknown as {
+      const result = (await service.getAnalysis('r-1', 'u-1')) as unknown as {
         formattingScore: number;
         suggestions: Array<{ reason?: string }>;
         baselineAtsScore: number;
@@ -1493,7 +1514,7 @@ describe('ResumeAnalysisService', () => {
       const a = analysis({ editedContent: null });
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(a);
       h.prisma.resumeVersion.create.mockResolvedValue({ id: 1 });
-      await service.saveVersion('r-1', 'v2');
+      await service.saveVersion('r-1', 'u-1', 'v2');
       expect(h.prisma.resumeVersion.create).toHaveBeenCalledWith(
         expect.objectContaining({
           data: expect.objectContaining({
