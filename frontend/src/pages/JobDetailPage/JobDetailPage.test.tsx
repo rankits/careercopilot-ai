@@ -117,7 +117,7 @@ describe('JobDetailPage', () => {
     expect(screen.queryByText(/<div class="content-intro"/i)).not.toBeInTheDocument();
   });
 
-  it('shows See more for long descriptions', async () => {
+  it('shows View more for long descriptions', async () => {
     getJobMock.mockResolvedValue({
       ...baseJob,
       descriptionHtml: '',
@@ -126,8 +126,25 @@ describe('JobDetailPage', () => {
 
     renderDetail();
 
-    expect(await screen.findByRole('button', { name: /see more/i })).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /see less/i })).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: /view more/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /view less/i })).not.toBeInTheDocument();
+  });
+
+  it('expands and collapses the About this role description', async () => {
+    const user = userEvent.setup();
+    getJobMock.mockResolvedValue({
+      ...baseJob,
+      descriptionHtml: '',
+      descriptionText: 'Role overview. '.repeat(40),
+    });
+
+    renderDetail();
+
+    await user.click(await screen.findByRole('button', { name: /view more/i }));
+    expect(screen.getByRole('button', { name: /view less/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /view less/i }));
+    expect(screen.getByRole('button', { name: /view more/i })).toBeInTheDocument();
   });
 
   it('hides empty structured sections when backend returns unstructured prose', async () => {

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'reac
 import { useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/atoms';
+import { useToast } from '@/components/organisms/Toast/ToastContext';
 import { ResumeTemplatePreview } from '@/pages/ResumeBuilderPage/components/OptimizeStep/ResumeTemplatePreview';
 
 import { ROUTES } from '@/constants/routes';
@@ -109,6 +110,7 @@ function deriveMetrics(version: SavedResumeVersion) {
 
 export function SavedResumesPage() {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [versions, setVersions] = useState<SavedResumeVersion[]>([]);
   const [loading, setLoading] = useState(true);
   const [downloadingKey, setDownloadingKey] = useState<string | null>(null);
@@ -203,12 +205,12 @@ export function SavedResumesPage() {
           URL.revokeObjectURL(url);
         }
       } catch {
-        alert('Download failed. Please try again.');
+        showToast({ message: 'Download failed. Please try again.', severity: 'error' });
       } finally {
         setDownloadingKey(null);
       }
     },
-    [],
+    [showToast],
   );
 
   const openCardMenu = (event: MouseEvent<HTMLElement>, version: SavedResumeVersion) => {
@@ -227,7 +229,7 @@ export function SavedResumesPage() {
       if (preview?.id === deleteTarget.id) setPreview(null);
       setDeleteTarget(null);
     } catch {
-      alert('Could not delete this resume. Please try again.');
+      showToast({ message: 'Could not delete this resume. Please try again.', severity: 'error' });
     } finally {
       setDeleting(false);
     }

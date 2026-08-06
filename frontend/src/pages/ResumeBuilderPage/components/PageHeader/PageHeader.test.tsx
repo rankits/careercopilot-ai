@@ -26,10 +26,10 @@ describe('PageHeader', () => {
     expect(onBack).toHaveBeenCalled();
   });
 
-  it('hides Next on export step', () => {
-    render(<PageHeader canContinue current={10} onBack={vi.fn()} onNext={vi.fn()} />);
+  it('hides Back and Next on export step', () => {
+    render(<PageHeader canContinue current={10} onNext={vi.fn()} />);
 
     expect(screen.queryByRole('button', { name: /Next/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Back/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Back/i })).not.toBeInTheDocument();
   });
 });

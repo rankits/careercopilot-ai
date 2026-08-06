@@ -19,6 +19,7 @@ import type {
   OutboxRelaySummary,
 } from '@/infrastructure/outbox/outbox.types.js';
 import { JOB_SEMANTIC_CONTENT_CHANGED_EVENT } from '@/modules/jobs/events/job.events.js';
+import { RESUME_ANALYSIS_REQUESTED_EVENT } from '@/modules/resume-analysis/events/resume-analysis.events.js';
 import { logger } from '@/shared/logger/logger.js';
 
 export interface OutboxRelayOptions {
@@ -42,6 +43,12 @@ export const resolveOutboxEventRoute = (eventType: string): OutboxEventRoute | n
       routingKey: MessageRoutingKeys.JOB_SEMANTIC_CONTENT_CHANGED,
     };
   }
+  if (eventType === RESUME_ANALYSIS_REQUESTED_EVENT) {
+    return {
+      exchange: MessageExchanges.DOMAIN_EVENTS,
+      routingKey: MessageRoutingKeys.RESUME_ANALYSIS_REQUESTED,
+    };
+  }
   return null;
 };
 
@@ -52,6 +59,12 @@ export const prepareOutboxRelayTopology = async (
     MessageQueues.JOB_EMBEDDING_REQUESTS,
     MessageExchanges.DOMAIN_EVENTS,
     MessageRoutingKeys.JOB_SEMANTIC_CONTENT_CHANGED,
+    QoSPresets.RELIABLE_DLQ,
+  );
+  await bus.ensureQueue(
+    MessageQueues.RESUME_ANALYSIS_REQUESTS,
+    MessageExchanges.DOMAIN_EVENTS,
+    MessageRoutingKeys.RESUME_ANALYSIS_REQUESTED,
     QoSPresets.RELIABLE_DLQ,
   );
 };

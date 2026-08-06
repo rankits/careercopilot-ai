@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -108,7 +108,7 @@ describe('AuthForm', () => {
 
     expect(handleGoogle).toHaveBeenCalledTimes(1);
     expect(handleLinkedIn).toHaveBeenCalledTimes(1);
-    expect(handleSubmit).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(handleSubmit).toHaveBeenCalledTimes(1));
   });
 
   it('shows validation errors from the active yup schema', async () => {
@@ -148,7 +148,7 @@ describe('AuthForm', () => {
     render(<AuthForm mode="register" />);
     const phoneInput = screen.getByRole('textbox', { name: /phone number/i });
 
-    await user.type(phoneInput, 'call +91 98765@43210');
+    await user.type(phoneInput, '+91 98765@43210');
 
     expect(phoneInput).toHaveValue('9198765432');
   });

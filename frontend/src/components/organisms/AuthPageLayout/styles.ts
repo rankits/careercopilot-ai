@@ -20,7 +20,6 @@ import {
   createStyledBox,
   createStyledImage,
   createStyledText,
-  elevatedSurface,
   featureTitleBase,
   flex,
   flexBetween,
@@ -49,10 +48,10 @@ const excludeFeatureIconProps = {
   shouldForwardProp: (prop: PropertyKey) => prop !== 'size' && prop !== 'tone',
 };
 
-/** Short laptop viewports (e.g. 15" @ 1366×768) while still in desktop split layout. */
-const shortDesktopViewport = '@media (max-height: 56.25rem) and (min-width: 75rem)';
-/** Below MUI `lg` (1200px): phones + tablets use a stacked form-first layout. */
-const belowDesktop = '@media (max-width: 74.9375rem)';
+/** Short laptop viewports (e.g. 15" @ 1366×768, 950×650) while in desktop split layout. */
+const shortDesktopViewport = '@media (max-height: 56.25rem) and (min-width: 56.25rem)';
+/** Below `md` (900px): phones + tablets use a stacked form-first layout. */
+const belowDesktop = '@media (max-width: 56.24rem)';
 
 export const AuthRoot = styled(
   Box,
@@ -62,11 +61,13 @@ export const AuthRoot = styled(
     {
       background: `radial-gradient(circle at 10% 12%, ${colorTokens.actionPrimarySubtle} 0, transparent ${sizing[26]}), ${colorTokens.backgroundApp}`,
       boxSizing: 'border-box',
+      display: 'flex',
+      flexDirection: 'column',
       height: authLayout.viewportHeight,
       overflow: 'hidden',
-      px: { xs: spacing[4], sm: spacing[6], md: spacing[8], lg: spacing[10] },
-      py: { xs: spacing[4], sm: spacing[5], md: spacing[6] },
       position: 'relative',
+      px: { xs: spacing[4], sm: spacing[6], md: spacing[8], lg: spacing[10] },
+      py: { xs: spacing[3], sm: spacing[4], md: spacing[4] },
       [shortDesktopViewport]: {
         py: spacing[2],
       },
@@ -79,17 +80,26 @@ export const AuthRoot = styled(
     },
     mode === 'login' && {
       background: colorTokens.backgroundApp,
-      [theme.breakpoints.up('lg')]: {
-        background: `linear-gradient(90deg, ${colorTokens.backgroundApp} 0 52%, ${colorTokens.backgroundCard} 52% 100%)`,
-        px: 0,
-        py: 0,
+      display: 'flex',
+      flexDirection: 'column',
+      height: 'auto',
+      minHeight: authLayout.viewportHeight,
+      overflow: 'visible',
+      WebkitOverflowScrolling: 'touch',
+      [theme.breakpoints.up('md')]: {
+        background: colorTokens.backgroundApp,
+      },
+      [belowDesktop]: {
+        py: { xs: spacing[4], sm: spacing[5], md: spacing[4] },
+        pb: { xs: spacing[4], sm: spacing[5], md: 0 },
       },
     },
     mode === 'register' && {
       display: 'flex',
       flexDirection: 'column',
-      overflowX: 'hidden',
-      overflowY: 'auto',
+      height: 'auto',
+      minHeight: authLayout.viewportHeight,
+      overflow: 'visible',
       [belowDesktop]: {
         py: { xs: spacing[4], sm: spacing[5], md: spacing[4] },
         pb: { xs: spacing[4], sm: spacing[5], md: 0 },
@@ -111,7 +121,7 @@ export const AuthHeader = styled(
           gap: spacing[3],
           margin: '0 auto',
           maxWidth: authLayout.contentMaxWidth,
-          mb: { xs: spacing[3], lg: spacing[3], xl: spacing[4] },
+          mb: { xs: spacing[3], md: spacing[3], xl: spacing[4] },
           width: '100%',
           [shortDesktopViewport]: {
             mb: spacing[2],
@@ -126,21 +136,10 @@ export const AuthHeader = styled(
           flexShrink: 0,
           margin: '0 auto',
           maxWidth: authLayout.contentMaxWidth,
-          mb: { xs: spacing[3], sm: spacing[4], lg: spacing[4] },
+          mb: { xs: spacing[2], sm: spacing[2], md: spacing[3] },
           width: '100%',
-          [theme.breakpoints.up('lg')]: {
-            boxSizing: 'border-box',
-            left: 0,
-            margin: 0,
-            maxWidth: 'none',
-            mb: 0,
-            px: spacing[10],
-            position: 'absolute',
-            top: spacing[3],
-            zIndex: 1,
-          },
           [shortDesktopViewport]: {
-            mb: 0,
+            mb: spacing[1],
           },
           [belowDesktop]: {
             display: 'flex',
@@ -158,16 +157,16 @@ export const LogoImage = styled(
     {
       display: 'block',
       height: 'auto',
-      maxWidth: { xs: '10rem', sm: '11rem', lg: sizing[12] },
+      maxWidth: { xs: '9rem', sm: '10rem', md: '9.5rem', lg: '10.5rem' },
       width: '100%',
     },
     mode === 'login' && {
       [shortDesktopViewport]: {
-        maxWidth: '9rem',
+        maxWidth: '8.5rem',
       },
     },
     mode === 'register' && {
-      maxWidth: { xs: '7.75rem', sm: '8.5rem', lg: '8.75rem', xl: '10rem' },
+      maxWidth: { xs: '7.75rem', sm: '8.5rem', md: '8.75rem', xl: '10rem' },
       [shortDesktopViewport]: {
         maxWidth: '7.5rem',
       },
@@ -196,17 +195,20 @@ export const AuthContent = styled(
   theme.unstable_sx([
     {
       ...grid,
+      alignItems: 'center',
+      flex: 1,
       gap: { xs: spacing[4], md: spacing[6], lg: spacing[8], xl: spacing[12] },
       gridTemplateColumns: createResponsiveColumns(authLayout.contentColumns),
-      height: `calc(100% - ${spacing[16]})`,
       margin: '0 auto',
       maxWidth: authLayout.contentMaxWidth,
       minHeight: 0,
+      overflow: 'hidden',
       width: '100%',
       [shortDesktopViewport]: {
-        height: `calc(100% - ${spacing[12]})`,
+        gap: spacing[3],
       },
       [belowDesktop]: {
+        flex: '0 0 auto',
         height: 'auto',
         maxWidth: { xs: '28rem', sm: '32rem', md: '36rem' },
         minHeight: 0,
@@ -214,30 +216,38 @@ export const AuthContent = styled(
       },
     },
     mode === 'login' && {
-      [theme.breakpoints.up('lg')]: {
-        gap: 0,
-        gridTemplateColumns: '52% 48%',
-        height: '100%',
-        margin: 0,
-        maxWidth: 'none',
+      [theme.breakpoints.up('md')]: {
+        gap: { md: spacing[6], lg: spacing[8], xl: spacing[12] },
+        gridTemplateColumns: '1fr 1fr',
+        height: 'auto',
+        maxWidth: authLayout.contentMaxWidth,
+        minHeight: '100%',
+        overflow: 'visible',
       },
       [shortDesktopViewport]: {
-        gap: 0,
-        height: '100%',
+        gap: spacing[3],
+        height: 'auto',
+        minHeight: '100%',
       },
       [belowDesktop]: {
         gridTemplateColumns: authLayout.mobileColumn,
       },
     },
     mode === 'register' && {
-      flex: 1,
-      height: 'auto',
-      gridTemplateColumns: createResponsiveColumns(authLayout.registerColumns),
+      [theme.breakpoints.up('md')]: {
+        gap: { md: spacing[6], lg: spacing[8], xl: spacing[12] },
+        gridTemplateColumns: '1fr 1fr',
+        height: 'auto',
+        maxWidth: authLayout.contentMaxWidth,
+        minHeight: '100%',
+        overflow: 'visible',
+      },
       [shortDesktopViewport]: {
         gap: spacing[3],
+        height: 'auto',
+        minHeight: '100%',
       },
       [belowDesktop]: {
-        flex: '0 0 auto',
         gridTemplateColumns: authLayout.mobileColumn,
       },
     },
@@ -249,11 +259,27 @@ export const FormColumn = styled(
   excludeModeProp,
 )<ModeProps>(({ mode, theme }) =>
   theme.unstable_sx([
-    { ...flexCenter, height: '100%', minHeight: 0, minWidth: 0 },
+    {
+      ...flexCenter,
+      boxSizing: 'border-box',
+      height: '100%',
+      minHeight: 0,
+      minWidth: 0,
+      overflow: 'hidden',
+      p: { xs: spacing[2], md: spacing[3], lg: spacing[4] },
+      width: '100%',
+    },
     mode === 'login' && {
-      [theme.breakpoints.up('lg')]: {
-        boxSizing: 'border-box',
-        px: { lg: spacing[6], xl: spacing[10] },
+      alignItems: 'center',
+      alignSelf: 'stretch',
+      height: 'auto',
+      justifyContent: 'center',
+      minHeight: '100%',
+      overflow: 'visible',
+      WebkitOverflowScrolling: 'touch',
+      [theme.breakpoints.up('md')]: {
+        alignItems: 'center',
+        justifyContent: 'center',
       },
       [shortDesktopViewport]: {
         justifyContent: 'center',
@@ -261,21 +287,26 @@ export const FormColumn = styled(
       [belowDesktop]: {
         height: 'auto',
         justifyContent: 'flex-start',
+        overflowY: 'auto',
         width: '100%',
       },
     },
     mode === 'register' && {
-      alignItems: 'stretch',
+      alignItems: 'center',
       alignSelf: 'stretch',
-      height: '100%',
-      justifyContent: 'flex-start',
-      order: 1,
+      gridColumn: { md: 2 },
+      height: 'auto',
+      justifyContent: 'center',
+      minHeight: '100%',
+      overflow: 'visible',
+      WebkitOverflowScrolling: 'touch',
       [shortDesktopViewport]: {
-        justifyContent: 'flex-start',
+        justifyContent: 'center',
       },
       [belowDesktop]: {
+        gridColumn: 'auto',
         height: 'auto',
-        order: 0,
+        justifyContent: 'flex-start',
         width: '100%',
       },
     },
@@ -294,10 +325,10 @@ export const FormStack = styled(
       minWidth: 0,
       width: '100%',
       [shortDesktopViewport]: {
-        gap: spacing[3],
+        gap: spacing[2],
         '& > form': {
-          gap: `${spacing[4]} !important`,
-          padding: `${spacing[5]} !important`,
+          gap: `${spacing[3]} !important`,
+          padding: `${spacing[4]} !important`,
         },
       },
       [belowDesktop]: {
@@ -310,20 +341,20 @@ export const FormStack = styled(
     },
     mode === 'register' && {
       '& > form': {
-        gap: { lg: spacing[4], xl: spacing[5] },
+        gap: { md: spacing[3], lg: spacing[4], xl: spacing[5] },
         height: 'auto',
         minHeight: 0,
-        p: { lg: spacing[5], xl: spacing[6] },
+        p: { md: spacing[4], lg: spacing[5], xl: spacing[6] },
       },
       alignContent: 'start',
       maxWidth: 'none',
       [shortDesktopViewport]: {
         alignContent: 'stretch',
         '& > form': {
-          gap: `${spacing[3]} !important`,
+          gap: `${spacing[2]} !important`,
           height: 'auto',
           minHeight: '100%',
-          padding: `${spacing[4]} !important`,
+          padding: `${spacing[3]} !important`,
         },
       },
       [belowDesktop]: {
@@ -348,7 +379,7 @@ export const ErrorAlert = createStyledBox({
 });
 
 export const MobileLoginIntro = createStyledBox({
-  display: { xs: 'grid', lg: 'none' },
+  display: { xs: 'grid', md: 'none' },
   gap: spacing[3],
   justifyItems: 'center',
   mb: { xs: spacing[1], sm: spacing[2] },
@@ -364,26 +395,20 @@ export const MobileLoginHeading = createStyledText({
 });
 
 export const LoginHeroSection = createStyledBox({
-  display: { xs: 'none', lg: 'grid' },
-  gap: spacing[5],
-  gridTemplateRows: `auto auto minmax(0, 1fr)`,
+  display: { xs: 'none', md: 'flex' },
+  flexDirection: 'column',
+  justifyContent: 'center',
+  gap: { md: spacing[3], lg: spacing[4], xl: spacing[5] },
   height: '100%',
   minHeight: 0,
   minWidth: 0,
-  paddingLeft: {
-    lg: `calc(${spacing[10]} + ${spacing[8]})`,
-    xl: `calc(${spacing[10]} + ${spacing[16]})`,
-  },
-  paddingTop: { xs: spacing[2], lg: spacing[16] },
-  [shortDesktopViewport]: {
-    gap: spacing[2],
-    paddingTop: spacing[16],
-  },
+  paddingLeft: 0,
+  paddingTop: 0,
 });
 
 export const HeroCopy = createStyledBox({
   ...grid,
-  gap: spacing[4],
+  gap: spacing[3],
   [shortDesktopViewport]: {
     gap: spacing[2],
   },
@@ -405,12 +430,12 @@ export const AiBadge = createStyledBox({
 
 export const HeroHeading = createStyledText({
   ...headingBase,
-  fontSize: { md: fontSize['5xl'], xl: fontSize['7xl'] },
+  fontSize: { md: fontSize['3xl'], lg: fontSize['5xl'], xl: fontSize['7xl'] },
   letterSpacing: '-0.045em',
   lineHeight: 1.08,
   maxWidth: sizing[30],
   [shortDesktopViewport]: {
-    fontSize: fontSize['4xl'],
+    fontSize: fontSize['3xl'],
     lineHeight: 1.15,
   },
 });
@@ -470,26 +495,28 @@ export const FeatureDescription = createStyledText({
 
 export const LoginVisual = createStyledBox({
   ...flex,
-  alignItems: 'flex-end',
-  height: '100%',
+  alignItems: 'center',
+  flexShrink: 0,
   justifyContent: 'center',
+  maxHeight: { md: '200px', lg: '260px', xl: '320px' },
   minHeight: 0,
   overflow: 'hidden',
   position: 'relative',
+  width: '100%',
 });
 
 export const LoginIllustration = createStyledImage({
   height: '100%',
   maxHeight: '100%',
-  maxWidth: sizing[40],
+  maxWidth: '100%',
   objectFit: 'contain',
-  width: '100%',
+  width: 'auto',
 });
 
 export const TrustPanel = createStyledBox({
   ...borderedCardSurface,
   bgcolor: colorTokens.backgroundCardTranslucent,
-  display: { xs: 'none', lg: 'grid' },
+  display: { xs: 'none', md: 'grid' },
   gap: spacing[3],
   gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
   p: spacing[4],
@@ -506,26 +533,27 @@ export const TrustItem = createStyledBox({
 });
 
 export const RegisterPanel = createStyledBox({
-  ...borderedCardSurface,
-  display: { xs: 'none', lg: 'grid' },
-  gap: { lg: spacing[4], xl: spacing[8] },
-  gridTemplateRows: 'minmax(0, 1fr) auto',
+  display: { xs: 'none', md: 'flex' },
+  flexDirection: 'column',
+  gap: { md: spacing[3], lg: spacing[4], xl: spacing[6] },
+  gridColumn: { md: 1 },
   height: '100%',
+  justifyContent: 'center',
   minHeight: 0,
-  order: 2,
+  minWidth: 0,
   overflow: 'hidden',
-  p: { lg: spacing[8], xl: spacing[10] },
+  p: 0,
   [shortDesktopViewport]: {
-    gap: spacing[3],
-    p: spacing[4],
+    gap: spacing[2],
   },
 });
 
 export const RegisterHeroTop = createStyledBox({
   ...grid,
   alignItems: 'center',
-  gap: { lg: spacing[5], xl: spacing[8] },
+  gap: { md: spacing[3], lg: spacing[5], xl: spacing[8] },
   gridTemplateColumns: {
+    md: `minmax(0, 1fr) minmax(0, 0.9fr)`,
     lg: `minmax(${sizing[17]}, 1fr) minmax(${sizing[15]}, 0.95fr)`,
     xl: `minmax(${sizing[20]}, 1fr) minmax(${sizing[22]}, 1.25fr)`,
   },
@@ -539,7 +567,7 @@ export const RegisterHeroTop = createStyledBox({
 export const RegisterCopy = createStyledBox({
   ...grid,
   alignSelf: 'center',
-  gap: { lg: spacing[4], xl: spacing[6] },
+  gap: { md: spacing[2], lg: spacing[4], xl: spacing[6] },
   [shortDesktopViewport]: {
     gap: spacing[2],
   },
@@ -547,49 +575,52 @@ export const RegisterCopy = createStyledBox({
 
 export const RegisterHeading = createStyledText({
   ...headingBase,
-  fontSize: { lg: fontSize['4xl'], xl: fontSize['6xl'] },
+  fontSize: { md: fontSize['2xl'], lg: fontSize['4xl'], xl: fontSize['6xl'] },
   lineHeight: 1.25,
   [shortDesktopViewport]: {
-    fontSize: fontSize['3xl'],
+    fontSize: fontSize['2xl'],
   },
 });
 
 export const RegisterIllustration = createStyledImage({
-  maxHeight: { lg: sizing[17], xl: sizing[28] },
+  maxHeight: { md: sizing[12.5], lg: sizing[17], xl: sizing[28] },
+  mixBlendMode: 'multiply',
   objectFit: 'contain',
   width: '100%',
   [shortDesktopViewport]: {
-    maxHeight: sizing[15],
+    maxHeight: sizing[12],
   },
 });
 
 export const RegisterFeatureList = createStyledBox({
   ...grid,
   alignItems: 'end',
-  gap: spacing[4],
-  gridTemplateColumns: { xs: '1fr', md: 'repeat(2, 1fr)', lg: 'repeat(3, 1fr)' },
+  gap: spacing[3],
+  gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
   [shortDesktopViewport]: {
-    gap: spacing[3],
+    gap: spacing[2],
   },
 });
 
 export const RegisterFeatureCard = createStyledBox({
-  ...elevatedSurface,
+  ...borderedCardSurface,
   ...flex,
   ...alignCenter,
+  boxShadow: 'none',
   boxSizing: 'border-box',
   flexDirection: 'column',
-  gap: spacing[4],
-  height: sizing[12.5],
+  gap: spacing[3],
+  height: 'auto',
+  minHeight: sizing[12],
   justifyContent: 'center',
   minWidth: 0,
-  p: { lg: spacing[4], xl: spacing[6] },
+  p: { md: spacing[3], lg: spacing[4], xl: spacing[6] },
   textAlign: 'center',
   [shortDesktopViewport]: {
-    gap: spacing[2],
+    gap: spacing[1],
     height: 'auto',
-    minHeight: sizing[12],
-    p: spacing[3],
+    minHeight: '10rem',
+    p: spacing[2],
   },
 });
 

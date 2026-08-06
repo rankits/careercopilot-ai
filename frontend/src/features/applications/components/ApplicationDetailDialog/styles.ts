@@ -7,13 +7,12 @@ const mobileBreakpoint = '@media (max-width: 47.5rem)';
 
 export const DetailApplicationDialog = styled(ApplicationDialog)({
   '& .MuiDialog-paper': {
-    display: 'flex',
-    flexDirection: 'column',
-    maxHeight: 'calc(100vh - 2rem)',
-    overflow: 'hidden',
+    maxHeight:
+      'min(52rem, calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)))',
 
     [mobileBreakpoint]: {
-      maxHeight: 'calc(100vh - 1.5rem)',
+      maxHeight:
+        'calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
     },
   },
 });

@@ -159,6 +159,8 @@ export function estimateImprovedAtsScore(input: {
 }): number {
   const baseline = Math.min(100, Math.max(0, Math.round(input.baseline)));
   const contentLower = (input.content || '').toLowerCase();
+  const appliedCount = Math.max(0, input.appliedCount);
+  const highAppliedCount = Math.max(0, input.highAppliedCount ?? 0);
 
   const pool = uniqSkills([...(input.matchedSkills ?? []), ...(input.missingSkills ?? [])]);
   const liveMatched = pool.filter((skill) => contentHasSkill(input.content || '', skill));
@@ -172,40 +174,32 @@ export function estimateImprovedAtsScore(input: {
     contentLower.includes(term.trim().toLowerCase()),
   ).length;
 
+  const skillsRecoveredWell =
+    pool.length > 0 &&
+    ((liveSkillMatch ?? 0) >= 80 ||
+      ((input.missingSkills?.length ?? 0) > 0 &&
+        recoveredSkills / (input.missingSkills?.length ?? 1) >= 0.7));
+  const markedApplied = appliedCount > 0 || highAppliedCount > 0;
+  // Mirror backend scoreEditedResume.optimizeSucceeded so Optimize ≈ Export.
+  const optimizeSucceeded =
+    (skillsRecoveredWell && markedApplied) ||
+    ((liveSkillMatch ?? 0) >= 90 && (markedApplied || recoveredSkills >= 2)) ||
+    ((liveSkillMatch ?? 0) >= 95 && recoveredKeywords >= 1) ||
+    ((liveSkillMatch ?? 0) >= 100 && markedApplied);
+
+  // Align uplift with backend scoreEditedResume (optimizeSucceeded max +45).
   const uplift = Math.min(
-    26,
-    recoveredSkills * 2.2 +
-      recoveredKeywords * 1.6 +
-      (input.highAppliedCount ?? 0) * 3 +
-      input.appliedCount * 1.2,
+    optimizeSucceeded ? 45 : 26,
+    recoveredSkills * 2.4 + recoveredKeywords * 1.8 + highAppliedCount * 3.5 + appliedCount * 1.5,
   );
-
-  // Prefer live JD ↔ resume skill coverage so scores are not stuck at a flat baseline (e.g. 45/45).
-  if (liveSkillMatch != null) {
-    const recoveredSkillRatio =
-      (input.missingSkills?.length ?? 0) > 0
-        ? recoveredSkills / (input.missingSkills?.length ?? 1)
-        : liveSkillMatch / 100;
-    const softCeiling =
-      recoveredSkillRatio >= 0.9
-        ? 94
-        : recoveredSkillRatio >= 0.7
-          ? 90
-          : recoveredSkillRatio >= 0.5
-            ? 86
-            : 84;
-    const contentBased = Math.round(
-      liveSkillMatch * 0.62 + Math.min(baseline + uplift, softCeiling) * 0.38,
-    );
-    return Math.min(softCeiling, Math.max(baseline, contentBased));
-  }
-
-  if (uplift < 2) return baseline;
 
   const recoveredSkillRatio =
     (input.missingSkills?.length ?? 0) > 0
       ? recoveredSkills / (input.missingSkills?.length ?? 1)
-      : 0;
+      : liveSkillMatch != null
+        ? liveSkillMatch / 100
+        : 0;
+
   const softCeiling =
     recoveredSkillRatio >= 0.9
       ? 94
@@ -215,11 +209,35 @@ export function estimateImprovedAtsScore(input: {
           ? 86
           : 84;
 
-  return Math.min(
-    softCeiling,
-    baseline + Math.max(2, Math.round(uplift * 0.55)),
-    baseline + (recoveredSkillRatio >= 0.85 ? 26 : 18),
-  );
+  let score: number;
+  if (liveSkillMatch != null) {
+    const contentBased = Math.round(
+      liveSkillMatch * 0.62 + Math.min(baseline + uplift, softCeiling) * 0.38,
+    );
+    score = Math.min(softCeiling, Math.max(baseline, contentBased));
+  } else if (uplift < 2) {
+    score = baseline;
+  } else {
+    score = Math.min(
+      softCeiling,
+      baseline + Math.max(2, Math.round(uplift * 0.55)),
+      baseline + (recoveredSkillRatio >= 0.85 ? 26 : 18),
+    );
+  }
+
+  // Mirror backend optimize floor (74–80) so strip matches Export recheck.
+  if (optimizeSucceeded) {
+    const optimizeFloor =
+      (liveSkillMatch ?? 0) >= 95 && recoveredKeywords >= 1
+        ? 80
+        : (liveSkillMatch ?? 0) >= 90 ||
+            ((liveSkillMatch ?? 0) >= 85 && (markedApplied || highAppliedCount >= 1))
+          ? 78
+          : 74;
+    score = Math.max(score, Math.min(optimizeFloor, softCeiling, baseline + 45));
+  }
+
+  return Math.min(100, Math.max(baseline, Math.round(score)));
 }
 
 export function scoreTone(score: number): 'success' | 'warning' | 'error' {

@@ -171,7 +171,8 @@ export class RecommendationsService {
     ): Promise<T> => {
       const stageStartedAt = Date.now();
       try {
-        return await operation();
+        const result = await operation();
+        return result;
       } finally {
         stageDurationsMs[stage] = (stageDurationsMs[stage] ?? 0) + Date.now() - stageStartedAt;
       }
@@ -188,7 +189,7 @@ export class RecommendationsService {
     );
 
     try {
-      return await withRecommendationTimeout(async () => {
+      const generated = await withRecommendationTimeout(async () => {
         const context = await measureStage('context', async () => {
           const built = await dependencies.contextService.build(input);
           const filtered = applyRecommendationFilters(built, options.filters);
@@ -294,6 +295,7 @@ export class RecommendationsService {
         );
         return records;
       });
+      return generated;
     } catch (error) {
       const failureCode =
         error instanceof RecommendationError
@@ -411,7 +413,11 @@ export class RecommendationsService {
     let coverage = { activeJobs: 0, embeddedJobs: 0, coverageRatio: 1 };
     try {
       coverage = await countEmbeddingCoverage();
-    } catch {
+    } catch (error) {
+      this.logger.warn(
+        { err: error, event: 'recommendation.coverage_lookup_failed' },
+        'Embedding coverage lookup failed; assuming full coverage',
+      );
       coverage = { activeJobs: 0, embeddedJobs: 0, coverageRatio: 1 };
     }
     const [latestRun, latestRecommendationCreatedAt] = await Promise.all([

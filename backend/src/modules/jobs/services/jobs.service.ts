@@ -86,8 +86,11 @@ export class JobsService implements IJobContract {
           );
           return found;
         }
-      } catch {
-        // Ignore provider fetch error during lookup
+      } catch (error) {
+        jobsLogger.warn(
+          { err: error, jobId, event: 'jobs.provider_lookup_failed' },
+          'Provider fetch error during job lookup; trying next provider',
+        );
       }
     }
     return null;
