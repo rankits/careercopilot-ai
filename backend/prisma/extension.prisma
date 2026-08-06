@@ -1,0 +1,45 @@
+// -----------------------------------------------------------------------
+// Extension (Paired Devices & Pairing Codes)
+// -----------------------------------------------------------------------
+
+model ExtensionPairingCode {
+  id Int @id @default(autoincrement())
+
+  /// SHA-256 hash of the 6-digit code. We never persist the plaintext code.
+  codeHash String @map("code_hash")
+
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  expiresAt  DateTime  @map("expires_at")
+  redeemedAt DateTime? @map("redeemed_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+
+  @@index([codeHash])
+  @@index([userId])
+  @@map("extension_pairing_codes")
+}
+
+model ExtensionDevice {
+  id Int @id @default(autoincrement())
+
+  userId Int  @map("user_id")
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// SHA-256 hash of the refresh token. We never persist the plaintext token.
+  refreshTokenHash String @unique @map("refresh_token_hash")
+
+  /// Optional metadata about the browser/device that paired the extension
+  userAgent String? @map("user_agent")
+  ipAddress String? @map("ip_address")
+
+  expiresAt DateTime  @map("expires_at")
+  revokedAt DateTime? @map("revoked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@index([userId])
+  @@map("extension_devices")
+}
