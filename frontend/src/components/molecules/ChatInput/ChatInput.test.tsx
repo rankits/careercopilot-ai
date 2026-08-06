@@ -44,9 +44,7 @@ describe('ChatInput', () => {
   });
 
   it('disables the send button when the input is empty or only whitespace', () => {
-    const { rerender } = render(
-      <ChatInput onChange={vi.fn()} onSend={vi.fn()} value="" />,
-    );
+    const { rerender } = render(<ChatInput onChange={vi.fn()} onSend={vi.fn()} value="" />);
 
     const sendButton = screen.getByRole('button', { name: CHAT_INPUT_COPY.sendAriaLabel });
     expect(sendButton).toBeDisabled();
@@ -59,7 +57,9 @@ describe('ChatInput', () => {
     const user = userEvent.setup();
     const handleSend = vi.fn();
 
-    render(<ChatInput onChange={vi.fn()} onSend={handleSend} value="How can I improve my resume?" />);
+    render(
+      <ChatInput onChange={vi.fn()} onSend={handleSend} value="How can I improve my resume?" />,
+    );
 
     const sendButton = screen.getByRole('button', { name: CHAT_INPUT_COPY.sendAriaLabel });
     expect(sendButton).not.toBeDisabled();
@@ -115,9 +115,7 @@ describe('ChatInput', () => {
   });
 
   it('disables input field, send button, and displays CircularProgress when isSending is true', () => {
-    render(
-      <ChatInput isSending onChange={vi.fn()} onSend={vi.fn()} value="Sending query..." />,
-    );
+    render(<ChatInput isSending onChange={vi.fn()} onSend={vi.fn()} value="Sending query..." />);
 
     const input = screen.getByPlaceholderText(CHAT_INPUT_COPY.placeholder);
     const sendButton = screen.getByRole('button', { name: CHAT_INPUT_COPY.sendAriaLabel });

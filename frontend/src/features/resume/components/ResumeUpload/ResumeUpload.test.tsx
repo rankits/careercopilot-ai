@@ -33,23 +33,29 @@ describe('ResumeUpload', () => {
   });
 
   it.each([
-    [new File(['invalid'], 'document.txt', { type: 'text/plain' }), /choose a pdf, doc, or docx resume/i],
+    [
+      new File(['invalid'], 'document.txt', { type: 'text/plain' }),
+      /choose a pdf, doc, or docx resume/i,
+    ],
     [
       new File([new Uint8Array(10 * 1024 * 1024 + 1)], 'large_resume.pdf', {
         type: 'application/pdf',
       }),
       /resume must be 10 mb or smaller/i,
     ],
-  ])('displays validation error alert when selecting an invalid file', async (file, expectedError) => {
-    const user = userEvent.setup({ applyAccept: false });
-    render(<ResumeUpload onUpload={vi.fn()} />);
+  ])(
+    'displays validation error alert when selecting an invalid file',
+    async (file, expectedError) => {
+      const user = userEvent.setup({ applyAccept: false });
+      render(<ResumeUpload onUpload={vi.fn()} />);
 
-    const input = screen.getByLabelText('Choose resume');
-    await user.upload(input, file);
+      const input = screen.getByLabelText('Choose resume');
+      await user.upload(input, file);
 
-    const alert = screen.getByRole('alert');
-    expect(alert).toHaveTextContent(expectedError);
-  });
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent(expectedError);
+    },
+  );
 
   it('supports drag and drop file upload', async () => {
     render(<ResumeUpload onUpload={vi.fn()} />);
