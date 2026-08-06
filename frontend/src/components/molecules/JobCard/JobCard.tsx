@@ -93,6 +93,8 @@ export interface JobCardData {
 export interface JobCardProps {
   job: JobCardData;
   isSaved?: boolean;
+  /** Adds an elevated hover treatment (border/shadow/lift) — used by premium feed surfaces. */
+  premiumHover?: boolean;
   onApply?: (job: JobCardData) => void;
   onOpen?: (job: JobCardData) => void;
   onSave?: (job: JobCardData) => void;
@@ -108,6 +110,7 @@ const toDomId = (value: string) => value.replace(/[^a-zA-Z0-9_-]+/g, '-').replac
 export function JobCard({
   job,
   isSaved = false,
+  premiumHover = false,
   onApply,
   onOpen,
   onSave,
@@ -155,6 +158,7 @@ export function JobCard({
   return (
     <JobCardRoot
       onClick={onOpen ? () => onOpen(job) : undefined}
+      premiumHover={premiumHover}
       sx={onOpen ? { cursor: 'pointer' } : undefined}
     >
       <Accent tone={job.accent} />
@@ -172,7 +176,7 @@ export function JobCard({
 
             {showHeaderEnd ? (
               <HeaderEnd>
-                {showMatch ? (
+                {typeof job.match === 'number' ? (
                   <MatchPill aria-label={JOB_CARD_ARIA.match(job.match, job.matchSubtitle)}>
                     {job.match}
                     {JOB_UI.MATCH_SUFFIX}

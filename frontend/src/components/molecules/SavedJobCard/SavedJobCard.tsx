@@ -42,7 +42,6 @@ export interface SavedJobCardProps {
 export function SavedJobCard({ job, onOpen, onUnsave }: SavedJobCardProps) {
   const visibleSkills = job.skills.slice(0, 4);
   const canOpen = Boolean(job.id && onOpen);
-  const showMatch = typeof job.match === 'number';
 
   return (
     <CardRoot
@@ -109,7 +108,7 @@ export function SavedJobCard({ job, onOpen, onUnsave }: SavedJobCardProps) {
 
       <RightColumn>
         <TopRight>
-          {showMatch ? (
+          {typeof job.match === 'number' ? (
             <MatchBadge aria-label={JOB_CARD_ARIA.match(job.match)}>
               <SmartToyOutlinedIcon fontSize="inherit" />
               {job.match}

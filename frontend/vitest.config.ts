@@ -21,7 +21,7 @@ export default defineConfig({
   },
   test: {
     coverage: {
-      all: false,
+      // `all` was removed from CoverageOptions; `include` alone now scopes reporting.
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         // Boilerplate / non-testable code (standard practice to exclude):
