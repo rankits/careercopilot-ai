@@ -8,7 +8,7 @@ import { useResumeVersions } from '@/features/auto-apply/hooks/useResumeVersions
 
 import { ROUTES } from '@/constants/routes';
 import { buildImproveResumeHref } from '@/features/auto-apply/utils/returnToNavigation';
-import { Alert, Box, CircularProgress, MuiButton, Stack, Typography } from '@/lib/material';
+import { Alert, Box, Chip, CircularProgress, MuiButton, Stack, Typography } from '@/lib/material';
 import { trackEvent } from '@/shared/analytics/trackEvent';
 
 import { assistedApplyTouchTargetSx, WorkspaceStickyActions } from './WorkspaceStickyActions';
@@ -80,7 +80,6 @@ export function ResumeAnalysisStep({
 
   useEffect(() => {
     if (!returnedSaved) return;
-    // Clear the one-shot flag after the forced fetch is kicked off
     const next = new URLSearchParams(searchParams);
     next.delete('resumeReturned');
     setSearchParams(next, { replace: true });
@@ -89,11 +88,12 @@ export function ResumeAnalysisStep({
   useEffect(() => {
     const analysis = analysisQuery.data;
     if (!analysis) return;
-    const degraded = analysis.confidence === 'LOW' || analysis.strengths.length === 0;
+    const degraded = analysis.confidence === 'LOW' || analysis.status === 'LIMITED';
     trackEvent(degraded ? 'resume_analysis_degraded' : 'resume_analysis_viewed', {
       job_application_id: jobApplicationId,
       confidence: analysis.confidence,
       cached: Boolean(analysis.cached),
+      schema_version: analysis.schemaVersion ?? null,
     });
   }, [analysisQuery.data, jobApplicationId]);
 
@@ -144,6 +144,10 @@ export function ResumeAnalysisStep({
 
   const analysis = analysisQuery.data;
   const degraded = analysis?.degraded || analysisQuery.isError;
+  const limited = analysis?.status === 'LIMITED' || analysis?.confidence === 'LOW';
+  const noRelevant =
+    analysis?.warnings?.some((w) => w.code === 'NO_RESUME_RELEVANT_REQUIREMENTS') ||
+    (analysis?.summary?.criteriaAnalyzed === 0 && !degraded);
 
   return (
     <Stack spacing={2}>
@@ -155,32 +159,82 @@ export function ResumeAnalysisStep({
         </Alert>
       ) : (
         <>
-          <Alert severity="info">Suggestions — review carefully</Alert>
+          <Alert severity="info">
+            Suggestions only — review carefully. Work authorization, location, and sponsorship are
+            evaluated in Fit &amp; Eligibility, not in Resume Match.
+          </Alert>
 
           {degraded ? (
             <Alert severity="warning">
-              We couldn&apos;t generate detailed suggestions this time.
+              We couldn&apos;t generate detailed suggestions this time. You can still continue with
+              this resume.
             </Alert>
           ) : null}
 
           {analysis && !degraded ? (
             <>
-              <Typography color="text.secondary" variant="body2">
-                Confidence:{' '}
-                {analysis.confidence === 'HIGH'
-                  ? 'High confidence'
-                  : analysis.confidence === 'LOW'
-                    ? 'Low confidence'
-                    : 'Medium confidence'}
-              </Typography>
-              <CategoryCard emptyLabel="None noted." items={analysis.strengths} title="Strengths" />
-              <CategoryCard emptyLabel="None noted." items={analysis.concerns} title="Concerns" />
+              <Stack alignItems="center" direction="row" flexWrap="wrap" spacing={1}>
+                <Typography color="text.secondary" variant="body2">
+                  Confidence:{' '}
+                  {analysis.confidence === 'HIGH'
+                    ? 'High'
+                    : analysis.confidence === 'LOW'
+                      ? 'Low'
+                      : 'Medium'}
+                </Typography>
+                {analysis.overallAlignment != null ? (
+                  <Chip
+                    label={`Resume alignment ${Math.round(analysis.overallAlignment * 100)}%`}
+                    size="small"
+                    variant="outlined"
+                  />
+                ) : (
+                  <Chip label="Alignment unavailable" size="small" variant="outlined" />
+                )}
+                {limited ? <Chip color="warning" label="Limited analysis" size="small" /> : null}
+              </Stack>
+
+              {noRelevant ? (
+                <Alert severity="info">
+                  We did not have enough resume-relevant job requirements to identify reliable
+                  strengths.
+                </Alert>
+              ) : null}
+
               <CategoryCard
-                emptyLabel="None noted."
+                emptyLabel={
+                  noRelevant
+                    ? 'We did not have enough resume-relevant job requirements to identify reliable strengths.'
+                    : 'No confirmed strengths yet.'
+                }
+                items={analysis.strengths}
+                title="Strengths"
+              />
+              <CategoryCard
+                emptyLabel="No major concerns were identified."
+                items={analysis.concerns}
+                title="Concerns"
+              />
+              <CategoryCard
+                emptyLabel="No missing evidence highlighted."
                 items={analysis.missingEvidence}
                 title="Missing evidence"
               />
-              <CategoryCard emptyLabel="None noted." items={analysis.unknowns} title="Unknowns" />
+              {analysis.unknowns.length > 0 ? (
+                <CategoryCard emptyLabel="None." items={analysis.unknowns} title="Unknowns" />
+              ) : null}
+              {analysis.keywords?.matched?.length ? (
+                <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+                  <Typography fontWeight={600} sx={{ mb: 0.75 }} variant="subtitle2">
+                    Matched keywords
+                  </Typography>
+                  <Stack direction="row" flexWrap="wrap" gap={0.75}>
+                    {analysis.keywords.matched.slice(0, 16).map((term) => (
+                      <Chip key={term} label={term} size="small" variant="outlined" />
+                    ))}
+                  </Stack>
+                </Box>
+              ) : null}
             </>
           ) : null}
         </>

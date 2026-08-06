@@ -1,3 +1,4 @@
+export { useAssistedApplyBuilderContext } from './useAssistedApplyBuilderContext';
 export { useResumeBuilderDraft } from './useResumeBuilderDraft';
 export { useResumeAnalysisPolling } from './useResumeAnalysisPolling';
 export { useResumeBuilderActions } from './useResumeBuilderActions';

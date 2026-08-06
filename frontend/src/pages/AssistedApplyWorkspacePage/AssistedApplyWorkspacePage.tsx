@@ -176,6 +176,7 @@ export function AssistedApplyWorkspacePage() {
     if (activeStep === 'fit' && jobId) {
       return (
         <FitStep
+          applicationStatus={data.application.status}
           company={data.application.companyName ?? data.application.company}
           jobApplicationId={jobApplicationId}
           jobId={jobId}
@@ -183,9 +184,12 @@ export function AssistedApplyWorkspacePage() {
           onBack={() => selectStep('analysis')}
           onContinue={() => selectStep('resume')}
           onRefresh={() => void workspaceQuery.refetch()}
+          onSelectResume={() => selectStep('resume')}
+          onViewDetails={() => selectStep('done')}
           profileMatch={data.fit?.profileMatch ?? null}
           profileMatchLoading={workspaceQuery.isFetching && !data.fit?.profileMatch}
           viewLabel={data.viewLabel}
+          viewState={data.viewState}
           workplaceMode={data.application.workplaceMode ?? null}
         />
       );
@@ -257,7 +261,8 @@ export function AssistedApplyWorkspacePage() {
     <Box
       sx={{
         p: { xs: 2, md: 4 },
-        maxWidth: '100%',
+        maxWidth: 1500,
+        mx: 'auto',
         overflowX: 'hidden',
         pb: { xs: 10, md: 4 },
       }}
@@ -283,7 +288,9 @@ export function AssistedApplyWorkspacePage() {
       >
         <Box sx={{ minWidth: 0 }}>
           <Stack alignItems="center" direction="row" flexWrap="wrap" spacing={1} sx={{ mb: 0.5 }}>
-            <Typography variant="h4">Assisted Apply</Typography>
+            <Typography sx={{ fontWeight: 700, letterSpacing: '-0.03em' }} variant="h4">
+              Assisted Apply
+            </Typography>
             <Chip
               label={`Application mode: ${applicationModeLabel}`}
               size="small"
@@ -296,7 +303,7 @@ export function AssistedApplyWorkspacePage() {
               ? ` · ${data.application.companyName ?? data.application.company}`
               : ''}
           </Typography>
-          <Typography sx={{ mt: 0.5 }} variant="body2">
+          <Typography color="success.main" fontWeight={600} sx={{ mt: 0.5 }} variant="body2">
             {data.viewLabel}
           </Typography>
         </Box>

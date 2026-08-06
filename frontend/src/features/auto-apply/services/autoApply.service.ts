@@ -25,6 +25,7 @@ import type {
   PrivacyAcknowledgementDto,
   PrivacyAcknowledgementPayload,
   ResumeAnalysisDto,
+  ResumeBuilderContextDto,
   SetupStatusDto,
   AssistedApplyWorkspaceDto,
   WorkspaceStepId,
@@ -387,6 +388,33 @@ export const autoApplyService = {
       { forceRefresh: options?.forceRefresh === true },
     );
     return unwrapData(data, 'Missing resume-analysis data in API response');
+  },
+
+  async syncBuilderResume(
+    jobApplicationId: string,
+    payload: { resumeId: string; builderVersionId: number; label?: string },
+  ): Promise<{
+    approvedResumeVersionId: string;
+    resumeVersionId: string;
+    builderResumeVersionId: number;
+    resumeId: string;
+  }> {
+    const { data } = await httpClient.post<
+      BackendSuccessResponse<{
+        approvedResumeVersionId: string;
+        resumeVersionId: string;
+        builderResumeVersionId: number;
+        resumeId: string;
+      }>
+    >(`/auto-apply/submissions/${jobApplicationId}/sync-builder-resume`, payload);
+    return unwrapData(data, 'Missing sync-builder-resume data in API response');
+  },
+
+  async getResumeBuilderContext(jobApplicationId: string): Promise<ResumeBuilderContextDto> {
+    const { data } = await httpClient.get<BackendSuccessResponse<ResumeBuilderContextDto>>(
+      `/auto-apply/submissions/${jobApplicationId}/resume-builder-context`,
+    );
+    return unwrapData(data, 'Missing resume-builder-context data in API response');
   },
 
   async handoffApplication(jobApplicationId: string): Promise<HandoffResultDto> {

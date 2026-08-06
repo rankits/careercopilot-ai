@@ -29,7 +29,11 @@ export function buildImproveResumeHref(input: {
     ':jobApplicationId',
     input.jobApplicationId,
   )}?step=resume&resumeReturned=saved`;
-  const params = new URLSearchParams({ returnTo });
+  const params = new URLSearchParams({
+    source: 'assisted-apply',
+    jobApplicationId: input.jobApplicationId,
+    returnTo,
+  });
   return `${ROUTES.RESUME_BUILDER}/${input.resumeId}?${params.toString()}`;
 }
 
@@ -55,4 +59,20 @@ export function navigateAfterAssistedApplyExit(
   }
   void navigate(target);
   return true;
+}
+
+/** Extract jobApplicationId from a safe Assisted Apply returnTo path. */
+export function extractJobApplicationIdFromReturnTo(
+  raw: string | null | undefined,
+): string | null {
+  if (!isSafeAssistedApplyReturnTo(raw)) return null;
+  let decoded = raw!;
+  try {
+    decoded = decodeURIComponent(raw!);
+  } catch {
+    return null;
+  }
+  const pathOnly = decoded.split('?')[0] ?? decoded;
+  const match = pathOnly.match(/^\/assisted-apply\/([0-9a-fA-F-]{36})$/);
+  return match?.[1] ?? null;
 }
