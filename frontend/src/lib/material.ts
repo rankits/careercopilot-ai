@@ -47,7 +47,10 @@ export { default as LightbulbOutlinedIcon } from '@mui/icons-material/LightbulbO
 export { default as LockOutlinedIcon } from '@mui/icons-material/LockOutlined';
 export { default as LogoutIcon } from '@mui/icons-material/Logout';
 export { default as MoreHorizIcon } from '@mui/icons-material/MoreHoriz';
+export { default as MenuIcon } from '@mui/icons-material/Menu';
 export { default as MoreVertIcon } from '@mui/icons-material/MoreVert';
+export { default as PlayArrowIcon } from '@mui/icons-material/PlayArrow';
+export { default as ShowChartOutlinedIcon } from '@mui/icons-material/ShowChartOutlined';
 export { default as NavigateBeforeIcon } from '@mui/icons-material/NavigateBefore';
 export { default as NavigateNextIcon } from '@mui/icons-material/NavigateNext';
 export { default as NotificationsOutlinedIcon } from '@mui/icons-material/NotificationsOutlined';
