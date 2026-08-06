@@ -86,6 +86,16 @@ export class AssistedApplyWorkspaceService {
       throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
     }
 
+    if (progressStep === 'open') {
+      if (!existing.resumeVersionId) {
+        throw new AppError(
+          'Select an approved resume before continuing to Open Job Page.',
+          400,
+          'RESUME_SELECTION_REQUIRED',
+        );
+      }
+    }
+
     const previousStep = existing.progressStep;
     const updated = await this.applications.updateProgressStep(
       userId,
@@ -95,12 +105,19 @@ export class AssistedApplyWorkspaceService {
 
     // AA-063: emit RESUME_CONFIRMED once when transitioning into "open"
     if (progressStep === 'open' && previousStep !== 'open') {
+      if (!updated.resumeVersionId) {
+        throw new AppError(
+          'Select an approved resume before continuing to Open Job Page.',
+          400,
+          'RESUME_SELECTION_REQUIRED',
+        );
+      }
       void autoApplyEventService.record({
         userId,
         jobApplicationId,
         eventType: 'RESUME_CONFIRMED',
         metadata: {
-          resumeVersionId: existing.resumeVersionId,
+          resumeVersionId: updated.resumeVersionId,
         },
       });
     }
