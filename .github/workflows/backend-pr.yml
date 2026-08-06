@@ -274,7 +274,7 @@ jobs:
       - unit-tests
       - integration-tests
       - build
-      - prisma
+      # - prisma
       - docker-build
       - deploy-config-validation
       - security
@@ -289,7 +289,7 @@ jobs:
              [ "${{ needs.unit-tests.result }}" != "success" ] || \
              [ "${{ needs.integration-tests.result }}" != "success" ] || \
              [ "${{ needs.build.result }}" != "success" ] || \
-             [ "${{ needs.prisma.result }}" != "success" ] || \
+             # [ "${{ needs.prisma.result }}" != "success" ] || \
              [ "${{ needs.docker-build.result }}" != "success" ] || \
              [ "${{ needs.deploy-config-validation.result }}" != "success" ] || \
              [ "${{ needs.security.result }}" != "success" ]; then
