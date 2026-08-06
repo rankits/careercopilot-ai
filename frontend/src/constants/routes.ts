@@ -15,7 +15,9 @@ export const ROUTES = {
   RESUME_BUILDER: '/resume-builder',
   SAVED_RESUMES: '/resume-builder/saved',
   AUTO_APPLY: '/auto-apply',
+  BROWSER_EXTENSION: '/browser-extension',
   ASSISTED_APPLY_WORKSPACE: '/assisted-apply/:jobApplicationId',
+  ASSISTED_APPLICATIONS: '/assisted-applications',
 } as const;
 
 export const jobDetailPath = (jobId: string) => `/jobs/${jobId}`;

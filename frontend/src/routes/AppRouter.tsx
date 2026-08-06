@@ -18,8 +18,10 @@ import {
   LazyAiMatchPage,
   LazyApplicationDetailPage,
   LazyApplicationsPage,
+  LazyAssistedApplicationsPage,
   LazyAssistedApplyWorkspacePage,
   LazyAutoApplyPage,
+  LazyBrowserExtensionPage,
   LazyEditProfilePage,
   LazyHomePage,
   LazyJobDetailPage,
@@ -141,10 +143,26 @@ export const appRouteObjects: RouteObject[] = [
             ),
           },
           {
+            path: ROUTES.ASSISTED_APPLICATIONS,
+            element: (
+              <LazyRoute>
+                <LazyAssistedApplicationsPage />
+              </LazyRoute>
+            ),
+          },
+          {
             path: ROUTES.AUTO_APPLY,
             element: (
               <LazyRoute>
                 <LazyAutoApplyPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.BROWSER_EXTENSION,
+            element: (
+              <LazyRoute>
+                <LazyBrowserExtensionPage />
               </LazyRoute>
             ),
           },
