@@ -259,18 +259,19 @@ determine_version() {
   stage "Determine immutable version"
   cd "${REPO_ROOT}"
 
-  if [[ -n "$(git status --porcelain)" ]]; then
+  # Use || true to avoid exiting on WSL/Windows git worktree path errors
+  if [[ -n "$(git status --porcelain 2>/dev/null || true)" ]]; then
     if [[ "${ALLOW_DIRTY}" == "true" ]]; then
-      warn "Git working tree is dirty; continuing because --allow-dirty was set."
+      warn "Git working tree is dirty or git failed; continuing because --allow-dirty was set."
     else
-      die "Git working tree is dirty. Commit/stash changes or pass --allow-dirty."
+      die "Git working tree is dirty or git failed. Commit/stash changes or pass --allow-dirty."
     fi
   fi
 
   if [[ -n "${VERSION_OVERRIDE}" ]]; then
     VERSION="${VERSION_OVERRIDE}"
   else
-    VERSION="$(git rev-parse --short=12 HEAD)"
+    VERSION="$(git rev-parse --short=12 HEAD 2>/dev/null || echo "manual-$(date +%s)")"
   fi
 
   [[ -n "${VERSION}" ]] || die "VERSION resolved empty."
