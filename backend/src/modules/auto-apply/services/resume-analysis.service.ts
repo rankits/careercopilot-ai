@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
+
 import { prisma } from '@/shared/config/db.conf.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import { logger } from '@/shared/logger/logger.js';
@@ -6,9 +7,21 @@ import type { IJobApplicationRepository } from '@/modules/auto-apply/contracts/j
 import type { IApprovedResumeVersionRepository } from '@/modules/auto-apply/contracts/resume-version.contract.js';
 import type { IApplicationConsentRepository } from '@/modules/auto-apply/contracts/application-consent.contract.js';
 import type { IApplicationPageAnalysisRepository } from '@/modules/auto-apply/contracts/application-page-analysis.contract.js';
+import type { IResumeContentResolver } from '@/modules/auto-apply/services/resume-content-resolver.service.js';
+import {
+  RESUME_JOB_ANALYZER_PROMPT_VERSION,
+  RESUME_JOB_ANALYZER_SCHEMA_VERSION,
+  RESUME_JOB_ANALYZER_VERSION,
+  resumeJobAnalyzer,
+  type ResumeJobAnalyzer,
+  type ResumeJobAnalysisResult,
+} from '@/modules/auto-apply/services/resume-job-analyzer.js';
+import { REQUIREMENT_CLASSIFIER_VERSION } from '@/modules/auto-apply/utils/requirement-domain.util.js';
+import { KEYWORD_EXTRACTOR_VERSION } from '@/modules/auto-apply/utils/resume-keyword-extract.util.js';
 
 export type ResumeAnalysisConfidence = 'HIGH' | 'MEDIUM' | 'LOW';
 
+/** Advisory resume analysis result. String lists remain FE-compatible. */
 export interface ResumeAnalysisResult {
   strengths: string[];
   concerns: string[];
@@ -18,24 +31,31 @@ export interface ResumeAnalysisResult {
   analyzedAt: string;
   degraded?: boolean;
   cached?: boolean;
+  status?: 'COMPLETE' | 'LIMITED' | 'FAILED';
+  overallAlignment?: number | null;
+  summary?: ResumeJobAnalysisResult['summary'];
+  keywords?: {
+    matched: string[];
+    missing: string[];
+    optional: string[];
+  };
+  excludedRequirements?: ResumeJobAnalysisResult['excludedRequirements'];
+  warnings?: Array<{ code: string; message: string }>;
+  resumeContentHash?: string;
+  jobContentHash?: string;
+  contentSource?: 'UPLOADED_EXTRACTION' | 'BUILDER_VERSION';
+  schemaVersion?: number;
+  analyzerVersion?: string;
 }
 
 function contentHash(parts: string[]): string {
   return createHash('sha256').update(parts.join('\n')).digest('hex');
 }
 
-function tokenize(text: string): string[] {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9+\s]/g, ' ')
-    .split(/\s+/)
-    .filter((t) => t.length > 2);
-}
-
 /**
- * Deterministic resume-vs-job comparison (AA-061).
- * Uses job analysis requirements + resume label/tags/category — never blocks Continue.
- * AI provider failures are not applicable; analysis failures degrade to empty advisory.
+ * Application-scoped resume↔job analysis (AA-061).
+ * Uses real resume body text; excludes eligibility-only requirements.
+ * Advisory only: never blocks Continue / employer handoff.
  */
 export class ResumeAnalysisService {
   constructor(
@@ -43,6 +63,8 @@ export class ResumeAnalysisService {
     private readonly resumeVersions: IApprovedResumeVersionRepository,
     private readonly consents: IApplicationConsentRepository,
     private readonly analysisRepository: IApplicationPageAnalysisRepository,
+    private readonly contentResolver: IResumeContentResolver,
+    private readonly analyzer: ResumeJobAnalyzer = resumeJobAnalyzer,
   ) {}
 
   async analyze(
@@ -64,7 +86,7 @@ export class ResumeAnalysisService {
       throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
     }
     if (!application.jobId) {
-      return this.degradedResult();
+      return this.degradedResult('FAILED');
     }
     if (!application.resumeVersionId) {
       throw new AppError(
@@ -80,14 +102,39 @@ export class ResumeAnalysisService {
     }
 
     try {
+      const resolved = await this.contentResolver.resolve({
+        userId,
+        approvedResumeVersionId: application.resumeVersionId,
+      });
+
       const pageAnalysis = await this.analysisRepository.findLatestByJobId(application.jobId);
-      const requirementBlob = JSON.stringify(pageAnalysis?.requirements ?? []);
-      const resumeBlob = [version.label, version.category, ...(version.tags ?? [])].join('|');
-      const hash = contentHash([
-        application.resumeVersionId,
+      const requirements = pageAnalysis?.requirements ?? [];
+      const requirementBlob = JSON.stringify(
+        requirements.map((r) => ({
+          code: r.code,
+          assertion: r.assertion,
+          sourceText: r.sourceText,
+          required: r.required,
+          importance: r.importance,
+        })),
+      );
+      const jobContentHash = contentHash([
         application.jobId,
+        pageAnalysis?.id ?? 'none',
+        pageAnalysis?.analyzedAt ?? '',
         requirementBlob,
-        resumeBlob,
+      ]);
+
+      const hash = contentHash([
+        jobApplicationId,
+        application.resumeVersionId,
+        resolved.contentHash,
+        jobContentHash,
+        String(RESUME_JOB_ANALYZER_SCHEMA_VERSION),
+        RESUME_JOB_ANALYZER_VERSION,
+        RESUME_JOB_ANALYZER_PROMPT_VERSION,
+        REQUIREMENT_CLASSIFIER_VERSION,
+        KEYWORD_EXTRACTOR_VERSION,
       ]);
 
       if (!options?.forceRefresh) {
@@ -102,11 +149,79 @@ export class ResumeAnalysisService {
         });
         if (cached) {
           const result = cached.result as ResumeAnalysisResult;
-          return { ...result, cached: true };
+          const staleSchema =
+            result.schemaVersion == null ||
+            result.schemaVersion < RESUME_JOB_ANALYZER_SCHEMA_VERSION ||
+            result.analyzerVersion !== RESUME_JOB_ANALYZER_VERSION;
+          if (result.degraded || result.status === 'FAILED' || staleSchema) {
+            // recompute
+          } else {
+            return {
+              ...result,
+              cached: true,
+              resumeContentHash: resolved.contentHash,
+              jobContentHash,
+              contentSource: resolved.source,
+            };
+          }
         }
       }
 
-      const result = this.compare(version, pageAnalysis?.requirements ?? []);
+      const job = await prisma.job.findFirst({
+        where: { id: application.jobId },
+        select: {
+          title: true,
+          descriptionText: true,
+          company: { select: { name: true } },
+        },
+      });
+
+      const jobAnalysisLimited =
+        pageAnalysis?.outcomeStatus === 'LIMITED' ||
+        pageAnalysis?.outcomeStatus === 'FAILED' ||
+        (pageAnalysis as { status?: string } | null)?.status === 'LIMITED' ||
+        (pageAnalysis as { status?: string } | null)?.status === 'FAILED';
+
+      const analysis = this.analyzer.analyze({
+        resumeText: resolved.text,
+        jobTitle: job?.title ?? application.jobTitle ?? '',
+        jobDescription: job?.descriptionText ?? '',
+        jobAnalysisLimited,
+        requirements: requirements.map((r) => ({
+          code: r.code ?? 'REQUIREMENT',
+          assertion: r.assertion,
+          sourceText: r.sourceText,
+          required: r.required,
+          importance: r.importance,
+          confidence: r.confidence,
+          value: r.value,
+        })),
+      });
+
+      const result: ResumeAnalysisResult = {
+        strengths: analysis.strengths,
+        concerns: analysis.concerns,
+        missingEvidence: analysis.missingEvidence,
+        unknowns: analysis.unknowns,
+        confidence: analysis.confidence,
+        analyzedAt: new Date().toISOString(),
+        status: analysis.status,
+        overallAlignment: analysis.overallAlignment,
+        summary: analysis.summary,
+        keywords: {
+          matched: analysis.keywords.matched,
+          missing: analysis.keywords.missing,
+          optional: analysis.keywords.optional,
+        },
+        excludedRequirements: analysis.excludedRequirements,
+        warnings: analysis.warnings,
+        resumeContentHash: resolved.contentHash,
+        jobContentHash,
+        contentSource: resolved.source,
+        schemaVersion: analysis.schemaVersion,
+        analyzerVersion: analysis.analyzerVersion,
+      };
+
       await prisma.jobApplicationResumeAnalysis.upsert({
         where: {
           resumeVersionId_jobId_contentHash: {
@@ -139,79 +254,11 @@ export class ResumeAnalysisService {
         { err: error, jobApplicationId },
         'Resume analysis failed — returning degraded advisory result',
       );
-      return this.degradedResult();
+      return this.degradedResult('FAILED');
     }
   }
 
-  private compare(
-    version: { label: string; category: string; tags: string[] },
-    requirements: Array<{
-      code?: string;
-      assertion?: string;
-      sourceText?: string;
-      required?: boolean;
-    }>,
-  ): ResumeAnalysisResult {
-    const resumeText = [version.label, version.category, ...version.tags].join(' ');
-    const resumeTokens = new Set(tokenize(resumeText));
-
-    const strengths: string[] = [];
-    const concerns: string[] = [];
-    const missingEvidence: string[] = [];
-    const unknowns: string[] = [];
-
-    if (requirements.length === 0) {
-      unknowns.push('Job requirements are not available yet — analysis confidence is limited.');
-    }
-
-    for (const req of requirements) {
-      const haystack = [req.code, req.assertion, req.sourceText].filter(Boolean).join(' ');
-      const tokens = tokenize(haystack);
-      if (tokens.length === 0) {
-        unknowns.push(`Could not interpret requirement ${req.code ?? 'unknown'}.`);
-        continue;
-      }
-      const overlap = tokens.filter((t) => resumeTokens.has(t));
-      const label = (req.code ?? 'Requirement').replace(/_/g, ' ');
-      if (overlap.length >= Math.max(1, Math.ceil(tokens.length * 0.35))) {
-        strengths.push(
-          `Your resume (${version.label}) appears to align with “${label}” based on overlapping terms.`,
-        );
-      } else if (req.required !== false) {
-        if (overlap.length === 0) {
-          concerns.push(
-            `This posting mentions “${label}”, which is not clearly reflected in your selected resume.`,
-          );
-        } else {
-          missingEvidence.push(
-            `Not clear whether “${label}” is fully covered — only partial overlap with your resume.`,
-          );
-        }
-      } else {
-        missingEvidence.push(`Optional signal “${label}” is not clearly evidenced on your resume.`);
-      }
-    }
-
-    let confidence: ResumeAnalysisConfidence = 'MEDIUM';
-    if (requirements.length === 0 || (strengths.length === 0 && concerns.length === 0)) {
-      confidence = 'LOW';
-    } else if (strengths.length >= concerns.length && missingEvidence.length <= 1) {
-      confidence = 'HIGH';
-    } else if (concerns.length > strengths.length + 1) {
-      confidence = 'LOW';
-    }
-
-    return {
-      strengths,
-      concerns,
-      missingEvidence,
-      unknowns,
-      confidence,
-      analyzedAt: new Date().toISOString(),
-    };
-  }
-
-  private degradedResult(): ResumeAnalysisResult {
+  private degradedResult(status: 'LIMITED' | 'FAILED' = 'FAILED'): ResumeAnalysisResult {
     return {
       strengths: [],
       concerns: [],
@@ -220,6 +267,10 @@ export class ResumeAnalysisService {
       confidence: 'LOW',
       analyzedAt: new Date().toISOString(),
       degraded: true,
+      status,
+      overallAlignment: null,
+      schemaVersion: RESUME_JOB_ANALYZER_SCHEMA_VERSION,
+      analyzerVersion: RESUME_JOB_ANALYZER_VERSION,
     };
   }
 }
