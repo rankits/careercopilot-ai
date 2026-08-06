@@ -4,7 +4,7 @@ import aiPlatformIllustration from '@/assets/illustrations/ai-platform-illustrat
 import careerBoyIllustration from '@/assets/illustrations/career-boy-illustration.png';
 import careerCopilotLogo from '@/assets/logo/career-copilot-logo.png';
 import { ROUTES } from '@/constants/routes';
-import { AUTH_PAGE_COPY, LOGIN_FEATURES, TRUST_ITEMS } from '@/constants/ui';
+import { AUTH_PAGE_COPY, LOGIN_FEATURES } from '@/constants/ui';
 import { AutoAwesomeOutlinedIcon, Box } from '@/lib/material';
 
 import type { AuthPageFeature } from './interfaces';
@@ -84,24 +84,6 @@ function MobileLoginIntro() {
   );
 }
 
-function TrustPanel() {
-  return (
-    <Styled.TrustPanel aria-label={AUTH_PAGE_COPY.securityAria}>
-      {TRUST_ITEMS.map(({ description, icon: Icon, title, tone }) => (
-        <Styled.TrustItem key={title}>
-          <Styled.FeatureIcon size="small" tone={tone}>
-            <Icon fontSize="small" />
-          </Styled.FeatureIcon>
-          <Box>
-            <Styled.FeatureTitle>{title}</Styled.FeatureTitle>
-            <Styled.FeatureDescription>{description}</Styled.FeatureDescription>
-          </Box>
-        </Styled.TrustItem>
-      ))}
-    </Styled.TrustPanel>
-  );
-}
-
 function RegisterPanel() {
   return (
     <Styled.RegisterPanel as="aside">
@@ -151,7 +133,6 @@ export function AuthPageLayout({ children, mode }: AuthPageLayoutProps) {
           <Styled.FormStack mode={mode}>
             {!isRegister ? <MobileLoginIntro /> : null}
             {children}
-            {!isRegister ? <TrustPanel /> : null}
           </Styled.FormStack>
         </Styled.FormColumn>
       </Styled.AuthContent>

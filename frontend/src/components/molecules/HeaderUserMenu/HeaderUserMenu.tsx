@@ -62,11 +62,11 @@ export function HeaderUserMenu({
         <UserAvatar alt={name} src={avatarUrl}>
           {avatarUrl ? null : initials}
         </UserAvatar>
-        <UserMenuText>
+        <UserMenuText className="header-user-meta">
           <Typography component="span">{name}</Typography>
           <Typography component="small">{roleLabel}</Typography>
         </UserMenuText>
-        <KeyboardArrowDownIcon fontSize="small" />
+        <KeyboardArrowDownIcon className="header-user-chevron" fontSize="small" />
       </UserMenuButton>
 
       <Menu anchorEl={anchorElement} onClose={handleClose} open={open}>

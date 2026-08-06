@@ -31,33 +31,33 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   ref,
 ) {
   const resolvedTone: InputTone = errorMessage ? 'error' : tone;
-  const inputLabelSlotProps = props.slotProps?.inputLabel;
-  const htmlInputSlotProps = props.slotProps?.htmlInput;
+  const { inputProps: legacyInputProps, slotProps, sx: consumerSx, ...restProps } = props;
+  const inputLabelSlotProps = slotProps?.inputLabel;
+  const htmlInputSlotProps = slotProps?.htmlInput;
+  const inputSlotProps = slotProps?.input;
 
   return (
     <TextField
-      {...props}
+      {...restProps}
       error={Boolean(errorMessage)}
       helperText={errorMessage || helperText}
       inputRef={ref}
       size={size}
       variant="outlined"
       slotProps={{
-        ...props.slotProps,
+        ...slotProps,
         htmlInput: {
+          ...(typeof legacyInputProps === 'object' && legacyInputProps ? legacyInputProps : {}),
           ...(typeof htmlInputSlotProps === 'function' ? {} : htmlInputSlotProps),
         },
         input: {
+          ...(typeof inputSlotProps === 'function' ? {} : inputSlotProps),
           endAdornment: endAdornment ? (
             <InputAdornment position="end">{endAdornment}</InputAdornment>
           ) : undefined,
           startAdornment: startAdornment ? (
             <InputAdornment position="start">{startAdornment}</InputAdornment>
           ) : undefined,
-          ...props.slotProps?.input,
-        },
-        htmlInput: {
-          ...props.slotProps?.htmlInput,
         },
         inputLabel: {
           shrink: true,
@@ -65,7 +65,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         },
       }}
       sx={getInputSx({
-        consumerSx: props.sx,
+        consumerSx,
         inputVariant,
         size,
         tone: resolvedTone,

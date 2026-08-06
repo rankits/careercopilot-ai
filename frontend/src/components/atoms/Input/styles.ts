@@ -51,7 +51,8 @@ function getInputStyles(
     },
     '& .MuiInputBase-input': {
       color: colorTokens.textPrimary,
-      fontSize: fontSize.sm,
+      // iOS Safari zooms focused inputs under 16px; keep readable without pinch-reset.
+      fontSize: fontSize.base,
       paddingBlock: 0,
       '&::placeholder': {
         color: colorTokens.textTertiary,

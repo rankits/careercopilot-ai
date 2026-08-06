@@ -13,13 +13,17 @@ import { authReducer } from '@/features/auth/authSlice';
 
 import { LoginPage } from './LoginPage';
 
-const { loginMock } = vi.hoisted(() => ({
+const { loginMock, forgotPasswordMock, resetPasswordMock } = vi.hoisted(() => ({
   loginMock: vi.fn(),
+  forgotPasswordMock: vi.fn(),
+  resetPasswordMock: vi.fn(),
 }));
 
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
     login: loginMock,
+    forgotPassword: forgotPasswordMock,
+    resetPassword: resetPasswordMock,
   },
 }));
 
@@ -56,9 +60,45 @@ async function completeValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/^password$/i), 'password123');
 }
 
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    clear: () => {
+      store = {};
+    },
+    getItem: (key: string) => store[key] ?? null,
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() {
+      return Object.keys(store).length;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: localStorageMock,
+  writable: true,
+});
+
 describe('LoginPage', () => {
   beforeEach(() => {
     loginMock.mockReset();
+    forgotPasswordMock.mockReset();
+    resetPasswordMock.mockReset();
+    forgotPasswordMock.mockResolvedValue({
+      message: 'If an account with that email exists, a verification code has been sent.',
+      status: 'success',
+    });
+    resetPasswordMock.mockResolvedValue({
+      message: 'Password has been reset. Please sign in with your new password.',
+      status: 'success',
+    });
     localStorage.clear();
   });
 
@@ -66,7 +106,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(screen.getByRole('main')).toHaveStyle({ overflow: 'hidden' });
+    expect(screen.getByRole('main')).toHaveStyle({ minHeight: '100dvh' });
     expect(screen.getByRole('heading', { name: /welcome back!/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /careercopilot/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /careercopilot/i })).not.toHaveStyle({
@@ -90,10 +130,9 @@ describe('LoginPage', () => {
     expect(screen.getByText(/^application tracking$/i)).toBeInTheDocument();
     expect(screen.queryByText(/^resume score$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^jobs aggregated$/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/^your data is safe$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^privacy first$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^ai you can trust$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/security and trust/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^your data is safe$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^privacy first$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^ai you can trust$/i)).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /remember me/i })).toBeChecked();
 
     await user.click(screen.getByRole('link', { name: /create account/i }));
