@@ -142,15 +142,22 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
   forgotPassword: yup.object({
     email: yup
       .string()
-      .required('Email is required')
-      .matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$/, 'Enter a valid email address'),
+      .trim()
+      .email('Enter a valid email address')
+      .max(300, 'Email cannot exceed 300 characters')
+      .required('Email is required'),
     confirmPassword: yup
       .string()
       .oneOf([yup.ref('password')], 'Passwords must match')
       .required('Confirm password is required'),
     password: yup
       .string()
+      .required('Password is required')
       .min(8, 'Password must be at least 8 characters')
-      .required('Password is required'),
+      .max(128, 'Password cannot exceed 128 characters')
+      .matches(/[A-Z]/, 'Password must include an uppercase letter')
+      .matches(/[a-z]/, 'Password must include a lowercase letter')
+      .matches(/\d/, 'Password must include a number')
+      .matches(/[^A-Za-z0-9]/, 'Password must include a symbol'),
   }),
 } as const;

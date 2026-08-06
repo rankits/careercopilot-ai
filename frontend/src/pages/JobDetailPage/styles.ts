@@ -214,29 +214,40 @@ export const jobDetailPageSx = {
     margin: 0,
   } satisfies SxProps<Theme>,
 
-  descriptionCollapsed: {
-    maxHeight: '15rem',
-    overflow: 'hidden',
+  descriptionInline: {
+    color: colorTokens.textPrimary,
+    display: 'inline',
+    fontSize: fontSize.sm,
+    lineHeight: 1.6,
+    margin: 0,
+    overflowWrap: 'anywhere',
+    whiteSpace: 'normal',
+  } satisfies SxProps<Theme>,
 
-    '&::after': {
-      background: `linear-gradient(180deg, transparent 0%, ${colorTokens.backgroundCard} 88%)`,
-      bottom: 0,
-      content: '""',
-      height: '4rem',
-      left: 0,
-      pointerEvents: 'none',
-      position: 'absolute',
-      right: 0,
+  descriptionToggle: {
+    background: 'transparent',
+    border: 0,
+    color: colorTokens.actionPrimary,
+    cursor: 'pointer',
+    display: 'inline',
+    font: 'inherit',
+    fontSize: 'inherit',
+    fontWeight: fontWeight.bold,
+    lineHeight: 'inherit',
+    padding: 0,
+    textDecoration: 'underline',
+    textUnderlineOffset: '0.15em',
+    verticalAlign: 'baseline',
+    whiteSpace: 'nowrap',
+    width: 'auto',
+    '&:hover': {
+      color: colorTokens.actionPrimaryHover,
     },
   } satisfies SxProps<Theme>,
 
-  descriptionExpanded: {
-    maxHeight: 'none',
-    overflow: 'visible',
-
-    '&::after': {
-      display: 'none',
-    },
+  descriptionToggleAfter: {
+    display: 'inline-block',
+    marginTop: spacing[1],
   } satisfies SxProps<Theme>,
 
   panel: {
