@@ -27,6 +27,8 @@ import {
 import {
   updateResumeSelectionController,
   analyzeResumeForApplicationController,
+  syncBuilderResumeController,
+  getResumeBuilderContextController,
   handoffApplicationController,
 } from '@/modules/auto-apply/controllers/assisted-apply-resume-handoff.controller.js';
 import {
@@ -63,6 +65,14 @@ const ResumeAnalysisBodySchema = z.object({
     })
     .optional()
     .default({}),
+});
+
+const SyncBuilderResumeBodySchema = z.object({
+  body: z.object({
+    resumeId: z.string().uuid(),
+    builderVersionId: z.coerce.number().int().positive(),
+    label: z.string().max(120).optional(),
+  }),
 });
 
 const MarkAppliedBodySchema = z.object({
@@ -139,6 +149,21 @@ router.post(
   requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_READ_OWN),
   validateResource(ResumeAnalysisBodySchema),
   analyzeResumeForApplicationController,
+);
+
+router.post(
+  '/:id/sync-builder-resume',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_UPDATE_OWN),
+  validateResource(SyncBuilderResumeBodySchema),
+  syncBuilderResumeController,
+);
+
+router.get(
+  '/:id/resume-builder-context',
+  ...requireUser,
+  requirePermission(AUTO_APPLY_PERMISSIONS.SUBMISSIONS_READ_OWN),
+  getResumeBuilderContextController,
 );
 
 router.post(
