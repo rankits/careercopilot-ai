@@ -22,7 +22,7 @@ concurrency:
 jobs:
   validate:
     name: Validate Backend Before Deployment
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -99,7 +99,7 @@ jobs:
   build-and-push:
     name: Build and Push Docker Image
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out repository
@@ -130,7 +130,7 @@ jobs:
   package-deployment:
     name: Package and Upload Release Bundle
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out repository
@@ -158,7 +158,7 @@ jobs:
   deploy:
     name: Deploy to EC2 via AWS Systems Manager
     needs: package-deployment
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
 
@@ -242,7 +242,7 @@ jobs:
   verify-public-endpoint:
     name: Verify Public Health Endpoint
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Verify Public Health Endpoint
