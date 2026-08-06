@@ -9,6 +9,8 @@ export interface SidebarNavItem {
   icon: SvgIconComponent;
   id: string;
   label: string;
+  /** Compact label for the mobile bottom bar; falls back to `label`. */
+  shortLabel?: string;
 }
 
 export interface SidebarProps {
@@ -24,6 +26,7 @@ export interface SidebarProps {
   onOpenResumeVersions?: () => void;
   onSettingsClick?: () => void;
   onVariantChange?: (variant: SidebarVariant) => void;
+  resumeListLoaded?: boolean;
   tone?: SidebarTone;
   userName?: string;
   variant?: SidebarVariant;

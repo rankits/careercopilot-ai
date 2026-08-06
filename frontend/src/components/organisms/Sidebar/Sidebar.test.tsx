@@ -103,6 +103,9 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /^jobs feed$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^ai match$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^applications$/i })).toBeInTheDocument();
+    expect(screen.getByText(/^home$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^jobs$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^apps$/i)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^saved jobs$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument();
 

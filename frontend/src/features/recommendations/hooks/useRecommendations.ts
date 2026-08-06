@@ -15,8 +15,8 @@ export const recommendationsQueryKey = (params: ListRecommendationsParams) =>
 
 export const recommendationsReadinessQueryKey = ['recommendations', 'readiness'] as const;
 
-export const similarJobsQueryKey = (jobId: string, limit: number) =>
-  ['recommendations', 'similar', jobId, limit] as const;
+export const similarJobsQueryKey = (jobId: string, limit?: number) =>
+  ['recommendations', 'similar', jobId, limit ?? 'default'] as const;
 
 export const savedSearchesQueryKey = ['recommendations', 'saved-searches'] as const;
 
@@ -84,12 +84,19 @@ export function useSimilarJobs(
   jobId: string | undefined,
   options: { enabled?: boolean; limit?: number } = {},
 ) {
-  const limit = options.limit ?? 10;
+  const limit = options.limit;
 
   return useQuery({
     enabled: Boolean(jobId) && (options.enabled ?? true),
     queryKey: similarJobsQueryKey(jobId ?? 'missing', limit),
-    queryFn: ({ signal }) => recommendationsService.getSimilarJobs(jobId!, { limit }, { signal }),
+    queryFn: ({ signal }) =>
+      recommendationsService.getSimilarJobs(jobId!, limit !== undefined ? { limit } : {}, {
+        signal,
+      }),
+    // Similar-job retrieval is expensive; avoid automatic multi-retries on failure.
+    retry: false,
+    refetchOnWindowFocus: false,
+    staleTime: 30_000,
     select: (items) => {
       const filteredItems = items.filter((item) => item.job.id !== jobId);
       return {
