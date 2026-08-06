@@ -1,12 +1,11 @@
-import { createRoot } from 'react-dom/client';
-import { PreviewDrawer, FieldInfo } from './components/PreviewDrawer';
+import { mountReviewPanel } from './review-panel/ReviewPanelRoot';
 
 console.log('Career Copilot Content Script initialized.');
 
-let drawerRoot: ReturnType<typeof createRoot> | null = null;
 const userOverrides = new Set<string>();
 
 import { matchFieldToVaultKey } from '../autofill/vaultMatching';
+import { FrameworkEventAdapter } from './review-panel/core/FrameworkEventAdapter';
 
 // Listen for messages from the popup or background script
 chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
@@ -49,7 +48,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         }
       }
 
-      mountPreviewDrawer(request.fields, augmentedAnswers, vaultKeys, contentGenerationAllowed);
+      mountReviewPanel(request.fields, augmentedAnswers, vaultKeys, contentGenerationAllowed);
       sendResponse({ success: true });
     })();
     return true; // Keep the channel open for the async response
@@ -57,68 +56,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
   return true; // Keep the message channel open for asynchronous responses if needed
 });
 
-function mountPreviewDrawer(
-  fields: FieldInfo[], 
-  answers: Record<string, string>, 
-  vaultKeys: Record<string, string | null> = {},
-  contentGenerationAllowed: boolean = false
-) {
-  let container = document.getElementById('career-copilot-root');
-  if (!container) {
-    container = document.createElement('div');
-    container.id = 'career-copilot-root';
-    document.body.appendChild(container);
-  }
-
-  // Use Shadow DOM to prevent CSS leakage
-  let shadowRoot = container.shadowRoot;
-  if (!shadowRoot) {
-    shadowRoot = container.attachShadow({ mode: 'open' });
-  }
-
-  // Find or create the mount point inside the shadow root
-  let mountPoint = shadowRoot.getElementById('drawer-mount');
-  if (!mountPoint) {
-    mountPoint = document.createElement('div');
-    mountPoint.id = 'drawer-mount';
-    shadowRoot.appendChild(mountPoint);
-  }
-
-  if (!drawerRoot) {
-    drawerRoot = createRoot(mountPoint);
-  }
-
-  const handleConfirm = (selectedAnswers: Record<string, string>) => {
-    fillFormFields(selectedAnswers);
-    closePreviewDrawer();
-  };
-
-  const handleCancel = () => {
-    closePreviewDrawer();
-  };
-
-  drawerRoot.render(
-    <PreviewDrawer 
-      fields={fields} 
-      answers={answers} 
-      vaultKeys={vaultKeys}
-      contentGenerationAllowed={contentGenerationAllowed}
-      onConfirm={handleConfirm} 
-      onCancel={handleCancel} 
-    />
-  );
-}
-
-function closePreviewDrawer() {
-  if (drawerRoot) {
-    drawerRoot.unmount();
-    drawerRoot = null;
-  }
-  const container = document.getElementById('career-copilot-root');
-  if (container) {
-    container.remove();
-  }
-}
+// mount logic moved to ReviewPanelRoot.tsx
 
 function trackUserEdit(identifier: string) {
   userOverrides.add(identifier);
@@ -205,7 +143,7 @@ function extractFormFields() {
   return fields;
 }
 
-async function fillFormFields(answers: Record<string, string>) {
+export async function fillFormFields(answers: Record<string, string>) {
   for (const [identifier, value] of Object.entries(answers)) {
     // Do not overwrite if the user manually edited this field this session
     if (userOverrides.has(identifier)) {
@@ -248,10 +186,7 @@ async function fillFormFields(answers: Record<string, string>) {
         }
       }
 
-      el.value = value;
-      // Dispatch events so React/Angular/Vue picks up the change
-      el.dispatchEvent(new Event('input', { bubbles: true }));
-      el.dispatchEvent(new Event('change', { bubbles: true }));
+      FrameworkEventAdapter.setValue(el, value);
       
       // Listen for future manual edits to flag as user-overridden
       el.addEventListener('input', () => trackUserEdit(identifier), { once: true });
