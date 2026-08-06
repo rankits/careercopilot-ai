@@ -48,7 +48,7 @@ describe('GET /api/v1/auto-apply/setup-status', () => {
         { id: 'links', label: 'Professional links', complete: true, required: false },
         { id: 'answers', label: 'Common answers', complete: false, required: true },
         { id: 'resumes', label: 'Resumes', complete: false, required: true },
-        { id: 'exclusions', label: 'Exclusions', complete: true, required: false },
+        { id: 'education', label: 'Education', complete: true, required: false },
         { id: 'consents', label: 'Consents & privacy', complete: false, required: true },
       ],
     });
