@@ -108,6 +108,12 @@ describe('OutboxRelay', () => {
         MessageRoutingKeys.JOB_SEMANTIC_CONTENT_CHANGED,
         QoSPresets.RELIABLE_DLQ,
       ],
+      [
+        MessageQueues.RESUME_ANALYSIS_REQUESTS,
+        MessageExchanges.DOMAIN_EVENTS,
+        MessageRoutingKeys.RESUME_ANALYSIS_REQUESTED,
+        QoSPresets.RELIABLE_DLQ,
+      ],
     ]);
   });
 
