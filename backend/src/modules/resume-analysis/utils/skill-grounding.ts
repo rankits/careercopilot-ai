@@ -7,9 +7,9 @@ import {
   extractProfessionalSkillsFromText,
   skillAppearsIn,
   skillMatchKey,
-} from '@/modules/resumes/utils/skill-normalizer.js'; //no-eslint-disable-line no-unused-vars
+} from '@/modules/resumes/utils/skill-normalizer.js';
 
-import { dedupeSemanticSkills } from '@/modules/resume-analysis/utils/semantic-skills.js'; //no-eslint-disable-line no-unused-vars
+import { dedupeSemanticSkills } from '@/modules/resume-analysis/utils/semantic-skills.js';
 
 export type GroundedSkillGap = {
   matchedSkills: string[];
@@ -20,8 +20,13 @@ export type GroundedSkillGap = {
   crossDomain: boolean;
 };
 
+const skillEvidencedIn = (evidenceText: string, skill: string): boolean =>
+  skillAppearsIn(evidenceText, skill);
+
 export const groundSkillGapAgainstResume = (input: {
   resumeText: string;
+  /** Extra structured skills/technologies that may be missing from lossy extract text. */
+  structuredSkills?: string[];
   jobDescription?: string;
   targetRole?: string;
   aiMatched?: string[];
@@ -30,6 +35,13 @@ export const groundSkillGapAgainstResume = (input: {
   aiAdditional?: string[];
   aiKeywordTerms?: string[];
 }): GroundedSkillGap => {
+  const structured = dedupeSemanticSkills(input.structuredSkills ?? []);
+  // Evidence pool = resume prose + structured skills/technologies (lossy PDF safety net).
+  const evidenceText =
+    structured.length > 0
+      ? `${input.resumeText}\n\nSKILLS\n${structured.join(', ')}\n`
+      : input.resumeText;
+
   const jdText = [input.jobDescription ?? '', input.targetRole ?? ''].join('\n');
   const jdPool = dedupeSemanticSkills([
     ...extractProfessionalSkillsFromText(jdText),
@@ -39,10 +51,10 @@ export const groundSkillGapAgainstResume = (input: {
     ...(input.aiKeywordTerms ?? []),
   ]);
 
-  const evidencedFromJd = jdPool.filter((skill) => skillAppearsIn(input.resumeText, skill));
+  const evidencedFromJd = jdPool.filter((skill) => skillEvidencedIn(evidenceText, skill));
   const aiMatchedKeep = dedupeSemanticSkills(input.aiMatched ?? []).filter(
     (skill) =>
-      skillAppearsIn(input.resumeText, skill) ||
+      skillEvidencedIn(evidenceText, skill) ||
       evidencedFromJd.some((item) => skillMatchKey(item) === skillMatchKey(skill)),
   );
 
@@ -56,7 +68,8 @@ export const groundSkillGapAgainstResume = (input: {
 
   const additionalSkills = dedupeSemanticSkills([
     ...(input.aiAdditional ?? []),
-    ...extractProfessionalSkillsFromText(input.resumeText),
+    ...extractProfessionalSkillsFromText(evidenceText),
+    ...structured,
   ]).filter(
     (skill) =>
       !matchedKeys.has(skillMatchKey(skill)) &&
