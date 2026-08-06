@@ -55,11 +55,13 @@ export interface TrackedEvent {
 const DEBUG_BUFFER_MAX = 100;
 const debugBuffer: TrackedEvent[] = [];
 
-type AnalyticsSink = (event: AssistedApplyAnalyticsEvent, properties: Record<string, string | number | boolean | null>) => void;
+type AnalyticsSink = (
+  event: AssistedApplyAnalyticsEvent,
+  properties: Record<string, string | number | boolean | null>,
+) => void;
 
 let sink: AnalyticsSink = (event, properties) => {
   if (import.meta.env.DEV || import.meta.env.VITE_ASSISTED_APPLY_ANALYTICS_DEBUG === 'true') {
-    // eslint-disable-next-line no-console -- intentional debug sink (AA-083)
     console.debug('[assisted-apply:analytics]', event, properties);
   }
 };
@@ -69,7 +71,6 @@ export function setAnalyticsSink(next: AnalyticsSink | null): void {
     next ??
     ((event, properties) => {
       if (import.meta.env.DEV || import.meta.env.VITE_ASSISTED_APPLY_ANALYTICS_DEBUG === 'true') {
-        // eslint-disable-next-line no-console -- intentional debug sink (AA-083)
         console.debug('[assisted-apply:analytics]', event, properties);
       }
     });
@@ -91,7 +92,12 @@ function sanitizeProperties(
   for (const [key, value] of Object.entries(properties)) {
     if (FORBIDDEN_PROPERTY_KEYS.has(key)) continue;
     if (value === undefined) continue;
-    if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean' || value === null) {
+    if (
+      typeof value === 'string' ||
+      typeof value === 'number' ||
+      typeof value === 'boolean' ||
+      value === null
+    ) {
       out[key] = value;
     }
   }

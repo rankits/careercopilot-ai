@@ -4,6 +4,7 @@ import { Box, useMediaQuery } from '@/lib/material';
 import type { SxProps, Theme } from '@/lib/material';
 
 /** WCAG 2.5.5 — minimum 44×44px touch target (AA-081, mirrors AA-030). */
+// eslint-disable-next-line react-refresh/only-export-components -- shared touch-target sx used by step pages
 export const assistedApplyTouchTargetSx: SxProps<Theme> = {
   minHeight: 44,
   minWidth: 44,

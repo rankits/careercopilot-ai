@@ -26,13 +26,18 @@ import { createHeadlessPageSnapshot } from '@/modules/auto-apply/services/headle
 import { JobPageAnalyzerService } from '@/modules/auto-apply/services/job-page-analyzer.service.js';
 import { RecommendationsMatchAdapter } from '@/modules/auto-apply/adapters/recommendations-match.adapter.js';
 import { PrepareApplicationService } from '@/modules/auto-apply/services/prepare-application.service.js';
+import { PrismaProfileJobMatchRepository } from '@/modules/auto-apply/repositories/prisma-profile-job-match.repository.js';
+import { ProfileJobMatchService } from '@/modules/auto-apply/services/profile-job-match.service.js';
 
 const channelJobLookup = new PrismaChannelDetectionJobLookup();
 const analysisRepository = new PrismaApplicationPageAnalysisRepository();
 const matchScoreLookup = new PrismaMatchScoreLookup();
 const consentRepository = new PrismaApplicationConsentRepository();
 const resumeVersionRepository = new PrismaApprovedResumeVersionRepository();
+const candidateProfileRepository = new PrismaCandidateApplicationProfileRepository();
+const applicationAnswerRepository = new PrismaApplicationAnswerRepository();
 export const jobApplicationRepository = new PrismaJobApplicationRepository();
+export const profileJobMatchRepository = new PrismaProfileJobMatchRepository();
 
 export const readinessAdapterRegistry = new JobApplicationAdapterRegistry();
 readinessAdapterRegistry.register(new ExternalRedirectAdapter());
@@ -43,8 +48,8 @@ export const applicationReadinessService = new ApplicationReadinessService(
   channelJobLookup,
   new ChannelDetectionService(channelJobLookup),
   readinessAdapterRegistry,
-  new PrismaCandidateApplicationProfileRepository(),
-  new PrismaApplicationAnswerRepository(),
+  candidateProfileRepository,
+  applicationAnswerRepository,
   resumeVersionRepository,
   new PrismaApplicationRuleRepository(),
   consentRepository,
@@ -77,9 +82,16 @@ export const applicationMatchPort = new RecommendationsMatchAdapter(
   resumeVersionRepository,
 );
 
+export const profileJobMatchService = new ProfileJobMatchService(
+  candidateProfileRepository,
+  applicationAnswerRepository,
+  profileJobMatchRepository,
+);
+
 export const prepareApplicationService = new PrepareApplicationService(
   jobPageAnalyzerService,
   applicationMatchPort,
   applicationReadinessService,
   jobApplicationRepository,
+  profileJobMatchService,
 );

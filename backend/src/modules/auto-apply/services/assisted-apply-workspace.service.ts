@@ -1,6 +1,8 @@
 import { AppError } from '@/shared/utils/errors/AppError.js';
+import { prisma } from '@/shared/config/db.conf.js';
 import type { IJobApplicationRepository } from '@/modules/auto-apply/contracts/job-application.contract.js';
 import type { IApplicationPageAnalysisRepository } from '@/modules/auto-apply/contracts/application-page-analysis.contract.js';
+import type { IProfileJobMatchRepository } from '@/modules/auto-apply/repositories/prisma-profile-job-match.repository.js';
 import type { AssistedApplyWorkspaceDto } from '@/modules/auto-apply/types/assisted-apply-workspace.types.js';
 import {
   WORKSPACE_STEP_IDS,
@@ -13,6 +15,7 @@ export class AssistedApplyWorkspaceService {
   constructor(
     private readonly applications: IJobApplicationRepository,
     private readonly analysisRepository: IApplicationPageAnalysisRepository,
+    private readonly profileMatches?: IProfileJobMatchRepository,
   ) {}
 
   async getWorkspace(userId: string, jobApplicationId: string): Promise<AssistedApplyWorkspaceDto> {
@@ -35,7 +38,38 @@ export class AssistedApplyWorkspaceService {
       }
     }
 
-    return buildWorkspaceDto({ application, hasAnalysis, analysisSummary });
+    const profileMatchRecord = this.profileMatches
+      ? await this.profileMatches.findByJobApplicationId(userId, jobApplicationId)
+      : null;
+
+    const jobSummary = application.jobId ? await this.loadJobSummary(application.jobId) : null;
+
+    return buildWorkspaceDto({
+      application,
+      hasAnalysis,
+      analysisSummary,
+      profileMatch: profileMatchRecord?.result ?? null,
+      jobSummary,
+    });
+  }
+
+  /** Job-card display fields only; a lookup failure must not break the workspace. */
+  private async loadJobSummary(
+    jobId: string,
+  ): Promise<{ companyName: string | null; workplaceMode: string | null } | null> {
+    try {
+      const job = await prisma.job.findUnique({
+        where: { id: jobId },
+        select: { remoteType: true, company: { select: { name: true } } },
+      });
+      if (!job) return null;
+      return {
+        companyName: job.company?.name ?? null,
+        workplaceMode: job.remoteType ?? null,
+      };
+    } catch {
+      return null;
+    }
   }
 
   async updateProgressStep(

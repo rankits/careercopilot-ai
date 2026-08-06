@@ -97,11 +97,7 @@ export interface IJobApplicationRepository {
   /** Resets a withdrawn submission so the same job can be applied again. */
   reopenFromWithdrawn(userId: string, id: string): Promise<JobApplicationDto>;
   /** AA-043: persist last-viewed workspace step. */
-  updateProgressStep(
-    userId: string,
-    id: string,
-    progressStep: string,
-  ): Promise<JobApplicationDto>;
+  updateProgressStep(userId: string, id: string, progressStep: string): Promise<JobApplicationDto>;
   /** AA-060: persist per-application resume selection. */
   updateResumeSelection(
     userId: string,
@@ -129,7 +125,11 @@ export interface IJobApplicationRepository {
   abandonApplication(
     userId: string,
     id: string,
-    data: { abandonReason: string; abandonNote: string | null },
+    data: {
+      abandonReason: string;
+      abandonNote: string | null;
+      targetStatus?: JobApplicationStatusValue;
+    },
     expectedStatus: JobApplicationStatusValue,
   ): Promise<JobApplicationDto | null>;
   /** AA-072: update notes/date on already-SUBMITTED application. */

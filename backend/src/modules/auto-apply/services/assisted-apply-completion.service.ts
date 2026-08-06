@@ -8,16 +8,14 @@ export const ABANDON_REASON_CODES = [
   'NOT_INTERESTED',
   'TOO_MANY_REQUIREMENTS',
   'BROKEN_LINK',
+  'JOB_CLOSED',
   'WILL_APPLY_LATER',
   'OTHER',
 ] as const;
 
 export type AbandonReasonCode = (typeof ABANDON_REASON_CODES)[number];
 
-const TERMINAL_NO_ABANDON: JobApplicationStatusValue[] = [
-  'SUBMITTED',
-  'CONFIRMATION_RECEIVED',
-];
+const TERMINAL_NO_ABANDON: JobApplicationStatusValue[] = ['SUBMITTED', 'CONFIRMATION_RECEIVED'];
 
 export class AssistedApplyCompletionService {
   constructor(private readonly applications: IJobApplicationRepository) {}
@@ -40,10 +38,7 @@ export class AssistedApplyCompletionService {
     }
 
     // Idempotent if already SUBMITTED / CONFIRMATION_RECEIVED
-    if (
-      application.status === 'SUBMITTED' ||
-      application.status === 'CONFIRMATION_RECEIVED'
-    ) {
+    if (application.status === 'SUBMITTED' || application.status === 'CONFIRMATION_RECEIVED') {
       const updated = await this.applications.updateAppliedDetails(userId, jobApplicationId, {
         submittedAt: appliedAt,
         appliedNotes: notes ?? application.appliedNotes,
@@ -58,11 +53,7 @@ export class AssistedApplyCompletionService {
     const isOpened =
       application.status === 'ACTION_REQUIRED' && Boolean(application.handoffOpenedAt);
     if (!isOpened) {
-      throw new AppError(
-        'Open the application before marking as applied.',
-        409,
-        'INVALID_STATE',
-      );
+      throw new AppError('Open the application before marking as applied.', 409, 'INVALID_STATE');
     }
 
     const updated =
@@ -83,11 +74,7 @@ export class AssistedApplyCompletionService {
           viewState: 'APPLIED',
         };
       }
-      throw new AppError(
-        'Open the application before marking as applied.',
-        409,
-        'INVALID_STATE',
-      );
+      throw new AppError('Open the application before marking as applied.', 409, 'INVALID_STATE');
     }
 
     void autoApplyEventService.record({
@@ -113,17 +100,20 @@ export class AssistedApplyCompletionService {
     if (!ABANDON_REASON_CODES.includes(reasonCode as AbandonReasonCode)) {
       throw new AppError('Invalid or missing abandon reasonCode', 400, 'INVALID_ABANDON_REASON');
     }
-    const note =
-      typeof input.note === 'string' ? input.note.trim().slice(0, 2000) || null : null;
+    const note = typeof input.note === 'string' ? input.note.trim().slice(0, 2000) || null : null;
 
     const application = await this.applications.findById(userId, jobApplicationId);
     if (!application) {
       throw new AppError('Auto-apply submission not found', 404, 'APPLICATION_NOT_FOUND');
     }
 
-    if (application.status === 'WITHDRAWN') {
+    let targetStatus: JobApplicationStatusValue = 'WITHDRAWN';
+    if (reasonCode === 'BROKEN_LINK') targetStatus = 'COULD_NOT_APPLY';
+    if (reasonCode === 'JOB_CLOSED') targetStatus = 'JOB_CLOSED';
+
+    if (application.status === targetStatus) {
       return {
-        status: 'WITHDRAWN',
+        status: targetStatus,
         abandonReason: application.abandonReason ?? reasonCode,
       };
     }
@@ -139,15 +129,15 @@ export class AssistedApplyCompletionService {
     const updated = await this.applications.abandonApplication(
       userId,
       jobApplicationId,
-      { abandonReason: reasonCode, abandonNote: note },
+      { abandonReason: reasonCode, abandonNote: note, targetStatus },
       application.status,
     );
 
     if (!updated) {
       const current = await this.applications.findById(userId, jobApplicationId);
-      if (current?.status === 'WITHDRAWN') {
+      if (current?.status === targetStatus) {
         return {
-          status: 'WITHDRAWN',
+          status: targetStatus,
           abandonReason: current.abandonReason ?? reasonCode,
         };
       }
@@ -162,10 +152,10 @@ export class AssistedApplyCompletionService {
       userId,
       jobApplicationId,
       eventType: 'SUBMISSION_WITHDRAWN',
-      metadata: { reasonCode, kind: 'application_abandoned' },
+      metadata: { reasonCode, kind: 'application_abandoned', targetStatus },
     });
 
-    return { status: 'WITHDRAWN', abandonReason: reasonCode };
+    return { status: targetStatus, abandonReason: reasonCode };
   }
 
   async reportBrokenLink(
