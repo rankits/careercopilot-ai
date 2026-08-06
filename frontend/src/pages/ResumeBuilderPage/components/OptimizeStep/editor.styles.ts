@@ -1,11 +1,25 @@
 import { Box, Typography, styled } from '@/lib/material';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
-import { border, borderRadius, muted, t, title } from '../../styles/shared';
+import { border, borderRadius, muted, scrollableMultilineSx, t, title } from '../../styles/shared';
+
+export { scrollableMultilineSx };
 
 export const SectionEditorShell = styled(Box)({
   display: 'grid',
   gap: spacing[3],
+  minWidth: 0,
+});
+
+export const ScrollableEntries = styled(Box)({
+  display: 'grid',
+  gap: spacing[3],
+  maxHeight: '22rem',
+  minWidth: 0,
+  overflowX: 'hidden',
+  overflowY: 'auto',
+  paddingRight: spacing[1],
+  scrollbarWidth: 'thin',
 });
 
 export const FieldLabel = styled(Typography)({
@@ -20,7 +34,33 @@ export const ChipInputRow = styled(Box)({
   display: 'flex',
   flexWrap: 'wrap',
   gap: spacing[2],
+  maxWidth: '100%',
   minHeight: '2.5rem',
+  minWidth: 0,
+});
+
+/** Plain text skill suggestions — not chip pills. */
+export const SkillSuggestionRow = styled(Box)({
+  display: 'flex',
+  flexWrap: 'wrap',
+  gap: `${spacing[1]} ${spacing[2]}`,
+  maxWidth: '100%',
+  minWidth: 0,
+  '& button': {
+    background: 'transparent',
+    border: 'none',
+    borderBottom: `1px solid ${t.primarySoft}`,
+    color: t.primary,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semiBold,
+    padding: `0.15rem 0`,
+    '&:hover': {
+      borderBottomColor: t.primary,
+      color: t.primaryHover,
+    },
+  },
 });
 
 export const EntryCard = styled(Box)({
@@ -54,13 +94,10 @@ export const EntryGrid = styled(Box)({
 export const TemplatePicker = styled(Box)({
   display: 'grid',
   gap: spacing[2],
-  gridTemplateColumns: 'repeat(5, minmax(0, 1fr))',
-  '@media (max-width: 64rem)': {
-    gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-  },
-  '@media (max-width: 40rem)': {
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  },
+  gridTemplateColumns: 'repeat(auto-fit, minmax(8.75rem, 1fr))',
+  maxWidth: '100%',
+  minWidth: 0,
+  width: '100%',
 });
 
 export const TemplateOption = styled('button', {
@@ -74,16 +111,26 @@ export const TemplateOption = styled('button', {
   display: 'grid',
   gap: spacing[1],
   fontFamily: 'inherit',
+  maxWidth: '100%',
+  minWidth: 0,
+  overflow: 'hidden',
   padding: spacing[2],
   textAlign: 'left',
   '& .label': {
+    color: active ? t.primary : t.text,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.extraBold,
-    color: active ? t.primary : t.text,
+    overflow: 'hidden',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
   },
   '& .desc': {
     ...muted,
+    display: '-webkit-box',
     fontSize: '0.7rem',
     lineHeight: 1.35,
+    overflow: 'hidden',
+    WebkitBoxOrient: 'vertical',
+    WebkitLineClamp: 2,
   },
 }));

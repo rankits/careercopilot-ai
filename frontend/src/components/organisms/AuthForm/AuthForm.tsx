@@ -5,6 +5,13 @@ import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
 
 import {
+  AUTH_FORM_ARIA,
+  AUTH_FORM_CONTENT,
+  AUTH_FORM_FIELDS,
+  AUTH_FORM_STATIC_COPY,
+  AUTH_FORM_VALIDATION_SCHEMAS,
+} from '@/constants/ui';
+import {
   ArrowForwardIcon,
   Box,
   Checkbox,
@@ -22,7 +29,6 @@ import {
 
 import { SocialConnectButton } from '../SocialConnectButton';
 
-import { AUTH_FORM_CONTENT, AUTH_FORM_FIELDS, AUTH_FORM_VALIDATION_SCHEMAS } from './constants';
 import type { AuthFieldIcon, AuthFieldIconMap, AuthFormField, AuthFormProps } from './interfaces';
 import { authFormSx } from './styles';
 
@@ -47,7 +53,11 @@ function renderIcon(icon?: AuthFieldIcon) {
 }
 
 function sanitizePhoneNumber(value: string) {
-  return value.replace(/[^\d+()\s-]/g, '').replace(/^\s+/, '');
+  return value.replace(/\D/g, '');
+}
+
+function limitFieldValue(value: string, maxLength?: number) {
+  return typeof maxLength === 'number' ? value.slice(0, maxLength) : value;
 }
 
 export function AuthForm<TFormValues extends FieldValues = FieldValues>({
@@ -85,8 +95,16 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
   const submitHandler = onValidSubmit ? handleSubmit(onValidSubmit) : onSubmit;
 
   return (
-    <Box component="form" onSubmit={submitHandler} sx={authFormSx.card}>
-      <Box sx={authFormSx.header}>
+    <Box
+      component="form"
+      onSubmit={submitHandler}
+      sx={mode === 'register' ? [authFormSx.card, authFormSx.registerCard] : authFormSx.card}
+    >
+      <Box
+        sx={
+          mode === 'register' ? [authFormSx.header, authFormSx.registerHeader] : authFormSx.header
+        }
+      >
         <Typography component="h1" sx={authFormSx.title}>
           {content.title}
         </Typography>
@@ -95,18 +113,26 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
 
       {showSocialLogin ? (
         <>
-          <Box sx={authFormSx.stack}>
+          <Box
+            sx={
+              mode === 'register'
+                ? [authFormSx.stack, authFormSx.registerSocialStack]
+                : authFormSx.stack
+            }
+          >
             <SocialConnectButton onClick={onGoogleConnect} provider="google" />
             <SocialConnectButton onClick={onLinkedInConnect} provider="linkedin" />
           </Box>
 
           <Box aria-hidden="true" sx={authFormSx.divider}>
-            <span>or</span>
+            <span>{AUTH_FORM_STATIC_COPY.dividerLabel}</span>
           </Box>
         </>
       ) : null}
 
-      <Box sx={authFormSx.stack}>
+      <Box
+        sx={mode === 'register' ? [authFormSx.stack, authFormSx.registerFields] : authFormSx.stack}
+      >
         {fields.map((field) => {
           const fieldError = errors[field.name]?.message;
           const isPasswordField = PASSWORD_FIELDS.has(field.name);
@@ -130,20 +156,28 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
                 void trigger(field.name as Path<TFormValues>);
               }}
               onInput={
-                isPhoneField
+                isPhoneField || field.maxLength
                   ? (event) => {
                       const input = event.target as HTMLInputElement;
-                      input.value = sanitizePhoneNumber(input.value);
+                      const sanitizedValue = isPhoneField
+                        ? sanitizePhoneNumber(input.value)
+                        : input.value;
+
+                      input.value = limitFieldValue(sanitizedValue, field.maxLength);
                     }
                   : undefined
               }
               placeholder={field.placeholder}
+              size={mode === 'register' ? 'small' : 'medium'}
+              slotProps={
+                field.maxLength ? { htmlInput: { maxLength: field.maxLength } } : undefined
+              }
               startAdornment={renderIcon(field.startIcon)}
               type={resolvedType}
               endAdornment={
                 isPasswordField ? (
                   <button
-                    aria-label={isVisible ? `Hide ${field.label}` : `Show ${field.label}`}
+                    aria-label={AUTH_FORM_ARIA.visibilityToggle(isVisible, field.label)}
                     onClick={(event) => {
                       event.preventDefault();
                       setVisibleFields((current) => ({
@@ -178,10 +212,10 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           <Box sx={authFormSx.actions}>
             <FormControlLabel
               control={<Checkbox defaultChecked {...register('rememberMe' as Path<TFormValues>)} />}
-              label="Remember me"
+              label={AUTH_FORM_STATIC_COPY.rememberMeLabel}
             />
             <Link href={forgotPasswordHref} onClick={onForgotPasswordClick} sx={authFormSx.link}>
-              Forgot password?
+              {AUTH_FORM_STATIC_COPY.forgotPasswordLabel}
             </Link>
           </Box>
         ) : null}
@@ -190,7 +224,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           endIcon={<ArrowForwardIcon />}
           fullWidth
           isLoading={isSubmitting}
-          size="extraLarge"
+          size={mode === 'register' ? 'large' : 'extraLarge'}
           type="submit"
         >
           {content.submitLabel}

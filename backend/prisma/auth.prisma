@@ -112,7 +112,7 @@ model RolePermission {
 // -----------------------------------------------------------------------
 
 model Admin {
-  id       Int    @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   firstName    String  @map("first_name")
   lastName     String  @map("last_name")
@@ -191,7 +191,7 @@ model AdminSession {
 // -----------------------------------------------------------------------
 
 model User {
-  id       Int    @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
   firstName    String  @map("first_name")
   lastName     String  @map("last_name")
@@ -200,8 +200,8 @@ model User {
   profileImage String? @map("profile_image")
   bio          String?
 
-  status          Status  @default(PendingVerification)
-  isEmailVerified Boolean @default(false) @map("is_email_verified")
+  status           Status  @default(PendingVerification)
+  isEmailVerified  Boolean @default(false) @map("is_email_verified")
   isProfileCreated Boolean @default(false) @map("is_profile_created")
 
   roleId Int  @map("role_id")

@@ -3,6 +3,22 @@ import type { ApplicationRecord } from '../types/application.view.types';
 
 import { mapUiArchiveToApi, mapUiSortToApi, mapUiStatusToApi } from './applicationMappers';
 
+/** Pipeline statuses shown in Application Management (excludes bookmark-only SAVED). */
+export const APPLICATION_MANAGEMENT_STATUSES: ApiApplicationStatus[] = [
+  'PREPARING',
+  'APPLIED',
+  'SCREENING',
+  'INTERVIEW',
+  'ASSESSMENT',
+  'OFFER',
+  'ACCEPTED',
+  'HIRED',
+  'REJECTED',
+  'WITHDRAWN',
+  'GHOSTED',
+  'EXPIRED',
+];
+
 export interface ApplicationListQueryInput {
   activeTab: string;
   archiveFilter: string;
@@ -14,7 +30,7 @@ export interface ApplicationListQueryInput {
 export function resolveApplicationStatusFilter(
   activeTab: string,
   statusFilter: string,
-): ApiApplicationStatus | undefined {
+): ApiApplicationStatus | ApiApplicationStatus[] | undefined {
   if (statusFilter !== 'all') {
     return mapUiStatusToApi(statusFilter as ApplicationRecord['status']);
   }
@@ -23,7 +39,8 @@ export function resolveApplicationStatusFilter(
     return mapUiStatusToApi(activeTab as ApplicationRecord['status']);
   }
 
-  return undefined;
+  // Default "All" on Applications excludes SAVED bookmarks (those belong on Saved Jobs).
+  return APPLICATION_MANAGEMENT_STATUSES;
 }
 
 export function buildApplicationListParams(

@@ -87,7 +87,6 @@ export function useJobFeedSearchParams() {
 
   const listParams = useMemo<ListJobsParams>(() => {
     const params: ListJobsParams = {
-      page: state.page,
       limit: state.limit,
       sortBy: state.sortBy,
       ...(state.query ? { query: state.query } : {}),
@@ -106,7 +105,7 @@ export function useJobFeedSearchParams() {
     if (state.workMode === 'internship') params.employmentTypes = 'INTERNSHIP';
 
     return params;
-  }, [state]);
+  }, [state.limit, state.maxSalary, state.minSalary, state.query, state.sortBy, state.workMode]);
 
   return { state, listParams, patch, clearAll };
 }

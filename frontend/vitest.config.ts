@@ -1,23 +1,52 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
+
+/** Directory of this config file — ESM-safe replacement for `__dirname`. */
+const configDir = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@core': path.resolve(__dirname, './src/core'),
-      '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@lib': path.resolve(__dirname, './src/lib'),
-      '@styles': path.resolve(__dirname, './src/styles'),
+      '@': path.resolve(configDir, './src'),
+      '@components': path.resolve(configDir, './src/components'),
+      '@core': path.resolve(configDir, './src/core'),
+      '@hooks': path.resolve(configDir, './src/hooks'),
+      '@lib': path.resolve(configDir, './src/lib'),
+      '@styles': path.resolve(configDir, './src/styles'),
     },
   },
   test: {
     coverage: {
-      exclude: ['dist/**', 'node_modules/**', 'src/types/**', 'src/test/**'],
+      // `all` was removed from CoverageOptions; `include` alone now scopes reporting.
+      include: ['src/**/*.{ts,tsx}'],
+      exclude: [
+        // Boilerplate / non-testable code (standard practice to exclude):
+        'src/main.tsx',
+        'src/vite-env.d.ts',
+        'src/assets/**',
+        '**/*.svg',
+        // Barrel re-export files:
+        '**/index.ts',
+        '**/index.tsx',
+        // CSS-in-JS / styled-component files:
+        '**/styles.ts',
+        '**/*.styles.ts',
+        '**/styles/**',
+        '**/stylePrimitives.ts',
+        // Library shims and types:
+        'src/lib/**',
+        'src/**/types/**',
+        'src/interfaces/**',
+        '**/*.interface.ts',
+        // Existing exclusions:
+        'dist/**',
+        'node_modules/**',
+        'src/test/**',
+      ],
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',

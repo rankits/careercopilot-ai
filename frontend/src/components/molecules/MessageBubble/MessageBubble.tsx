@@ -1,3 +1,5 @@
+import { memo } from 'react';
+
 import { MessageBubbleSurface, MessageRow, MessageText, MessageTimestamp } from './styles';
 
 export interface MessageBubbleProps {
@@ -13,7 +15,16 @@ function formatTimestamp(value: string) {
   return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
 }
 
-export function MessageBubble({ isError = false, role, text, timestamp }: MessageBubbleProps) {
+/**
+ * Rendered once per chat message and memoized so typing in the draft input
+ * (which re-renders the whole copilot panel) does not re-render old bubbles.
+ */
+export const MessageBubble = memo(function MessageBubble({
+  isError = false,
+  role,
+  text,
+  timestamp,
+}: MessageBubbleProps) {
   const isUser = role === 'user';
 
   return (
@@ -26,4 +37,4 @@ export function MessageBubble({ isError = false, role, text, timestamp }: Messag
       </MessageTimestamp>
     </MessageRow>
   );
-}
+});

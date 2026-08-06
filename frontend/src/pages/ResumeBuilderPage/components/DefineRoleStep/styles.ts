@@ -7,7 +7,9 @@ import {
   iconBox,
   muted,
   panel,
+  scrollableMultilineSx,
   spacing,
+  stepPadding,
   t,
   title,
 } from '../../styles/shared';
@@ -16,65 +18,46 @@ export { EmptyText, FileTile, ScoreBadge } from '../../styles/shared';
 
 export const DefineRoleShell = styled(Box)({
   display: 'grid',
-  gap: spacing[5],
-  gridTemplateColumns: 'minmax(0, 1fr) 22.5rem',
-  padding: `${spacing[5]} ${spacing[7]} ${spacing[6]}`,
-  '@media (max-width: 72rem)': { gridTemplateColumns: '1fr' },
+  gap: spacing[4],
+  gridTemplateColumns: '1fr',
+  minWidth: 0,
+  overflowX: 'hidden',
+  width: '100%',
+  ...stepPadding,
+  '@media (max-width: 48rem)': {
+    gap: spacing[3],
+  },
 
-  '& .main': { alignContent: 'start', display: 'grid', gap: spacing[3], minWidth: 0 },
-  '& .section-heading': { display: 'grid', gap: spacing[2] },
+  '& .section-heading': { display: 'grid', gap: spacing[1] },
   '& .step-title': {
     ...title,
     fontSize: fontSize['2xl'],
     lineHeight: 1.2,
     '& span': { color: t.primary },
   },
+  '& .content-row': {
+    alignItems: 'start',
+    display: 'grid',
+    gap: spacing[4],
+    gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 22.5rem)',
+    minWidth: 0,
+    '@media (max-width: 72rem)': { gridTemplateColumns: '1fr' },
+    '@media (max-width: 48rem)': { gap: spacing[3] },
+  },
   '& .role-card': {
     ...panel,
     background: 'rgba(255,255,255,0.94)',
-    boxShadow: '0 22px 70px rgba(17,24,39,0.07)',
-    padding: spacing[5],
+    gap: spacing[3],
+    minWidth: 0,
   },
-  '& .form-group': { display: 'grid', gap: spacing[2] },
+  '& .form-group': { display: 'grid', gap: spacing[1] },
   '& .form-grid-two': {
     display: 'grid',
-    gap: spacing[4],
+    gap: spacing[3],
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
     '@media (max-width: 42rem)': { gridTemplateColumns: '1fr' },
   },
-  '& .role-tip': {
-    alignItems: 'center',
-    background: `linear-gradient(135deg, ${t.primarySoft}, ${t.background})`,
-    border: '1px solid rgba(37, 99, 235, 0.16)',
-    borderRadius: borderRadius['2xl'],
-    color: t.primary,
-    display: 'grid',
-    gap: spacing[3],
-    gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-    padding: spacing[3],
-    '@media (max-width: 42rem)': {
-      alignItems: 'flex-start',
-      gridTemplateColumns: 'auto minmax(0, 1fr)',
-    },
-  },
-  '& .tip-title': {
-    color: t.primaryHover,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.extraBold,
-  },
-  '& .tip-text': { ...muted, fontSize: fontSize.xs, lineHeight: 1.55 },
-  '& .tip-actions': {
-    alignItems: 'center',
-    display: 'flex',
-    gap: spacing[2],
-    justifyContent: 'flex-end',
-    '@media (max-width: 42rem)': {
-      gridColumn: '1 / -1',
-      width: '100%',
-      '& > button': { flex: 1 },
-    },
-  },
-  '& .aside': { alignSelf: 'start', display: 'grid', gap: spacing[4] },
+  '& .aside': { alignSelf: 'start', display: 'grid', gap: spacing[4], minWidth: 0 },
   '& .aside-card': {
     ...panel,
     background: 'rgba(255,255,255,0.96)',
@@ -132,4 +115,19 @@ export const FormInputSx = {
   },
 };
 
-export const DefineRoleNextButtonSx = { minWidth: '6.25rem' };
+export const JobDescriptionInputSx = {
+  ...FormInputSx,
+  ...scrollableMultilineSx,
+  '& .MuiOutlinedInput-root': {
+    ...FormInputSx['& .MuiOutlinedInput-root'],
+    height: '11rem',
+    maxHeight: '11rem',
+    overflowY: 'auto',
+  },
+  '& .MuiInputBase-inputMultiline': {
+    height: '100% !important',
+    maxHeight: '9.5rem',
+    overflowY: 'auto !important',
+    resize: 'none',
+  },
+};

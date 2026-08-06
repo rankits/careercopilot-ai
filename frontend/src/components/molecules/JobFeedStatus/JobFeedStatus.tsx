@@ -1,7 +1,17 @@
 import { Button } from '@/components/atoms/Button';
 
-import { Alert, Box, CircularProgress, RefreshIcon, Typography } from '@/lib/material';
-import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
+import { APP_ACTIONS, JOB_FEED_STATUS_MESSAGES, JOB_FEED_STATUS_RULES } from '@/constants/ui';
+import {
+  Box,
+  CircularProgress,
+  ErrorOutlineIcon,
+  InfoOutlinedIcon,
+  RefreshIcon,
+  Typography,
+} from '@/lib/material';
+import { colorTokens } from '@/tokens';
+
+import { jobFeedStatusSx } from './styles';
 
 interface JobFeedStatusProps {
   message: string;
@@ -11,24 +21,26 @@ interface JobFeedStatusProps {
   tone?: 'info' | 'error';
 }
 
-export function JobFeedLoadingState({ label = 'Loading jobs…' }: { label?: string }) {
+function toFriendlyMessage(message: string): string {
+  const normalized = message.trim();
+  if (!normalized) {
+    return JOB_FEED_STATUS_MESSAGES.defaultError;
+  }
+
+  const rule = JOB_FEED_STATUS_RULES.find(({ pattern }) => pattern.test(normalized));
+
+  return rule?.message ?? normalized;
+}
+
+export function JobFeedLoadingState({
+  label = JOB_FEED_STATUS_MESSAGES.loading,
+}: {
+  label?: string;
+}) {
   return (
-    <Box
-      aria-busy="true"
-      aria-label={label}
-      sx={{
-        alignItems: 'center',
-        display: 'grid',
-        gap: spacing[3],
-        justifyItems: 'center',
-        minHeight: '16rem',
-        padding: spacing[6],
-      }}
-    >
+    <Box aria-busy="true" aria-label={label} sx={jobFeedStatusSx.loadingRoot}>
       <CircularProgress size={36} />
-      <Typography sx={{ color: colorTokens.textSecondary, fontSize: fontSize.sm }}>
-        {label}
-      </Typography>
+      <Typography sx={jobFeedStatusSx.loadingLabel}>{label}</Typography>
     </Box>
   );
 }
@@ -36,47 +48,48 @@ export function JobFeedLoadingState({ label = 'Loading jobs…' }: { label?: str
 export function JobFeedStatus({
   message,
   onRetry,
-  retryLabel = 'Retry',
+  retryLabel = APP_ACTIONS.RETRY,
   title,
   tone = 'info',
 }: JobFeedStatusProps) {
+  const isError = tone === 'error';
+  const friendlyMessage = toFriendlyMessage(message);
+  const Icon = isError ? ErrorOutlineIcon : InfoOutlinedIcon;
+  const iconBackground = isError
+    ? colorTokens.actionDangerSurface
+    : colorTokens.actionPrimarySurface;
+  const iconColor = isError ? colorTokens.actionDanger : colorTokens.actionPrimary;
+
   return (
-    <Box
-      sx={{
-        display: 'grid',
-        gap: spacing[2],
-        justifyItems: 'start',
-        minHeight: 0,
-        padding: `${spacing[2]} 0`,
-      }}
-    >
-      <Alert
-        role={tone === 'error' ? 'alert' : 'status'}
-        severity={tone === 'error' ? 'error' : 'info'}
-        sx={{ width: '100%' }}
-        action={
-          onRetry ? (
-            <Button
-              onClick={onRetry}
-              size="small"
-              startIcon={<RefreshIcon fontSize="small" />}
-              variant="outline"
-            >
-              {retryLabel}
-            </Button>
-          ) : undefined
-        }
+    <Box role={isError ? 'alert' : 'status'} sx={jobFeedStatusSx.root}>
+      <Box
+        aria-hidden="true"
+        sx={{
+          ...jobFeedStatusSx.iconWrap,
+          background: iconBackground,
+          color: iconColor,
+        }}
       >
-        <Typography
-          component="h2"
-          sx={{ display: 'block', fontSize: fontSize.sm, fontWeight: fontWeight.bold, m: 0 }}
-        >
+        <Icon fontSize="medium" />
+      </Box>
+
+      <Box sx={jobFeedStatusSx.copy}>
+        <Typography component="h2" sx={jobFeedStatusSx.title}>
           {title}
         </Typography>
-        <Typography component="span" sx={{ fontSize: fontSize.sm }}>
-          {message}
-        </Typography>
-      </Alert>
+        <Typography sx={jobFeedStatusSx.message}>{friendlyMessage}</Typography>
+      </Box>
+
+      {onRetry ? (
+        <Button
+          onClick={onRetry}
+          size="small"
+          startIcon={<RefreshIcon fontSize="small" />}
+          variant="outline"
+        >
+          {retryLabel}
+        </Button>
+      ) : null}
     </Box>
   );
 }
