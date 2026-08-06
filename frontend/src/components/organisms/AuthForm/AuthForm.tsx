@@ -183,9 +183,6 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               }
               placeholder={field.placeholder}
               size="medium"
-              slotProps={
-                field.maxLength ? { htmlInput: { maxLength: field.maxLength } } : undefined
-              }
               startAdornment={renderIcon(field.startIcon)}
               type={resolvedType}
               endAdornment={

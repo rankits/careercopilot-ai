@@ -27,7 +27,7 @@ type CareerGoalPanelProps = {
   generateCareerGoal: {
     isPending: boolean;
     isError: boolean;
-    mutateAsync: (goal: string) => Promise<RecommendationDto[]>;
+    mutateAsync: (variables: { goalText: string; structured?: Record<string, unknown> }) => Promise<RecommendationDto[]>;
   };
   setCareerGeneratedOnce: (value: boolean) => void;
   setCareerRecommendations: (items: RecommendationDto[]) => void;
@@ -100,7 +100,7 @@ export function CareerGoalPanel({
             if (!trimmedCareerGoalText || careerGoalTooLong) return;
             setCareerGeneratedOnce(true);
             void generateCareerGoal
-              .mutateAsync(trimmedCareerGoalText)
+              .mutateAsync({ goalText: trimmedCareerGoalText })
               .then((items) => setCareerRecommendations(items))
               .catch(() => undefined);
           }}
