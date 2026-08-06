@@ -20,7 +20,7 @@ concurrency:
 jobs:
   format:
     name: 'Frontend / Format Check'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -40,7 +40,7 @@ jobs:
 
   lint:
     name: 'Frontend / Lint'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -60,7 +60,7 @@ jobs:
 
   typecheck:
     name: 'Frontend / Type Check'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -80,7 +80,7 @@ jobs:
 
   unit-tests:
     name: 'Frontend / Unit Tests'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -107,7 +107,7 @@ jobs:
 
   build:
     name: 'Frontend / Production Build'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -133,7 +133,7 @@ jobs:
   bundle-analysis:
     name: 'Frontend / Bundle Analysis'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -159,7 +159,7 @@ jobs:
 
   accessibility:
     name: 'Frontend / Accessibility'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -181,7 +181,7 @@ jobs:
 
   e2e-smoke:
     name: 'Frontend / E2E Smoke'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -203,7 +203,7 @@ jobs:
 
   security:
     name: 'Frontend / Security Scan'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -233,7 +233,7 @@ jobs:
       - accessibility
       - e2e-smoke
       - security
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: always()
     steps:
       - name: Evaluate Quality Gate
