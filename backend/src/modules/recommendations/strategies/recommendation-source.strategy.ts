@@ -11,6 +11,9 @@ import {
 } from '@/modules/recommendations/errors/recommendation.error.js';
 import type { RecommendationExtractionProvider } from '@/modules/recommendations/contracts/recommendation-provider.contracts.js';
 import { HeuristicTargetTextExtractionProvider } from '@/modules/recommendations/providers/heuristic-target-text-extraction.provider.js';
+import { createChildLogger } from '@/shared/logger/logger.js';
+
+const sourceLogger = createChildLogger({ module: 'recommendation-source' });
 
 export interface RecommendationSourceStrategy {
   supports(sourceType: RecommendationSourceType): boolean;
@@ -113,7 +116,11 @@ export class TargetTextSourceStrategy extends TypedSourceStrategy {
     let extracted;
     try {
       extracted = await this.extractionProvider.extractContextFromText(sourceText);
-    } catch {
+    } catch (error) {
+      sourceLogger.warn(
+        { err: error, event: 'recommendation.extraction_fallback' },
+        'Primary extraction failed; using heuristic fallback',
+      );
       extracted = await this.fallbackProvider.extractContextFromText(sourceText);
     }
     return {

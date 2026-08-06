@@ -8,10 +8,7 @@ import { resumeRoutes } from '@/modules/resumes/index.js';
 import { resumeAnalysisRoutes } from '@/modules/resume-analysis/index.js';
 import jobsRoutes from '@/modules/jobs/routes/jobs.route.js';
 import { jobListingRoutes } from '@/modules/job-listing/index.js';
-import { interviewsRoutes } from '@/modules/interviews/index.js';
 import { recommendationsRoutes } from '@/modules/recommendations/index.js';
-import { notificationsRoutes } from '@/modules/notifications/index.js';
-import { careerRoutes } from '@/modules/career/index.js';
 import { copilotRoutes } from '@/modules/copilot/index.js';
 
 const router = express.Router();
@@ -28,10 +25,7 @@ router.use('/resume-analysis', resumeAnalysisRoutes);
 router.use('/jobs', jobListingRoutes); // Public job discovery
 router.use('/jobs-ingestion', jobsRoutes); // Administrative ingestion endpoints
 router.use('/applications', applicationRoutes);
-router.use('/interviews', interviewsRoutes);
 router.use('/job-recommendations', recommendationsRoutes);
-router.use('/notifications', notificationsRoutes);
-router.use('/career', careerRoutes);
 router.use('/copilot', copilotRoutes);
 
 export default router;
