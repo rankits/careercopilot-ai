@@ -31,6 +31,10 @@ import {
   NoopHeadlessPageSnapshot,
   shouldAttemptHeadlessSnapshot,
 } from '@/modules/auto-apply/services/headless-page-snapshot.service.js';
+import {
+  buildJobListingCorpus,
+  mergeAnalysisCorpus,
+} from '@/modules/auto-apply/utils/merge-analysis-corpus.util.js';
 
 /** Requirements TTL (longer). Status/url freshness tracked separately. */
 const REQUIREMENTS_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -103,7 +107,10 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
 
     const job = await prisma.job.findUnique({
       where: { id: input.jobId },
-      include: { sources: { orderBy: { priority: 'desc' } } },
+      include: {
+        sources: { orderBy: { priority: 'desc' } },
+        company: { select: { name: true, slug: true } },
+      },
     });
     if (!job) {
       throw new AppError('Job not found', 404, 'JOB_NOT_FOUND');
@@ -114,7 +121,21 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
     const provider = detectApplicationProvider(applyUrl ?? '');
     const capability = submissionCapabilityForProvider(provider);
 
-    let sanitizedText = (job.descriptionText ?? '').trim();
+    // Always start from stored job listing data (title/company/skills/JD). Page
+    // explore and headless snapshots are merged in — never used alone when they
+    // would wipe a substantial listing (Ashby application forms are a common case).
+    const listingCorpus = buildJobListingCorpus({
+      title: job.title,
+      companyName: job.company?.name,
+      companySlug: job.companySlug,
+      employmentType: job.employmentType,
+      remoteType: job.remoteType,
+      descriptionText: job.descriptionText,
+      skills: job.skills,
+      tags: job.tags,
+    });
+
+    let pageExploredText = '';
     let contentHash = '';
     let httpStatus = 0;
     let finalUrl = pageUrl;
@@ -129,11 +150,7 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
       try {
         const fetched = await this.fetcher.fetchPublicPage(applyUrl);
         httpSanitizedLength = fetched.sanitizedText.length;
-        if (fetched.sanitizedText.length > 80) {
-          sanitizedText = fetched.sanitizedText;
-        } else if (!sanitizedText) {
-          sanitizedText = fetched.sanitizedText;
-        }
+        pageExploredText = fetched.sanitizedText.trim();
         contentHash = fetched.contentHash;
         httpStatus = fetched.httpStatus;
         finalUrl = fetched.finalUrl;
@@ -153,10 +170,10 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
           provider,
           durationMs: Date.now() - fetchStarted,
         });
-        if (!sanitizedText) {
+        if (!listingCorpus) {
           throw error;
         }
-        // Fall back to stored JD text — still extractable, form remains uninspected.
+        // Fall back to stored job listing — still extractable, form remains uninspected.
         jobPageStatus = 'PARTIAL';
         outcomeStatus = 'JOB_PAGE_ANALYZED';
         httpStatus = 0;
@@ -172,8 +189,8 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
         })
       ) {
         const snap = await this.headlessSnapshot.snapshot(applyUrl);
-        if (snap && snap.sanitizedText.length > sanitizedText.length) {
-          sanitizedText = snap.sanitizedText;
+        if (snap && snap.sanitizedText.trim().length > pageExploredText.length) {
+          pageExploredText = snap.sanitizedText.trim();
           contentHash = snap.contentHash;
           httpStatus = snap.httpStatus || httpStatus;
           finalUrl = snap.finalUrl;
@@ -183,7 +200,7 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
             snap.httpStatus >= 200 && snap.httpStatus < 300 ? 'COMPLETE' : jobPageStatus;
         }
       }
-    } else if (!sanitizedText) {
+    } else if (!listingCorpus) {
       throw new AppError(
         'No apply URL or job description available to analyze',
         422,
@@ -191,7 +208,21 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
       );
     }
 
-    if (!contentHash) {
+    const sanitizedText = mergeAnalysisCorpus({
+      listingText: listingCorpus,
+      pageText: pageExploredText,
+    });
+
+    if (!sanitizedText) {
+      throw new AppError(
+        'No apply URL or job description available to analyze',
+        422,
+        'ANALYSIS_UNAVAILABLE',
+      );
+    }
+
+    // Hash the merged corpus so cache invalidates when either listing or page changes.
+    {
       const { createHash } = await import('node:crypto');
       contentHash = createHash('sha256').update(sanitizedText).digest('hex');
     }
