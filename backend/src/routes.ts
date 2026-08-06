@@ -11,6 +11,7 @@ import jobsRoutes from '@/modules/jobs/routes/jobs.route.js';
 import { jobListingRoutes } from '@/modules/job-listing/index.js';
 import { recommendationsRoutes } from '@/modules/recommendations/index.js';
 import { copilotRoutes } from '@/modules/copilot/index.js';
+import extensionRoutes from '@/modules/extension/index.js';
 
 const router = express.Router();
 
@@ -29,5 +30,6 @@ router.use('/applications', applicationRoutes);
 router.use('/auto-apply', autoApplyRoutes);
 router.use('/job-recommendations', recommendationsRoutes);
 router.use('/copilot', copilotRoutes);
+router.use('/extension', extensionRoutes);
 
 export default router;
