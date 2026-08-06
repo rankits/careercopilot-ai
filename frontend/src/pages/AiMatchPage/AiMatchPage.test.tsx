@@ -12,7 +12,7 @@ import type * as RecommendationHooks from '@/features/recommendations/hooks/useR
 
 import { authReducer } from '@/features/auth/authSlice';
 
-import { ForYouPage } from './ForYouPage';
+import { AiMatchPage } from './AiMatchPage';
 
 const {
   listMock,
@@ -121,7 +121,7 @@ const scoreResult = (overallScore: number) => ({
   reasons: [],
 });
 
-function renderPage(isProfileComplete = true, route = '/for-you') {
+function renderPage(isProfileComplete = true, route = '/ai-match') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -151,7 +151,7 @@ function renderPage(isProfileComplete = true, route = '/for-you') {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <MemoryRouter initialEntries={[route]}>
-            <ForYouPage />
+            <AiMatchPage />
           </MemoryRouter>
         </ToastProvider>
       </QueryClientProvider>
@@ -238,7 +238,7 @@ beforeEach(() => {
   });
 });
 
-describe('ForYouPage', () => {
+describe('AiMatchPage', () => {
   it('renders recommendation mode tabs with profile selected by default', async () => {
     listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
     renderPage(true);
@@ -272,7 +272,7 @@ describe('ForYouPage', () => {
 
   it('opens the Saved tab showing the All Saved Jobs view without loading profile recommendations', async () => {
     const user = userEvent.setup();
-    renderPage(true, '/for-you?mode=saved');
+    renderPage(true, '/ai-match?mode=saved');
 
     expect(await screen.findByText(/no saved jobs yet/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /all saved jobs/i })).toBeInTheDocument();
@@ -309,7 +309,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=text-career');
+    renderPage(true, '/ai-match?mode=text-career');
 
     expect(await screen.findByText(/no recommendations yet/i)).toBeInTheDocument();
 
@@ -324,7 +324,7 @@ describe('ForYouPage', () => {
   });
 
   it('blocks text generation when target text exceeds the 500-character limit', async () => {
-    renderPage(true, '/for-you?mode=text-career');
+    renderPage(true, '/ai-match?mode=text-career');
 
     fireEvent.change(await screen.findByLabelText(/describe your ideal job/i), {
       target: { value: 'x'.repeat(501) },
@@ -337,7 +337,7 @@ describe('ForYouPage', () => {
 
   it('clears the text field with the Clear button', async () => {
     const user = userEvent.setup();
-    renderPage(true, '/for-you?mode=text-career');
+    renderPage(true, '/ai-match?mode=text-career');
 
     const textarea = await screen.findByLabelText(/describe your ideal job/i);
     await user.type(textarea, 'Some target text');
@@ -401,7 +401,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=career');
+    renderPage(true, '/ai-match?mode=career');
 
     const targetRoleInput = await screen.findByLabelText(/target role/i);
     await user.type(targetRoleInput, 'Automation QA Engineer');
@@ -436,7 +436,7 @@ describe('ForYouPage', () => {
     });
     generateCareerGoalMock.mockResolvedValue([]);
 
-    renderPage(true, '/for-you?mode=career');
+    renderPage(true, '/ai-match?mode=career');
 
     await user.type(await screen.findByLabelText(/target role/i), 'Software developer');
     const countryInput = screen.getByLabelText(/^country$/i);
@@ -470,7 +470,7 @@ describe('ForYouPage', () => {
     });
     generateCareerGoalMock.mockResolvedValue([]);
 
-    renderPage(true, '/for-you?mode=career');
+    renderPage(true, '/ai-match?mode=career');
 
     await user.type(await screen.findByLabelText(/target role/i), 'Software developer');
     await user.click(screen.getByLabelText(/work mode/i));
@@ -493,7 +493,7 @@ describe('ForYouPage', () => {
 
   it('fills the career path field when a popular path is clicked', async () => {
     const user = userEvent.setup();
-    renderPage(true, '/for-you?mode=career');
+    renderPage(true, '/ai-match?mode=career');
 
     await screen.findByText(/quick picks/i);
     await user.click(
@@ -565,7 +565,7 @@ describe('ForYouPage', () => {
     ]);
     deleteSavedSearchMock.mockResolvedValue(undefined);
 
-    renderPage(true, '/for-you?mode=saved');
+    renderPage(true, '/ai-match?mode=saved');
 
     expect(await screen.findByRole('button', { name: /remote typescript/i })).toBeInTheDocument();
 
@@ -607,7 +607,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=saved');
+    renderPage(true, '/ai-match?mode=saved');
 
     expect(await screen.findByText(/bookmarked platform engineer/i)).toBeInTheDocument();
     expect(
@@ -664,7 +664,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=resume');
+    renderPage(true, '/ai-match?mode=resume');
 
     expect(await screen.findByText(/myresume\.pdf/i)).toBeInTheDocument();
     expect(screen.getByText(/200 KB/i)).toBeInTheDocument();
@@ -681,7 +681,7 @@ describe('ForYouPage', () => {
   it('shows a resume CTA when no completed resume source is available', async () => {
     profileMock.mockResolvedValue(null);
 
-    renderPage(true, '/for-you?mode=resume');
+    renderPage(true, '/ai-match?mode=resume');
 
     expect(await screen.findByRole('status')).toHaveTextContent(/upload and confirm/i);
     expect(screen.getByRole('link', { name: /add resume/i })).toHaveAttribute('href', '/profile');
@@ -729,7 +729,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=similar&jobId=source-job');
+    renderPage(true, '/ai-match?mode=similar&jobId=source-job');
 
     expect(await screen.findByText(/design systems engineer/i)).toBeInTheDocument();
     expect(screen.getByText(/91% Match/i)).toBeInTheDocument();
@@ -858,7 +858,7 @@ describe('ForYouPage', () => {
       },
     ]);
 
-    renderPage(true, '/for-you?mode=similar');
+    renderPage(true, '/ai-match?mode=similar');
 
     expect(await screen.findByText(/similar frontend engineer/i)).toBeInTheDocument();
     await waitFor(() =>
@@ -868,7 +868,7 @@ describe('ForYouPage', () => {
   });
 
   it('shows an empty state without a source job on the Similar tab', async () => {
-    renderPage(true, '/for-you?mode=similar');
+    renderPage(true, '/ai-match?mode=similar');
 
     expect(await screen.findByText(/pick a source job/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /browse jobs/i })).toHaveAttribute(
