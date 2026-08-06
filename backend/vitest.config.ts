@@ -36,8 +36,20 @@ export default defineConfig({
     },
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html'],
-      include: ['src/modules/auth/**', 'src/modules/user/**', 'src/modules/admin/**'],
+      reporter: ['text', 'html', 'json-summary'],
+      include: ['src/**/*'],
+      exclude: [
+        'src/**/*.test.ts',
+        'src/**/__tests__/**',
+        'src/server.ts',
+        'src/shared/interfaces/express.d.ts',
+        'src/shared/polyfills/pdfjs-dom.polyfill.ts',
+      ],
+      thresholds: {
+        lines: 100,
+        functions: 100,
+        branches: 100,
+      },
     },
   },
   resolve: {
