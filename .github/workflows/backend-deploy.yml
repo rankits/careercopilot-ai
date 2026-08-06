@@ -147,9 +147,45 @@ jobs:
           echo "Release bundle created successfully."
           
       - name: Print GitHub OIDC claims
-        uses: github/actions-oidc-debugger@main
-        with:
-          audience: sts.amazonaws.com
+        shell: bash
+        run: |
+          set -euo pipefail
+      
+          RESPONSE="$(curl --silent --show-error --fail \
+            -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")"
+      
+          TOKEN="$(printf '%s' "$RESPONSE" | jq -r '.value')"
+      
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Unable to retrieve GitHub OIDC token"
+            exit 1
+          fi
+      
+          PAYLOAD="$(printf '%s' "$TOKEN" | cut -d '.' -f 2)"
+      
+          # JWT payload uses URL-safe Base64 and may omit padding.
+          PAYLOAD="${PAYLOAD//-/+}"
+          PAYLOAD="${PAYLOAD//_/\/}"
+      
+          case $((${#PAYLOAD} % 4)) in
+            2) PAYLOAD="${PAYLOAD}==" ;;
+            3) PAYLOAD="${PAYLOAD}=" ;;
+          esac
+      
+          echo "GitHub OIDC claims:"
+          printf '%s' "$PAYLOAD" | base64 --decode | jq '{
+            sub,
+            aud,
+            repository,
+            repository_owner,
+            ref,
+            ref_type,
+            environment,
+            workflow,
+            job_workflow_ref,
+            actor
+          }'
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -174,9 +210,45 @@ jobs:
     steps:
 
       - name: Print GitHub OIDC claims
-        uses: github/actions-oidc-debugger@main
-        with:
-          audience: sts.amazonaws.com
+        shell: bash
+        run: |
+          set -euo pipefail
+      
+          RESPONSE="$(curl --silent --show-error --fail \
+            -H "Authorization: Bearer ${ACTIONS_ID_TOKEN_REQUEST_TOKEN}" \
+            "${ACTIONS_ID_TOKEN_REQUEST_URL}&audience=sts.amazonaws.com")"
+      
+          TOKEN="$(printf '%s' "$RESPONSE" | jq -r '.value')"
+      
+          if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+            echo "Unable to retrieve GitHub OIDC token"
+            exit 1
+          fi
+      
+          PAYLOAD="$(printf '%s' "$TOKEN" | cut -d '.' -f 2)"
+      
+          # JWT payload uses URL-safe Base64 and may omit padding.
+          PAYLOAD="${PAYLOAD//-/+}"
+          PAYLOAD="${PAYLOAD//_/\/}"
+      
+          case $((${#PAYLOAD} % 4)) in
+            2) PAYLOAD="${PAYLOAD}==" ;;
+            3) PAYLOAD="${PAYLOAD}=" ;;
+          esac
+      
+          echo "GitHub OIDC claims:"
+          printf '%s' "$PAYLOAD" | base64 --decode | jq '{
+            sub,
+            aud,
+            repository,
+            repository_owner,
+            ref,
+            ref_type,
+            environment,
+            workflow,
+            job_workflow_ref,
+            actor
+          }'
           
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
