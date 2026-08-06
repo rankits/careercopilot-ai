@@ -32,7 +32,11 @@ function toFriendlyMessage(message: string): string {
   return rule?.message ?? normalized;
 }
 
-export function JobFeedLoadingState({ label = JOB_FEED_STATUS_MESSAGES.loading }: { label?: string }) {
+export function JobFeedLoadingState({
+  label = JOB_FEED_STATUS_MESSAGES.loading,
+}: {
+  label?: string;
+}) {
   return (
     <Box aria-busy="true" aria-label={label} sx={jobFeedStatusSx.loadingRoot}>
       <CircularProgress size={36} />

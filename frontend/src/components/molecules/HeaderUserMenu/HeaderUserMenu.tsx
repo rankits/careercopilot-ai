@@ -1,9 +1,6 @@
 import { useState, type MouseEvent } from 'react';
 
-import {
-  HEADER_USER_MENU_COPY,
-  USER_INITIALS_FALLBACK,
-} from '@/constants/ui';
+import { HEADER_USER_MENU_COPY, USER_INITIALS_FALLBACK } from '@/constants/ui';
 import {
   KeyboardArrowDownIcon,
   LogoutIcon,

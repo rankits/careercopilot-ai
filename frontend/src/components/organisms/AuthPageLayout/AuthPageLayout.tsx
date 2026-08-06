@@ -138,10 +138,7 @@ export function AuthPageLayout({ children, mode }: AuthPageLayoutProps) {
         {isRegister ? (
           <Styled.HeaderLoginText>
             {AUTH_PAGE_COPY.alreadyHaveAccount}{' '}
-            <Styled.HeaderLoginLink
-              aria-label={AUTH_PAGE_COPY.loginAria}
-              href={ROUTES.LOGIN}
-            >
+            <Styled.HeaderLoginLink aria-label={AUTH_PAGE_COPY.loginAria} href={ROUTES.LOGIN}>
               {AUTH_PAGE_COPY.loginLink}
             </Styled.HeaderLoginLink>
           </Styled.HeaderLoginText>

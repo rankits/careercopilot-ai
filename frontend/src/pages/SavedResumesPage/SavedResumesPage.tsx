@@ -253,7 +253,10 @@ export function SavedResumesPage() {
             Manage and download your optimized resumes.
           </Typography>
         </Box>
-        <Button startIcon={<AddIcon fontSize="small" />} onClick={() => void navigate(ROUTES.RESUME_BUILDER)}>
+        <Button
+          startIcon={<AddIcon fontSize="small" />}
+          onClick={() => void navigate(ROUTES.RESUME_BUILDER)}
+        >
           Build New Resume
         </Button>
       </PageHeader>
@@ -314,7 +317,8 @@ export function SavedResumesPage() {
           <DescriptionOutlinedIcon sx={{ fontSize: 40, opacity: 0.45 }} />
           <Typography fontWeight={fontWeight.semiBold}>No saved resumes yet</Typography>
           <Typography color={colorTokens.textSecondary} fontSize={fontSize.sm}>
-            Complete the Resume Builder and tap Save Resume on the export step to save a version here.
+            Complete the Resume Builder and tap Save Resume on the export step to save a version
+            here.
           </Typography>
           <Button onClick={() => void navigate(ROUTES.RESUME_BUILDER)}>Open Resume Builder</Button>
         </EmptyState>
