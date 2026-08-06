@@ -75,27 +75,27 @@ model RecommendationRun {
 }
 
 model JobRecommendation {
-  id             String                     @id @default(uuid())
-  runId          String                     @map("run_id")
-  userId         String                     @map("user_id")
-  jobId          String                     @map("job_id")
-  overallScore   Float                      @map("overall_score")
-  category       RecommendationCategory
-  matchType      RecommendationMatchType    @map("match_type")
-  rank           Int
-  matchedSkills  String[]                   @default([]) @map("matched_skills")
-  aliasSkills    String[]                   @default([]) @map("alias_skills")
-  relatedSkills  String[]                   @default([]) @map("related_skills")
+  id                 String                  @id @default(uuid())
+  runId              String                  @map("run_id")
+  userId             String                  @map("user_id")
+  jobId              String                  @map("job_id")
+  overallScore       Float                   @map("overall_score")
+  category           RecommendationCategory
+  matchType          RecommendationMatchType @map("match_type")
+  rank               Int
+  matchedSkills      String[]                @default([]) @map("matched_skills")
+  aliasSkills        String[]                @default([]) @map("alias_skills")
+  relatedSkills      String[]                @default([]) @map("related_skills")
   transferableSkills String[]                @default([]) @map("transferable_skills")
-  missingSkills  String[]                   @default([]) @map("missing_skills")
-  reasons        Json                       @default("[]")
-  createdAt      DateTime                   @default(now()) @map("created_at")
-  updatedAt      DateTime                   @updatedAt @map("updated_at")
+  missingSkills      String[]                @default([]) @map("missing_skills")
+  reasons            Json                    @default("[]")
+  createdAt          DateTime                @default(now()) @map("created_at")
+  updatedAt          DateTime                @updatedAt @map("updated_at")
 
-  run            RecommendationRun          @relation(fields: [runId], references: [id], onDelete: Cascade)
-  job            Job                        @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  run             RecommendationRun              @relation(fields: [runId], references: [id], onDelete: Cascade)
+  job             Job                            @relation(fields: [jobId], references: [id], onDelete: Cascade)
   scoreComponents RecommendationScoreComponent[]
-  feedback       RecommendationFeedback[]
+  feedback        RecommendationFeedback[]
 
   @@unique([runId, jobId])
   @@index([userId, createdAt(sort: Desc)])
@@ -107,15 +107,15 @@ model JobRecommendation {
 }
 
 model RecommendationScoreComponent {
-  id               String                           @id @default(uuid())
-  recommendationId String                           @map("recommendation_id")
-  component        RecommendationScoreComponentName
-  weight           Float
-  score            Float
-  explanationMetadata Json?                         @map("explanation_metadata")
-  createdAt        DateTime                         @default(now()) @map("created_at")
+  id                  String                           @id @default(uuid())
+  recommendationId    String                           @map("recommendation_id")
+  component           RecommendationScoreComponentName
+  weight              Float
+  score               Float
+  explanationMetadata Json?                            @map("explanation_metadata")
+  createdAt           DateTime                         @default(now()) @map("created_at")
 
-  recommendation   JobRecommendation                @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  recommendation JobRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
 
   @@unique([recommendationId, component])
   @@index([recommendationId])
@@ -132,8 +132,8 @@ model RecommendationFeedback {
   createdAt        DateTime                     @default(now()) @map("created_at")
   updatedAt        DateTime                     @updatedAt @map("updated_at")
 
-  recommendation   JobRecommendation            @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
-  job              Job                          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  recommendation JobRecommendation @relation(fields: [recommendationId], references: [id], onDelete: Cascade)
+  job            Job               @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([userId, recommendationId])
   @@index([userId, jobId])

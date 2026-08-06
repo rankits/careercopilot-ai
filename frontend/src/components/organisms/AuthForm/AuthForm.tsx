@@ -115,7 +115,9 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
         <Typography component="h1" sx={authFormSx.title}>
           {content.title}
         </Typography>
-        <Typography sx={authFormSx.subtitle}>{content.subtitle}</Typography>
+        {content.subtitle ? (
+          <Typography sx={authFormSx.subtitle}>{content.subtitle}</Typography>
+        ) : null}
       </Box>
 
       {showSocialLogin ? (
@@ -180,7 +182,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
                   : undefined
               }
               placeholder={field.placeholder}
-              size={mode === 'register' ? 'small' : 'medium'}
+              size="medium"
               slotProps={
                 field.maxLength ? { htmlInput: { maxLength: field.maxLength } } : undefined
               }
@@ -237,6 +239,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           fullWidth
           isLoading={isSubmitting}
           size={mode === 'register' ? 'large' : 'extraLarge'}
+          sx={{ gridColumn: '1 / -1', boxShadow: 'none', '&:hover': { boxShadow: 'none' } }}
           type="submit"
         >
           {content.submitLabel}

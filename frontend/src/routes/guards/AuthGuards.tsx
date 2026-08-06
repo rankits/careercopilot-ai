@@ -28,17 +28,12 @@ export function ProtectedRoute() {
   return <Outlet />;
 }
 
+/** Login / register — reachable even when already signed in (e.g. switch account). */
 export function GuestRoute() {
   const { isSessionResolved } = useAuthBootstrap();
-  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
 
   if (!isSessionResolved) {
     return <RouteLoading />;
-  }
-
-  if (isAuthenticated) {
-    return <Navigate replace to={getPostAuthRoute(isProfileComplete)} />;
   }
 
   return <Outlet />;

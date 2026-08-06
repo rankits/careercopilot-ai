@@ -2,22 +2,15 @@ import type { SxProps, Theme } from '@/lib/material';
 import { borderRadius, colorTokens, spacing } from '@/tokens';
 
 export const headerSearchSx: SxProps<Theme> = {
+  maxWidth: '100%',
+  minWidth: 0,
+  width: '100%',
   '& .MuiOutlinedInput-root': {
     background: colorTokens.backgroundCard,
     borderRadius: borderRadius.full,
+    maxWidth: '100%',
     minHeight: spacing[12],
-    flex: 1,
     minWidth: 0,
-    maxWidth: {
-      xs: '100%',
-      sm: '18rem',
-      md: '24rem',
-      lg: '32rem',
-    },
-    '& .MuiOutlinedInput-root': {
-      background: colorTokens.backgroundCard,
-      borderRadius: borderRadius.full,
-      minHeight: spacing[12],
-    },
+    width: '100%',
   },
 };

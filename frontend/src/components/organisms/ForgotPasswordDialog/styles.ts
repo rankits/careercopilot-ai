@@ -1,319 +1,413 @@
 import type { SxProps, Theme } from '@/lib/material';
-import { colorTokens, fontSize, fontWeight, shadows, spacing } from '@/tokens';
+import { borderRadius, colorTokens, fontSize, fontWeight, shadows, spacing } from '@/tokens';
 
 export const forgotPasswordDialogSx = {
-  '*': {
-    boxSizing: 'border-box',
-  },
   root: {
-    '& .MuiDialog-root': {
-      overflow: 'hidden',
-    },
     '& .MuiDialog-container': {
-      display: 'flex',
       alignItems: 'center',
-      justifyContent: 'center',
+      display: 'flex',
       height: '100dvh',
-      width: '100vw',
+      justifyContent: 'center',
       margin: 0,
+      padding: {
+        xs: spacing[2],
+        sm: spacing[3],
+      },
+      width: '100vw',
     },
   } satisfies SxProps<Theme>,
+  backdrop: {
+    backdropFilter: 'blur(10px)',
+    backgroundColor: 'rgba(15, 23, 42, 0.55)',
+  } satisfies SxProps<Theme>,
+  paper: {
+    backgroundColor: colorTokens.backgroundCard,
+    border: `1px solid ${colorTokens.borderDefault}`,
+    borderRadius: { xs: '16px', sm: '24px' },
+    boxShadow: shadows.card,
+    display: 'flex',
+    flexDirection: 'column',
+    margin: 0,
+    maxHeight: {
+      xs: 'calc(100dvh - 1rem)',
+      sm: 'calc(100dvh - 48px)',
+    },
+    maxWidth: {
+      xs: '100%',
+      sm: '560px',
+      md: '640px',
+    },
+    overflow: 'hidden',
+    position: 'relative',
+    width: {
+      xs: '100%',
+      sm: '92%',
+      md: '640px',
+    },
+  } satisfies SxProps<Theme>,
+  dialogContent: {
+    display: 'flex',
+    flex: 1,
+    flexDirection: 'column',
+    minHeight: 0,
+    overflowX: 'hidden',
+    overflowY: 'auto',
+    p: {
+      xs: `${spacing[3]} ${spacing[3]} 0`,
+      sm: `${spacing[4]} ${spacing[4]} 0`,
+      md: `${spacing[5]} ${spacing[5]} 0`,
+    },
+    WebkitOverflowScrolling: 'touch',
+  } satisfies SxProps<Theme>,
+  closeButton: {
+    borderRadius: borderRadius.full,
+    color: colorTokens.textSecondary,
+    p: spacing[1],
+    position: 'absolute',
+    right: spacing[1],
+    top: spacing[1],
+    zIndex: 2,
+    '&:hover': {
+      backgroundColor: colorTokens.backgroundApp,
+      color: colorTokens.textPrimary,
+    },
+  } satisfies SxProps<Theme>,
+  stepper: {
+    alignItems: 'flex-start',
+    borderBottom: `1px solid ${colorTokens.borderSubtle}`,
+    display: 'flex',
+    justifyContent: 'space-between',
+    mb: {
+      xs: spacing[3],
+      sm: spacing[4],
+    },
+    minWidth: 0,
+    pb: {
+      xs: spacing[2],
+      sm: spacing[3],
+    },
+    pt: spacing[1],
+    px: {
+      xs: 0,
+      sm: spacing[2],
+    },
+  } satisfies SxProps<Theme>,
+  stepItem: {
+    alignItems: 'center',
+    display: 'flex',
+    flex: 1,
+    flexDirection: 'column',
+    minWidth: 0,
+    position: 'relative',
+  } satisfies SxProps<Theme>,
+  stepCircle: (active: boolean) =>
+    ({
+      alignItems: 'center',
+      backgroundColor: active ? colorTokens.actionPrimary : colorTokens.backgroundApp,
+      border: `2px solid ${active ? colorTokens.actionPrimary : colorTokens.borderDefault}`,
+      borderRadius: borderRadius.full,
+      boxShadow: active ? '0 4px 12px rgba(37, 99, 235, 0.25)' : 'none',
+      color: active ? '#FFFFFF' : colorTokens.textSecondary,
+      display: 'flex',
+      flexShrink: 0,
+      fontSize: { xs: fontSize.xs, sm: fontSize.sm },
+      fontWeight: fontWeight.bold,
+      height: { xs: '1.75rem', sm: '2.5rem' },
+      justifyContent: 'center',
+      position: 'relative',
+      transition: 'all 0.2s ease-in-out',
+      width: { xs: '1.75rem', sm: '2.5rem' },
+      zIndex: 1,
+      '& .MuiSvgIcon-root': {
+        fontSize: { xs: '0.875rem', sm: '1.125rem' },
+      },
+    }) satisfies SxProps<Theme>,
+  stepLabel: (active: boolean) =>
+    ({
+      color: active ? colorTokens.actionPrimary : colorTokens.textSecondary,
+      fontSize: { xs: '0.65rem', sm: fontSize.xs },
+      fontWeight: active ? fontWeight.bold : fontWeight.medium,
+      lineHeight: 1.25,
+      maxWidth: '100%',
+      mt: spacing[1],
+      overflowWrap: 'anywhere',
+      px: '0.125rem',
+      textAlign: 'center',
+      transition: 'color 0.2s ease-in-out',
+      whiteSpace: { xs: 'normal', sm: 'nowrap' },
+    }) satisfies SxProps<Theme>,
+  stepLabelFull: {
+    display: { xs: 'none', sm: 'inline' },
+  } satisfies SxProps<Theme>,
+  stepLabelShort: {
+    display: { xs: 'inline', sm: 'none' },
+  } satisfies SxProps<Theme>,
+  stepLine: {
+    borderTop: `2px dashed ${colorTokens.borderDefault}`,
+    left: '50%',
+    position: 'absolute',
+    top: { xs: '0.875rem', sm: '1.25rem' },
+    transform: 'translateY(-50%)',
+    width: '100%',
+    zIndex: 0,
+  } satisfies SxProps<Theme>,
+  mainContent: {
+    alignItems: {
+      xs: 'stretch',
+      sm: 'center',
+    },
+    display: 'grid',
+    flex: '1 1 auto',
+    gap: {
+      xs: spacing[2],
+      sm: spacing[3],
+      md: spacing[4],
+    },
+    gridTemplateColumns: {
+      xs: '1fr',
+      // Side-by-side from tablet up so the penguin stays visible without eating vertical space.
+      sm: 'minmax(120px, 0.9fr) minmax(0, 1.1fr)',
+      md: '0.85fr 1.15fr',
+    },
+    minHeight: 0,
+    minWidth: 0,
+    px: { xs: 0, sm: spacing[1] },
+    py: { xs: 0, sm: spacing[1] },
+    width: '100%',
+  } satisfies SxProps<Theme>,
+  heroImageWrapper: {
+    alignItems: 'center',
+    background: 'none',
+    border: 'none',
+    borderRadius: 0,
+    display: 'flex',
+    flexShrink: 0,
+    justifyContent: 'center',
+    p: 0,
+    width: '100%',
+  } satisfies SxProps<Theme>,
+  heroImage: {
+    display: 'block',
+    filter: 'drop-shadow(0 8px 16px rgba(37, 99, 235, 0.12))',
+    // Always visible: scale with both width and height so short phones still fit.
+    height: 'auto',
+    margin: '0 auto',
+    maxHeight: 'clamp(64px, 18vh, 190px)',
+    maxWidth: '100%',
+    objectFit: 'contain',
+    width: {
+      xs: 'clamp(64px, 22vw, 110px)',
+      sm: 'clamp(110px, 20vw, 160px)',
+      md: 'clamp(140px, 18vw, 200px)',
+    },
+  } satisfies SxProps<Theme>,
+  formContent: {
+    display: 'grid',
+    gap: {
+      xs: spacing[1],
+      sm: spacing[2],
+    },
+    minWidth: 0,
+    textAlign: 'left',
+    width: '100%',
+  } satisfies SxProps<Theme>,
+  title: {
+    color: colorTokens.textPrimary,
+    fontSize: { xs: fontSize.lg, sm: fontSize.xl, md: fontSize['2xl'] },
+    fontWeight: fontWeight.extraBold,
+    lineHeight: 1.2,
+    m: 0,
+    textAlign: {
+      xs: 'center',
+      sm: 'left',
+    },
+  } satisfies SxProps<Theme>,
+  subtitle: {
+    color: colorTokens.textSecondary,
+    fontSize: { xs: fontSize.xs, sm: fontSize.sm },
+    lineHeight: 1.5,
+    mb: spacing[1],
+    overflowWrap: 'anywhere',
+    textAlign: {
+      xs: 'center',
+      sm: 'left',
+    },
+    wordBreak: 'break-word',
+    '& strong': {
+      color: colorTokens.textPrimary,
+      fontWeight: fontWeight.bold,
+    },
+  } satisfies SxProps<Theme>,
+  form: {
+    display: 'grid',
+    gap: {
+      xs: spacing[2],
+      sm: spacing[3],
+    },
+    textAlign: 'left',
+    width: '100%',
+  } satisfies SxProps<Theme>,
+  passwordFields: {
+    display: 'grid',
+    gap: {
+      xs: spacing[3],
+      sm: spacing[3],
+    },
+    width: '100%',
+  } satisfies SxProps<Theme>,
+  passwordFieldGroup: {
+    display: 'grid',
+    gap: spacing[1],
+    width: '100%',
+  } satisfies SxProps<Theme>,
+  otpGrid: {
+    display: 'grid',
+    gap: {
+      xs: spacing[1],
+      sm: spacing[2],
+    },
+    gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+    maxWidth: '100%',
+    my: spacing[1],
+    width: '100%',
+  } satisfies SxProps<Theme>,
+  otpInput: (hasError = false) =>
+    ({
+      minWidth: 0,
+      width: '100%',
+      '& .MuiFormLabel-root': {
+        display: 'none',
+      },
+      '& .MuiOutlinedInput-root': {
+        borderRadius: borderRadius.md,
+        minHeight: { xs: '2.5rem', sm: '3rem' },
+        px: { xs: '0.125rem', sm: spacing[1] },
+        ...(hasError
+          ? {
+              bgcolor: colorTokens.feedbackErrorSurface,
+              borderColor: colorTokens.feedbackError,
+            }
+          : {}),
+      },
+      '& .MuiInputBase-input': {
+        fontSize: { xs: fontSize.base, sm: fontSize.lg },
+        fontWeight: fontWeight.bold,
+        p: {
+          xs: `${spacing[1]} 0`,
+          sm: spacing[2],
+        },
+        textAlign: 'center',
+      },
+      '& .MuiOutlinedInput-notchedOutline legend': {
+        display: 'none',
+      },
+    }) satisfies SxProps<Theme>,
+  otpError: {
+    color: colorTokens.feedbackError,
+    fontSize: fontSize.xs,
+    mt: 0,
+    textAlign: 'center',
+  } satisfies SxProps<Theme>,
+  resendRow: {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[1],
+    justifyContent: 'center',
+    mt: 0,
+    rowGap: '0.125rem',
+    textAlign: 'center',
+  } satisfies SxProps<Theme>,
+  resendText: {
+    color: colorTokens.textSecondary,
+    fontSize: fontSize.xs,
+  } satisfies SxProps<Theme>,
+  resendLink: {
+    appearance: 'none',
+    background: 'none',
+    border: 'none',
+    color: colorTokens.actionPrimary,
+    cursor: 'pointer',
+    fontFamily: 'inherit',
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.bold,
+    p: 0,
+    '&:disabled': {
+      cursor: 'not-allowed',
+      opacity: 0.6,
+    },
+    '&:hover:not(:disabled)': {
+      textDecoration: 'underline',
+    },
+  } satisfies SxProps<Theme>,
+  strengthRow: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: spacing[2],
+    minHeight: '1.25rem',
+  } satisfies SxProps<Theme>,
+  strengthBar: (strength: string) =>
+    ({
+      backgroundColor:
+        strength === 'Strong'
+          ? colorTokens.feedbackSuccess
+          : strength === 'Medium'
+            ? colorTokens.actionPrimary
+            : strength === 'Weak'
+              ? colorTokens.feedbackError
+              : colorTokens.borderDefault,
+      borderRadius: borderRadius.full,
+      height: '0.375rem',
+      transition: 'width 0.3s ease-in-out, background-color 0.3s ease-in-out',
+      width:
+        strength === 'Strong'
+          ? '100%'
+          : strength === 'Medium'
+            ? '60%'
+            : strength === 'Weak'
+              ? '25%'
+              : '25%',
+    }) satisfies SxProps<Theme>,
   actionRow: {
     alignItems: 'center',
-    justifyContent: 'space-between',
+    backgroundColor: colorTokens.backgroundCard,
+    borderTop: `1px solid ${colorTokens.borderSubtle}`,
+    bottom: 0,
     display: 'flex',
     flexDirection: {
       xs: 'column-reverse',
       sm: 'row',
     },
-    position: {
-      xs: 'sticky',
-      sm: 'static',
-    },
-    bottom: 0,
-    backgroundColor: colorTokens.backgroundCard,
-    pt: spacing[2],
-    mt: spacing[1],
-  } satisfies SxProps<Theme>,
-  backdrop: {
-    backdropFilter: 'blur(0.75rem)',
-    backgroundColor: colorTokens.dialogBackdrop,
     flexShrink: 0,
-    fontSize: fontSize.base,
-    mt: spacing[2],
-    px: spacing[3],
-    width: {
-      xs: '100%',
-      sm: 'auto',
+    gap: spacing[2],
+    justifyContent: 'space-between',
+    mt: 'auto',
+    position: 'sticky',
+    pt: {
+      xs: spacing[3],
+      sm: spacing[4],
     },
+    pb: {
+      xs: `max(${spacing[3]}, env(safe-area-inset-bottom))`,
+      sm: spacing[5],
+    },
+    px: 0,
+    zIndex: 1,
   } satisfies SxProps<Theme>,
   backButton: {
     flexShrink: 0,
-    fontSize: fontSize.base,
-    justifySelf: 'start',
-    mt: spacing[2],
-    px: spacing[3],
     width: {
       xs: '100%',
       sm: 'auto',
     },
-    whiteSpace: 'normal',
-  } satisfies SxProps<Theme>,
-  closeButton: {
-    color: colorTokens.textSecondary,
-    position: 'absolute',
-    top: spacing[1],
-    right: {
-      xs: spacing[0],
-      sm: spacing[1],
-    },
-    zIndex: 2,
-  } satisfies SxProps<Theme>,
-  dialogContent: {
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    minHeight: 0,
-    overflowY: 'auto',
-    p: {
-      xs: spacing[2],
-      sm: spacing[3],
-    },
-    WebkitOverflowScrolling: 'touch',
-  } satisfies SxProps<Theme>,
-  form: {
-    display: 'grid',
-    gap: { xs: spacing[1], sm: spacing[2] },
-    textAlign: 'left',
-  } satisfies SxProps<Theme>,
-  formContent: {
-    display: 'grid',
-    gap: { xs: spacing[1], sm: spacing[2] },
-    textAlign: 'left',
-    minWidth: 0,
-    width: '100%',
-  } satisfies SxProps<Theme>,
-  heroImage: {
-    display: 'block',
-    width: {
-      xs: '150px',
-      sm: '180px',
-      md: '220px',
-    },
-    maxWidth: '100%',
-    maxHeight: {
-      xs: '140px',
-      md: '200px',
-    },
-    objectFit: 'contain',
-    margin: {
-      xs: '0 auto',
-      md: 0,
-    },
-  } satisfies SxProps<Theme>,
-  mainContent: {
-    flex: 1,
-    display: 'grid',
-    gridTemplateColumns: {
-      xs: '1fr',
-      md: '0.8fr 1.2fr',
-    },
-    alignContent: 'flex-start',
-    alignItems: {
-      xs: 'center',
-      md: 'flex-start',
-    },
-    gap: {
-      xs: spacing[2],
-      md: spacing[2],
-    },
-    px: spacing[1],
-    py: spacing[1],
-    minWidth: 0,
-    minHeight: 0,
-    width: '100%',
-  } satisfies SxProps<Theme>,
-  otpInput: {
-    width: '100%',
-    '& .MuiInputBase-input': {
-      textAlign: 'center',
-      fontWeight: fontWeight.bold,
-      fontSize: {
-        xs: '18px',
-        sm: '22px',
-      },
-    },
-  } satisfies SxProps<Theme>,
-  paper: {
-    backgroundColor: colorTokens.backgroundCard,
-    border: `1px solid ${colorTokens.borderDefault}`,
-    borderRadius: { xs: '24px', sm: '24px' },
-    boxShadow: shadows.card,
-    width: {
-      xs: '90%',
-      sm: '90%',
-      md: '640px',
-    },
-    maxWidth: '640px',
-    height: {
-      xs: 'auto',
-      sm: 'auto',
-    },
-    maxHeight: {
-      xs: '100dvh',
-      sm: 'calc(100dvh - 24px)',
-    },
-    margin: {
-      xs: 0,
-      sm: 'auto',
-    },
-    display: 'flex',
-    flexDirection: 'column',
-    overflow: 'hidden',
   } satisfies SxProps<Theme>,
   primaryButton: {
-    fontSize: {
-      xs: '17px',
-      sm: '18px',
-      md: '18px',
+    minWidth: {
+      sm: '180px',
     },
-    px: spacing[2],
-    mt: spacing[1],
-    whiteSpace: 'normal',
-    wordBreak: 'break-word',
     width: {
       xs: '100%',
-      sm: '220px',
-    },
-  } satisfies SxProps<Theme>,
-  resendText: {
-    color: colorTokens.textSecondary,
-    mb: 0,
-    fontSize: fontSize.sm,
-    textAlign: 'center',
-    whiteSpace: 'normal',
-    wordBreak: 'break-word',
-  } satisfies SxProps<Theme>,
-  resendRow: {
-    display: 'flex',
-    flexDirection: {
-      xs: 'column',
-      sm: 'row',
-    },
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: spacing[1],
-    mt: spacing[2],
-  } satisfies SxProps<Theme>,
-  resendLink: {
-    color: colorTokens.actionPrimary,
-    fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
-    cursor: 'pointer',
-    whiteSpace: 'normal',
-    wordBreak: 'break-word',
-  } satisfies SxProps<Theme>,
-  stepCircle: (active: boolean) =>
-    ({
-      alignItems: 'center',
-      backgroundColor: active ? colorTokens.actionPrimary : colorTokens.backgroundCard,
-      border: `0.125rem solid ${active ? colorTokens.actionPrimary : colorTokens.borderDefault}`,
-      borderRadius: '50%',
-      color: active ? colorTokens.backgroundCard : colorTokens.textSecondary,
-      display: 'flex',
-      flexShrink: 0,
-      fontSize: fontSize.sm,
-      fontWeight: fontWeight.bold,
-      height: { xs: '2rem', sm: '2.5rem' },
-      justifyContent: 'center',
-      position: 'relative',
-      width: { xs: '2rem', sm: '2.5rem' },
-      zIndex: 1,
-    }) satisfies SxProps<Theme>,
-  stepItem: {
-    flex: 1,
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    alignItems: 'center',
-    '&:not(:last-child)::after': {
-      content: '""',
-      position: 'absolute',
-      borderTop: `2px dashed ${colorTokens.borderDefault}`,
-      zIndex: 0,
-    },
-  } satisfies SxProps<Theme>,
-  stepLabel: (active: boolean) =>
-    ({
-      color: active ? colorTokens.actionPrimary : colorTokens.textSecondary,
-      fontSize: {
-        xs: '15px',
-        sm: fontSize.sm,
-      },
-      textAlign: 'center',
-      whiteSpace: 'normal',
-      wordBreak: 'break-word',
-      mt: spacing[1],
-    }) satisfies SxProps<Theme>,
-  stepLine: {
-    position: 'absolute',
-    top: '1.25rem',
-    left: '50%',
-    marginLeft: '1.25rem',
-    marginRight: '1.25rem',
-    width: 'calc(100% - 2.5rem)',
-    borderTop: `2px dashed ${colorTokens.borderDefault}`,
-    transform: 'translateY(-50%)',
-    zIndex: 0,
-  } satisfies SxProps<Theme>,
-  stepper: {
-    minWidth: 0,
-    display: 'flex',
-    justifyContent: 'space-between',
-    overflow: 'hidden',
-    pb: spacing[2],
-    px: {
-      xs: spacing[1],
-      sm: spacing[2],
-    },
-  } satisfies SxProps<Theme>,
-  strengthBar: (strength: string) =>
-    ({
-      backgroundColor:
-        strength === 'Strong' ? colorTokens.feedbackSuccess : colorTokens.borderDefault,
-      borderRadius: '999px',
-      height: '0.375rem',
-      width: strength === 'Strong' ? '80%' : strength === 'Medium' ? '50%' : '15%',
-    }) satisfies SxProps<Theme>,
-  strengthRow: {
-    alignItems: 'center',
-    display: 'flex',
-    gap: spacing[2],
-    mt: `-${spacing[2]}`,
-  } satisfies SxProps<Theme>,
-  subtitle: {
-    color: colorTokens.textSecondary,
-    lineHeight: 1.5,
-    mb: spacing[2],
-    fontSize: {
-      xs: '18px',
-      sm: '18px',
-      md: '18px',
-    },
-    textAlign: {
-      xs: 'center',
-      md: 'left',
-    },
-  } satisfies SxProps<Theme>,
-  title: {
-    color: colorTokens.textPrimary,
-    fontSize: { xs: fontSize['2xl'], sm: fontSize['3xl'] },
-    fontWeight: fontWeight.extraBold,
-    lineHeight: 1.1,
-    m: 0,
-    textAlign: {
-      xs: 'center',
-      md: 'left',
+      sm: 'auto',
     },
   } satisfies SxProps<Theme>,
 } as const;
