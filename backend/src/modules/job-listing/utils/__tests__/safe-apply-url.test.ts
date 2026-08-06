@@ -18,6 +18,11 @@ describe('toSafeApplyUrl', () => {
     expect(toSafeApplyUrl(null)).toBeNull();
     expect(toSafeApplyUrl('')).toBeNull();
   });
+
+  it('rejects whitespace-only strings and trims surrounding whitespace', () => {
+    expect(toSafeApplyUrl('   ')).toBeNull();
+    expect(toSafeApplyUrl('  https://jobs.example.com/a  ')).toBe('https://jobs.example.com/a');
+  });
 });
 
 describe('pickPrimaryApplyUrl', () => {
@@ -33,5 +38,9 @@ describe('pickPrimaryApplyUrl', () => {
 
   it('returns null when no source has a safe URL', () => {
     expect(pickPrimaryApplyUrl([{ applyUrl: 'javascript:x' }, { applyUrl: null }])).toBeNull();
+  });
+
+  it('returns null for an empty sources list', () => {
+    expect(pickPrimaryApplyUrl([])).toBeNull();
   });
 });
