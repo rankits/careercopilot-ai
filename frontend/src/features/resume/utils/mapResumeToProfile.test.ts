@@ -36,7 +36,7 @@ describe('mapResumeToProfile', () => {
       fullName: 'Ada Lovelace',
       location: 'London, UK',
       phone: '+44 1234',
-      projects: 'Bernoulli Engine — Algorithm implementation',
+      projects: 'Bernoulli Engine\nDescription: Algorithm implementation',
       skills: 'Algorithms, Git, Leadership, Computing',
       summary: 'Computing pioneer',
       totalExperience: '8',
