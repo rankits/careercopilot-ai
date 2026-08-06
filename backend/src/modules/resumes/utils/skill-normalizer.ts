@@ -185,6 +185,10 @@ const SKILL_ALIASES: Record<string, string> = {
   reactjs: 'React',
   'react.js': 'React',
   'react native': 'React Native',
+  angular: 'Angular',
+  angularjs: 'Angular',
+  'angular.js': 'Angular',
+  'angular js': 'Angular',
   vue: 'Vue',
   vuejs: 'Vue',
   'vue.js': 'Vue',
@@ -434,21 +438,45 @@ export const extractProfessionalSkillsFromText = (text: string): string[] => {
   const softened = text
     .replace(/[\u00ad\u200b\u200c\u200d\ufeff]/g, '')
     .replace(/\b([A-Za-z]{2,20})\s*\.\s*js\b/gi, '$1.js')
-    .replace(/\b(React|Node|Next|Vue|Express)[\s._-]*js\b/gi, '$1.js');
+    .replace(/\b(React|Node|Next|Vue|Express|Angular)[\s._-]*js\b/gi, '$1.js');
+
+  const looksLikeSkillListLine = (line: string): boolean => {
+    const words = line.split(/\s+/).filter(Boolean);
+    if (words.length < 2 || words.length > 24) return false;
+    // Skip prose / experience bullets — only expand compact skill grids.
+    if (
+      /\b(developed|created|collaborated|maintained|optimized|participated|built|implemented|responsible|experience|years?)\b/i.test(
+        line,
+      )
+    ) {
+      return false;
+    }
+    // Prefer short tech-looking tokens (React, TypeScript, Node.js, CI/CD).
+    const techish = words.filter((word) =>
+      /^[A-Za-z][A-Za-z0-9+#./-]{0,23}$/.test(word.replace(/[(),]/g, '')),
+    ).length;
+    return techish / words.length >= 0.7;
+  };
 
   const candidates = softened
     .replace(/[•●▪◦]/g, ',')
     .split(/[,|;\n/]+/)
-    .map((part) =>
-      part
+    .flatMap((part) => {
+      const cleaned = part
         .replace(
           /^(?:required|preferred|skills?|technologies|tools|requirements?|qualifications?|experience with|knowledge of|proficient in)\s*:?\s*/i,
           '',
         )
         // Keep first skill-looking token when OCR glues a sentence after it ("Kafka. Ability…").
         .replace(/^([A-Za-z0-9+#._-]{2,40})[.].*$/, '$1')
-        .trim(),
-    )
+        .trim();
+      if (!cleaned) return [];
+      // PDF skill grids: "React TypeScript Angular Docker" (no commas).
+      if (looksLikeSkillListLine(cleaned)) {
+        return [cleaned, ...cleaned.split(/\s+/).filter(Boolean)];
+      }
+      return [cleaned];
+    })
     .filter(Boolean);
 
   const catalogHits: string[] = [];
@@ -456,9 +484,9 @@ export const extractProfessionalSkillsFromText = (text: string): string[] => {
     // Skip ultra-short ambiguous tokens (C, R, Go handled via careful boundaries below).
     if (skill.length <= 2 && !SHORT_ALLOWED.has(skill.toLowerCase())) continue;
     const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
-    // Allow React ≈ React.js ≈ ReactJS in catalog scans.
+    // Allow React ≈ React.js ≈ ReactJS / Angular ≈ AngularJS in catalog scans.
     const flexible =
-      /\.js$/i.test(skill) || /^(react|node|next|vue|express)$/i.test(skill)
+      /\.js$/i.test(skill) || /^(react|node|next|vue|express|angular)$/i.test(skill)
         ? `\\b${escaped.replace(/\\\.js$/i, '')}(?:[\\s._-]*js|\\.js)?\\b`
         : `\\b${escaped}\\b`;
     const pattern = new RegExp(flexible, 'i');
@@ -467,7 +495,7 @@ export const extractProfessionalSkillsFromText = (text: string): string[] => {
 
   const knownShapeMatches =
     softened.match(
-      /\b(?:C\+\+|C#|\.NET|CI\/CD|Node\.?js|Next\.?js|Vue\.?js|Express\.?js|React\.?js|ReactJS|NodeJS|NextJS|VueJS|ExpressJS)\b/gi,
+      /\b(?:C\+\+|C#|\.NET|CI\/CD|Node\.?js|Next\.?js|Vue\.?js|Express\.?js|React\.?js|Angular\.?js|ReactJS|NodeJS|NextJS|VueJS|ExpressJS|AngularJS)\b/gi,
     ) ?? [];
 
   return normalizeProfessionalSkills([...candidates, ...catalogHits, ...knownShapeMatches]);
@@ -522,7 +550,7 @@ export const skillAppearsIn = (content: string, skill: string): boolean => {
   const softened = content
     .replace(/[\u00ad\u200b\u200c\u200d\ufeff]/g, '')
     .replace(/\b([A-Za-z]{2,20})\s*\.\s*js\b/gi, '$1.js')
-    .replace(/\b(React|Node|Next|Vue|Express)[\s._-]*js\b/gi, '$1.js');
+    .replace(/\b(React|Node|Next|Vue|Express|Angular)[\s._-]*js\b/gi, '$1.js');
 
   for (const variant of skillMatchVariants(skill)) {
     if (termAppearsInLocal(softened, variant)) return true;
