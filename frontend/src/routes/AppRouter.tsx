@@ -12,8 +12,10 @@ import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
 import { AiMatchPage } from '@/pages/AiMatchPage';
 import { ApplicationsPage } from '@/pages/ApplicationsPage';
+import { AssistedApplicationsPage } from '@/pages/AssistedApplicationsPage';
 import { AssistedApplyWorkspacePage } from '@/pages/AssistedApplyWorkspacePage/AssistedApplyWorkspacePage';
 import { AutoApplyPage } from '@/pages/AutoApplyPage';
+import { BrowserExtensionPage } from '@/pages/BrowserExtensionPage';
 import { EditProfilePage } from '@/pages/EditProfilePage';
 import { HomePage } from '@/pages/HomePage';
 import { JobDetailPage } from '@/pages/JobDetailPage';
@@ -64,7 +66,9 @@ export const appRouteObjects: RouteObject[] = [
           { path: '/for-you', element: <LegacyForYouRedirect /> },
           { path: ROUTES.SAVED_JOBS, element: <SavedJobsPage /> },
           { path: ROUTES.APPLICATIONS, element: <ApplicationsPage /> },
+          { path: ROUTES.ASSISTED_APPLICATIONS, element: <AssistedApplicationsPage /> },
           { path: ROUTES.AUTO_APPLY, element: <AutoApplyPage /> },
+          { path: ROUTES.BROWSER_EXTENSION, element: <BrowserExtensionPage /> },
           { path: ROUTES.ASSISTED_APPLY_WORKSPACE, element: <AssistedApplyWorkspacePage /> },
           { path: ROUTES.SAVED_RESUMES, element: <SavedResumesPage /> },
           { path: ROUTES.RESUME_BUILDER, element: <ResumeBuilderPage /> },

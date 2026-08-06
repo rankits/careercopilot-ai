@@ -31,6 +31,13 @@ export function AppLayout() {
         ? 'saved-jobs'
         : pathname === ROUTES.AI_MATCH
           ? 'ai-match'
+          : pathname === ROUTES.AUTO_APPLY
+            ? 'auto-apply'
+            : pathname === ROUTES.ASSISTED_APPLICATIONS ||
+                pathname.startsWith('/assisted-apply/')
+              ? 'assisted-applications'
+            : pathname === ROUTES.BROWSER_EXTENSION
+              ? 'browser-extension'
           : pathname === ROUTES.APPLICATIONS
             ? 'applications'
             : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')

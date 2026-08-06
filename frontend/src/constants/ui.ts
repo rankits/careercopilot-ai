@@ -17,11 +17,13 @@ import {
   HomeOutlinedIcon,
   InsightsOutlinedIcon,
   LockOutlinedIcon,
+  LanguageOutlinedIcon,
   PersonOutlineIcon,
   SearchOutlinedIcon,
   SecurityOutlinedIcon,
   TuneOutlinedIcon,
   AutoAwesomeOutlinedIcon,
+  TaskAltOutlinedIcon,
 } from '@/lib/material';
 
 /* ----------------------------------------------------------------------------
@@ -504,7 +506,9 @@ export const CAREER_COPILOT_COPY = {
 
 export const SIDEBAR_NAV_LABELS = {
   autoApply: 'Auto Apply',
+  browserExtension: 'Browser Extension',
   applications: 'Applications',
+  assistedApplications: 'Assisted Applications',
   aiMatch: 'AI Match',
   dashboard: 'Dashboard',
   jobsFeed: 'Jobs Feed',
@@ -550,6 +554,18 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     icon: AutoAwesomeOutlinedIcon,
     id: 'auto-apply',
     label: SIDEBAR_NAV_LABELS.autoApply,
+  },
+  {
+    href: ROUTES.ASSISTED_APPLICATIONS,
+    icon: TaskAltOutlinedIcon,
+    id: 'assisted-applications',
+    label: SIDEBAR_NAV_LABELS.assistedApplications,
+  },
+  {
+    href: ROUTES.BROWSER_EXTENSION,
+    icon: LanguageOutlinedIcon,
+    id: 'browser-extension',
+    label: SIDEBAR_NAV_LABELS.browserExtension,
   },
   {
     href: ROUTES.RESUME_BUILDER,
