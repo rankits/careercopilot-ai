@@ -1109,7 +1109,7 @@ describe('ResumeAnalysisService', () => {
   describe('getResumeText variants through recheckAts', () => {
     const emptyAnalysis = () => analysis({ editedContent: '' });
 
-    it('serializes structured parse data as JSON with a skills appendix', async () => {
+    it('reconstructs plain text from structured parse data with a skills appendix', async () => {
       h.prisma.resumeAnalysis.findFirst.mockResolvedValue(emptyAnalysis());
       h.prisma.resumeExtraction.findFirst.mockResolvedValue({
         extractedText: null,
@@ -1122,7 +1122,15 @@ describe('ResumeAnalysisService', () => {
       });
       await service.recheckAts('r-1');
       expect(h.scoreEdited).toHaveBeenCalledWith(
-        expect.objectContaining({ content: expect.stringContaining('John') }),
+        expect.objectContaining({
+          content: expect.stringMatching(/John[\s\S]*SKILLS[\s\S]*React/i),
+        }),
+      );
+      // Never feed raw JSON.stringify blobs into ATS scoring.
+      expect(h.scoreEdited).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: expect.not.stringContaining('"name": "John"'),
+        }),
       );
     });
 

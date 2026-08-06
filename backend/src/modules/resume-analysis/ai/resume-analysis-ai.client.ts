@@ -15,7 +15,17 @@ import {
   dedupeSemanticSkills,
 } from '@/modules/resume-analysis/utils/semantic-skills.js';
 import { groundSkillGapAgainstResume } from '@/modules/resume-analysis/utils/skill-grounding.js';
-import { skillMatchKey } from '@/modules/resumes/utils/skill-normalizer.js';
+import {
+  describeYearsGap,
+  estimateCandidateYears,
+  extractRequiredYearsFromJd,
+  yearsGapSeverity,
+  yearsMatchScore,
+} from '@/modules/resume-analysis/utils/experience-years.js';
+import {
+  extractProfessionalSkillsFromText,
+  skillMatchKey,
+} from '@/modules/resumes/utils/skill-normalizer.js';
 import {
   extractJsonObject,
   isNonJsonModelOutput,
@@ -72,9 +82,11 @@ const finalizeAiSemanticAnalysis = (
   resumeText: string,
   jobDescription?: string,
   targetRole?: string,
+  structuredSkills?: string[],
 ): AiAnalysisOutput => {
   const grounded = groundSkillGapAgainstResume({
     resumeText,
+    structuredSkills,
     jobDescription,
     targetRole,
     aiMatched: aiResult.skillAnalysis?.matchedSkills,
@@ -125,7 +137,7 @@ const finalizeAiSemanticAnalysis = (
   }
   if (crossDomain) atsScore = Math.min(atsScore, 35);
 
-  const experienceRelevance = crossDomain
+  let experienceRelevance = crossDomain
     ? 0
     : clampPct(aiResult.experienceRelevance ?? aiResult.sectionScores?.experience, skillMatch);
   const sectionScores = {
@@ -179,9 +191,60 @@ const finalizeAiSemanticAnalysis = (
     });
   }
 
+  // Blend AI skillMatch with deterministic years gap so tenure shortfalls reduce ATS.
+  const requiredYears = extractRequiredYearsFromJd(jobDescription ?? '');
+  const candidateYears = estimateCandidateYears(resumeText);
+  const yearsSeverity = yearsGapSeverity(requiredYears, candidateYears);
+  const yearsGapMessage = describeYearsGap(requiredYears, candidateYears);
+  const yearsScore = yearsMatchScore(requiredYears, candidateYears);
+
+  if (yearsSeverity === 'major_gap') {
+    experienceRelevance = Math.min(experienceRelevance, 45);
+    sectionScores.experience = Math.min(sectionScores.experience, 45);
+  } else if (yearsSeverity === 'minor_gap') {
+    experienceRelevance = Math.min(experienceRelevance, 70);
+    sectionScores.experience = Math.min(sectionScores.experience, 70);
+  }
+
+  // Soft-blend years into final ATS (JD comparison, not keywords alone).
+  if (yearsSeverity === 'major_gap') {
+    atsScore = Math.min(atsScore, Math.round(atsScore * 0.82 + yearsScore * 0.18));
+  } else if (yearsSeverity === 'minor_gap') {
+    atsScore = Math.min(atsScore, Math.round(atsScore * 0.9 + yearsScore * 0.1));
+  }
+
+  if (
+    yearsGapMessage &&
+    (yearsSeverity === 'major_gap' || yearsSeverity === 'minor_gap') &&
+    !atsIssues.some((item) => /years?\s+of\s+experience/i.test(item.issue))
+  ) {
+    atsIssues.push({
+      issue: yearsGapMessage,
+      section: 'experience',
+      severity: yearsSeverity === 'major_gap' ? 'HIGH' : 'MEDIUM',
+      fix: 'Highlight longer-tenure roles and leadership scope honestly — do not invent years of experience.',
+    });
+  }
+
   const suggestions = (aiResult.suggestions ?? []).filter((suggestion) =>
     isGroundedSuggestion(suggestion, resumeText),
   );
+
+  if (
+    yearsGapMessage &&
+    yearsSeverity === 'major_gap' &&
+    !suggestions.some((item) => /years?\s+of\s+experience/i.test(`${item.title} ${item.reason}`))
+  ) {
+    suggestions.unshift({
+      title: 'Address years-of-experience gap vs JD',
+      category: 'experience',
+      originalText: '',
+      suggestedText: yearsGapMessage,
+      reason:
+        'The JD asks for more years of experience than the resume clearly shows. Call out transferable seniority honestly without inventing tenure.',
+      impact: 'HIGH',
+    });
+  }
 
   const improvedSummary =
     (aiResult.optimizedSections?.professionalSummary ?? '').trim() ||
@@ -263,7 +326,28 @@ const enrichAnalysisWithJdSkills = (
   resumeText: string,
   jobDescription?: string,
   targetRole?: string,
-): AiAnalysisOutput => finalizeAiSemanticAnalysis(aiResult, resumeText, jobDescription, targetRole);
+): AiAnalysisOutput => {
+  // Pull skills already surfaced at the top of getResumeText ("SKILLS\n...") plus
+  // any remaining catalog hits so grounding survives lossy PDF extracts.
+  const skillsHeader =
+    resumeText.match(/(?:^|\n)\s*skills?\s*\n([^\n]+)/i)?.[1] ??
+    resumeText.match(/(?:^|\n)\s*skills?\s*:\s*([^\n]+)/i)?.[1] ??
+    '';
+  const structuredSkills = [
+    ...skillsHeader
+      .split(/[,|/;]+/)
+      .map((item) => item.trim())
+      .filter(Boolean),
+    ...extractProfessionalSkillsFromText(resumeText),
+  ];
+  return finalizeAiSemanticAnalysis(
+    aiResult,
+    resumeText,
+    jobDescription,
+    targetRole,
+    structuredSkills,
+  );
+};
 
 const sanitizeAiSkillOutput = (aiResult: AiAnalysisOutput): AiAnalysisOutput => {
   void cleanSemanticSkill;
@@ -362,7 +446,7 @@ export const resumeAnalysisAiClient = {
         resumeChars: resumeText.length,
         jdChars: jobDescription?.length ?? 0,
       },
-      'Resume analysis AI starting (OpenRouter preferred, then fallbacks)',
+      'Resume analysis AI starting (Groq preferred, then fallbacks)',
     );
 
     let lastError: unknown;

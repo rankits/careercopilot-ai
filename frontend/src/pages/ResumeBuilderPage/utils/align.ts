@@ -46,22 +46,17 @@ function alignSkills(draft: ResumeDraft, context: JobAlignContext): ResumeDraft 
     mergeSkillLists(draft.skillsList).map((skill) => [skill.toLowerCase(), skill] as const),
   );
 
-  // User-declared preferred skills always stay on the resume.
-  for (const skill of preferred) {
-    rebuilt.set(skill.toLowerCase(), skill);
-  }
+  // Do NOT auto-inject preferred skills — Apply / manual chips own the resume list.
+  // Preferred skills stay in Define Role until the user adds them via Apply or the editor.
 
-  // Matched / JD skills only when evidenced in the resume body (no inventing).
-  for (const skill of [...matched, ...jdSkills]) {
+  // Matched / JD / preferred skills only when evidenced in the resume body (no inventing).
+  for (const skill of [...preferred, ...matched, ...jdSkills]) {
     if (evidencedIn(resumeBlob, skill)) rebuilt.set(skill.toLowerCase(), skill);
   }
 
   // Recommended: only surface if already evidenced (user still clicks +chip to add missing ones).
   for (const skill of recommended) {
-    if (
-      evidencedIn(resumeBlob, skill) ||
-      preferred.some((p) => p.toLowerCase() === skill.toLowerCase())
-    ) {
+    if (evidencedIn(resumeBlob, skill)) {
       rebuilt.set(skill.toLowerCase(), skill);
     }
   }

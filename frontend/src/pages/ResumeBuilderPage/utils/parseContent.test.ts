@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { serializeResumeDraft } from './draft';
 import { parseResumeContent } from './parseContent';
 
 const SAMPLE_RESUME = `
@@ -57,6 +58,9 @@ describe('parseResumeContent', () => {
     );
     expect(draft.experiences.length).toBeGreaterThan(0);
     expect(draft.projectsList.length).toBeGreaterThan(0);
+    expect(draft.projectsList[0]?.title).toMatch(/CareerCopilot/i);
+    expect(draft.projectsList[0]?.title).not.toMatch(/^role$/i);
+    expect(draft.projectsList[0]?.details).toMatch(/ATS resume optimizer/i);
     expect(draft.education).toMatch(/Computer Science/i);
     expect(draft.certifications).toMatch(/AWS/i);
     expect(draft.achievements).toMatch(/Hackathon/i);
@@ -112,5 +116,90 @@ Java, React, TypeScript, Node.js, Docker, AWS
     );
     expect(draft.experiences.length).toBeGreaterThan(0);
     expect(draft.education).toMatch(/Computer Science|B\.Tech/i);
+  });
+
+  it('extracts skills under alternate Skills section titles', () => {
+    const draft = parseResumeContent(
+      `Alex Rivera
+alex@example.com
+
+PROFESSIONAL SUMMARY
+Engineer building web apps.
+
+Technical Skills
+React, TypeScript, Node.js, Docker
+
+WORK EXPERIENCE
+Acme - Engineer
+- Built React apps
+`,
+      'Frontend Developer',
+    );
+    expect(draft.skillsList).toEqual(
+      expect.arrayContaining(['React', 'TypeScript', 'Node.js', 'Docker']),
+    );
+  });
+
+  it('extracts skills from CareerCopilot PDF-style bullet / line lists', () => {
+    const draft = parseResumeContent(
+      `Alex Rivera
+Frontend Developer
+alex@example.com
+
+PROFESSIONAL SUMMARY
+Frontend engineer building React apps.
+
+SKILLS
+• React
+• TypeScript
+• Angular
+• Node.js
+• Docker
+• AWS
+
+WORK EXPERIENCE
+Acme - Engineer
+Jan 2022 - Present
+- Built React dashboards
+`,
+      'Frontend Developer',
+    );
+
+    expect(draft.skillsList).toEqual(
+      expect.arrayContaining(['React', 'TypeScript', 'Angular', 'Node.js', 'Docker', 'AWS']),
+    );
+  });
+
+  it('keeps Interests separate from GitHub/Portfolio on ADDITIONAL round-trip', () => {
+    const source = `Alex Rivera
+alex@example.com
+
+PROFESSIONAL SUMMARY
+Java engineer building Spring Boot APIs for production systems every day.
+
+SKILLS
+Java, Spring Boot
+
+ADDITIONAL
+Interests: Chess, Reading
+GitHub: github.com/alex
+Portfolio: alex.vercel.app
+`;
+    const draft = parseResumeContent(source, 'Java Developer');
+    const interests = draft.customFields.find((field) => /^interests?$/i.test(field.label));
+    const github = draft.customFields.find((field) => /^github$/i.test(field.label));
+    const portfolio = draft.customFields.find((field) => /^portfolio$/i.test(field.label));
+
+    expect(interests?.value).toMatch(/Chess/i);
+    expect(interests?.value).not.toMatch(/github|vercel|portfolio/i);
+    expect(github?.value).toMatch(/github\.com\/alex/i);
+    expect(portfolio?.value).toMatch(/alex\.vercel\.app/i);
+
+    const roundTrip = parseResumeContent(serializeResumeDraft(draft), 'Java Developer');
+    const interests2 = roundTrip.customFields.find((field) => /^interests?$/i.test(field.label));
+    const github2 = roundTrip.customFields.find((field) => /^github$/i.test(field.label));
+    expect(interests2?.value).toMatch(/Chess/i);
+    expect(interests2?.value).not.toMatch(/github|vercel/i);
+    expect(github2?.value).toMatch(/github\.com\/alex/i);
   });
 });

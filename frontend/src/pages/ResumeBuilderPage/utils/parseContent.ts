@@ -1,14 +1,26 @@
 import { createEmptyDraft } from './draft';
 import { parseExperienceBlocks } from './parseExperience';
-import { parseProjectBlocks } from './parseProjects';
+import { parseProjectBlocks, resolveProjectDisplayTitle } from './parseProjects';
 import {
   isContactOrMetaLine,
+  isLinkOrMetaCustomValue,
   isNoiseLine,
+  matchCustomFieldLabel,
   matchTopSection,
   sanitizeExtractedText,
+  type CustomFieldLabel,
 } from './sanitize';
 import { isSkillLabelNoise, mergeSkillLists, splitSkillTokens } from './skills';
 import { newId, type ResumeDraft, type ResumeSectionId } from './types';
+
+type ParseBucket = ResumeSectionId | CustomFieldLabel;
+
+const CUSTOM_LABEL_TITLE: Record<Exclude<CustomFieldLabel, 'additional'>, string> = {
+  languages: 'Languages',
+  interests: 'Interests',
+  github: 'GitHub',
+  portfolio: 'Portfolio',
+};
 
 const JOB_DATE_LINE =
   /^((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}|\d{1,2}[/.-]\d{4}|\d{4})\s*[-–—−to]+\s*((jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\.?\s+\d{4}|\d{1,2}[/.-]\d{4}|\d{4}|present|current|now)/i;
@@ -107,6 +119,8 @@ function normalizeDraft(draft: ResumeDraft): ResumeDraft {
     projectsList: draft.projectsList
       .map((entry) => ({
         ...entry,
+        title: resolveProjectDisplayTitle(entry),
+        company: entry.company.replace(/\s+/g, ' ').trim(),
         details: cleanExperienceDetails(entry.details),
       }))
       .filter((entry) => entry.title || entry.company || entry.details),
@@ -232,12 +246,18 @@ function recoverUnstructuredContent(draft: ResumeDraft, text: string): ResumeDra
   }
 
   if (!next.projectsList.some((entry) => entry.title || entry.details)) {
-    // Soft project recovery: short Title Case lines followed by bullets.
-    const projects = parseProjectBlocks(
-      lines.filter((line) => !matchTopSection(line) && !isContactOrMetaLine(line)).join('\n'),
-    ).filter((entry) => entry.details && entry.details.length > 40);
-    if (projects.length > 0 && projects.length <= 6) {
-      next.projectsList = projects.slice(0, 4);
+    // Soft project recovery: dedicated PROJECTS section only (avoid scraping experience bullets).
+    const projectSectionMatch = text.match(
+      /(?:^|\n)\s*(?:key\s+|selected\s+|personal\s+|academic\s+)?projects?\s*:?\s*\n([\s\S]*?)(?=\n\s*(?:education|certifications?|achievements?|awards?|skills?|work\s+experience|experience|additional)\b|$)/i,
+    );
+    const projectSource = projectSectionMatch?.[1]?.trim() || '';
+    const fromSection = projectSource ? parseProjectBlocks(projectSource) : [];
+    const projects = fromSection.map((entry) => ({
+      ...entry,
+      title: resolveProjectDisplayTitle(entry),
+    }));
+    if (projects.length > 0 && projects.length <= 8) {
+      next.projectsList = projects.slice(0, 6);
     }
   }
 
@@ -293,24 +313,42 @@ export function parseResumeContent(content: string, targetRole = ''): ResumeDraf
   if (linkedinMatch) draft.linkedin = linkedinMatch[0];
   if (locationMatch) draft.location = locationMatch;
 
-  let current: ResumeSectionId | 'languages' | 'interests' | null = null;
-  const buckets: Partial<Record<ResumeSectionId | 'languages' | 'interests', string[]>> = {};
+  let current: ParseBucket | null = null;
+  const buckets: Partial<Record<ParseBucket, string[]>> = {};
   const skillExtra: string[] = [];
   const preamble: string[] = [];
   let captureSkillsInExperience = false;
   let sawAnySection = false;
 
+  const pushBucket = (key: ParseBucket, value: string) => {
+    const list = buckets[key] ?? [];
+    list.push(value);
+    buckets[key] = list;
+  };
+
   for (const raw of lines) {
     const line = raw.trim();
     if (!line || isNoiseLine(line)) {
-      if (current) buckets[current]?.push('');
+      if (current && current !== 'additional') buckets[current]?.push('');
       continue;
+    }
+
+    // Inline "Interests: Chess, Reading" / "GitHub: github.com/x" anywhere.
+    const inlineCustom = line.match(/^([A-Za-z][A-Za-z\s/]{0,28}?)\s*:\s*(.+)$/);
+    if (inlineCustom) {
+      const labelKind = matchCustomFieldLabel(inlineCustom[1]!.trim());
+      if (labelKind && labelKind !== 'additional') {
+        pushBucket(labelKind, inlineCustom[2]!.trim());
+        current = labelKind;
+        sawAnySection = true;
+        continue;
+      }
     }
 
     const section = matchTopSection(line);
     if (section) {
       current = section;
-      buckets[current] ??= [];
+      if (section !== 'additional') buckets[current] ??= [];
       captureSkillsInExperience = false;
       sawAnySection = true;
       continue;
@@ -323,8 +361,7 @@ export function parseResumeContent(content: string, targetRole = ''): ResumeDraf
 
     if (/^responsibilities$/i.test(line) && current === 'experience') {
       captureSkillsInExperience = false;
-      buckets.experience ??= [];
-      buckets.experience.push('Responsibilities:');
+      pushBucket('experience', 'Responsibilities:');
       continue;
     }
 
@@ -336,11 +373,34 @@ export function parseResumeContent(content: string, targetRole = ''): ResumeDraf
       continue;
     }
 
+    if (current === 'additional') {
+      // Orphan lines under ADDITIONAL without a label are ignored (prevents Interests pollution).
+      continue;
+    }
+
+    if (
+      current === 'interests' ||
+      current === 'languages' ||
+      current === 'github' ||
+      current === 'portfolio'
+    ) {
+      if (current === 'interests' && isLinkOrMetaCustomValue(line)) continue;
+      if (matchCustomFieldLabel(line)) {
+        const nextLabel = matchCustomFieldLabel(line)!;
+        if (nextLabel !== 'additional') {
+          current = nextLabel;
+          buckets[current] ??= [];
+        }
+        continue;
+      }
+      pushBucket(current, line);
+      continue;
+    }
+
     if (captureSkillsInExperience || current === 'skills') {
       if (!isSkillLabelNoise(line) && !isContactOrMetaLine(line)) skillExtra.push(line);
       if (current === 'skills' && !isSkillLabelNoise(line)) {
-        buckets.skills ??= [];
-        buckets.skills.push(line);
+        pushBucket('skills', line);
       }
       continue;
     }
@@ -351,8 +411,7 @@ export function parseResumeContent(content: string, targetRole = ''): ResumeDraf
       continue;
     }
 
-    buckets[current] ??= [];
-    buckets[current]!.push(raw);
+    pushBucket(current, raw);
   }
 
   const summaryRaw = (buckets.summary ?? preamble)
@@ -367,7 +426,7 @@ export function parseResumeContent(content: string, targetRole = ''): ResumeDraf
   draft.skillsList = mergeSkillLists(
     splitSkillTokens([...(buckets.skills ?? []), ...skillExtra].join('\n')),
     // Soft whole-doc skill pass so catalog skills are not lost when SKILLS header is missing.
-    buckets.skills?.length ? [] : splitSkillTokens(text),
+    buckets.skills?.length ? [] : splitSkillTokens(text).slice(0, 24),
   );
   draft.experiences = parseExperienceBlocks((buckets.experience ?? []).join('\n'));
   draft.projectsList = parseProjectBlocks((buckets.projects ?? []).join('\n'));
@@ -377,21 +436,55 @@ export function parseResumeContent(content: string, targetRole = ''): ResumeDraf
     draft.experiences = parseExperienceBlocks(text);
   }
 
-  const languages = (buckets.languages ?? [])
-    .map((line) => line.trim())
-    .filter((line) => line && !/full professional proficiency/i.test(line))
-    .join(', ');
-  const interests = (buckets.interests ?? [])
-    .map((line) => line.trim())
-    .filter(Boolean)
-    .join(', ');
+  const joinCustom = (key: Exclude<CustomFieldLabel, 'additional'>) =>
+    (buckets[key] ?? [])
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .filter((line) => (key === 'interests' ? !isLinkOrMetaCustomValue(line) : true))
+      .join(key === 'interests' || key === 'languages' ? ', ' : '\n')
+      .replace(/,\s*,/g, ', ')
+      .trim();
 
-  if (languages) draft.customFields.push({ id: newId(), label: 'Languages', value: languages });
-  if (interests) draft.customFields.push({ id: newId(), label: 'Interests', value: interests });
-  if (githubMatch) draft.customFields.push({ id: newId(), label: 'GitHub', value: githubMatch[0] });
-  if (portfolioMatch) {
-    draft.customFields.push({ id: newId(), label: 'Portfolio', value: portfolioMatch[0] });
+  const pushUniqueCustom = (label: string, value: string) => {
+    const cleaned = value.trim();
+    if (!cleaned) return;
+    const exists = draft.customFields.some(
+      (field) =>
+        field.label.toLowerCase() === label.toLowerCase() &&
+        field.value.trim().toLowerCase() === cleaned.toLowerCase(),
+    );
+    if (exists) return;
+    const sameLabel = draft.customFields.find(
+      (field) => field.label.toLowerCase() === label.toLowerCase(),
+    );
+    if (sameLabel) {
+      // Prefer the richer / first non-link value; don't concatenate GitHub into Interests.
+      if (!sameLabel.value.trim()) sameLabel.value = cleaned;
+      return;
+    }
+    draft.customFields.push({ id: newId(), label, value: cleaned });
+  };
+
+  for (const key of ['languages', 'interests', 'github', 'portfolio'] as const) {
+    const value = joinCustom(key);
+    if (value) pushUniqueCustom(CUSTOM_LABEL_TITLE[key], value);
   }
+
+  if (githubMatch) pushUniqueCustom('GitHub', githubMatch[0]);
+  if (portfolioMatch) pushUniqueCustom('Portfolio', portfolioMatch[0]);
+
+  // Strip any Interests value that accidentally absorbed links.
+  draft.customFields = draft.customFields
+    .map((field) => {
+      if (!/^interests?$/i.test(field.label)) return field;
+      const cleaned = field.value
+        .split(/,|\n/)
+        .map((part) => part.trim())
+        .filter((part) => part && !isLinkOrMetaCustomValue(part) && !matchCustomFieldLabel(part))
+        .join(', ');
+      return { ...field, value: cleaned };
+    })
+    .filter((field) => field.value.trim() || !/^interests?$/i.test(field.label));
 
   const normalized = normalizeDraft(draft);
   if (isSparseDraft(normalized)) {

@@ -51,7 +51,7 @@ describe('AuthForm', () => {
     );
     expect(screen.getByRole('textbox', { name: /phone number/i })).toHaveAttribute(
       'maxlength',
-      '10',
+      '16',
     );
     expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toHaveAttribute(
       'maxlength',
@@ -67,7 +67,7 @@ describe('AuthForm', () => {
     render(<AuthForm mode="register" />);
     const longName = 'A'.repeat(81);
     const longEmail = `${'a'.repeat(300)}@example.com`;
-    const longPhone = '1'.repeat(11);
+    const longPhone = '1'.repeat(20);
     const longPassword = 'P'.repeat(129);
 
     const firstNameInput = screen.getByRole('textbox', { name: /first name/i });
@@ -82,7 +82,7 @@ describe('AuthForm', () => {
 
     expect(firstNameInput).toHaveValue('A'.repeat(80));
     expect(emailInput).toHaveValue(longEmail.slice(0, 300));
-    expect(phoneInput).toHaveValue('1'.repeat(10));
+    expect(phoneInput).toHaveValue('1'.repeat(15));
     expect(passwordInput).toHaveValue('P'.repeat(128));
   });
 
@@ -143,14 +143,14 @@ describe('AuthForm', () => {
     expect(screen.getByRole('textbox', { name: /current role/i })).toBeInTheDocument();
   });
 
-  it('keeps only ten digits in the phone number field', async () => {
+  it('keeps +91 country code and digits in the phone number field', async () => {
     const user = userEvent.setup();
     render(<AuthForm mode="register" />);
     const phoneInput = screen.getByRole('textbox', { name: /phone number/i });
 
     await user.type(phoneInput, '+91 98765@43210');
 
-    expect(phoneInput).toHaveValue('9198765432');
+    expect(phoneInput).toHaveValue('+919876543210');
   });
 
   it('disables submit action while submitting', () => {
