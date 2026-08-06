@@ -20,6 +20,7 @@ export interface AuthFormField {
   autoComplete?: string;
   endIcon?: AuthFieldIcon;
   label: string;
+  maxLength?: number;
   name: string;
   placeholder?: string;
   startIcon?: AuthFieldIcon;

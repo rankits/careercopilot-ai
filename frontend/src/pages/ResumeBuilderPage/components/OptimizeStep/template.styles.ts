@@ -62,7 +62,7 @@ const pageSheetBase = {
   position: 'relative' as const,
   width: '100%',
   // Keep blocks/entries together so preview/print don't split mid-item.
-  '& .block, & .entry, & .skills, & .header, & .sidebar, & .main': {
+  '& .block, & .entry, & .skills, & .skills-list, & .header, & .sidebar, & .main': {
     breakInside: 'avoid',
     pageBreakInside: 'avoid',
     WebkitColumnBreakInside: 'avoid',
@@ -112,18 +112,39 @@ const pageSheetBase = {
     overflowWrap: 'anywhere' as const,
   },
   '& .skills': {
-    display: 'flex',
-    flexWrap: 'wrap' as const,
-    gap: spacing[2],
+    color: '#1e293b',
+    fontSize: '0.875rem',
+    lineHeight: 1.7,
+    overflowWrap: 'anywhere' as const,
   },
-  '& .skill': {
-    background: t.primarySofter,
-    border: `1px solid ${t.primarySoft}`,
-    borderRadius: borderRadius.full,
-    color: t.primaryHover,
-    fontSize: '0.72rem',
-    fontWeight: fontWeight.semiBold,
-    padding: `0.3rem ${spacing[3]}`,
+  '& .skills-list': {
+    display: 'grid',
+    gap: '0.4rem 1.5rem',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    listStyle: 'none',
+    margin: 0,
+    padding: 0,
+    '@media (max-width: 28rem)': {
+      gridTemplateColumns: '1fr',
+    },
+  },
+  '& .skill-item': {
+    color: '#1e293b',
+    fontSize: '0.875rem',
+    fontWeight: fontWeight.medium,
+    letterSpacing: '0.01em',
+    lineHeight: 1.45,
+    overflowWrap: 'anywhere' as const,
+    paddingLeft: '0.95rem',
+    position: 'relative' as const,
+    '&::before': {
+      color: t.primary,
+      content: '"•"',
+      fontWeight: fontWeight.bold,
+      left: 0,
+      position: 'absolute' as const,
+      top: 0,
+    },
   },
   '& .entry': {
     display: 'grid',
@@ -154,14 +175,29 @@ const pageSheetBase = {
     whiteSpace: 'nowrap' as const,
   },
   '& .bullets': {
+    listStyle: 'none',
     margin: `${spacing[1]} 0 0`,
-    paddingLeft: '1.15rem',
+    padding: 0,
     '& li': {
       color: '#1e293b',
+      display: 'list-item',
       fontSize: '0.84rem',
       lineHeight: 1.55,
-      marginBottom: '0.35rem',
+      listStyle: 'none',
+      marginBottom: '0.4rem',
       overflowWrap: 'anywhere' as const,
+      paddingLeft: '1rem',
+      position: 'relative' as const,
+      '&::before': {
+        color: '#0f172a',
+        content: '"•"',
+        fontSize: '0.95rem',
+        fontWeight: fontWeight.bold,
+        left: 0,
+        lineHeight: 1.45,
+        position: 'absolute' as const,
+        top: 0,
+      },
     },
   },
   '& .empty': {
@@ -179,23 +215,49 @@ const pageSheetBase = {
 
 export const OriginalPaper = styled(Box)({
   ...pageSheetBase,
+  fontFamily: '"Segoe UI", "Helvetica Neue", Arial, sans-serif',
   '& .badge': {
-    ...muted,
-    fontSize: '0.7rem',
+    color: '#64748b',
+    fontSize: '0.65rem',
     fontWeight: fontWeight.extraBold,
-    letterSpacing: '0.08em',
+    letterSpacing: '0.1em',
+    marginBottom: spacing[2],
     textTransform: 'uppercase',
   },
-  '& .name': { fontSize: '1.45rem', fontWeight: fontWeight.bold },
-  '& .role': { color: '#334155', fontWeight: fontWeight.semiBold },
-  '& .heading': {
-    borderBottom: '1.5px solid #cbd5e1',
+  '& .name': {
     color: '#0f172a',
+    fontSize: '1.65rem',
+    fontWeight: fontWeight.bold,
+    letterSpacing: '-0.01em',
   },
-  '& .skill': {
-    background: '#f1f5f9',
-    border: '1px solid #e2e8f0',
-    color: '#334155',
+  '& .role': {
+    color: '#475569',
+    fontSize: '0.95rem',
+    fontWeight: fontWeight.semiBold,
+  },
+  '& .contact': {
+    borderBottom: '1.5px solid #0f172a',
+    color: '#64748b',
+    paddingBottom: spacing[2],
+  },
+  '& .heading': {
+    borderBottom: '2px solid #0f172a',
+    color: '#0f172a',
+    letterSpacing: '0.06em',
+  },
+  '& .skill-item': {
+    color: '#1e293b',
+    fontSize: '0.9rem',
+    '&::before': {
+      color: '#0f172a',
+    },
+  },
+  '& .original-fallback': {
+    color: '#1e293b',
+    fontSize: '0.875rem',
+    lineHeight: 1.65,
+    whiteSpace: 'pre-wrap',
+    overflowWrap: 'anywhere',
   },
 });
 
@@ -224,11 +286,8 @@ export const ClassicPaper = styled(Box)({
     color: '#0f172a',
     fontFamily: '"Segoe UI", sans-serif',
   },
-  '& .skill': {
-    background: '#f8fafc',
-    border: '1px solid #cbd5e1',
-    borderRadius: borderRadius.md,
-    color: '#0f172a',
+  '& .skills-list': {
+    justifyItems: 'start',
   },
 });
 
@@ -268,10 +327,11 @@ export const MinimalPaper = styled(Box)({
     borderBottom: '1px solid #d1d5db',
     color: '#111827',
   },
-  '& .skill': {
-    background: '#f3f4f6',
-    borderRadius: borderRadius.md,
+  '& .skill-item': {
     color: '#111827',
+    '&::before': {
+      color: '#111827',
+    },
   },
 });
 
@@ -305,10 +365,16 @@ export const ExecutivePaper = styled(Box)({
     color: '#93c5fd',
   },
   '& .sidebar .body': { color: '#cbd5e1', fontSize: fontSize.xs },
-  '& .sidebar .skill': {
-    background: 'rgba(147,197,253,0.15)',
-    border: '1px solid rgba(147,197,253,0.25)',
+  '& .sidebar .skills-list': {
+    gridTemplateColumns: '1fr',
+    gap: '0.35rem',
+  },
+  '& .sidebar .skill-item': {
     color: '#e2e8f0',
+    fontSize: fontSize.xs,
+    '&::before': {
+      color: '#93c5fd',
+    },
   },
   '& .main': {
     alignContent: 'start',

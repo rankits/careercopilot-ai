@@ -1,7 +1,6 @@
 import { Button } from '@/components/atoms';
 
 import {
-  BookmarkBorderOutlinedIcon,
   Box,
   DescriptionOutlinedIcon,
   NavigateBeforeIcon,
@@ -18,18 +17,9 @@ interface PageHeaderProps {
   current: ResumeBuilderStep;
   onBack?: () => void;
   onNext: () => void;
-  onSaveDraft?: () => void;
-  savingDraft?: boolean;
 }
 
-export function PageHeader({
-  canContinue,
-  current,
-  onBack,
-  onNext,
-  onSaveDraft,
-  savingDraft = false,
-}: PageHeaderProps) {
+export function PageHeader({ canContinue, current, onBack, onNext }: PageHeaderProps) {
   const activeIndex = Math.max(
     0,
     WORKFLOW_STEPS.findIndex((workflowStep) => workflowStep.internalSteps.includes(current)),
@@ -74,19 +64,6 @@ export function PageHeader({
             variant="outline"
           >
             Back
-          </Button>
-        ) : null}
-        {!isExportStep && onSaveDraft ? (
-          <Button
-            disabled={savingDraft}
-            isLoading={savingDraft}
-            onClick={onSaveDraft}
-            size="medium"
-            startIcon={<BookmarkBorderOutlinedIcon fontSize="small" />}
-            sx={HeaderSecondaryButtonSx}
-            variant="outline"
-          >
-            Save Draft
           </Button>
         ) : null}
         {!isExportStep ? (

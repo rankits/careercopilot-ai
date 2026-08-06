@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   buildWorkingResumeContent,
   isIncompleteOptimizedResume,
+  mergeJdSkillsIntoResume,
   patchRoleSubtitle,
   replaceSummarySection,
 } from '@/modules/resume-analysis/utils/merge-resume-content';
@@ -74,6 +75,14 @@ Java
     );
     expect(next).toContain('New summary focused');
     expect(next).toContain('City Hospital');
+    expect(next).toContain('Alex Rivera');
+  });
+
+  it('auto-merges missing JD skills into the Skills section', () => {
+    const next = mergeJdSkillsIntoResume(ORIGINAL, ['Java', 'Spring Boot', 'Patient Care']);
+    expect(next).toMatch(/SKILLS[\s\S]*Java/i);
+    expect(next).toMatch(/Spring Boot/i);
+    expect(next).toContain('Patient Care');
     expect(next).toContain('Alex Rivera');
   });
 });

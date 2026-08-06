@@ -23,6 +23,7 @@ describe('draft utils', () => {
   it('detects preview content and serializes draft', () => {
     const empty = createEmptyDraft();
     expect(hasPreviewContent(empty)).toBe(false);
+    expect(hasPreviewContent({ ...empty, originalText: 'raw only' })).toBe(false);
 
     const draft = {
       ...createEmptyDraft('Engineer'),
@@ -125,8 +126,8 @@ describe('draft utils', () => {
       'Built UI components',
       'Built accessible UI components in React',
     );
-    expect(next.experiences[0].details).toContain('Built accessible UI components in React');
-    expect(next.experiences[0].details).toContain('Shipped features');
+    expect(next.experiences[0]?.details).toContain('Built accessible UI components in React');
+    expect(next.experiences[0]?.details).toContain('Shipped features');
   });
 
   it('adds JD skills from prose skill suggestions without dumping narrative', () => {

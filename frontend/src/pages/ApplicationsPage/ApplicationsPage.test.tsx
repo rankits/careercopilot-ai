@@ -115,7 +115,7 @@ const mockApplicationRecords: ApplicationRecord[] = [
     location: 'Los Gatos, CA',
     priority: 'low',
     source: 'platform-apply',
-    status: 'saved',
+    status: 'preparing',
     title: 'Backend Engineer',
     updatedAt: '4d ago',
   },

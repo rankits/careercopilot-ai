@@ -311,11 +311,60 @@ describe('RecommendationSourceAuthorizationService', () => {
         requiredSkills: ['Leadership', 'TypeScript', 'PostgreSQL'],
         industries: ['SaaS'],
         flexibilityMode: 'FLEXIBLE',
+        filterMode: 'FLEXIBLE',
         goalIntent: {
           currentRole: undefined,
           targetRole: 'Engineering Manager',
           targetIndustries: ['SaaS'],
           timeframe: '12 months',
+        },
+      },
+    });
+  });
+
+  it('extracts free-text career goals and keeps filters flexible when structured is empty', async () => {
+    const targetId = '33333333-3333-3333-3333-333333333334';
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+          personalDetails: {
+            currentTitle: 'QA Analyst',
+            summary: 'Manual testing',
+            location: 'Noida, U.P., India',
+          },
+          skills: ['Selenium'],
+          experience: [],
+          education: [],
+          certifications: [],
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedCareerTargetSource: vi.fn().mockResolvedValue({
+          id: targetId,
+          userId: 'user-1',
+          goalText: 'Angular Developer role',
+          structured: {},
+        }),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', {
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+    });
+
+    expect(authorized).toMatchObject({
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+      authorizedSourcePayload: {
+        targetTitles: expect.arrayContaining(['Angular Developer']),
+        requiredSkills: expect.arrayContaining(['Angular', 'Selenium']),
+        locations: ['Noida, U.P., India'],
+        flexibilityMode: 'FLEXIBLE',
+        filterMode: 'FLEXIBLE',
+        goalIntent: {
+          targetRole: 'Angular Developer',
+          summary: 'Angular Developer role',
         },
       },
     });

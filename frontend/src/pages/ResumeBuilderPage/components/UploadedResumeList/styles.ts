@@ -18,7 +18,6 @@ export { CardTitle, CardSubtitle, EmptyText, FileTile } from '../../styles/share
 export const ResumeListCard = styled(Box)({
   ...panel,
   gap: spacing[4],
-  padding: spacing[5],
 
   '& .list-header': {
     alignItems: 'center',
@@ -36,7 +35,10 @@ export const ResumeListCard = styled(Box)({
   '& .resume-subtext': { ...muted, fontSize: fontSize.xs },
   '& .badge-row': { alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: spacing[2] },
   '& .resume-version': { ...muted, fontWeight: fontWeight.medium },
-  '& .more-icon': { color: t.textMuted },
+  '& .more-icon': { color: colorTokens.feedbackError },
+  '& .resume-menu': {
+    color: colorTokens.feedbackError,
+  },
   '& .footer-notice': {
     alignItems: 'center',
     background: 'linear-gradient(135deg, #FFFFFF 0%, #F8FAFC 100%)',
