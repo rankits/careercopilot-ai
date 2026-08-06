@@ -70,10 +70,13 @@ describe('resume-analysis.controller', () => {
       res as never,
       next,
     );
-    expect(h.svc.startAnalysis).toHaveBeenCalledWith(
-      { resumeId: 'r-1', targetRole: 'T', experienceLevel: 'MID', jobDescription: undefined },
-      'u-1',
-    );
+    expect(h.svc.startAnalysis).toHaveBeenCalledWith({
+      resumeId: 'r-1',
+      userId: 'u-1',
+      targetRole: 'T',
+      experienceLevel: 'MID',
+      jobDescription: undefined,
+    });
     expect(res.status).toHaveBeenCalledWith(202);
     expect(res.json).toHaveBeenCalledWith({ message: 'Analysis started', data: expect.anything() });
   });
@@ -146,7 +149,7 @@ describe('resume-analysis.controller', () => {
       res as never,
       next as never,
     );
-    expect(h.svc.exportResume).toHaveBeenCalledWith('r-1', 'pdf', 'u-1');
+    expect(h.svc.exportResume).toHaveBeenCalledWith('r-1', 'u-1', 'pdf');
   });
 
   it('saveVersion: returns 201', async () => {

@@ -41,6 +41,8 @@ export const RESUME_PERMISSIONS = {
   UPDATE_OWN: 'resume.update.own',
   DELETE_OWN: 'resume.delete.own',
   READ_ANALYSIS_OWN: 'resume-analysis.read.own',
+  UPDATE_ANALYSIS_OWN: 'resume-analysis.update.own',
+  DELETE_ANALYSIS_OWN: 'resume-analysis.delete.own',
 } as const;
 
 export const JOBS_PERMISSIONS = {
@@ -200,6 +202,18 @@ export const PERMISSIONS: PermissionDefinition[] = [
     resource: 'resume-analysis',
     action: 'read.own',
     description: 'View own resume analysis reports',
+  },
+  {
+    key: RESUME_PERMISSIONS.UPDATE_ANALYSIS_OWN,
+    resource: 'resume-analysis',
+    action: 'update.own',
+    description: 'Start and update own resume analysis',
+  },
+  {
+    key: RESUME_PERMISSIONS.DELETE_ANALYSIS_OWN,
+    resource: 'resume-analysis',
+    action: 'delete.own',
+    description: 'Delete own saved resume analysis versions',
   },
 
   // Jobs
