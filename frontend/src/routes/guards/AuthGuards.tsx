@@ -7,6 +7,7 @@ import { useAppSelector } from '@/hooks/redux';
 
 import { ROUTES } from '@/constants/routes';
 import { getPostAuthRoute } from '@/features/auth/utils/getPostAuthRoute';
+import { LandingPage } from '@/pages/LandingPage';
 
 export function ProtectedRoute() {
   const { isSessionResolved } = useAuthBootstrap();
@@ -59,6 +60,23 @@ export function OnboardingRoute() {
   }
 
   return <Outlet />;
+}
+
+/** Public marketing landing for guests; authenticated users continue into the app. */
+export function LandingRoute() {
+  const { isSessionResolved } = useAuthBootstrap();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
+
+  if (!isSessionResolved) {
+    return <RouteLoading />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate replace to={getPostAuthRoute(isProfileComplete)} />;
+  }
+
+  return <LandingPage />;
 }
 
 export function RootRedirect() {
