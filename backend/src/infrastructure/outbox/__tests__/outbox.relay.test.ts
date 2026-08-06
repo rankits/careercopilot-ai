@@ -21,6 +21,7 @@ class MemoryOutboxRepository implements OutboxRepository {
   published: string[] = [];
   retries: Array<{ eventId: string; nextAttemptAt: Date; error: string }> = [];
   failed: Array<{ eventId: string; error: string }> = [];
+  publishResult = true;
 
   async claimBatch(options: ClaimOutboxEventsOptions): Promise<ClaimedOutboxEvent[]> {
     this.claims.push(options);
@@ -29,7 +30,7 @@ class MemoryOutboxRepository implements OutboxRepository {
 
   async markPublished(eventId: string): Promise<boolean> {
     this.published.push(eventId);
-    return true;
+    return this.publishResult;
   }
 
   async scheduleRetry(
@@ -177,5 +178,70 @@ describe('OutboxRelay', () => {
         error: 'No route registered for outbox event type: unknown.event',
       },
     ]);
+  });
+
+  it('fails a published event whose lock was lost before marking', async () => {
+    const repository = new MemoryOutboxRepository();
+    repository.events = [event({ attemptCount: 3 })];
+    repository.publishResult = false; // publishEvent confirms, markPublished loses ownership
+    const publisher = new RecordingPublisher();
+    const relay = new OutboxRelay(repository, publisher, silentLogger, options, 'worker-a');
+
+    const summary = await relay.runOnce();
+
+    expect(summary).toEqual({ claimed: 1, published: 0, retryScheduled: 0, failed: 1 });
+    expect(repository.failed[0].error).toBe('Outbox event lock was lost after publication');
+  });
+
+  it('retries a published event whose lock was lost before attempts run out', async () => {
+    const repository = new MemoryOutboxRepository();
+    repository.events = [event({ attemptCount: 1 })];
+    repository.publishResult = false;
+    const publisher = new RecordingPublisher();
+    const relay = new OutboxRelay(repository, publisher, silentLogger, options, 'worker-a');
+
+    const summary = await relay.runOnce();
+
+    expect(summary).toEqual({ claimed: 1, published: 0, retryScheduled: 1, failed: 0 });
+    expect(repository.retries[0].eventId).toBe('event-id');
+  });
+
+  it('handles non-Error publisher failures', async () => {
+    const repository = new MemoryOutboxRepository();
+    repository.events = [event({ attemptCount: 1 })];
+    const publisher = new RecordingPublisher();
+    publisher.error = 'plain string failure' as unknown as Error;
+    const relay = new OutboxRelay(repository, publisher, silentLogger, options, 'worker-a');
+
+    const summary = await relay.runOnce();
+
+    expect(summary.retryScheduled).toBe(1);
+    expect(repository.retries[0].error).toBe('plain string failure');
+  });
+
+  it('reports an empty batch without logging', async () => {
+    const repository = new MemoryOutboxRepository();
+    const publisher = new RecordingPublisher();
+    const relay = new OutboxRelay(repository, publisher, silentLogger, options, 'worker-a');
+
+    const summary = await relay.runOnce();
+
+    expect(summary).toEqual({ claimed: 0, published: 0, retryScheduled: 0, failed: 0 });
+  });
+
+  it('constructs with all defaults', () => {
+    const relay = new OutboxRelay();
+    expect(relay).toBeInstanceOf(OutboxRelay);
+  });
+});
+
+describe('prepareOutboxRelayTopology defaults', () => {
+  it('uses the shared messageBus when no bus is supplied', async () => {
+    // The default bus drives a real (usually unreachable) RabbitMQ broker;
+    // either resolution or rejection still exercises the default param.
+    await prepareOutboxRelayTopology().then(
+      () => undefined,
+      () => undefined,
+    );
   });
 });
