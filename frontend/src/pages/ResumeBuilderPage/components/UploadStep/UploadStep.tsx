@@ -10,6 +10,7 @@ import { MainGrid, UploadLayout } from './styles';
 
 interface UploadStepProps {
   existingResumes: UploadedResume[];
+  deletingResumeId?: string | null;
   fileInputRef: RefObject<HTMLInputElement | null>;
   isDragging: boolean;
   uploadError: string;
@@ -18,10 +19,13 @@ interface UploadStepProps {
   onDrop: (event: DragEvent) => void;
   onFileSelect: (file: File) => void;
   onUseResume: (resume: UploadedResume) => void;
+  onDeleteResume: (resume: UploadedResume) => void | Promise<void>;
+  onShowMoreResumes: () => void;
 }
 
 export function UploadStep({
   existingResumes,
+  deletingResumeId = null,
   fileInputRef,
   isDragging,
   uploadError,
@@ -30,6 +34,8 @@ export function UploadStep({
   onDrop,
   onFileSelect,
   onUseResume,
+  onDeleteResume,
+  onShowMoreResumes,
 }: UploadStepProps) {
   return (
     <UploadLayout>
@@ -46,7 +52,13 @@ export function UploadStep({
           />
           <SupportedResumeCard />
         </MainGrid>
-        <UploadedResumeList resumes={existingResumes} onUseResume={onUseResume} />
+        <UploadedResumeList
+          resumes={existingResumes}
+          deletingId={deletingResumeId}
+          onUseResume={onUseResume}
+          onDeleteResume={onDeleteResume}
+          onShowMore={onShowMoreResumes}
+        />
       </div>
     </UploadLayout>
   );

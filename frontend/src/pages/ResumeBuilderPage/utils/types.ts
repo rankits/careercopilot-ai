@@ -56,7 +56,11 @@ export const RESUME_TEMPLATES: Array<{
   label: string;
   description: string;
 }> = [
-  { id: 'original', label: 'Default', description: 'Your uploaded resume layout' },
+  {
+    id: 'original',
+    label: 'Default',
+    description: 'Your resume content in a clean document layout',
+  },
   { id: 'classic', label: 'Classic', description: 'Clean ATS-friendly single column' },
   { id: 'modern', label: 'Modern', description: 'Bold gradient header layout' },
   { id: 'minimal', label: 'Minimal', description: 'Tight spacing, quiet type' },
@@ -77,7 +81,7 @@ export const RESUME_SECTIONS: Array<{ id: ResumeSectionId; label: string; tip: s
   {
     id: 'skills',
     label: 'Skills',
-    tip: 'Add skills one chip at a time.',
+    tip: 'List skills separated by commas.',
   },
   {
     id: 'education',
@@ -102,13 +106,17 @@ export const RESUME_SECTIONS: Array<{ id: ResumeSectionId; label: string; tip: s
 ];
 
 export const SECTION_ALIASES: Record<ResumeSectionId, RegExp> = {
-  summary: /^(professional\s+)?summary$|^profile(\s+summary)?$|^objective$|^about(\s+me)?$/i,
-  experience: /^(work\s+)?experience$|^employment$|^work\s+history$|^professional\s+experience$/i,
-  skills: /^skills$|^technical\s+skills$|^core\s+competencies$|^technologies$|^tech\s+stack$/i,
-  education: /^education$|^academic$|^qualifications$/i,
-  projects: /^projects?$|^personal\s+projects$|^key\s+projects$/i,
-  certifications: /^certifications?$|^licenses?$|^certificates?$/i,
-  achievements: /^achievements?$|^awards?$|^accomplishments?$/i,
+  summary:
+    /^(professional\s+)?summary$|^profile(\s+summary)?$|^objective$|^about(\s+me)?$|^career\s+summary$|^professional\s+profile$/i,
+  experience:
+    /^(work\s+)?experience$|^employment(\s+history)?$|^work\s+history$|^professional\s+experience$|^career\s+history$|^professional\s+background$|^relevant\s+experience$/i,
+  skills:
+    /^skills$|^technical\s+skills$|^core\s+competencies$|^technologies$|^tech\s+stack$|^tools(\s+&\s+technologies)?$|^technical\s+proficiencies$|^key\s+skills$/i,
+  education: /^education$|^academic(\s+background)?$|^qualifications$|^academic\s+qualifications$/i,
+  projects:
+    /^projects?$|^personal\s+projects$|^key\s+projects$|^selected\s+projects$|^academic\s+projects$/i,
+  certifications: /^certifications?$|^licenses?$|^certificates?$|^professional\s+certifications?$/i,
+  achievements: /^achievements?$|^awards?$|^accomplishments?$|^honors?(\s+&\s+awards)?$/i,
 };
 
 export const newId = () =>

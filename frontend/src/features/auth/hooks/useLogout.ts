@@ -8,6 +8,7 @@ import { useAppDispatch } from '@/hooks/redux';
 import { ROUTES } from '@/constants/routes';
 import { logout as clearSession } from '@/features/auth/authSlice';
 import { authService } from '@/features/auth/services/auth.service';
+import { queryClient } from '@/services/queryClient';
 
 export function useLogout() {
   const dispatch = useAppDispatch();
@@ -24,17 +25,18 @@ export function useLogout() {
       return;
     }
 
+    dispatch(clearSession());
+    queryClient.clear();
+    void navigate(ROUTES.LOGIN, { replace: true });
+
     try {
       const { message } = await logoutMutation.mutateAsync();
       showToast({ message, severity: 'success' });
     } catch {
       showToast({
-        message: 'Unable to log out. Please try again.',
-        severity: 'error',
+        message: 'Signed out locally. Server logout could not be completed.',
+        severity: 'warning',
       });
-    } finally {
-      dispatch(clearSession());
-      void navigate(ROUTES.LOGIN, { replace: true });
     }
   };
 

@@ -298,12 +298,17 @@ export const recommendationsService = {
   },
 
   async createCareerTarget(
-    goalText: string,
+    input: { goalText: string; structured?: Record<string, unknown> } | string,
     options: { signal?: AbortSignal } = {},
   ): Promise<CareerTargetDto> {
+    const goalText = typeof input === 'string' ? input : input.goalText;
+    const structured = typeof input === 'string' ? undefined : input.structured;
     const response = await httpClient.post(
       '/job-recommendations/career-targets',
-      { goalText },
+      {
+        goalText,
+        ...(structured ? { structured } : {}),
+      },
       { signal: options.signal },
     );
     return unwrapCareerTarget(response);

@@ -28,23 +28,51 @@ import { ResumeBuilderStepPanels } from './components/ResumeBuilderStepPanels';
 import { WorkflowStepper } from './components/WorkflowStepper';
 import type { ResumeBuilderStep as Step } from './constants';
 import { Root, StickyChrome } from './styles';
-import type { ResumeTemplateId } from './utils';
-import {
-  getAnalysisFailureMessage,
-  getApiErrorMessage,
-  refreshSkillAnalysisFromContent,
-  shouldBlockAnalyzeContinue,
-} from './utils';
+import type { LiveSkillAnalysis, ResumeTemplateId } from './utils';
+import { getAnalysisFailureMessage, getApiErrorMessage, shouldBlockAnalyzeContinue } from './utils';
 
 type CleanSnapshot = {
   content: string;
   targetRole: string;
   jobDescription: string;
   skillsKey: string;
+  skills: string[];
 };
 
 function skillsKeyOf(skills: string[]) {
-  return skills.map((skill) => skill.trim().toLowerCase()).filter(Boolean).sort().join('|');
+  return skills
+    .map((skill) => skill.trim().toLowerCase())
+    .filter(Boolean)
+    .sort()
+    .join('|');
+}
+
+/** Builder workspace paths (not Saved Resumes). */
+function isResumeBuilderWorkspacePath(pathname: string) {
+  if (pathname === ROUTES.SAVED_RESUMES || pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)) {
+    return false;
+  }
+  return pathname === ROUTES.RESUME_BUILDER || pathname.startsWith(`${ROUTES.RESUME_BUILDER}/`);
+}
+
+function analysisInputFingerprint(input: {
+  resumeId: string;
+  targetRole: string;
+  jobDescription: string;
+  industry: string;
+  employmentType: string;
+  experienceLevel: string;
+  skillsKey: string;
+}) {
+  return [
+    input.resumeId,
+    input.targetRole.trim(),
+    input.jobDescription.trim(),
+    input.industry.trim(),
+    input.employmentType.trim(),
+    input.experienceLevel,
+    input.skillsKey,
+  ].join('\u0000');
 }
 
 export function ResumeBuilderPage() {
@@ -73,6 +101,7 @@ export function ResumeBuilderPage() {
   const [isDragging, setIsDragging] = useState(false);
   const [uploadError, setUploadError] = useState('');
   const [uploading, setUploading] = useState(false);
+  const [deletingResumeId, setDeletingResumeId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [targetRole, setTargetRole] = useState('');
@@ -87,6 +116,11 @@ export function ResumeBuilderPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<ResumeTemplateId>('original');
 
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
+  /** Frozen ATS snapshot from the last completed analysis run (Analyze step display). */
+  const [originalAnalysis, setOriginalAnalysis] = useState<AnalysisResult | null>(null);
+  const analysisRef = useRef<AnalysisResult | null>(null);
+  const originalAnalysisRef = useRef<AnalysisResult | null>(null);
+  const analyzedFingerprintRef = useRef('');
   const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const [keywords, setKeywords] = useState<KeywordsResponse | null>(null);
@@ -107,6 +141,7 @@ export function ResumeBuilderPage() {
     targetRole: '',
     jobDescription: '',
     skillsKey: '',
+    skills: [],
   });
 
   const skillsKey = skillsKeyOf(skills);
@@ -117,17 +152,32 @@ export function ResumeBuilderPage() {
       jobDescription !== cleanSnapshot.jobDescription ||
       skillsKey !== cleanSnapshot.skillsKey);
 
-  const blocker = useBlocker(
-    ({ currentLocation, nextLocation }) =>
-      isDirty &&
-      !allowLeaveRef.current &&
-      currentLocation.pathname !== nextLocation.pathname,
-  );
+  const blocker = useBlocker(({ currentLocation, nextLocation }) => {
+    if (!isDirty || allowLeaveRef.current) return false;
+    if (currentLocation.pathname === nextLocation.pathname) return false;
+    // In-flow navigations (/resume-builder ↔ /resume-builder/:id) must not prompt.
+    if (
+      isResumeBuilderWorkspacePath(currentLocation.pathname) &&
+      isResumeBuilderWorkspacePath(nextLocation.pathname)
+    ) {
+      return false;
+    }
+    // Only when leaving the Resume Builder workspace for another app page.
+    return isResumeBuilderWorkspacePath(currentLocation.pathname);
+  });
 
   // Re-arm the leave guard after the user keeps editing or makes new changes.
   useEffect(() => {
     if (isDirty) allowLeaveRef.current = false;
   }, [isDirty]);
+
+  useEffect(() => {
+    analysisRef.current = analysis;
+  }, [analysis]);
+
+  useEffect(() => {
+    originalAnalysisRef.current = originalAnalysis;
+  }, [originalAnalysis]);
 
   // Browser refresh / tab close.
   useEffect(() => {
@@ -142,15 +192,38 @@ export function ResumeBuilderPage() {
 
   const markSnapshotClean = useCallback(
     (overrides?: Partial<CleanSnapshot>) => {
+      const nextSkills = overrides?.skills ?? skills;
       setCleanSnapshot({
         content: overrides?.content ?? editedContentRef.current,
         targetRole: overrides?.targetRole ?? targetRole,
         jobDescription: overrides?.jobDescription ?? jobDescription,
-        skillsKey: overrides?.skillsKey ?? skillsKeyOf(skills),
+        skillsKey: overrides?.skillsKey ?? skillsKeyOf(nextSkills),
+        skills: [...nextSkills],
       });
     },
     [jobDescription, skills, targetRole],
   );
+
+  const cleanSnapshotRef = useRef(cleanSnapshot);
+  useEffect(() => {
+    cleanSnapshotRef.current = cleanSnapshot;
+  }, [cleanSnapshot]);
+
+  /** Drop unsaved Define Role edits when returning to Upload. */
+  const discardDefineRoleDraft = useCallback(() => {
+    const snap = cleanSnapshotRef.current;
+    setTargetRole(snap.targetRole);
+    setJobDescription(snap.jobDescription);
+    setSkills([...snap.skills]);
+    setIndustry('');
+    setEmploymentType('');
+    setExperienceLevel('mid');
+  }, []);
+
+  const goBackToUpload = useCallback(() => {
+    discardDefineRoleDraft();
+    setStep(1);
+  }, [discardDefineRoleDraft]);
 
   const closeLeaveDialog = () => {
     blocker.reset?.();
@@ -161,53 +234,131 @@ export function ResumeBuilderPage() {
     blocker.proceed?.();
   };
 
-
   useEffect(() => {
-    resumeBuilderService
-      .listResumes()
-      .then(setExistingResumes)
-      .catch(() => {});
+    const loadResumes = async () => {
+      try {
+        const resumes = await resumeBuilderService.listResumes();
+        setExistingResumes(resumes);
+      } catch (error) {
+        console.error(error);
+      }
+    };
+
+    void loadResumes();
   }, []);
 
-  const hydrateFromExistingAnalysis = useCallback(async (id: string) => {
-    try {
-      const result = await resumeBuilderService.getAnalysis(id);
-      if (!result) {
-        setAnalysis(null);
+  const hydrateFromExistingAnalysis = useCallback(
+    async (id: string, options?: { force?: boolean }) => {
+      const cached = analysisRef.current;
+      const cachedOriginal = originalAnalysisRef.current;
+      // Restore from in-memory cache when returning between steps — avoid duplicate API calls.
+      if (
+        !options?.force &&
+        cached &&
+        cached.resumeId === id &&
+        String(cached.status || '').toUpperCase() === 'COMPLETED' &&
+        cachedOriginal?.resumeId === id
+      ) {
         return;
       }
-      setAnalysis(result);
-      if (result.targetRole?.trim()) {
-        setTargetRole((prev) => (prev.trim() ? prev : result.targetRole));
-      }
-      if (result.jobDescription?.trim()) {
-        setJobDescription((prev) => (prev.trim() ? prev : (result.jobDescription ?? '')));
-      }
-      if (result.editedContent && !editedContentRef.current.trim()) {
-        editedContentRef.current = result.editedContent;
-        setEditedContent(result.editedContent);
-        setCleanSnapshot({
-          content: result.editedContent,
-          targetRole: result.targetRole || '',
-          jobDescription: result.jobDescription || '',
-          skillsKey: '',
+
+      try {
+        const result = await resumeBuilderService.getAnalysis(id);
+        if (!result) {
+          if (!cached || cached.resumeId !== id) {
+            setAnalysis(null);
+            setOriginalAnalysis(null);
+            analyzedFingerprintRef.current = '';
+          }
+          return;
+        }
+        setAnalysis((prev) => {
+          // Keep local edited content / freeze ATS scores if we already completed this run.
+          if (
+            prev &&
+            prev.resumeId === id &&
+            String(prev.status || '').toUpperCase() === 'COMPLETED' &&
+            originalAnalysisRef.current?.resumeId === id &&
+            !options?.force
+          ) {
+            return {
+              ...prev,
+              editedContent: editedContentRef.current || prev.editedContent || result.editedContent,
+            };
+          }
+          return result;
         });
+        if (String(result.status || '').toUpperCase() === 'COMPLETED') {
+          setOriginalAnalysis((prev) => {
+            if (prev?.resumeId === id && !options?.force) return prev;
+            return result;
+          });
+          // Align cache key with form values after hydrate (force clears industry/skills).
+          // Empty fingerprint used to skip ATS even after JD edits — always seed from result.
+          if (options?.force || !analyzedFingerprintRef.current) {
+            analyzedFingerprintRef.current = analysisInputFingerprint({
+              resumeId: id,
+              targetRole: result.targetRole?.trim() || '',
+              jobDescription: result.jobDescription?.trim() || '',
+              industry: '',
+              employmentType: '',
+              experienceLevel: 'mid',
+              skillsKey: '',
+            });
+          }
+        }
+        if (options?.force) {
+          // Re-selecting / re-uploading must not keep unsaved Define Role edits.
+          setTargetRole(result.targetRole?.trim() || '');
+          setJobDescription(result.jobDescription?.trim() || '');
+          setIndustry('');
+          setEmploymentType('');
+          setExperienceLevel('mid');
+          setSkills([]);
+          setCleanSnapshot((prev) => ({
+            ...prev,
+            targetRole: result.targetRole?.trim() || '',
+            jobDescription: result.jobDescription?.trim() || '',
+            skillsKey: '',
+            skills: [],
+          }));
+        } else {
+          if (result.targetRole?.trim()) {
+            setTargetRole((prev) => (prev.trim() ? prev : result.targetRole));
+          }
+          if (result.jobDescription?.trim()) {
+            setJobDescription((prev) => (prev.trim() ? prev : (result.jobDescription ?? '')));
+          }
+        }
+        if (result.editedContent && !editedContentRef.current.trim()) {
+          editedContentRef.current = result.editedContent;
+          setEditedContent(result.editedContent);
+          setCleanSnapshot((prev) => ({
+            ...prev,
+            content: result.editedContent!,
+            targetRole: result.targetRole || prev.targetRole,
+            jobDescription: result.jobDescription || prev.jobDescription,
+          }));
+        }
+      } catch {
+        if (!analysisRef.current || analysisRef.current.resumeId !== id) {
+          setAnalysis(null);
+          setOriginalAnalysis(null);
+        }
       }
-    } catch {
-      setAnalysis(null);
-    }
-  }, []);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!resumeId) return;
-    // Avoid duplicate status fetches while the analyze poller is already running.
-    if (step === 3) return;
     void hydrateFromExistingAnalysis(resumeId);
     resumeBuilderService
       .getVersions(resumeId)
       .then(setVersions)
       .catch(() => setVersions([]));
-  }, [resumeId, step, hydrateFromExistingAnalysis]);
+    // Hydrate once per resume — step changes must not refetch ATS.
+  }, [resumeId, hydrateFromExistingAnalysis]);
 
   useEffect(() => {
     if (step !== 3 || !resumeId) return;
@@ -256,11 +407,22 @@ export function ResumeBuilderPage() {
         }
 
         const status = String(result.status || '').toUpperCase();
-        setAnalysis(result);
 
         // Terminal states: stop polling. Stay on Analyze until the user clicks Next.
         if (status === 'COMPLETED') {
           stopPolling();
+          // Trust AI semantic ATS JSON from the server — do not re-filter with chip parsers.
+          setAnalysis(result);
+          setOriginalAnalysis(result);
+          analyzedFingerprintRef.current = analysisInputFingerprint({
+            resumeId,
+            targetRole,
+            jobDescription,
+            industry,
+            employmentType,
+            experienceLevel,
+            skillsKey: skillsKeyOf(skills),
+          });
           if (result.editedContent) {
             editedContentRef.current = result.editedContent;
             setEditedContent(result.editedContent);
@@ -276,6 +438,8 @@ export function ResumeBuilderPage() {
           }
           return;
         }
+
+        setAnalysis(result);
 
         if (status === 'FAILED') {
           stopPolling();
@@ -311,10 +475,14 @@ export function ResumeBuilderPage() {
     };
 
     // Analysis already finished — keep the user on Analyze until they click Next.
-    if (analysis?.status === 'COMPLETED') {
+    // Prefer frozen original snapshot so returning from Review never restarts polling.
+    const cachedStatus = String(
+      (originalAnalysisRef.current ?? analysis)?.status || '',
+    ).toUpperCase();
+    if (cachedStatus === 'COMPLETED') {
       return stopPolling;
     }
-    if (analysis?.status === 'FAILED') {
+    if (cachedStatus === 'FAILED') {
       setStep(2);
       return stopPolling;
     }
@@ -332,36 +500,61 @@ export function ResumeBuilderPage() {
 
   useEffect(() => {
     if (step !== 5 || !resumeId) return;
-    resumeBuilderService
-      .getKeywords(resumeId)
-      .then(setKeywords)
-      .catch(() => {});
-    resumeBuilderService
-      .getSuggestions(resumeId)
-      .then((items) => {
-        if (items.length > 0) setSuggestions(items);
-      })
-      .catch(() => {});
-    resumeBuilderService
-      .getAnalysis(resumeId)
-      .then((result) => {
-        if (!result) return;
-        setAnalysis(result);
-        if (Array.isArray(result.suggestions) && result.suggestions.length > 0) {
-          setSuggestions((prev) => (prev.length > 0 ? prev : result.suggestions));
-        }
-        if (result.editedContent && !editedContentRef.current.trim()) {
-          setEditedContent(result.editedContent);
-        }
-      })
-      .catch(() => {});
+
+    // Only fetch keywords/suggestions when missing — never overwrite a completed ATS snapshot.
+    let cancelled = false;
+
+    if (!keywords) {
+      void resumeBuilderService
+        .getKeywords(resumeId)
+        .then((result) => {
+          if (!cancelled) setKeywords(result);
+        })
+        .catch(() => {});
+    }
+
+    if (suggestions.length === 0) {
+      void resumeBuilderService
+        .getSuggestions(resumeId)
+        .then((items) => {
+          if (!cancelled && items.length > 0) setSuggestions(items);
+        })
+        .catch(() => {});
+    }
+
+    const hasCompleted =
+      String((originalAnalysisRef.current ?? analysisRef.current)?.status || '').toUpperCase() ===
+      'COMPLETED';
+    if (!hasCompleted) {
+      void resumeBuilderService
+        .getAnalysis(resumeId)
+        .then((result) => {
+          if (cancelled || !result) return;
+          setAnalysis(result);
+          if (String(result.status || '').toUpperCase() === 'COMPLETED') {
+            setOriginalAnalysis(result);
+          }
+          if (Array.isArray(result.suggestions) && result.suggestions.length > 0) {
+            setSuggestions((prev) => (prev.length > 0 ? prev : result.suggestions));
+          }
+          if (result.editedContent && !editedContentRef.current.trim()) {
+            setEditedContent(result.editedContent);
+          }
+        })
+        .catch(() => {});
+    }
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- cache-aware; avoid refetch on every analysis mutation
   }, [step, resumeId]);
 
   useEffect(() => {
     if (step !== 10 || !resumeId) return;
 
     const contentKey = (editedContent.trim() || analysis?.editedContent || '').trim();
-    // Reuse cached ATS result while navigating — only recheck when resume text changed.
+    // Reuse cached ATS recheck while navigating — only recheck when resume text changed.
     if (recheckResult && recheckContentKeyRef.current === contentKey && contentKey) {
       setRechecking(false);
       return;
@@ -379,22 +572,7 @@ export function ResumeBuilderPage() {
         if (cancelled) return;
         recheckContentKeyRef.current = contentKey;
         setRecheckResult(result);
-        setAnalysis((prev) =>
-          prev
-            ? {
-                ...prev,
-                baselineAtsScore: result.previousAtsScore ?? prev.baselineAtsScore ?? prev.atsScore,
-                atsScore: result.atsScore,
-                keywordMatch: result.keywordMatch ?? prev.keywordMatch,
-                skillMatch: result.skillMatch ?? prev.skillMatch,
-                contentQuality: result.contentQuality ?? prev.contentQuality,
-                readability: result.readability ?? prev.readability,
-                formattingScore: result.formattingScore ?? prev.formattingScore,
-                sectionScores: result.sectionScores ?? prev.sectionScores,
-                skillAnalysis: result.skillAnalysis ?? prev.skillAnalysis,
-              }
-            : prev,
-        );
+        // Do not overwrite the original Analyze-step ATS snapshot with export recheck scores.
       } catch (error) {
         if (!cancelled) {
           alert(
@@ -428,6 +606,13 @@ export function ResumeBuilderPage() {
     [resumeId],
   );
 
+  const handleLiveAtsChange = useCallback((_score: number, _skills?: LiveSkillAnalysis) => {
+    // Live Optimize estimates stay local to OptimizeStep.
+    // Never mutate the original Analyze-step ATS snapshot while reviewing.
+    void _score;
+    void _skills;
+  }, []);
+
   const handleFileSelect = useCallback(
     async (file: File) => {
       const allowed = [
@@ -444,11 +629,39 @@ export function ResumeBuilderPage() {
       setUploading(true);
       try {
         const uploaded = await resumeBuilderService.uploadResume(file);
+
+        // Fully reset UI state for the new resume so Live Preview/Optimize step hydrate correctly.
+        // (hydrateFromExistingAnalysis only sets edited content when the current draft is empty.)
+        setAnalysis(null);
+        setOriginalAnalysis(null);
+        analyzedFingerprintRef.current = '';
+        setKeywords(null);
+        setSuggestions([]);
+        setVersions([]);
+        setRecheckResult(null);
+        editedContentRef.current = '';
+        setEditedContent('');
+        recheckContentKeyRef.current = '';
+        setCleanSnapshot({
+          content: '',
+          targetRole: '',
+          jobDescription: '',
+          skillsKey: '',
+          skills: [],
+        });
+        setTargetRole('');
+        setJobDescription('');
+        setIndustry('');
+        setEmploymentType('');
+        setExperienceLevel('mid');
+        setSkills([]);
+        setSelectedTemplate('original');
+
         setResumeId(uploaded.id);
         setExistingResumes((prev) => [uploaded, ...prev.filter((r) => r.id !== uploaded.id)]);
         void navigate(`${ROUTES.RESUME_BUILDER}/${uploaded.id}`, { replace: true });
         setStep(2);
-        void hydrateFromExistingAnalysis(uploaded.id);
+        void hydrateFromExistingAnalysis(uploaded.id, { force: true });
       } catch {
         setUploadError('Upload failed. Please try again.');
       } finally {
@@ -483,6 +696,30 @@ export function ResumeBuilderPage() {
       setStep(1);
       return;
     }
+
+    const fingerprint = analysisInputFingerprint({
+      resumeId,
+      targetRole,
+      jobDescription,
+      industry,
+      employmentType,
+      experienceLevel,
+      skillsKey: skillsKeyOf(skills),
+    });
+    // Re-analyze from the Analyze step always forces a new run; Define Role Next reuses cache.
+    const forceReanalyze = step === 3;
+    const hasCompletedOriginal =
+      String((originalAnalysis ?? analysis)?.status || '').toUpperCase() === 'COMPLETED';
+
+    if (!forceReanalyze && hasCompletedOriginal) {
+      const previousFingerprint = analyzedFingerprintRef.current;
+      // Only reuse cached ATS when Define Role inputs match the last completed run.
+      if (previousFingerprint && previousFingerprint === fingerprint) {
+        setStep(3);
+        return;
+      }
+    }
+
     // Stop any previous poller before starting a new analysis job.
     if (pollTimerRef.current) {
       clearTimeout(pollTimerRef.current);
@@ -492,6 +729,8 @@ export function ResumeBuilderPage() {
     try {
       setRecheckResult(null);
       setAnalysis(null);
+      setOriginalAnalysis(null);
+      analyzedFingerprintRef.current = '';
       await resumeBuilderService.startAnalysis(resumeId, {
         targetRole,
         experienceLevel,
@@ -509,7 +748,10 @@ export function ResumeBuilderPage() {
         targetRole,
         jobDescription,
         skillsKey: skillsKeyOf(skills),
+        skills,
       });
+      // Store intended fingerprint; confirmed when poll completes.
+      analyzedFingerprintRef.current = fingerprint;
       setStep(3);
     } catch (error) {
       alert(`Failed to start analysis:\n${getApiErrorMessage(error)}`);
@@ -543,7 +785,7 @@ export function ResumeBuilderPage() {
   const handleHeaderBack = () => {
     if (step === 1) return;
     if (step === 2) {
-      setStep(1);
+      goBackToUpload();
       return;
     }
     if (step === 3) {
@@ -569,6 +811,8 @@ export function ResumeBuilderPage() {
     allowLeaveRef.current = true;
     setResumeId('');
     setAnalysis(null);
+    setOriginalAnalysis(null);
+    analyzedFingerprintRef.current = '';
     setKeywords(null);
     setSuggestions([]);
     setVersions([]);
@@ -580,7 +824,14 @@ export function ResumeBuilderPage() {
       targetRole: '',
       jobDescription: '',
       skillsKey: '',
+      skills: [],
     });
+    setTargetRole('');
+    setJobDescription('');
+    setIndustry('');
+    setEmploymentType('');
+    setExperienceLevel('mid');
+    setSkills([]);
     setStep(1);
     if (!navigateAfterExit(false)) {
       void navigate(ROUTES.RESUME_BUILDER, { replace: true });
@@ -592,49 +843,26 @@ export function ResumeBuilderPage() {
     recheck: Awaited<ReturnType<typeof resumeBuilderService.recheckAts>> | null,
     localContent: string,
   ) => {
-    if (refreshed) {
-      setAnalysis({
-        ...refreshed,
-        editedContent: localContent || refreshed.editedContent,
-        ...(recheck
-          ? {
-              atsScore: recheck.atsScore,
-              keywordMatch: recheck.keywordMatch ?? refreshed.keywordMatch,
-              skillMatch: recheck.skillMatch ?? refreshed.skillMatch,
-              contentQuality: recheck.contentQuality ?? refreshed.contentQuality,
-              readability: recheck.readability ?? refreshed.readability,
-              formattingScore: recheck.formattingScore ?? refreshed.formattingScore,
-              sectionScores: recheck.sectionScores ?? refreshed.sectionScores,
-              skillAnalysis: recheck.skillAnalysis ?? refreshed.skillAnalysis,
-              baselineAtsScore:
-                recheck.previousAtsScore ?? refreshed.baselineAtsScore ?? refreshed.atsScore,
-            }
-          : {}),
-      });
-      if (!localContent && refreshed.editedContent) {
-        setEditedContent(refreshed.editedContent);
+    // Keep analysis.id and original ATS metrics stable so Analyze step stays frozen.
+    // Export uses recheckResult for updated scores; Review uses editedContent.
+    void recheck;
+    setAnalysis((prev) => {
+      if (!prev) {
+        if (!refreshed) return prev;
+        return {
+          ...refreshed,
+          editedContent: localContent || refreshed.editedContent,
+        };
       }
-      return;
-    }
 
-    if (!recheck) return;
-    setAnalysis((prev) =>
-      prev
-        ? {
-            ...prev,
-            atsScore: recheck.atsScore,
-            keywordMatch: recheck.keywordMatch ?? prev.keywordMatch,
-            skillMatch: recheck.skillMatch ?? prev.skillMatch,
-            contentQuality: recheck.contentQuality ?? prev.contentQuality,
-            readability: recheck.readability ?? prev.readability,
-            formattingScore: recheck.formattingScore ?? prev.formattingScore,
-            sectionScores: recheck.sectionScores ?? prev.sectionScores,
-            skillAnalysis: recheck.skillAnalysis ?? prev.skillAnalysis,
-            baselineAtsScore: recheck.previousAtsScore ?? prev.baselineAtsScore ?? prev.atsScore,
-            editedContent: localContent || prev.editedContent,
-          }
-        : prev,
-    );
+      return {
+        ...prev,
+        editedContent: localContent || refreshed?.editedContent || prev.editedContent,
+        suggestions: prev.suggestions?.length
+          ? prev.suggestions
+          : (refreshed?.suggestions ?? prev.suggestions),
+      };
+    });
   };
 
   const handleApplySuggestion = async (id: number, contentOverride?: string) => {
@@ -645,12 +873,11 @@ export function ResumeBuilderPage() {
       if (localContent) {
         editedContentRef.current = localContent;
         setEditedContent(localContent);
-        // Optimistic skill refresh so Missing Skills update before the network round-trip.
+        // Optimistic content update only — do not mutate original ATS skill gaps/scores.
         setAnalysis((prev) => {
-          if (!prev?.skillAnalysis) return prev;
+          if (!prev) return prev;
           return {
             ...prev,
-            skillAnalysis: refreshSkillAnalysisFromContent(localContent, prev.skillAnalysis),
             editedContent: localContent,
           };
         });
@@ -665,20 +892,11 @@ export function ResumeBuilderPage() {
       if (localContent) {
         await resumeBuilderService.updateContent(resumeId, localContent);
       }
-
-      let recheck: Awaited<ReturnType<typeof resumeBuilderService.recheckAts>> | null = null;
-      try {
-        recheck = await resumeBuilderService.recheckAts(resumeId);
-      } catch {
-        recheck = null;
-      }
-
-      const refreshed = await resumeBuilderService.getAnalysis(resumeId);
-      mergeRecheckIntoAnalysis(refreshed, recheck, localContent);
-      if (recheck) {
-        setRecheckResult(recheck);
-        recheckContentKeyRef.current = localContent;
-      }
+      // Do not re-run ATS/reload analysis here:
+      // recheck can change analysis id and regenerate the "missing skills" suggestions list.
+      // OptimizeStep already updates skill cards optimistically from the edited draft.
+      setRecheckResult(null);
+      recheckContentKeyRef.current = '';
       showToast({
         message: 'Improvement applied successfully',
         severity: 'success',
@@ -703,9 +921,6 @@ export function ResumeBuilderPage() {
         return {
           ...prev,
           editedContent: localContent,
-          skillAnalysis: prev.skillAnalysis
-            ? refreshSkillAnalysisFromContent(localContent, prev.skillAnalysis)
-            : prev.skillAnalysis,
         };
       });
       if (ids.length > 0) {
@@ -721,15 +936,14 @@ export function ResumeBuilderPage() {
       for (const id of ids) {
         try {
           const updated = await resumeBuilderService.applySuggestion(resumeId, id, {
-            preserveContent: true,
+            // Allow backend to update resume content for each suggestion (skills in particular).
+            preserveContent: false,
           });
           setSuggestions((prev) => prev.map((s) => (s.id === id ? updated : s)));
         } catch {
           // Keep optimistic APPLIED status if a single mark fails.
         }
       }
-
-      await resumeBuilderService.updateContent(resumeId, localContent);
 
       let recheck: Awaited<ReturnType<typeof resumeBuilderService.recheckAts>> | null = null;
       try {
@@ -787,12 +1001,36 @@ export function ResumeBuilderPage() {
     }
   };
 
-  const handleExport = async (
-    format: 'pdf' | 'docx',
-    previewRoot?: HTMLElement | null,
-  ) => {
+  const handleExport = async (format: 'pdf' | 'docx', previewRoot?: HTMLElement | null) => {
     setExportingFormat(format);
     try {
+      if (format === 'pdf' && previewRoot) {
+        // Ensure fonts/layout are settled before html2canvas runs,
+        // so pagination & wrapping offsets match the Live Preview.
+        const doc = previewRoot.ownerDocument;
+        try {
+          const fontSet = doc?.fonts;
+          if (fontSet != null) {
+            await fontSet.ready;
+          }
+        } catch {
+          // Ignore font waiting failures — best-effort only.
+        }
+
+        // Wait a couple frames for ResizeObserver/layout effects to re-run.
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+        // If pages are still being constructed, wait briefly.
+        const startedAt = Date.now();
+        while (
+          Date.now() - startedAt < 2500 &&
+          previewRoot.querySelectorAll<HTMLElement>('.preview-page').length === 0
+        ) {
+          await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        }
+      }
+
       const { alignDraftToJob, parseResumeContent } = await import('./utils');
       const draft = alignDraftToJob(
         parseResumeContent(
@@ -872,14 +1110,21 @@ export function ResumeBuilderPage() {
 
   return (
     <Root>
+      <style>
+        {`
+          /* Make A4 preview robust for long/unbroken text. */
+          .preview-page * {
+            overflow-wrap: anywhere !important;
+            word-break: break-word !important;
+          }
+        `}
+      </style>
       <StickyChrome>
         <PageHeader
           canContinue={canContinue}
           current={step}
           onBack={step > 1 ? handleHeaderBack : undefined}
           onNext={handleHeaderNext}
-          onSaveDraft={resumeId && analysis ? () => void handleSaveContent() : undefined}
-          savingDraft={saving}
         />
         <WorkflowStepper current={step} />
       </StickyChrome>
@@ -890,6 +1135,7 @@ export function ResumeBuilderPage() {
         isDragging={isDragging}
         uploadError={uploadError}
         uploading={uploading}
+        deletingResumeId={deletingResumeId}
         fileInputRef={fileInputRef}
         targetRole={targetRole}
         industry={industry}
@@ -899,6 +1145,7 @@ export function ResumeBuilderPage() {
         jobDescription={jobDescription}
         startingAnalysis={startingAnalysis}
         analysis={analysis}
+        originalAnalysis={originalAnalysis}
         keywords={keywords}
         suggestions={suggestions}
         applyingId={applyingId}
@@ -914,10 +1161,42 @@ export function ResumeBuilderPage() {
         onDrop={handleDrop}
         onFileSelect={(file) => void handleFileSelect(file)}
         onUseResume={(resume) => {
+          discardDefineRoleDraft();
           setResumeId(resume.id);
+          setSelectedTemplate('original');
+          setOriginalAnalysis(null);
+          analyzedFingerprintRef.current = '';
+          setRecheckResult(null);
+          recheckContentKeyRef.current = '';
           void navigate(`${ROUTES.RESUME_BUILDER}/${resume.id}`, { replace: true });
           setStep(2);
-          void hydrateFromExistingAnalysis(resume.id);
+          void hydrateFromExistingAnalysis(resume.id, { force: true });
+        }}
+        onDeleteResume={async (resume) => {
+          setDeletingResumeId(resume.id);
+          try {
+            await resumeBuilderService.deleteResume(resume.id);
+            setExistingResumes((prev) => prev.filter((item) => item.id !== resume.id));
+            if (resumeId === resume.id) {
+              allowLeaveRef.current = true;
+              setResumeId('');
+              setAnalysis(null);
+              setOriginalAnalysis(null);
+              analyzedFingerprintRef.current = '';
+              editedContentRef.current = '';
+              setEditedContent('');
+              setStep(1);
+              void navigate(ROUTES.RESUME_BUILDER, { replace: true });
+            }
+            showToast({ message: 'Resume deleted', severity: 'success' });
+          } catch (error) {
+            alert(`Could not delete resume:\n${getApiErrorMessage(error)}`);
+          } finally {
+            setDeletingResumeId(null);
+          }
+        }}
+        onShowMoreResumes={() => {
+          void navigate(ROUTES.SAVED_RESUMES);
         }}
         onTargetRoleChange={setTargetRole}
         onIndustryChange={setIndustry}
@@ -926,7 +1205,7 @@ export function ResumeBuilderPage() {
         onSkillsChange={setSkills}
         onJobDescriptionChange={setJobDescription}
         onStartAnalysis={() => void handleStartAnalysis()}
-        onBackFromDefineRole={() => setStep(1)}
+        onBackFromDefineRole={goBackToUpload}
         onReplaceResume={handleReplaceResume}
         onGoTo={goTo}
         onApplySuggestion={(id, content) => void handleApplySuggestion(id, content)}
@@ -936,6 +1215,7 @@ export function ResumeBuilderPage() {
           editedContentRef.current = value;
           setEditedContent(value);
         }}
+        onLiveAtsChange={handleLiveAtsChange}
         onSaveContent={() => void handleSaveContent()}
         onPreviewResume={() => {
           void handleSaveContent();
@@ -946,12 +1226,7 @@ export function ResumeBuilderPage() {
         onTemplateChange={setSelectedTemplate}
       />
 
-      <Dialog
-        open={blocker.state === 'blocked'}
-        onClose={closeLeaveDialog}
-        fullWidth
-        maxWidth="xs"
-      >
+      <Dialog open={blocker.state === 'blocked'} onClose={closeLeaveDialog} fullWidth maxWidth="xs">
         <DialogTitle>Discard Changes?</DialogTitle>
         <DialogContent>
           <Typography>

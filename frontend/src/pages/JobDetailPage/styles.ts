@@ -80,16 +80,7 @@ export const jobDetailPageSx = {
     fontWeight: fontWeight.extraBold,
     height: spacing[14],
     justifyItems: 'center',
-    overflow: 'hidden',
     width: spacing[14],
-
-    '& img': {
-      display: 'block',
-      height: '100%',
-      objectFit: 'contain',
-      padding: spacing[1],
-      width: '100%',
-    },
 
     [compactBreakpoint]: {
       height: spacing[12],
@@ -225,6 +216,7 @@ export const jobDetailPageSx = {
     fontSize: fontSize.sm,
     lineHeight: 1.6,
     overflowWrap: 'anywhere',
+    position: 'relative',
     '& a': { color: colorTokens.actionPrimary },
     '& img, & table, & pre, & iframe': {
       maxWidth: '100%',
@@ -235,6 +227,35 @@ export const jobDetailPageSx = {
     },
     '& p': { marginBottom: spacing[2] },
     '& ul, & ol': { marginBottom: spacing[2], paddingLeft: spacing[4] },
+  } satisfies SxProps<Theme>,
+
+  descriptionBody: {
+    margin: 0,
+  } satisfies SxProps<Theme>,
+
+  descriptionCollapsed: {
+    maxHeight: '15rem',
+    overflow: 'hidden',
+
+    '&::after': {
+      background: `linear-gradient(180deg, transparent 0%, ${colorTokens.backgroundCard} 88%)`,
+      bottom: 0,
+      content: '""',
+      height: '4rem',
+      left: 0,
+      pointerEvents: 'none',
+      position: 'absolute',
+      right: 0,
+    },
+  } satisfies SxProps<Theme>,
+
+  descriptionExpanded: {
+    maxHeight: 'none',
+    overflow: 'visible',
+
+    '&::after': {
+      display: 'none',
+    },
   } satisfies SxProps<Theme>,
 
   panel: {
@@ -254,12 +275,37 @@ export const jobDetailPageSx = {
   sectionTitle: {
     color: colorTokens.textPrimary,
     fontSize: fontSize.lg,
-    fontWeight: fontWeight.bold,
+    fontWeight: fontWeight.extraBold,
+    letterSpacing: '-0.01em',
     margin: 0,
 
     [compactBreakpoint]: {
       fontSize: fontSize.base,
     },
+  } satisfies SxProps<Theme>,
+
+  sectionHeader: {
+    display: 'grid',
+    gap: spacing[2],
+  } satisfies SxProps<Theme>,
+
+  sectionHeaderTitleRow: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: spacing[2],
+  } satisfies SxProps<Theme>,
+
+  sectionHeaderAccent: {
+    background: colorTokens.actionPrimary,
+    borderRadius: borderRadius.full,
+    flexShrink: 0,
+    height: '1.375rem',
+    width: spacing[1],
+  } satisfies SxProps<Theme>,
+
+  sectionHeaderDivider: {
+    borderTop: `0.0625rem solid ${colorTokens.borderSubtle}`,
+    width: '100%',
   } satisfies SxProps<Theme>,
 
   listItem: {

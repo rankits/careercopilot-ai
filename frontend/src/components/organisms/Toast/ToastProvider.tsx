@@ -1,23 +1,28 @@
 import { Snackbar, Alert, Button } from '@mui/material';
 import { useCallback, useMemo, useState } from 'react';
 
+import { DEFAULT_AUTO_HIDE_DURATION } from './constants';
 import { ToastContext, type ToastOptions, type ToastSeverity } from './ToastContext';
 
+interface ToastState {
+  autoHideDuration: number;
+  message: string;
+  severity: ToastSeverity;
+  actionLabel?: string;
+  onAction?: () => void;
+}
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [severity, setSeverity] = useState<ToastSeverity>('info');
-  const [autoHideDuration, setAutoHideDuration] = useState(4000);
-  const [actionLabel, setActionLabel] = useState<string | undefined>();
-  const [onAction, setOnAction] = useState<(() => void) | undefined>();
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   const showToast = useCallback((options: ToastOptions) => {
-    setMessage(options.message);
-    setSeverity(options.severity ?? 'info');
-    setAutoHideDuration(options.autoHideDuration ?? 4000);
-    setActionLabel(options.actionLabel);
-    setOnAction(() => options.onAction);
-    setOpen(true);
+    setToast({
+      autoHideDuration: options.autoHideDuration ?? DEFAULT_AUTO_HIDE_DURATION,
+      message: options.message,
+      severity: options.severity ?? 'info',
+      actionLabel: options.actionLabel,
+      onAction: options.onAction,
+    });
   }, []);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
@@ -27,38 +32,39 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <Snackbar
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        autoHideDuration={autoHideDuration}
-        open={open}
+        autoHideDuration={toast?.autoHideDuration}
+        open={Boolean(toast)}
         onClose={(_, reason) => {
           if (reason === 'clickaway') {
             return;
           }
 
-          setOpen(false);
+          setToast(null);
         }}
+        sx={{ top: { xs: '4.75rem', sm: '5rem' } }}
       >
         <Alert
           action={
-            actionLabel && onAction ? (
+            toast?.actionLabel && toast?.onAction ? (
               <Button
                 color="inherit"
                 onClick={() => {
-                  onAction();
-                  setOpen(false);
+                  toast.onAction?.();
+                  setToast(null);
                 }}
                 size="small"
               >
-                {actionLabel}
+                {toast.actionLabel}
               </Button>
             ) : undefined
           }
-          aria-live={severity === 'error' ? 'assertive' : 'polite'}
-          onClose={() => setOpen(false)}
+          aria-live={toast?.severity === 'error' ? 'assertive' : 'polite'}
+          onClose={() => setToast(null)}
           role="status"
-          severity={severity}
+          severity={toast?.severity}
           sx={{ width: '100%' }}
         >
-          {message}
+          {toast?.message}
         </Alert>
       </Snackbar>
     </ToastContext.Provider>

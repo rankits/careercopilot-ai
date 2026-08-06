@@ -16,6 +16,7 @@ export interface SkillAnalysis {
   matchedSkills: string[];
   missingSkills: string[];
   transferableSkills: string[];
+  additionalSkills?: string[];
   recommendedSkills: string[];
 }
 
@@ -176,6 +177,11 @@ export const resumeBuilderService = {
     return unwrap(res) ?? [];
   },
 
+  async deleteResume(resumeId: string): Promise<{ id: string }> {
+    const res = await httpClient.delete<{ data: { id: string } }>(`${BASE}/resumes/${resumeId}`);
+    return unwrap(res);
+  },
+
   /**
    * Best-effort skill hints from prior parse / analysis so Define Role can
    * preview JD skill coverage before a full ATS run.
@@ -194,9 +200,7 @@ export const resumeBuilderService = {
       }
       const content = analysis?.editedContent?.trim() ?? '';
       if (content) {
-        const { extractKeywordsFromText } = await import(
-          '@/pages/ResumeBuilderPage/utils/skills'
-        );
+        const { extractKeywordsFromText } = await import('@/pages/ResumeBuilderPage/utils/skills');
         for (const skill of extractKeywordsFromText(content)) skills.add(skill);
       }
     } catch {

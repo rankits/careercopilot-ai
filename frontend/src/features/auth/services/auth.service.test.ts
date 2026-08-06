@@ -72,7 +72,7 @@ describe('authService register', () => {
         password: 'password123',
         phone: '+919876543210',
       }),
-    ).rejects.toThrow('Unable to create account. Please try again.');
+    ).rejects.toThrow('Unable to create your account. Please try again.');
   });
 });
 

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import { JOB_FILTER_BAR_COPY, JOB_FILTER_BAR_SCROLL } from '@/constants/ui';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -26,23 +27,30 @@ export interface JobFilterBarProps {
 const COMPACT_QUERY = '(max-width: 47.5rem)';
 const SCROLL_STEP_RATIO = 0.75;
 
+interface ScrollState {
+  canScrollLeft: boolean;
+  canScrollRight: boolean;
+}
+
+const NO_SCROLL_STATE: ScrollState = { canScrollLeft: false, canScrollRight: false };
+
 export function JobFilterBar({ filters, onFilterClick }: JobFilterBarProps) {
   const isCompact = useMediaQuery(COMPACT_QUERY);
   const trackRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
+  const [scrollState, setScrollState] = useState<ScrollState>(NO_SCROLL_STATE);
 
   const updateScrollState = useCallback(() => {
     const track = trackRef.current;
     if (!track) {
-      setCanScrollLeft(false);
-      setCanScrollRight(false);
+      setScrollState(NO_SCROLL_STATE);
       return;
     }
 
     const maxScrollLeft = track.scrollWidth - track.clientWidth;
-    setCanScrollLeft(track.scrollLeft > 2);
-    setCanScrollRight(track.scrollLeft < maxScrollLeft - 2);
+    setScrollState({
+      canScrollLeft: track.scrollLeft > JOB_FILTER_BAR_SCROLL.edgeThresholdPx,
+      canScrollRight: track.scrollLeft < maxScrollLeft - JOB_FILTER_BAR_SCROLL.edgeThresholdPx,
+    });
   }, []);
 
   useEffect(() => {
@@ -64,7 +72,7 @@ export function JobFilterBar({ filters, onFilterClick }: JobFilterBarProps) {
   const scrollByDirection = (direction: -1 | 1) => {
     const track = trackRef.current;
     if (!track) return;
-    const amount = Math.max(track.clientWidth * SCROLL_STEP_RATIO, 160);
+    const amount = Math.max(track.clientWidth * SCROLL_STEP_RATIO, JOB_FILTER_BAR_SCROLL.minStepPx);
     track.scrollBy({ behavior: 'smooth', left: direction * amount });
   };
 
@@ -72,8 +80,8 @@ export function JobFilterBar({ filters, onFilterClick }: JobFilterBarProps) {
     <FilterShell>
       {isCompact ? (
         <FilterScrollButton
-          aria-label="Scroll filters left"
-          disabled={!canScrollLeft}
+          aria-label={JOB_FILTER_BAR_COPY.scrollLeftAria}
+          disabled={!scrollState.canScrollLeft}
           onClick={() => scrollByDirection(-1)}
           type="button"
         >
@@ -81,7 +89,7 @@ export function JobFilterBar({ filters, onFilterClick }: JobFilterBarProps) {
         </FilterScrollButton>
       ) : null}
 
-      <FilterTrack aria-label="Job filters" ref={trackRef}>
+      <FilterTrack aria-label={JOB_FILTER_BAR_COPY.trackAria} ref={trackRef}>
         {filters.map((filter) => (
           <FilterButton
             active={Boolean(filter.active)}
@@ -99,8 +107,8 @@ export function JobFilterBar({ filters, onFilterClick }: JobFilterBarProps) {
 
       {isCompact ? (
         <FilterScrollButton
-          aria-label="Scroll filters right"
-          disabled={!canScrollRight}
+          aria-label={JOB_FILTER_BAR_COPY.scrollRightAria}
+          disabled={!scrollState.canScrollRight}
           onClick={() => scrollByDirection(1)}
           type="button"
         >

@@ -40,32 +40,40 @@ vi.mock('@/features/resume/services/resume.service', () => ({
 }));
 
 vi.mock('@/features/resume/hooks/useResumeParser', () => ({
-  useResumeParser: (onParsed: (values: Record<string, string>) => void) => ({
-    error: null,
-    isPending: false,
-    metadata: null,
-    parse: async (...args: unknown[]) => {
-      await parseMock(...args);
-      onParsed({
-        certifications: '',
-        currentCompany: 'Analytical Engines',
-        designation: 'Engineer',
-        education: '',
-        email: 'ada@example.com',
-        fullName: 'Ada Lovelace',
-        location: 'London',
-        phone: '+14155552671',
-        projects: '',
-        skills: 'Algorithms',
-        summary: 'Parsed summary from resume',
-        totalExperience: '8',
-        workExperience: 'Engineer — Analytical Engines',
-      });
-    },
-    parseProgress: null,
-    reset: vi.fn(),
-    resumeId: 'resume-2',
-  }),
+  useResumeParser: (onParsed: (values: Record<string, string>) => void) => {
+    const state = { resumeId: null as string | null };
+    return {
+      error: null,
+      isPending: false,
+      metadata: null,
+      parse: async (...args: unknown[]) => {
+        await parseMock(...args);
+        state.resumeId = 'resume-2';
+        onParsed({
+          certifications: '',
+          currentCompany: 'Analytical Engines',
+          designation: 'Engineer',
+          education: '',
+          email: 'ada@example.com',
+          fullName: 'Ada Lovelace',
+          location: 'London',
+          phone: '+14155552671',
+          projects: '',
+          skills: 'Algorithms',
+          summary: 'Parsed summary from resume',
+          totalExperience: '8',
+          workExperience: 'Engineer — Analytical Engines',
+        });
+      },
+      parseProgress: null,
+      reset: vi.fn(() => {
+        state.resumeId = null;
+      }),
+      get resumeId() {
+        return state.resumeId;
+      },
+    };
+  },
 }));
 
 const existingProfile = {
@@ -199,22 +207,40 @@ describe('EditProfilePage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/profile/edit');
   });
 
+  it('enables Save Changes after editing a blank field', async () => {
+    const user = userEvent.setup();
+    getMyProfileMock.mockResolvedValueOnce({
+      ...existingProfile,
+      personalDetails: {
+        ...existingProfile.personalDetails,
+        summary: '',
+      },
+    });
+    renderPage();
+
+    await screen.findByRole('textbox', { name: /full name/i });
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeDisabled();
+
+    await user.type(screen.getByRole('textbox', { name: /location/i }), 'London');
+
+    expect(screen.getByRole('button', { name: /save changes/i })).toBeEnabled();
+  });
+
   it('submits changes through the update API when no new resume was parsed', async () => {
     const user = userEvent.setup();
     getMyProfileMock.mockResolvedValueOnce(existingProfile);
     updateProfileMock.mockResolvedValueOnce({ message: 'Profile updated successfully' });
-    // Override parser mock resumeId via dynamic - useUpdate path needs resumeId null.
-    // The mocked hook always returns resume-2; force confirm path instead by accepting either.
-    confirmProfileMock.mockResolvedValueOnce({ message: 'Profile created successfully' });
     renderPage();
 
     await screen.findByRole('textbox', { name: /full name/i });
+    await user.type(screen.getByRole('textbox', { name: /location/i }), 'London');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
     await user.click(screen.getByRole('button', { name: /confirm & save/i }));
 
     await waitFor(() => {
-      expect(confirmProfileMock.mock.calls.length + updateProfileMock.mock.calls.length).toBe(1);
+      expect(updateProfileMock).toHaveBeenCalledTimes(1);
     });
+    expect(confirmProfileMock).not.toHaveBeenCalled();
   });
 
   it('cancels the confirmation dialog without saving', async () => {
@@ -223,6 +249,7 @@ describe('EditProfilePage', () => {
     renderPage();
 
     await screen.findByRole('textbox', { name: /full name/i });
+    await user.type(screen.getByRole('textbox', { name: /location/i }), 'London');
     await user.click(screen.getByRole('button', { name: /save changes/i }));
     await user.click(screen.getByRole('button', { name: /cancel/i }));
 

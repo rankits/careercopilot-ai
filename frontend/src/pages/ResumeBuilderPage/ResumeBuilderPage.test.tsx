@@ -6,6 +6,7 @@ const { mockResumeBuilderService } = vi.hoisted(() => ({
   mockResumeBuilderService: {
     listResumes: vi.fn(),
     uploadResume: vi.fn(),
+    deleteResume: vi.fn(),
     startAnalysis: vi.fn(),
     getAnalysis: vi.fn(),
     getKeywords: vi.fn(),

@@ -307,6 +307,9 @@ export const toCandidateProfileSourcePayload = (
       ...asStringList(input.languages),
       ...stringListFromRecord(personalDetails, ['languages']),
     ]),
+    // Keep location/preferences as retrieval signals, but do not hard-exclude
+    // global/remote jobs when the profile city does not literally appear on listings.
+    filterMode: 'FLEXIBLE',
     sourceText: sourceTextFrom(personalDetails, professionalProfile),
   };
 };

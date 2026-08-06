@@ -108,6 +108,7 @@ describe('JobDetailPage', () => {
     expect(screen.getByRole('button', { name: /apply now/i })).toBeDisabled();
   });
 
+
   it('shows Apply Now and Assisted Apply without Prepare Application (AA-003)', async () => {
     getJobMock.mockResolvedValue({
       ...baseJob,
@@ -171,6 +172,39 @@ describe('JobDetailPage', () => {
       'noopener,noreferrer',
     );
     openSpy.mockRestore();
+  });
+
+  it('renders HTML descriptions from descriptionText when descriptionHtml is empty', async () => {
+    getJobMock.mockResolvedValue({
+      ...baseJob,
+      descriptionHtml: '',
+      descriptionText:
+        '<div class="content-intro"><h2>Join us in building the future of finance.</h2><p>Our mission is to democratize finance for all.</p></div>',
+    });
+
+    renderDetail();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: /join us in building the future of finance/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/<div class="content-intro"/i)).not.toBeInTheDocument();
+  });
+
+  it('shows See more for long descriptions', async () => {
+    getJobMock.mockResolvedValue({
+      ...baseJob,
+      descriptionHtml: '',
+      descriptionText: 'Role overview. '.repeat(40),
+    });
+
+    renderDetail();
+
+    expect(await screen.findByRole('button', { name: /see more/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /see less/i })).not.toBeInTheDocument();
+
   });
 
   it('hides empty structured sections when backend returns unstructured prose', async () => {

@@ -94,6 +94,9 @@ describe('ResumeAnalysisService (AA-061)', () => {
     // instead spy compare indirectly: when prisma throws, we get degraded.
     // Call compare via a successful path with forceRefresh and mocked upsert.
     const { prisma } = await import('@/shared/config/db.conf.js');
+    if (!prisma.jobApplicationResumeAnalysis) {
+      (prisma as any).jobApplicationResumeAnalysis = { findUnique: vi.fn(), upsert: vi.fn() };
+    }
     vi.spyOn(prisma.jobApplicationResumeAnalysis, 'findUnique').mockResolvedValue(null as never);
     vi.spyOn(prisma.jobApplicationResumeAnalysis, 'upsert').mockResolvedValue({} as never);
 

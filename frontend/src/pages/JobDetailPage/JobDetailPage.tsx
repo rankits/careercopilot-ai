@@ -20,8 +20,7 @@ import type { JobDetailDto } from '@/features/jobs/types/job.types';
 import { extractJobDetailSections } from '@/features/jobs/utils/extractJobDetailSections';
 import { formatPostedAt } from '@/features/jobs/utils/formatPostedAt';
 import { openExternalApply, toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
-import { resolveCompanyLogoUrl } from '@/features/jobs/utils/resolveCompanyLogoUrl';
-import { sanitizeJobHtml } from '@/features/jobs/utils/sanitizeJobHtml';
+import { resolveJobDescriptionDisplay } from '@/features/jobs/utils/resolveJobDescriptionDisplay';
 import {
   Box,
   BusinessCenterOutlinedIcon,
@@ -32,6 +31,8 @@ import {
   WorkOutlineOutlinedIcon,
 } from '@/lib/material';
 
+import { JobAboutRoleSection } from './JobAboutRoleSection';
+import { JobDetailSectionHeader } from './JobDetailSectionHeader';
 import { jobDetailPageSx } from './styles';
 
 const ASSISTED_APPLY_TOOLTIP_ENABLED =
@@ -46,9 +47,7 @@ function DetailSection({ items, title }: { items: string[]; title: string }) {
 
   return (
     <Box component="section" sx={jobDetailPageSx.panel}>
-      <Typography component="h2" sx={jobDetailPageSx.sectionTitle}>
-        {title}
-      </Typography>
+      <JobDetailSectionHeader title={title} />
       <Box component="ul" sx={jobDetailPageSx.sectionList}>
         {items.map((item) => (
           <Typography component="li" key={`${title}-${item}`} sx={jobDetailPageSx.listItem}>
@@ -92,16 +91,6 @@ function companyInitial(name: string): string {
   return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
 }
 
-function companyLogoSrc(job: {
-  company: { logoUrl: string | null; slug: string; name: string };
-}): string | undefined {
-  return resolveCompanyLogoUrl({
-    logoUrl: job.company.logoUrl,
-    companySlug: job.company.slug,
-    companyName: job.company.name,
-  });
-}
-
 export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
@@ -117,15 +106,21 @@ export function JobDetailPage() {
     limit: 6,
   });
 
-  const companyLogoUrl = job ? companyLogoSrc(job) : undefined;
-  const { src: logoSrc, failed: logoFailed, onLogoError } = useCachedCompanyLogo(companyLogoUrl);
-
   const notFound = error instanceof JobNotFoundError;
   const applyUrl = toSafeApplyUrl(job?.applyUrl);
   const similarCards = similarJobs.data?.cards ?? [];
   const sections = useMemo(
     () => extractJobDetailSections(job?.descriptionText, job?.benefits),
     [job?.benefits, job?.descriptionText],
+  );
+  const descriptionDisplay = useMemo(
+    () =>
+      resolveJobDescriptionDisplay({
+        descriptionHtml: job?.descriptionHtml,
+        descriptionText: job?.descriptionText,
+        remainingDescription: sections.remainingDescription,
+      }),
+    [job?.descriptionHtml, job?.descriptionText, sections.remainingDescription],
   );
 
   const metaChips = useMemo(() => {
@@ -142,14 +137,8 @@ export function JobDetailPage() {
     sections.requirements.length > 0 ||
     sections.benefits.length > 0;
 
-  const descriptionBody = job?.descriptionHtml
-    ? null
-    : sections.remainingDescription || 'No description provided.';
   const showDescriptionPanel = Boolean(
-    job &&
-    (job.descriptionHtml ||
-      descriptionBody !== 'No description provided.' ||
-      !hasStructuredSections),
+    job && (descriptionDisplay.content !== 'No description provided.' || !hasStructuredSections),
   );
 
   return (
@@ -186,11 +175,7 @@ export function JobDetailPage() {
           <Box sx={jobDetailPageSx.hero}>
             <Box sx={jobDetailPageSx.heroTop}>
               <Box aria-label={`${job.company.name} logo`} sx={jobDetailPageSx.companyLogo}>
-                {logoSrc && !logoFailed ? (
-                  <img alt="" loading="lazy" onError={onLogoError} src={logoSrc} />
-                ) : (
-                  companyInitial(job.company.name)
-                )}
+                {companyInitial(job.company.name)}
               </Box>
 
               <Box sx={jobDetailPageSx.heroCopy}>
@@ -338,23 +323,7 @@ export function JobDetailPage() {
           <DetailSection items={sections.requirements} title="Requirements" />
           <DetailSection items={sections.benefits} title="Benefits" />
 
-          {showDescriptionPanel ? (
-            <Box component="section" sx={jobDetailPageSx.panel}>
-              <Typography component="h2" sx={jobDetailPageSx.sectionTitle}>
-                About this role
-              </Typography>
-              {job.descriptionHtml ? (
-                <Box
-                  dangerouslySetInnerHTML={{ __html: sanitizeJobHtml(job.descriptionHtml) }}
-                  sx={jobDetailPageSx.description}
-                />
-              ) : (
-                <Typography sx={jobDetailPageSx.description} whiteSpace="pre-wrap">
-                  {descriptionBody}
-                </Typography>
-              )}
-            </Box>
-          ) : null}
+          {showDescriptionPanel ? <JobAboutRoleSection description={descriptionDisplay} /> : null}
         </Box>
       ) : null}
     </Box>
