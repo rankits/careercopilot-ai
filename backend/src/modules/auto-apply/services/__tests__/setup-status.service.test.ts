@@ -203,7 +203,7 @@ describe('SetupStatusService', () => {
     );
   });
 
-  it('can be incomplete while readyForAssistedApply stays true when only preferences are missing', async () => {
+  it('keeps readyForAssistedApply false while a required setup section is incomplete', async () => {
     profileRepo.findByUserId.mockResolvedValue({
       ...readyProfile,
       preferences: {
@@ -215,6 +215,6 @@ describe('SetupStatusService', () => {
     const result = await service.getSetupStatus(userId);
 
     expect(result.complete).toBe(false);
-    expect(result.readyForAssistedApply).toBe(true);
+    expect(result.readyForAssistedApply).toBe(false);
   });
 });

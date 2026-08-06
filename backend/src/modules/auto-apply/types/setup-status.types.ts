@@ -5,7 +5,7 @@ export type SetupSectionId =
   | 'links'
   | 'answers'
   | 'resumes'
-  | 'exclusions'
+  | 'education'
   | 'consents';
 
 export type SetupGapCode =
