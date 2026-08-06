@@ -20,8 +20,11 @@ export interface SidebarProps {
   mobileMode?: MobileSidebarMode;
   onDownloadLatestResume?: () => void;
   onItemSelect?: (item: SidebarNavItem) => void;
+  onLogoutClick?: () => void;
   onOpenResumeVersions?: () => void;
+  onSettingsClick?: () => void;
   onVariantChange?: (variant: SidebarVariant) => void;
   tone?: SidebarTone;
+  userName?: string;
   variant?: SidebarVariant;
 }

@@ -17,7 +17,6 @@ import {
   HomeOutlinedIcon,
   InsightsOutlinedIcon,
   LockOutlinedIcon,
-  PersonOutlineIcon,
   SearchOutlinedIcon,
   SecurityOutlinedIcon,
   TuneOutlinedIcon,
@@ -260,7 +259,7 @@ export const AUTH_FORM_CONTENT: Record<AuthFormMode, AuthFormContent> = {
     footerActionLabel: 'Login',
     footerText: 'Already have an account?',
     submitLabel: 'Create account',
-    subtitle: 'Create your CareerCopilot account',
+    subtitle: '',
     title: 'Create account',
   },
 };
@@ -509,7 +508,6 @@ export const SIDEBAR_NAV_LABELS = {
   resumeBuilder: 'Resume Builder',
   savedJobs: 'Saved Jobs',
   savedResumes: 'Saved Resumes',
-  settings: 'Profile',
 } as const;
 
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
@@ -555,21 +553,21 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     id: 'saved-resumes',
     label: SIDEBAR_NAV_LABELS.savedResumes,
   },
-  {
-    href: ROUTES.PROFILE_EDIT,
-    icon: PersonOutlineIcon,
-    id: 'settings',
-    label: SIDEBAR_NAV_LABELS.settings,
-  },
 ];
 
-/** Primary destinations shown in the mobile bottom bar (max 5). */
+/** Primary destinations shown in the mobile bottom bar (More opens the overflow drawer). */
 export const DEFAULT_BOTTOM_NAV_IDS = [
   'dashboard',
   'jobs-feed',
   'ai-match',
   'applications',
-  'settings',
+] as const;
+
+/** Sidebar destinations that live in the mobile More drawer instead of the bottom bar. */
+export const DEFAULT_MOBILE_DRAWER_NAV_IDS = [
+  'saved-jobs',
+  'resume-builder',
+  'saved-resumes',
 ] as const;
 
 /** Static user-facing copy and defaults for the Sidebar. */
@@ -579,10 +577,20 @@ export const SIDEBAR_COPY = {
   dailyGoal: 'Daily Goal',
   dailyGoalProgress: 60,
   dailyGoalStatus: '3 / 5 applications today',
+  downloadLatest: 'Download latest resume',
+  drawerAccount: 'Account',
+  drawerAria: 'More navigation',
+  drawerPages: 'Pages',
+  drawerResume: 'Resume',
+  editProfile: 'Edit Profile',
   expandAria: 'Expand sidebar',
+  logout: 'Logout',
+  moreAria: 'Open more menu',
+  moreLabel: 'More',
   primaryNavAria: 'Primary navigation',
   uploadNow: 'Upload Now',
   uploadPanelDescription: 'Get AI analysis and better job matches',
+  viewResumeVersions: 'View resume versions',
 } as const;
 
 /* ----------------------------------------------------------------------------
