@@ -81,9 +81,10 @@ function SideCard({ title, children }: { title: string; children: ReactNode }) {
       sx={{
         border: 1,
         borderColor: 'divider',
-        borderRadius: 1.5,
+        borderRadius: 2,
         p: 2,
         bgcolor: 'background.paper',
+        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.035)',
       }}
     >
       <Typography fontWeight={700} sx={{ mb: 1.25 }} variant="subtitle2">
@@ -128,9 +129,9 @@ function RequirementRow({ view }: { view: RequirementViewModel }) {
       sx={{
         border: 1,
         borderColor: view.reviewTone === 'warning' ? 'warning.light' : 'divider',
-        borderRadius: 1.5,
+        borderRadius: 2,
         p: { xs: 1.5, sm: 2 },
-        bgcolor: view.reviewTone === 'warning' ? 'warning.50' : 'grey.50',
+        bgcolor: view.reviewTone === 'warning' ? 'warning.50' : 'background.paper',
       }}
     >
       <Stack
@@ -500,9 +501,10 @@ export function AnalysisStep({
         sx={{
           border: 1,
           borderColor: 'divider',
-          borderRadius: 1.5,
+          borderRadius: 2,
           p: { xs: 1.75, sm: 2 },
           bgcolor: 'background.paper',
+          boxShadow: '0 8px 24px rgba(15, 23, 42, 0.035)',
         }}
       >
         <Stack
@@ -597,9 +599,10 @@ export function AnalysisStep({
             sx={{
               border: 1,
               borderColor: 'divider',
-              borderRadius: 1.5,
+              borderRadius: 2,
               p: { xs: 1.75, sm: 2 },
               bgcolor: 'background.paper',
+              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.035)',
             }}
           >
             <Stack
@@ -663,9 +666,10 @@ export function AnalysisStep({
             sx={{
               border: 1,
               borderColor: 'divider',
-              borderRadius: 1.5,
+              borderRadius: 2,
               p: { xs: 1.75, sm: 2 },
               bgcolor: 'background.paper',
+              boxShadow: '0 8px 24px rgba(15, 23, 42, 0.035)',
             }}
           >
             <Typography component="h2" fontWeight={700} sx={{ mb: 1.5 }} variant="subtitle1">
@@ -746,7 +750,7 @@ export function AnalysisStep({
           </Box>
         </Stack>
 
-        <Stack spacing={2}>
+        <Stack spacing={2} sx={{ position: { lg: 'sticky' }, top: { lg: 16 } }}>
           <SideCard title="Summary">
             <Stack spacing={1.25}>
               <SummaryRow label="Requirements found" value={String(requirementViews.length)} />
@@ -785,7 +789,7 @@ export function AnalysisStep({
             sx={{
               border: 1,
               borderColor: 'primary.light',
-              borderRadius: 1.5,
+              borderRadius: 2,
               p: 2,
               bgcolor: 'primary.50',
             }}
