@@ -42,6 +42,31 @@ describe('job-listing.metrics', () => {
     expect(payload).not.toMatch(/react|engineer|query/i);
   });
 
+  it('restores the default logger sink when null is passed', () => {
+    setJobListingMetricsSinkForTests(null);
+    expect(() =>
+      recordJobListingRequest({
+        outcome: 'success',
+        statusCode: 200,
+        durationMs: 5,
+        hasFilters: false,
+        resultCount: 1,
+      }),
+    ).not.toThrow();
+  });
+
+  it('rounds negative durations up to zero', () => {
+    setJobListingMetricsSinkForTests(null);
+    recordJobListingRequest({
+      outcome: 'success',
+      statusCode: 200,
+      durationMs: -4,
+      hasFilters: false,
+      resultCount: 1,
+    });
+    expect(getJobListingMetricsSnapshot().latencyMs).toEqual([0]);
+  });
+
   it('counts 5xx outcomes separately', () => {
     recordJobListingRequest({
       outcome: 'error',
