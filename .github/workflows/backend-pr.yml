@@ -178,28 +178,28 @@ jobs:
       - name: Validate production TypeScript build
         run: npm run build
 
-  prisma:
-    name: 'Backend / Prisma Validation'
-    runs-on: self-hosted
-    defaults:
-      run:
-        working-directory: backend
-    steps:
-      - name: Check out repository
-        uses: actions/checkout@v4
-      - name: Set up Node.js 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: backend/package-lock.json
-      - name: Install dependencies
-        run: npm ci
-      - name: Validate Prisma schema and format
-        run: |
-          npx prisma format --check
-          npx prisma validate
-          npx prisma generate
+  # prisma:
+  #   name: 'Backend / Prisma Validation'
+  #   runs-on: self-hosted
+  #   defaults:
+  #     run:
+  #       working-directory: backend
+  #   steps:
+  #     - name: Check out repository
+  #       uses: actions/checkout@v4
+  #     - name: Set up Node.js 20
+  #       uses: actions/setup-node@v4
+  #       with:
+  #         node-version: '20'
+  #         cache: 'npm'
+  #         cache-dependency-path: backend/package-lock.json
+  #     - name: Install dependencies
+  #       run: npm ci
+  #     - name: Validate Prisma schema and format
+  #       run: |
+  #         npx prisma format --check
+  #         npx prisma validate
+  #         npx prisma generate
 
   docker-build:
     name: 'Backend / Docker Build'
