@@ -64,11 +64,13 @@ export function computeWorkspaceSteps(input: {
   hasAnalysis: boolean;
   application: JobApplicationDto;
   analysisSummary: AssistedApplyWorkspaceDto['analysisSummary'];
+  /** Fit is complete only when a persisted profile match can be projected. */
+  profileMatch?: ProfileJobMatchResult | null;
 }): WorkspaceStepStatus[] {
-  const { hasAnalysis, application, analysisSummary } = input;
+  const { hasAnalysis, application, analysisSummary, profileMatch = null } = input;
 
   const analysisComplete = hasAnalysis;
-  const fitComplete = application.matchScore != null || analysisComplete;
+  const fitComplete = profileMatch != null && profileMatch.schemaVersion === 1;
   const resumeComplete = Boolean(application.resumeVersionId);
 
   const openComplete = Boolean(
@@ -144,6 +146,7 @@ export function buildWorkspaceDto(input: {
     hasAnalysis: input.hasAnalysis,
     application: input.application,
     analysisSummary: input.analysisSummary,
+    profileMatch: input.profileMatch ?? null,
   });
 
   return {
