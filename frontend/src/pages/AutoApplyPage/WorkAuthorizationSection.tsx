@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
+
 import {
   useApplicationAnswers,
   useUpsertApplicationAnswer,
@@ -10,6 +11,7 @@ import {
   useCandidateProfile,
   useUpsertCandidateProfile,
 } from '@/features/auto-apply/hooks/useCandidateProfile';
+
 import {
   Box,
   CircularProgress,
@@ -21,7 +23,6 @@ import {
   RadioGroup,
 } from '@/lib/material';
 
-import { SetupSectionHeading } from './SetupSectionHeading';
 import { useSetupDirty } from './SetupDirtyContext';
 import {
   COUNTRY_OPTIONS,
@@ -29,6 +30,7 @@ import {
   WORK_AUTHORIZATION_OPTIONS,
   type SponsorshipChoice,
 } from './setupFormUtils';
+import { SetupSectionHeading } from './SetupSectionHeading';
 
 export function WorkAuthorizationSection() {
   const { data: answers, isLoading: answersLoading } = useApplicationAnswers();

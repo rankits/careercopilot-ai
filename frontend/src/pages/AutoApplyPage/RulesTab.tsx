@@ -4,8 +4,8 @@ import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { useApplicationRule, useUpsertApplicationRule } from '@/features/auto-apply/hooks/useApplicationRule';
-import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 
+import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 import { Box, CircularProgress, Paper, Typography } from '@/lib/material';
 
 import { ChipListEditor } from './ChipListEditor';

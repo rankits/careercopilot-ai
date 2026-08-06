@@ -3,6 +3,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { autoApplyQueryKeys } from '@/features/auto-apply/queryKeys';
 
 import { userService, type UpdateUserProfilePayload } from '../services/user.service';
+
 import { currentUserQueryKey } from './useCurrentUser';
 
 export function useUpdateUserProfile() {

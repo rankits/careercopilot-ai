@@ -2,15 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
+
 import {
   useApplicationAnswers,
   useUpsertApplicationAnswer,
 } from '@/features/auto-apply/hooks/useApplicationAnswers';
+
 import { Box, CircularProgress, Paper, TextField } from '@/lib/material';
 
-import { SetupSectionHeading } from './SetupSectionHeading';
 import { useSetupDirty } from './SetupDirtyContext';
 import { BASELINE_ANSWER_FIELDS } from './setupFormUtils';
+import { SetupSectionHeading } from './SetupSectionHeading';
 
 export function BaselineAnswersSection() {
   const { data: answers, isLoading } = useApplicationAnswers();
