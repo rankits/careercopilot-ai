@@ -86,7 +86,7 @@ jobs:
 
       - name: Validate production build
         run: npm run build
-        
+
       - name: Run vulnerability scan
         run: npm audit --audit-level=high
 

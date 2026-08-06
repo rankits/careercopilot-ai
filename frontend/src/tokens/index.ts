@@ -26,6 +26,7 @@ export const palette = {
   gray700: '#475569',
   gray800: '#1c2440',
   gray900: '#0F172A',
+  gray900Alpha58: '#0f172a94',
 } as const;
 
 export const colorTokens = {
@@ -35,6 +36,7 @@ export const colorTokens = {
   actionPrimaryActive: palette.blue800,
   actionPrimarySurface: palette.blue50,
   actionPrimarySubtle: palette.blue100,
+  dialogBackdrop: palette.gray900Alpha58,
   actionDanger: palette.red600,
   actionDangerHover: palette.red700,
   actionDangerSurface: palette.red50,

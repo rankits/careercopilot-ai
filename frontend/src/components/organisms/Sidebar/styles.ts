@@ -1,3 +1,5 @@
+import { Link as RouterLink } from 'react-router-dom';
+
 import { Box, IconButton, MuiButton, styled } from '@/lib/material';
 import {
   borderRadius,
@@ -91,6 +93,15 @@ export const SidebarLogoImage = styled('img', {
   width: collapsed ? spacing[10] : '100%',
 }));
 
+export const SidebarLogoLink = styled(RouterLink)({
+  alignItems: 'center',
+  display: 'inline-flex',
+  justifyContent: 'center',
+  lineHeight: 0,
+  maxWidth: '100%',
+  textDecoration: 'none',
+});
+
 export const SidebarNav = styled('nav')({
   '&::-webkit-scrollbar': {
     width: '0.25rem',
@@ -167,12 +178,163 @@ export const BottomNav = styled('nav')({
   gap: spacing[2],
   gridTemplateColumns: 'repeat(5, 1fr)',
   padding: spacing[3],
+  paddingBottom: `calc(${spacing[3]} + env(safe-area-inset-bottom, 0px))`,
   position: 'fixed',
   right: spacing[4],
   bottom: spacing[4],
   left: spacing[4],
   zIndex: 10,
 });
+
+export const MoreNavButton = styled(MuiButton, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})<{ active?: boolean }>(({ active }) => ({
+  '&:hover': {
+    background: colorTokens.actionPrimarySubtle,
+    color: colorTokens.actionPrimary,
+  },
+  background: active ? colorTokens.actionPrimarySubtle : 'transparent',
+  borderRadius: borderRadius.lg,
+  color: active ? colorTokens.actionPrimary : colorTokens.textSecondary,
+  display: 'grid',
+  fontSize: '0.625rem',
+  fontWeight: active ? fontWeight.bold : fontWeight.medium,
+  gap: spacing[1],
+  gridTemplateColumns: '1fr',
+  justifyItems: 'center',
+  lineHeight: 1.15,
+  minHeight: spacing[10],
+  minWidth: 0,
+  paddingInline: spacing[1],
+  textTransform: 'none',
+  width: '100%',
+
+  '& > span': {
+    display: 'block',
+    maxWidth: '100%',
+    overflow: 'hidden',
+    textAlign: 'center',
+    textOverflow: 'ellipsis',
+    whiteSpace: 'nowrap',
+  },
+}));
+
+export const mobileDrawerPaperSx = {
+  borderTopLeftRadius: borderRadius['2xl'],
+  borderTopRightRadius: borderRadius['2xl'],
+  boxSizing: 'border-box',
+  display: 'flex',
+  flexDirection: 'column',
+  gap: spacing[4],
+  maxHeight: 'min(85dvh, 40rem)',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  padding: `${spacing[3]} ${spacing[4]} calc(${spacing[5]} + env(safe-area-inset-bottom, 0px))`,
+  width: '100%',
+} as const;
+
+export const MobileDrawerHandle = styled('div')({
+  alignSelf: 'center',
+  background: colorTokens.borderDefault,
+  borderRadius: borderRadius.full,
+  flexShrink: 0,
+  height: '0.25rem',
+  marginBottom: spacing[1],
+  width: '2.5rem',
+});
+
+export const MobileDrawerHeader = styled(Box)({
+  alignItems: 'center',
+  borderBottom: `0.0625rem solid ${colorTokens.borderSubtle}`,
+  display: 'flex',
+  gap: spacing[3],
+  justifyContent: 'space-between',
+  minWidth: 0,
+  paddingBottom: spacing[3],
+});
+
+export const MobileDrawerIdentity = styled(Box)({
+  alignItems: 'center',
+  display: 'flex',
+  gap: spacing[3],
+  minWidth: 0,
+});
+
+export const MobileDrawerAvatar = styled('span')({
+  alignItems: 'center',
+  background: colorTokens.actionPrimaryGradient,
+  borderRadius: borderRadius.full,
+  color: colorTokens.textInverse,
+  display: 'inline-flex',
+  flexShrink: 0,
+  fontSize: fontSize.sm,
+  fontWeight: fontWeight.extraBold,
+  height: spacing[10],
+  justifyContent: 'center',
+  letterSpacing: '0.02em',
+  width: spacing[10],
+});
+
+export const MobileDrawerTitleGroup = styled(Box)({
+  display: 'grid',
+  gap: '0.125rem',
+  minWidth: 0,
+});
+
+export const MobileDrawerTitle = styled('p')({
+  color: colorTokens.textPrimary,
+  fontSize: fontSize.base,
+  fontWeight: fontWeight.extraBold,
+  lineHeight: 1.25,
+  margin: 0,
+  overflow: 'hidden',
+  textOverflow: 'ellipsis',
+  whiteSpace: 'nowrap',
+});
+
+export const MobileDrawerSection = styled(Box)({
+  display: 'grid',
+  gap: spacing[2],
+});
+
+export const MobileDrawerSectionLabel = styled('p')({
+  color: colorTokens.textTertiary,
+  fontSize: fontSize.xs,
+  fontWeight: fontWeight.extraBold,
+  letterSpacing: '0.08em',
+  margin: 0,
+  textTransform: 'uppercase',
+});
+
+export const MobileDrawerList = styled('div')({
+  display: 'grid',
+  gap: spacing[2],
+});
+
+export const MobileDrawerItem = styled(MuiButton, {
+  shouldForwardProp: (prop) => prop !== 'active',
+})<{ active?: boolean }>(({ active }) => ({
+  '&:hover': {
+    background: colorTokens.actionPrimarySubtle,
+    color: colorTokens.actionPrimary,
+  },
+  background: active ? colorTokens.actionPrimarySubtle : palette.gray50,
+  border: 0,
+  borderRadius: borderRadius.lg,
+  boxShadow: active ? `inset 0.1875rem 0 0 ${colorTokens.actionPrimary}` : 'none',
+  color: active ? colorTokens.actionPrimary : colorTokens.textPrimary,
+  display: 'grid',
+  fontSize: fontSize.sm,
+  fontWeight: active ? fontWeight.bold : fontWeight.medium,
+  gap: spacing[3],
+  gridTemplateColumns: '1.25rem 1fr',
+  justifyContent: 'start',
+  justifyItems: 'start',
+  minHeight: spacing[10],
+  paddingInline: spacing[3],
+  textTransform: 'none',
+  width: '100%',
+}));
 
 export const sidebarTextSx = {
   muted: {

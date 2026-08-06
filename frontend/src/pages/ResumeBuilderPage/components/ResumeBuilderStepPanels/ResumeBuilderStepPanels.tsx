@@ -612,6 +612,8 @@ interface ResumeBuilderStepPanelsProps {
   editedContent: string;
   saving: boolean;
   recheckResult: RecheckResult | null;
+  /** Live Optimize ATS — Export New ATS must match. */
+  optimizedAtsScore?: number | null;
   rechecking: boolean;
   exportingFormat: 'pdf' | 'docx' | null;
   versions: ResumeVersion[];
@@ -669,6 +671,7 @@ export function ResumeBuilderStepPanels({
   editedContent,
   saving,
   recheckResult,
+  optimizedAtsScore = null,
   rechecking,
   exportingFormat,
   versions,
@@ -779,6 +782,7 @@ export function ResumeBuilderStepPanels({
           editedContent={editedContent}
           jobDescription={jobDescription}
           preferredSkills={skills}
+          recheckResult={recheckResult}
           saving={saving}
           suggestions={suggestions.length > 0 ? suggestions : (analysis?.suggestions ?? [])}
           targetRole={targetRole}
@@ -811,12 +815,12 @@ export function ResumeBuilderStepPanels({
           exportingFormat={exportingFormat}
           jobDescription={jobDescription}
           preferredSkills={skills}
+          optimizedAtsScore={optimizedAtsScore}
           recheckResult={recheckResult}
           rechecking={rechecking}
           savingVersion={savingVersion}
           targetRole={targetRole}
           template={selectedTemplate}
-          onBack={() => onGoTo(5)}
           onDone={onDone}
           onExport={onExport}
           onTemplateChange={onTemplateChange}

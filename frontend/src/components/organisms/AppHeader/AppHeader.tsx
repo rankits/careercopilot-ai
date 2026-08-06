@@ -1,9 +1,10 @@
 import { HeaderNotification, HeaderSearch, HeaderUserMenu } from '@/components/molecules';
 
 import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.png';
+import { ROUTES } from '@/constants/routes';
 import { APP_HEADER_DEFAULTS, BRAND_NAME } from '@/constants/ui';
 
-import { HeaderActions, HeaderRoot, MobileLogo, SearchWrap } from './styles';
+import { HeaderActions, HeaderRoot, MobileLogoLink, SearchWrap } from './styles';
 
 export interface AppHeaderProps {
   notificationCount?: number;
@@ -30,7 +31,9 @@ export function AppHeader({
 }: AppHeaderProps) {
   return (
     <HeaderRoot>
-      <MobileLogo alt={BRAND_NAME} src={penguinLogoUrl} />
+      <MobileLogoLink aria-label={BRAND_NAME} to={ROUTES.DASHBOARD}>
+        <img alt="" src={penguinLogoUrl} />
+      </MobileLogoLink>
 
       <SearchWrap>
         <HeaderSearch placeholder={searchPlaceholder} />
