@@ -41,7 +41,7 @@ export const toJobListDto = (job: JobWithCompanyAndSources): JobListDto => ({
     currency: job.currency,
   },
   skills: (job.skills as string[]) || [],
-  publishedAt: job.postedAt ? job.postedAt.toISOString() : null,
+  publishedAt: (job.effectivePostedAt ?? job.postedAt)?.toISOString() ?? null,
   applyUrl: pickPrimaryApplyUrl(job.sources),
 });
 
@@ -52,16 +52,36 @@ export class PrismaJobSearchRepository implements IJobSearchRepository {
     const limit = Math.max(1, Math.min(100, pagination.limit));
     const skip = (page - 1) * limit;
 
-    const where = buildJobSearchWhere(filters);
+    const isSalarySort = sortBy === 'salaryHighToLow' || sortBy === 'salaryLowToHigh';
+    // Salary sorts must exclude undisclosed jobs; Postgres DESC puts NULLs first otherwise.
+    const where: Prisma.JobWhereInput = isSalarySort
+      ? {
+          AND: [
+            buildJobSearchWhere(filters),
+            {
+              OR: [{ salaryMin: { not: null } }, { salaryMax: { not: null } }],
+            },
+          ],
+        }
+      : buildJobSearchWhere(filters);
 
-    let orderBy: Prisma.JobOrderByWithRelationInput = { createdAt: 'desc' };
+    let orderBy: Prisma.JobOrderByWithRelationInput | Prisma.JobOrderByWithRelationInput[] = {
+      createdAt: 'desc',
+    };
     if (sortBy === 'salaryHighToLow') {
-      orderBy = { salaryMax: 'desc' };
+      // Highest top-of-range first; use min as tiebreaker when max ties.
+      orderBy = [
+        { salaryMax: { sort: 'desc', nulls: 'last' } },
+        { salaryMin: { sort: 'desc', nulls: 'last' } },
+      ];
     } else if (sortBy === 'salaryLowToHigh') {
-      orderBy = { salaryMin: 'asc' };
+      orderBy = [
+        { salaryMin: { sort: 'asc', nulls: 'last' } },
+        { salaryMax: { sort: 'asc', nulls: 'last' } },
+      ];
     } else {
-      // newest (default) — relevance removed in JOB-API-002
-      orderBy = { createdAt: 'desc' };
+      // newest — match the posted date shown on cards (not DB ingest time).
+      orderBy = [{ effectivePostedAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }];
     }
 
     const [totalItems, jobs] = await Promise.all([

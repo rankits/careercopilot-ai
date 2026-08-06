@@ -14,6 +14,9 @@ import {
   mapApplicationDtoToRecord,
 } from './applicationMappers';
 
+export const APPLICATIONS_EXPORT_EMPTY_MESSAGE =
+  'Nothing to export. Adjust your filters or add an application first.';
+
 const CSV_HEADERS = [
   'Job Title',
   'Company',

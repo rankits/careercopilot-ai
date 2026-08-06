@@ -7,7 +7,7 @@ import {
   TaskType,
   TaskStatus,
 } from '@prisma/client';
-import { getTodayDateInputValue } from '@/modules/application-management/utils/applied-at.util.js';
+import { getMaxAllowedAppliedAtDate } from '@/modules/application-management/utils/applied-at.util.js';
 
 export const SafeExternalUrlSchema = z
   .string()
@@ -30,7 +30,7 @@ const appliedAtSchema = z.preprocess(
   z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, 'Applied date must be in YYYY-MM-DD format')
-    .refine((date) => date <= getTodayDateInputValue(), {
+    .refine((date) => date <= getMaxAllowedAppliedAtDate(), {
       message: 'Applied date cannot be in the future',
     }),
 );
@@ -139,7 +139,11 @@ export const ApplicationSortBySchema = z.enum([
   'updatedAt:asc',
   'createdAt:desc',
   'createdAt:asc',
+  'appliedAt:desc',
+  'appliedAt:asc',
   'companyName:asc',
+  'priority:asc',
+  'priority:desc',
 ]);
 
 export const ListApplicationsQuerySchema = z.object({
@@ -148,6 +152,7 @@ export const ListApplicationsQuerySchema = z.object({
   search: z.string().trim().max(200).optional(),
   archived: z.enum(['true', 'false', 'all']).optional(),
   status: z.union([z.string(), z.array(z.string())]).optional(),
+  sourceType: z.union([z.string(), z.array(z.string())]).optional(),
   sortBy: ApplicationSortBySchema.default('updatedAt:desc'),
 });
 
