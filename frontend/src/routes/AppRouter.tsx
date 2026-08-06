@@ -19,14 +19,14 @@ import { SavedJobsPage } from '@/pages/SavedJobsPage';
 import { SavedResumesPage } from '@/pages/SavedResumesPage';
 import {
   GuestRoute,
+  LandingRoute,
   OnboardingRoute,
   ProtectedRoute,
-  RootRedirect,
 } from '@/routes/guards/AuthGuards';
 
 /** Shared route tree for the data router and for MemoryRouter-based tests. */
 export const appRouteObjects: RouteObject[] = [
-  { path: ROUTES.HOME, element: <RootRedirect /> },
+  { path: ROUTES.HOME, element: <LandingRoute /> },
   {
     element: <GuestRoute />,
     children: [
