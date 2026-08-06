@@ -5,19 +5,34 @@ import { formatDateRange } from './utils';
 
 /** Shared bullet cleanup with ResumeTemplatePreview. */
 function toBullets(text: string): string[] {
-  return text
-    .split(/\n/)
-    .map((line) =>
-      line
-        .replace(/^[\s|]*[-*•●·▪▸►]+[\s·.•]*/g, '')
-        .replace(/^[\s·.•]+/g, '')
-        .replace(/\s+/g, ' ')
-        .trim(),
-    )
-    .filter(Boolean)
-    .filter(
-      (line) => !/^responsibilities:?$/i.test(line) && !/^tech\s*(used|stack):?$/i.test(line),
-    );
+  const normalized = text
+    .replace(/\r\n/g, '\n')
+    .replace(/(?:^|\s)[•●▪▸►]\s+/g, '\n')
+    .replace(/(?:^|\s)[-*]\s+(?=[A-Z0-9])/g, '\n');
+
+  const out: string[] = [];
+  for (const raw of normalized.split(/\n/)) {
+    const line = raw
+      .replace(/^[\s|]*[-*•●·▪▸►]+[\s·.•]*/g, '')
+      .replace(/^[\s·.•]+/g, '')
+      .replace(/\s+/g, ' ')
+      .trim();
+    if (!line) continue;
+    if (/^responsibilities:?$/i.test(line) || /^tech\s*(used|stack):?$/i.test(line)) continue;
+
+    const prev = out[out.length - 1];
+    const hadBullet = /^[\s|]*[-*•●·▪▸►]/.test(raw);
+    if (
+      prev &&
+      !hadBullet &&
+      (/^[a-z]/.test(line) || /[,;:/-]$/.test(prev) || (!/[.!?]$/.test(prev) && prev.length > 30))
+    ) {
+      out[out.length - 1] = `${prev} ${line}`.replace(/\s+/g, ' ').trim();
+      continue;
+    }
+    out.push(line);
+  }
+  return out;
 }
 
 const THEME: Record<
@@ -36,11 +51,11 @@ const THEME: Record<
   }
 > = {
   original: {
-    accent: '#2563eb',
-    accentSoft: '#bfdbfe',
-    skillBg: '#eff6ff',
-    skillText: '#1d4ed8',
-    skillBorder: '#93c5fd',
+    accent: '#0f172a',
+    accentSoft: '#0f172a',
+    skillBg: 'transparent',
+    skillText: '#334155',
+    skillBorder: 'transparent',
     nameSize: 18,
   },
   classic: {
@@ -131,6 +146,20 @@ function buildStyles(template: ResumeTemplateId) {
       marginBottom: 6,
     },
     body: { fontSize: 10, lineHeight: 1.45, marginBottom: 4, fontFamily: 'Helvetica' },
+    skillsGrid: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      gap: 2,
+      marginBottom: 4,
+    },
+    skillItem: {
+      width: '48%',
+      fontSize: 10,
+      lineHeight: 1.45,
+      color: theme.skillText,
+      fontFamily: 'Helvetica',
+      marginBottom: 2,
+    },
     entry: { marginBottom: 8 },
     entryTitle: { fontSize: 10, fontFamily: 'Helvetica-Bold' },
     entryCompany: { fontSize: 9, color: '#475569', marginTop: 1 },
@@ -143,23 +172,15 @@ function buildStyles(template: ResumeTemplateId) {
     },
     bullet: {
       fontSize: 10,
-      marginLeft: 8,
+      marginLeft: 0,
       marginBottom: 2,
       lineHeight: 1.4,
       fontFamily: 'Helvetica',
     },
     skills: { flexDirection: 'row', flexWrap: 'wrap', gap: 4 },
     skill: {
-      fontSize: 8,
-      backgroundColor: theme.skillBg,
+      fontSize: 10,
       color: theme.skillText,
-      paddingHorizontal: 6,
-      paddingVertical: 3,
-      borderRadius: 4,
-      marginRight: 4,
-      marginBottom: 4,
-      borderWidth: 1,
-      borderColor: theme.skillBorder,
       fontFamily: 'Helvetica',
     },
     modernHeader: {
@@ -208,15 +229,21 @@ function buildStyles(template: ResumeTemplateId) {
       marginBottom: 6,
     },
     sidebarBody: { fontSize: 8, color: '#e2e8f0', lineHeight: 1.4 },
-    sidebarSkill: {
-      fontSize: 7,
+    sidebarSkillsLine: {
+      fontSize: 8,
       color: '#e2e8f0',
-      backgroundColor: '#1e293b',
-      paddingHorizontal: 5,
-      paddingVertical: 2,
-      borderRadius: 3,
-      marginRight: 3,
-      marginBottom: 3,
+      lineHeight: 1.5,
+      marginBottom: 4,
+    },
+    sidebarSkillItem: {
+      fontSize: 8,
+      color: '#e2e8f0',
+      lineHeight: 1.45,
+      marginBottom: 2,
+    },
+    sidebarSkill: {
+      fontSize: 8,
+      color: '#e2e8f0',
     },
     main: {
       width: '72%',
@@ -283,10 +310,10 @@ function MainBody({
       {!omitSkills && draft.skillsList.length > 0 ? (
         <View style={styles.section} wrap={false}>
           <Text style={styles.heading}>Skills</Text>
-          <View style={styles.skills}>
+          <View style={styles.skillsGrid}>
             {draft.skillsList.map((skill) => (
-              <Text key={skill} style={styles.skill}>
-                {skill}
+              <Text key={skill} style={styles.skillItem}>
+                • {skill}
               </Text>
             ))}
           </View>
@@ -393,13 +420,11 @@ export function ResumePdfDocument({
               {draft.skillsList.length > 0 ? (
                 <View>
                   <Text style={styles.sidebarHeading}>Skills</Text>
-                  <View style={styles.skills}>
-                    {draft.skillsList.map((skill) => (
-                      <Text key={skill} style={styles.sidebarSkill}>
-                        {skill}
-                      </Text>
-                    ))}
-                  </View>
+                  {draft.skillsList.map((skill) => (
+                    <Text key={skill} style={styles.sidebarSkillItem}>
+                      • {skill}
+                    </Text>
+                  ))}
                 </View>
               ) : null}
               {draft.education ? (

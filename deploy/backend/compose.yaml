@@ -1,6 +1,11 @@
 # Production Docker Compose for Career Copilot Backend
-# Only includes API container and required Outbox Relay worker.
+# API + outbox-relay + job-embedding-worker on one EC2 host.
 # Redis, RabbitMQ, and PostgreSQL run externally via private networking.
+# Embeddings use third-party providers from shared .env (e.g. OpenRouter).
+#
+# Fixed project name so release-directory deploys replace the same stack
+# instead of competing for 127.0.0.1:5001.
+name: career-copilot-backend
 
 services:
   api:
@@ -13,7 +18,6 @@ services:
       PORT: 5001
       RUN_MIGRATIONS: 'true'
       RUN_SEEDS_ON_STARTUP: 'false'
-      JOB_INGESTION_ON_STARTUP_ENABLED: 'false'
     ports:
       - '127.0.0.1:5001:5001'
     restart: unless-stopped
@@ -41,6 +45,28 @@ services:
       RUN_SEEDS_ON_STARTUP: 'false'
     restart: unless-stopped
     mem_limit: 160m
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Consumes RabbitMQ job-embedding requests (from outbox) and writes pgvector rows.
+  # Uses AI_EMBEDDING_* from shared .env (OpenRouter/Google/Groq) — no local model.
+  job-embedding-worker:
+    image: ${BACKEND_IMAGE}
+    command: ['node', 'dist/workers/run-job-embedding-worker.js']
+    env_file:
+      - ${SHARED_ENV_FILE:-/opt/career-copilot/backend/shared/.env}
+    environment:
+      NODE_ENV: production
+      RUN_MIGRATIONS: 'false'
+      RUN_SEEDS_ON_STARTUP: 'false'
+    restart: unless-stopped
+    mem_limit: 256m
     depends_on:
       api:
         condition: service_healthy

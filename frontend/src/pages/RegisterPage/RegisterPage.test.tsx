@@ -47,7 +47,7 @@ async function completeValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByRole('textbox', { name: /first name/i }), '  Ada  ');
   await user.type(screen.getByRole('textbox', { name: /last name/i }), '  Lovelace  ');
   await user.type(screen.getByRole('textbox', { name: /email address/i }), '  ADA@EXAMPLE.COM  ');
-  await user.type(screen.getByRole('textbox', { name: /phone number/i }), '+91 98765-43210');
+  await user.type(screen.getByRole('textbox', { name: /phone number/i }), '98765-43210');
   await user.type(screen.getByLabelText(/^password$/i, { selector: 'input' }), 'Str0ng!Passw0rd');
   await user.type(
     screen.getByLabelText(/confirm password/i, { selector: 'input' }),
@@ -64,7 +64,7 @@ describe('RegisterPage', () => {
     const user = setupUser();
     renderPage();
 
-    expect(screen.getByRole('main')).toHaveStyle({ height: '100dvh' });
+    expect(screen.getByRole('main')).toHaveStyle({ height: '100dvh', overflow: 'hidden' });
     expect(screen.getByRole('heading', { name: /create account/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /careercopilot/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /career journey illustration/i })).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(await screen.findByText(/enter a valid email address/i)).toBeInTheDocument();
-    // expect(screen.getByText(/enter a valid phone number/i)).toBeInTheDocument();
+    expect(screen.getByText(/phone number must be 10 digits/i)).toBeInTheDocument();
     expect(screen.getByText(/password must be at least 8 characters/i)).toBeInTheDocument();
     expect(screen.getByText(/passwords must match/i)).toBeInTheDocument();
     expect(registerMock).not.toHaveBeenCalled();
@@ -159,7 +159,7 @@ describe('RegisterPage', () => {
         firstName: 'Ada',
         lastName: 'Lovelace',
         password: 'Str0ng!Passw0rd',
-        phone: '9198765432',
+        phone: '9876543210',
       }),
     );
     expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
@@ -216,5 +216,28 @@ describe('RegisterPage', () => {
 
     expect(registerMock).toHaveBeenCalledTimes(2);
     expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
+  }, 15_000);
+
+  it('shows the backend registration error message when the API provides one', async () => {
+    const user = setupUser();
+    registerMock.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        data: {
+          code: 'CONFLICT',
+          message: 'An account with this email already exists',
+          requestId: '7b5b53e2-fcb4-43c8-b081-7dc26240182b',
+          status: 'error',
+        },
+      },
+    });
+    renderPage();
+
+    await completeValidForm(user);
+    await user.click(screen.getByRole('button', { name: /create account/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /an account with this email already exists/i,
+    );
   }, 15_000);
 });

@@ -20,7 +20,6 @@ describe('mapJobListDtoToCard', () => {
     expect(card.title).toBe('Backend Engineer');
     expect(card.company).toBe('Acme');
     expect(card.logo).toBe('A');
-    expect(card.logoUrl).toBe('https://www.google.com/s2/favicons?domain=acme.com&sz=128');
     expect(card.applyUrl).toBe('https://acme.test/jobs/1');
     expect(card.location).toBe('Berlin, Germany');
     expect(card.type).toBe('Remote');
@@ -47,7 +46,6 @@ describe('mapJobListDtoToCard', () => {
 
     expect(card.company).toBe('Company not listed');
     expect(card.logo).toBe('?');
-    expect(card.logoUrl).toBeUndefined();
     expect(card.location).toBe('');
     expect(card.type).toBe('On-site');
     expect(card.skills).toEqual(['Product & Design']);

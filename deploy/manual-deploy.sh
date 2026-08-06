@@ -3,6 +3,7 @@
 # Usage:
 #   ./deploy/manual-deploy.sh production
 #   ./deploy/manual-deploy.sh production <version>
+#   ./deploy/manual-deploy.sh production <version> --deploy-only
 #   ./deploy/manual-deploy.sh production --dry-run
 #   ./deploy/manual-deploy.sh production --allow-dirty
 #   ./deploy/manual-deploy.sh production --skip-tests
@@ -18,6 +19,7 @@ VERSION_OVERRIDE=""
 DRY_RUN="false"
 ALLOW_DIRTY="false"
 SKIP_TESTS="false"
+DEPLOY_ONLY="false"
 
 TMP_BUNDLE=""
 TMP_REMOTE_SCRIPT=""
@@ -69,10 +71,16 @@ Arguments:
   version             Optional immutable image/release tag (default: 12-char git SHA)
 
 Options:
+  --deploy-only       Skip npm validate + docker build/push; SSM-deploy existing images.
+                      Requires an explicit <version> tag already pushed to Docker Hub.
   --dry-run           Validate and print the plan; do not push, upload, or deploy
   --allow-dirty       Allow a dirty git working tree
   --skip-tests        EMERGENCY: skip npm test only (lint/typecheck/build/prisma still run)
   -h, --help          Show this help
+
+Examples:
+  ./deploy/manual-deploy.sh production
+  ./deploy/manual-deploy.sh production 26e7f24 --deploy-only --allow-dirty
 
 Local setup:
   1. cp deploy/manual-deploy.env.example deploy/manual-deploy.env
@@ -129,6 +137,10 @@ parse_args() {
         SKIP_TESTS="true"
         shift
         ;;
+      --deploy-only)
+        DEPLOY_ONLY="true"
+        shift
+        ;;
       production)
         if [[ -n "${ENVIRONMENT}" ]]; then
           die "Environment already set to '${ENVIRONMENT}'."
@@ -153,6 +165,9 @@ parse_args() {
   done
 
   [[ "${ENVIRONMENT}" == "production" ]] || die "Only the 'production' environment is supported."
+  if [[ "${DEPLOY_ONLY}" == "true" && -z "${VERSION_OVERRIDE}" ]]; then
+    die "--deploy-only requires an explicit version/image tag (e.g. production 26e7f24 --deploy-only)."
+  fi
 }
 
 require_cmd() {
@@ -447,14 +462,13 @@ export SHARED_ENV_FILE="\${ENV_FILE}"
 docker compose -f compose.yaml config >/dev/null
 
 # install-release.sh -> deploy.sh:
-# lock, pull exact image, prisma migrate deploy once, compose up,
-# local /health, nginx test+reload, state update, auto-rollback on failure,
-# retain 3 newest releases.
+# lock, pull exact image, prisma migrate deploy once, compose up
+# (api + outbox-relay + job-embedding-worker), local /health, nginx,
+# state update, auto-rollback on failure, retain 3 newest releases.
 echo ">>> [remote] Invoking install-release.sh..."
 exec ./install-release.sh "\${IMAGE}" "\${VERSION}"
 EOF
 }
-
 deploy_via_ssm() {
   stage "Deploy on EC2 via AWS SSM Run Command"
   write_remote_script
@@ -545,28 +559,47 @@ poll_ssm() {
     sleep 5
   done
 
+  local stdout_content="" stderr_content=""
+  stdout_content="$(
+    aws_cli ssm get-command-invocation \
+      --command-id "${command_id}" \
+      --instance-id "${EC2_INSTANCE_ID}" \
+      --region "${AWS_REGION}" \
+      --profile "${AWS_PROFILE}" \
+      --query "StandardOutputContent" \
+      --output text 2>/dev/null || true
+  )"
+  stderr_content="$(
+    aws_cli ssm get-command-invocation \
+      --command-id "${command_id}" \
+      --instance-id "${EC2_INSTANCE_ID}" \
+      --region "${AWS_REGION}" \
+      --profile "${AWS_PROFILE}" \
+      --query "StandardErrorContent" \
+      --output text 2>/dev/null || true
+  )"
+
   echo
   info "--- SSM StandardOutputContent ---"
-  aws_cli ssm get-command-invocation \
-    --command-id "${command_id}" \
-    --instance-id "${EC2_INSTANCE_ID}" \
-    --region "${AWS_REGION}" \
-    --profile "${AWS_PROFILE}" \
-    --query "StandardOutputContent" \
-    --output text || true
-
+  printf '%s\n' "${stdout_content}"
   echo
   info "--- SSM StandardErrorContent ---"
-  aws_cli ssm get-command-invocation \
-    --command-id "${command_id}" \
-    --instance-id "${EC2_INSTANCE_ID}" \
-    --region "${AWS_REGION}" \
-    --profile "${AWS_PROFILE}" \
-    --query "StandardErrorContent" \
-    --output text || true
+  printf '%s\n' "${stderr_content}"
   echo
 
-  [[ "${status}" == "Success" ]] || die "SSM deployment failed with status: ${status}"
+  if [[ "${status}" != "Success" ]]; then
+    echo
+    err "SSM deployment failed with status: ${status}"
+    echo
+    info "--- Extracted failure reason (from EC2 deploy.sh) ---"
+    # Prefer explicit failure markers written by deploy/backend/deploy.sh
+    {
+      printf '%s\n%s\n' "${stderr_content}" "${stdout_content}"
+    } | grep -E 'FAILURE DETECTED|DEPLOYMENT FAILURE DETAILS|Reason:|Failed step:|Health check failed|Error:|Prisma|Nginx validation' \
+      || true
+    echo
+    die "Remote deploy failed (SSM ${status}). See failure reason / logs above. CommandId=${command_id}"
+  fi
   ok "SSM deployment succeeded"
 }
 
@@ -609,6 +642,23 @@ EOF
 
 print_plan() {
   stage "Planned operations"
+  if [[ "${DEPLOY_ONLY}" == "true" ]]; then
+    cat <<EOF
+  [deploy-only] Skipping npm validate and docker build/push
+  1. Validate tooling + AWS/Docker auth
+  2. Use provided version → ${VERSION}
+     Image: ${IMAGE}
+  3. Package deploy/backend → ${BUNDLE}
+  4. Upload ${S3_URI}
+  5. SSM Run Command on ${EC2_INSTANCE_ID}:
+       download bundle → pull image → migrate → compose up
+       (api + outbox-relay + job-embedding-worker)
+       → /health → nginx → state
+  6. Poll SSM result
+  7. curl --fail ${PUBLIC_HEALTH_URL}
+EOF
+    return 0
+  fi
   cat <<EOF
   1. Validate tooling + AWS/Docker auth
   2. Resolve version → ${VERSION}
@@ -618,7 +668,8 @@ print_plan() {
   6. Upload ${S3_URI}
   7. SSM Run Command on ${EC2_INSTANCE_ID}:
        download bundle → extract release → validate scripts/compose
-       → pull image → prisma migrate deploy → compose up
+       → pull image → prisma migrate deploy
+       → compose up (api, outbox-relay, job-embedding-worker)
        → local /health → nginx -t/reload → update state
        → auto-rollback on failure → retain 3 releases
   8. Poll SSM result
@@ -639,8 +690,14 @@ main() {
   determine_version
   print_plan
 
-  run_backend_validation
-  build_and_push_image
+  if [[ "${DEPLOY_ONLY}" != "true" ]]; then
+    run_backend_validation
+    build_and_push_image
+  else
+    warn "DEPLOY-ONLY: using existing image ${IMAGE}"
+    warn "DEPLOY-ONLY: skipped npm validation and docker build/push"
+  fi
+
   package_bundle
   upload_bundle
   deploy_via_ssm

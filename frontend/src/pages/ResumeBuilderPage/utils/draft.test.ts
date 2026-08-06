@@ -23,6 +23,7 @@ describe('draft utils', () => {
   it('detects preview content and serializes draft', () => {
     const empty = createEmptyDraft();
     expect(hasPreviewContent(empty)).toBe(false);
+    expect(hasPreviewContent({ ...empty, originalText: 'raw only' })).toBe(false);
 
     const draft = {
       ...createEmptyDraft('Engineer'),
@@ -96,11 +97,11 @@ describe('draft utils', () => {
     );
     expect(
       applyTextReplaceToDraft(draft, 'experience', 'Built UI components', 'Built REST APIs')
-        .experiences[0].details,
+        .experiences[0]?.details,
     ).toBe('Built REST APIs');
     expect(
       applyTextReplaceToDraft(draft, 'projects', 'Used React', 'Used React and TypeScript')
-        .projectsList[0].details,
+        .projectsList[0]?.details,
     ).toBe('Used React and TypeScript');
   });
 

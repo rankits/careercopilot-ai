@@ -24,7 +24,7 @@ export class OutboxRelayWorker {
       try {
         await this.relay.runOnce();
       } catch (error) {
-        this.workerLogger.error({ error }, 'Outbox relay batch failed');
+        this.workerLogger.error({ err: error }, 'Outbox relay batch failed');
       }
       if (!this.stopping) await wait(this.pollIntervalMs);
     }

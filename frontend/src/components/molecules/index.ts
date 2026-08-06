@@ -11,4 +11,5 @@ export * from './JobFilterBar';
 export * from './MessageBubble';
 export * from './PromptChip';
 export * from './ResumeScoreCard';
+export * from './SavedJobCard';
 export * from './VirtualizedJobList';

@@ -108,6 +108,91 @@ export function replaceSummarySection(resumeText: string, summary: string): stri
   return next.join('\n').replace(/\n{3,}/g, '\n\n');
 }
 
+/**
+ * Auto-merge JD / AI missing skills into the SKILLS section so users do not
+ * have to click Apply for every skill. Generic for any resume format.
+ */
+export function mergeJdSkillsIntoResume(resumeText: string, skillsToAdd: string[]): string {
+  const toAdd = Array.from(
+    new Set(
+      skillsToAdd
+        .map((skill) => skill.trim())
+        .filter((skill) => skill.length > 1 && skill.length < 48),
+    ),
+  );
+  if (!resumeText.trim() || toAdd.length === 0) return resumeText;
+
+  const lower = resumeText.toLowerCase();
+  const missing = toAdd.filter((skill) => {
+    const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    try {
+      return !new RegExp(`\\b${escaped}\\b`, 'i').test(resumeText);
+    } catch {
+      return !lower.includes(skill.toLowerCase());
+    }
+  });
+  if (missing.length === 0) return resumeText;
+
+  const lines = resumeText.split(/\r?\n/);
+  let headerIndex = -1;
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i]?.trim() ?? '';
+    if (
+      /^(skills|technical\s+skills|core\s+competencies|technologies|tech\s+stack)\s*:?\s*$/i.test(
+        line,
+      )
+    ) {
+      headerIndex = i;
+      break;
+    }
+  }
+
+  const skillsLine = missing.join(', ');
+
+  if (headerIndex < 0) {
+    // Insert before education/projects if present, else append.
+    let insertAt = lines.length;
+    for (let i = 0; i < lines.length; i += 1) {
+      const line = lines[i]?.trim() ?? '';
+      if (/^(education|projects|certifications|achievements)\b/i.test(line)) {
+        insertAt = i;
+        break;
+      }
+    }
+    lines.splice(insertAt, 0, '', 'SKILLS', skillsLine, '');
+    return lines
+      .join('\n')
+      .replace(/\n{3,}/g, '\n\n')
+      .trim();
+  }
+
+  let endIndex = lines.length;
+  for (let i = headerIndex + 1; i < lines.length; i += 1) {
+    const line = lines[i]?.trim() ?? '';
+    if (
+      /^(work\s+experience|experience|employment|education|projects|certifications|achievements|summary|professional\s+summary)\b/i.test(
+        line,
+      )
+    ) {
+      endIndex = i;
+      break;
+    }
+  }
+
+  const existingBody = lines
+    .slice(headerIndex + 1, endIndex)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .join(', ');
+  const mergedSkills = [existingBody, skillsLine].filter(Boolean).join(', ');
+
+  const next = [...lines.slice(0, headerIndex + 1), mergedSkills, '', ...lines.slice(endIndex)];
+  return next
+    .join('\n')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 export function isIncompleteOptimizedResume(resumeText: string, optimizedText: string): boolean {
   const original = resumeText.trim();
   const optimized = optimizedText.trim();

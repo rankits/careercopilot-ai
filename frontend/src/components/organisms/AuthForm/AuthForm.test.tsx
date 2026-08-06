@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -27,6 +27,63 @@ describe('AuthForm', () => {
     expect(screen.getByTestId('PhoneOutlinedIcon')).toBeInTheDocument();
     expect(screen.queryByText(/forgot password/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: /remember me/i })).not.toBeInTheDocument();
+  });
+
+  it('applies auth field length limits on login and register inputs', () => {
+    const { rerender } = render(<AuthForm />);
+
+    expect(screen.getByRole('textbox', { name: /email address/i })).toHaveAttribute(
+      'maxlength',
+      '300',
+    );
+    expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toHaveAttribute(
+      'maxlength',
+      '128',
+    );
+
+    rerender(<AuthForm mode="register" />);
+
+    expect(screen.getByRole('textbox', { name: /first name/i })).toHaveAttribute('maxlength', '80');
+    expect(screen.getByRole('textbox', { name: /last name/i })).toHaveAttribute('maxlength', '80');
+    expect(screen.getByRole('textbox', { name: /email address/i })).toHaveAttribute(
+      'maxlength',
+      '300',
+    );
+    expect(screen.getByRole('textbox', { name: /phone number/i })).toHaveAttribute(
+      'maxlength',
+      '10',
+    );
+    expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toHaveAttribute(
+      'maxlength',
+      '128',
+    );
+    expect(screen.getByLabelText(/confirm password/i, { selector: 'input' })).toHaveAttribute(
+      'maxlength',
+      '128',
+    );
+  });
+
+  it('prevents limited auth fields from keeping text beyond their max length', () => {
+    render(<AuthForm mode="register" />);
+    const longName = 'A'.repeat(81);
+    const longEmail = `${'a'.repeat(300)}@example.com`;
+    const longPhone = '1'.repeat(11);
+    const longPassword = 'P'.repeat(129);
+
+    const firstNameInput = screen.getByRole('textbox', { name: /first name/i });
+    const emailInput = screen.getByRole('textbox', { name: /email address/i });
+    const phoneInput = screen.getByRole('textbox', { name: /phone number/i });
+    const passwordInput = screen.getByLabelText(/^password$/i, { selector: 'input' });
+
+    fireEvent.input(firstNameInput, { target: { value: longName } });
+    fireEvent.input(emailInput, { target: { value: longEmail } });
+    fireEvent.input(phoneInput, { target: { value: longPhone } });
+    fireEvent.input(passwordInput, { target: { value: longPassword } });
+
+    expect(firstNameInput).toHaveValue('A'.repeat(80));
+    expect(emailInput).toHaveValue(longEmail.slice(0, 300));
+    expect(phoneInput).toHaveValue('1'.repeat(10));
+    expect(passwordInput).toHaveValue('P'.repeat(128));
   });
 
   it('submits the form and calls social handlers', async () => {
@@ -86,7 +143,7 @@ describe('AuthForm', () => {
     expect(screen.getByRole('textbox', { name: /current role/i })).toBeInTheDocument();
   });
 
-  it('removes alphabetic and unsupported characters from the phone number field', async () => {
+  it('keeps only ten digits in the phone number field', async () => {
     const user = userEvent.setup();
     render(<AuthForm mode="register" />);
     const phoneInput = screen.getByRole('textbox', { name: /phone number/i });

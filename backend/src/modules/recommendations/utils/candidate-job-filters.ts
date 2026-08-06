@@ -4,7 +4,8 @@ import type {
   RecommendationFilterMode,
 } from '@/modules/recommendations/types/recommendations.types.js';
 import { recordCertificationFilterExclusion } from '@/modules/recommendations/observability/recommendation.metrics.js';
-import { tokenize } from '@/modules/recommendations/utils/recommendation-matching.js';
+import { matchesGeographicLocationPreference } from '@/modules/recommendations/utils/geographic-location-matching.js';
+import { matchesWorkModePreference } from '@/modules/recommendations/utils/work-mode-matching.js';
 
 const normalizeToken = (value: string): string => value.trim().toLowerCase();
 const normalizePhrase = (value: string): string =>
@@ -54,22 +55,13 @@ export const matchesLocationPreference = (
   locations: readonly string[],
 ): boolean => {
   if (!locations.length) return true;
-  const haystack = `${job.location.formatted} ${job.location.remoteType ?? ''}`.toLowerCase();
-  return locations.some((location) => {
-    const tokens = tokenize(location);
-    if (tokens.length === 0) return false;
-    return tokens.every((token) => haystack.includes(token));
-  });
+  const formatted = job.location.formatted.trim();
+  if (!formatted) return false;
+  return locations.some((location) => matchesGeographicLocationPreference(formatted, location));
 };
 
-export const matchesRemotePreference = (job: JobListDto, remotePreference?: string): boolean => {
-  if (!remotePreference) return true;
-  const preference = normalizeToken(remotePreference);
-  if (!preference || preference === 'any') return true;
-  const remoteType = job.location.remoteType ? normalizeToken(job.location.remoteType) : '';
-  const formatted = normalizeToken(job.location.formatted);
-  return remoteType === preference || formatted.includes(preference);
-};
+export const matchesRemotePreference = (job: JobListDto, remotePreference?: string): boolean =>
+  matchesWorkModePreference(job, remotePreference);
 
 const matchesSalaryCurrency = (job: JobListDto, currency?: string): boolean => {
   if (!currency || !job.salary.currency) return true;
@@ -214,14 +206,26 @@ export const hasFlexibleFilterViolation = (
     (violation) => violation !== 'EXCLUDED_COMPANY',
   );
 
-/** Post-filters that JobListDto can evaluate after vector search hydration. */
+const FLEXIBLE_STRETCH_VIOLATIONS = new Set<CandidateJobFilterViolation>([
+  'EMPLOYMENT_TYPE',
+  'REQUIRED_CERTIFICATION',
+  'SALARY_CURRENCY',
+  'SALARY_MAXIMUM',
+  'SALARY_MINIMUM',
+  'VISA_SPONSORSHIP',
+  'WORK_AUTHORIZATION',
+]);
+
 export const passesCandidateJobFilters = (
   job: JobListDto,
   context: RecommendationContext,
 ): boolean => {
   const violations = getCandidateJobFilterViolations(job, context);
+  if (violations.includes('EXCLUDED_COMPANY')) {
+    return false;
+  }
   if (resolveRecommendationFilterMode(context) === 'FLEXIBLE') {
-    return !violations.includes('EXCLUDED_COMPANY');
+    return violations.every((violation) => FLEXIBLE_STRETCH_VIOLATIONS.has(violation));
   }
   if (violations.includes('REQUIRED_CERTIFICATION')) {
     recordCertificationFilterExclusion();

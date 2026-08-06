@@ -475,4 +475,28 @@ describe('RecommendationRetrievalService with PGVECTOR registry', () => {
       },
     ]);
   });
+
+  it('returns an empty candidate list when retrieval finds no jobs', async () => {
+    const pgProvider: PgVectorCandidateRetrievalProvider = {
+      supportedBackends: ['PGVECTOR'],
+      retrieve: vi.fn().mockResolvedValue({
+        jobs: [],
+        backend: 'PGVECTOR',
+        totalCandidates: 0,
+        retrievalScores: {},
+      }),
+    } as unknown as PgVectorCandidateRetrievalProvider;
+
+    const service = new RecommendationRetrievalService(
+      new CandidateRetrievalRegistry([pgProvider]),
+    );
+
+    await expect(
+      service.retrieve({
+        context: baseContext(),
+        backend: 'PGVECTOR',
+        limit: 5,
+      }),
+    ).resolves.toEqual([]);
+  });
 });

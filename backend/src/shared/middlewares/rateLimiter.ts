@@ -2,6 +2,12 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { cacheService } from '@/infrastructure/cache/index.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import { securityConfig } from '@/shared/config/security.conf.js';
+import { APPLICATION_MANAGEMENT_RATE_LIMIT } from '@/modules/application-management/constants/application-management.rate-limit.constant.js';
+import { COPILOT_RATE_LIMIT } from '@/modules/copilot/constants/copilot.rate-limit.constant.js';
+import { JOBS_INGESTION_RATE_LIMIT } from '@/modules/jobs/constants/jobs.rate-limit.constant.js';
+import { RESUME_ANALYSIS_RATE_LIMIT } from '@/modules/resume-analysis/constants/resume-analysis.rate-limit.constant.js';
+import { RESUME_PROCESSING_RATE_LIMIT } from '@/modules/resumes/constants/resumes.rate-limit.constant.js';
+import { USER_RATE_LIMIT } from '@/modules/user/constants/user.rate-limit.constant.js';
 
 interface RateLimiterOptions {
   windowMinutes: number;
@@ -92,5 +98,52 @@ export const recommendationRateLimiter = buildLimiter({
   windowMinutes: securityConfig.rateLimit.recommendation.windowMinutes,
   max: securityConfig.rateLimit.recommendation.max,
   prefix: 'recommendation',
+  keyGenerator: authenticatedUserKeyGenerator,
+});
+
+/** Authenticated CRUD on applications, notes & tasks. */
+export const applicationManagementRateLimiter = buildLimiter({
+  windowMinutes: APPLICATION_MANAGEMENT_RATE_LIMIT.windowMinutes,
+  max: APPLICATION_MANAGEMENT_RATE_LIMIT.max,
+  prefix: 'application-management',
+  keyGenerator: authenticatedUserKeyGenerator,
+});
+
+/** Career Copilot chat - each call costs LLM tokens. */
+export const copilotRateLimiter = buildLimiter({
+  windowMinutes: COPILOT_RATE_LIMIT.windowMinutes,
+  max: COPILOT_RATE_LIMIT.max,
+  prefix: 'copilot',
+  keyGenerator: authenticatedUserKeyGenerator,
+});
+
+/** Admin-triggered job ingestion - fans out to every external provider. */
+export const jobsIngestionRateLimiter = buildLimiter({
+  windowMinutes: JOBS_INGESTION_RATE_LIMIT.windowMinutes,
+  max: JOBS_INGESTION_RATE_LIMIT.max,
+  prefix: 'jobs-ingestion',
+});
+
+/** Guards the AI-cost resume-analysis endpoints (/analyze, /recheck). */
+export const resumeAnalysisRateLimiter = buildLimiter({
+  windowMinutes: RESUME_ANALYSIS_RATE_LIMIT.windowMinutes,
+  max: RESUME_ANALYSIS_RATE_LIMIT.max,
+  prefix: 'resume-analysis',
+  keyGenerator: authenticatedUserKeyGenerator,
+});
+
+/** Resume upload/parse/reparse - file storage + AI extraction. */
+export const resumeProcessingRateLimiter = buildLimiter({
+  windowMinutes: RESUME_PROCESSING_RATE_LIMIT.windowMinutes,
+  max: RESUME_PROCESSING_RATE_LIMIT.max,
+  prefix: 'resume-processing',
+  keyGenerator: authenticatedUserKeyGenerator,
+});
+
+/** Light safety net for user profile & directory-listing endpoints. */
+export const userRateLimiter = buildLimiter({
+  windowMinutes: USER_RATE_LIMIT.windowMinutes,
+  max: USER_RATE_LIMIT.max,
+  prefix: 'user',
   keyGenerator: authenticatedUserKeyGenerator,
 });

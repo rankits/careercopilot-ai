@@ -3,7 +3,8 @@ set -Eeuo pipefail
 
 # Verifies localhost health endpoint of the backend application on port 5001.
 # Confirms HTTP 200 and JSON response containing "status":"ok".
-# RabbitMQ is not currently included in the application /health probe.
+# RabbitMQ is included in /health when ENABLE_EMAIL_WORKER=true or
+# HEALTH_CHECK_RABBITMQ=true.
 
 HEALTH_URL="http://127.0.0.1:5001/health"
 MAX_ATTEMPTS=24
@@ -35,4 +36,13 @@ for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
 done
 
 echo "Error: Health check failed after $MAX_ATTEMPTS attempts (~2 minutes)." >&2
+echo "Error: Last HTTP status: ${HTTP_CODE:-unknown}" >&2
+echo "Error: Last response body: ${BODY:-<empty>}" >&2
+echo "Error: Expected HTTP 200 and JSON containing \"status\":\"ok\"." >&2
+if command -v docker >/dev/null 2>&1 && [[ -f compose.yaml ]]; then
+  echo ">>> docker compose ps -a:" >&2
+  docker compose -p career-copilot-backend -f compose.yaml ps -a >&2 || true
+  echo ">>> Recent api logs:" >&2
+  docker compose -p career-copilot-backend -f compose.yaml logs --tail=60 api >&2 || true
+fi
 exit 1

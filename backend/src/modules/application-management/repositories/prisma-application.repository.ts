@@ -172,6 +172,9 @@ export class PrismaApplicationRepository implements IApplicationRepository {
       } else {
         where.currentStatus = filters.status;
       }
+    } else {
+      // Saved Jobs live on /saved-jobs — keep them out of Application Management lists.
+      where.currentStatus = { not: ApplicationStatus.SAVED };
     }
 
     if (filters.archived === 'true') {

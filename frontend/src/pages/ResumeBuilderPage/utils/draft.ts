@@ -41,14 +41,16 @@ export function createEmptyDraft(targetRole = ''): ResumeDraft {
 }
 
 export function hasPreviewContent(draft: ResumeDraft): boolean {
+  // Require structured fields — originalText alone must not show a hollow "Your Name" sheet.
   return Boolean(
-    draft.originalText.trim() ||
     draft.fullName ||
     draft.summary ||
     draft.skillsList.length ||
     draft.experiences.some((item) => item.company || item.title || item.details) ||
     draft.projectsList.some((item) => item.title || item.company || item.details) ||
-    draft.education,
+    draft.education ||
+    draft.certifications ||
+    draft.achievements,
   );
 }
 
