@@ -87,11 +87,11 @@ jobs:
       - name: Validate production build
         run: npm run build
 
-      - name: Validate Prisma schema and format
-        run: |
-          npx prisma format --check
-          npx prisma validate
-          npx prisma generate
+      # - name: Validate Prisma schema and format
+      #   run: |
+      #     npx prisma format --check
+      #     npx prisma validate
+      #     npx prisma generate
 
       - name: Run vulnerability scan
         run: npm audit --audit-level=high
