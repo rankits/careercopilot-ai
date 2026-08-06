@@ -23,6 +23,11 @@ export function usePrepareApplication() {
     onSuccess: async (result, variables) => {
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.plan(variables.jobId) });
       await queryClient.invalidateQueries({ queryKey: autoApplyQueryKeys.submissions });
+      if (variables.jobApplicationId) {
+        await queryClient.invalidateQueries({
+          queryKey: autoApplyQueryKeys.workspace(variables.jobApplicationId),
+        });
+      }
       if (result.analysis?.id) {
         await queryClient.invalidateQueries({
           queryKey: ['auto-apply', 'analysis', variables.jobId],
