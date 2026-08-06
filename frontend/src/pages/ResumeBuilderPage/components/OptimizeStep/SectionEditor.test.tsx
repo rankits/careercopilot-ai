@@ -41,6 +41,24 @@ describe('SectionEditor', () => {
     );
   });
 
+  it('shows contact only on summary — not on experience', () => {
+    const onChange = vi.fn();
+    const draft = {
+      ...createEmptyDraft('Engineer'),
+      fullName: 'Alex',
+      summary: 'Keep me',
+    };
+
+    const { rerender } = render(
+      <SectionEditor section="summary" draft={draft} onChange={onChange} />,
+    );
+    expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
+
+    rerender(<SectionEditor section="experience" draft={draft} onChange={onChange} />);
+    expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/companies \/ roles/i)).toBeInTheDocument();
+  });
+
   it('updates contact fields without wiping other draft data', () => {
     const onChange = vi.fn();
     const draft = {
