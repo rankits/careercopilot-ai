@@ -106,12 +106,55 @@ describe('passesCandidateJobFilters', () => {
           salaryExpectation: { minimum: 100000, currency: 'EUR' },
         }),
       ),
+    ).toBe(false);
+
+    expect(
+      passesCandidateJobFilters(
+        job({
+          salary: { minimum: 70000, maximum: 90000, currency: 'EUR' },
+        }),
+        context({
+          filterMode: 'FLEXIBLE',
+          locations: ['Berlin'],
+          salaryExpectation: { minimum: 100000, currency: 'EUR' },
+        }),
+      ),
     ).toBe(true);
 
     expect(
       passesCandidateJobFilters(
         job({ company: { slug: 'blocked', name: 'Blocked', logoUrl: null, verified: true } }),
         context({ filterMode: 'FLEXIBLE', excludedCompanies: ['blocked'] }),
+      ),
+    ).toBe(false);
+  });
+
+  it('separates geographic regions from work-mode preferences', () => {
+    expect(
+      passesCandidateJobFilters(
+        job({ location: { formatted: 'Bengaluru, India', remoteType: 'HYBRID' } }),
+        context({ filterMode: 'FLEXIBLE', locations: ['India'] }),
+      ),
+    ).toBe(true);
+
+    expect(
+      passesCandidateJobFilters(
+        job({ location: { formatted: 'Toronto, Canada', remoteType: 'ONSITE' } }),
+        context({ filterMode: 'FLEXIBLE', locations: ['India'] }),
+      ),
+    ).toBe(false);
+
+    expect(
+      passesCandidateJobFilters(
+        job({ location: { formatted: 'Toronto, Canada', remoteType: 'REMOTE' } }),
+        context({ filterMode: 'FLEXIBLE', remotePreference: 'REMOTE' }),
+      ),
+    ).toBe(true);
+
+    expect(
+      passesCandidateJobFilters(
+        job({ location: { formatted: 'Berlin, Germany', remoteType: 'HYBRID' } }),
+        context({ filterMode: 'FLEXIBLE', remotePreference: 'REMOTE' }),
       ),
     ).toBe(false);
   });

@@ -460,16 +460,7 @@ export const RecommendedLogo = styled('div')({
   fontWeight: fontWeight.extraBold,
   height: '2.75rem',
   justifyItems: 'center',
-  overflow: 'hidden',
   width: '2.75rem',
-
-  '& img': {
-    display: 'block',
-    height: '100%',
-    objectFit: 'contain',
-    padding: spacing[1],
-    width: '100%',
-  },
 });
 
 export const RecommendedTitle = styled('div')({
@@ -565,16 +556,7 @@ export const SavedLogo = styled('div')({
   fontWeight: fontWeight.extraBold,
   height: '2.5rem',
   justifyItems: 'center',
-  overflow: 'hidden',
   width: '2.5rem',
-
-  '& img': {
-    display: 'block',
-    height: '100%',
-    objectFit: 'contain',
-    padding: spacing[1],
-    width: '100%',
-  },
 });
 
 export const SavedTitle = styled('div')({

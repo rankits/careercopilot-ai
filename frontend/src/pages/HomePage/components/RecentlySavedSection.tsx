@@ -1,5 +1,3 @@
-import { useCachedCompanyLogo } from '@/features/jobs/hooks/useCachedCompanyLogo';
-
 import { DASHBOARD_COPY } from '@/constants/pages/dashboard';
 import { ROUTES } from '@/constants/routes';
 import type { SavedJobCardModel } from '@/features/applications/utils/mapApplicationDtoToSavedJobCard';
@@ -32,9 +30,6 @@ function SavedJobRow({
   job: SavedJobCardModel;
   onOpenJob: (job: SavedJobCardModel) => void;
 }) {
-  const { src, failed, onLogoError } = useCachedCompanyLogo(job.logoUrl);
-  const showLogo = Boolean(src) && !failed;
-
   return (
     <SavedRow
       aria-label={`Open ${job.title} at ${job.company}`}
@@ -49,9 +44,7 @@ function SavedJobRow({
       tabIndex={0}
       type="button"
     >
-      <SavedLogo aria-hidden="true">
-        {showLogo ? <img alt="" loading="lazy" onError={onLogoError} src={src} /> : job.logo || '?'}
-      </SavedLogo>
+      <SavedLogo aria-hidden="true">{job.logo || '?'}</SavedLogo>
       <SavedTitle>
         <strong>{job.title}</strong>
         <SavedMeta>

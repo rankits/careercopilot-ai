@@ -1,9 +1,30 @@
 import { useQuery } from '@tanstack/react-query';
-import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react';
 import { Link as RouterLink, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
-import { JobCard, VirtualizedJobList, type JobCardData } from '@/components/molecules';
+import {
+  JobCard,
+  JobFeedLoadingState,
+  JobFeedStatus,
+  VirtualizedJobList,
+  type JobCardData,
+} from '@/components/molecules';
+import {
+  FilterButton,
+  FilterScrollButton,
+  FilterShell,
+  FilterTrack,
+} from '@/components/molecules/JobFilterBar/styles';
+import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
 import {
@@ -24,8 +45,20 @@ import {
 } from '@/features/recommendations/hooks/useRecommendations';
 import { useAppSelector } from '@/hooks/redux';
 
+import { ANY_COUNTRY, findCountryOptionByName, getCountryOptions } from '@/constants/countries';
+import {
+  FOR_YOU_CAREER_PATHS,
+  FOR_YOU_COPY,
+  FOR_YOU_EXPERIENCE_OPTIONS,
+  FOR_YOU_WORK_MODE_OPTIONS,
+} from '@/constants/pages/forYou';
 import { jobDetailPath, ROUTES } from '@/constants/routes';
+import { JOB_FILTER_BAR_SCROLL } from '@/constants/ui';
 import { applicationsService } from '@/features/applications/services/applications.service';
+import { mapApplicationDtoToSavedJobCard } from '@/features/applications/utils/mapApplicationDtoToSavedJobCard';
+import { pickLatestSimilarSourceJobId } from '@/features/applications/utils/pickLatestSimilarSourceJobId';
+import { jobsService } from '@/features/jobs/services/jobs.service';
+import { mapJobListDtoToCard } from '@/features/jobs/utils/mapJobToCard';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
 import type {
   RecommendationDto,
@@ -33,13 +66,63 @@ import type {
   RecommendationReadinessStatus,
 } from '@/features/recommendations/types/recommendation.types';
 import { formatRecommendationCategoryLabel } from '@/features/recommendations/utils/formatRecommendationMatchLabel';
+import { mapCareerPreferences } from '@/features/recommendations/utils/mapCareerPreferences';
 import { resumeService } from '@/features/resume/services/resume.service';
-import { Alert, Box, CircularProgress, MenuItem, TextField, Typography } from '@/lib/material';
+import {
+  Autocomplete,
+  AddIcon,
+  AutoAwesomeOutlinedIcon,
+  BookmarkOutlinedIcon,
+  Box,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CircularProgress,
+  DeleteOutlineIcon,
+  DescriptionOutlinedIcon,
+  ErrorOutlineIcon,
+  InfoOutlinedIcon,
+  LockOutlinedIcon,
+  MenuItem,
+  PeopleOutlineIcon,
+  PersonOutlineIcon,
+  PictureAsPdfOutlinedIcon,
+  RefreshIcon,
+  StickyNote2OutlinedIcon,
+  SwapHorizOutlinedIcon,
+  TextField,
+  TrackChangesOutlinedIcon,
+  TravelExploreOutlinedIcon,
+  Typography,
+  VerifiedUserOutlinedIcon,
+  useMediaQuery,
+} from '@/lib/material';
+import { jobFeedPageSx } from '@/pages/JobFeedPage/styles';
+
+import { aiMatchPageSx } from './styles';
 
 type RecommendationMode = 'profile' | 'resume' | 'similar' | 'text-career' | 'career' | 'saved';
 type RecommendationLifecycleState = NonNullable<RecommendationReadinessStatus['lifecycleState']>;
-const TARGET_TEXT_MAX_LENGTH = 20_000;
-const CAREER_GOAL_MAX_LENGTH = 20_000;
+type SavedView = string;
+
+const TARGET_TEXT_MAX_LENGTH = 500;
+const COMPACT_MODE_TABS_QUERY = '(max-width: 47.5rem)';
+const MODE_TAB_SCROLL_STEP_RATIO = 0.75;
+const DEFAULT_CAREER_EXPERIENCE = FOR_YOU_EXPERIENCE_OPTIONS[0];
+const DEFAULT_CAREER_WORK_MODE = FOR_YOU_WORK_MODE_OPTIONS[0];
+const CAREER_COUNTRY_OPTIONS = getCountryOptions();
+const SIMILAR_SOURCE_CANDIDATES_QUERY_KEY = ['applications', 'similar-source-candidates'] as const;
+const SIMILAR_AUTO_OFF_PARAM = 'similarAutoOff';
+const BYTE_UNITS = ['B', 'KB', 'MB', 'GB'] as const;
+
+interface ModeTabScrollState {
+  canScrollLeft: boolean;
+  canScrollRight: boolean;
+}
+
+const NO_MODE_TAB_SCROLL: ModeTabScrollState = {
+  canScrollLeft: false,
+  canScrollRight: false,
+};
 
 const recommendationModes: Array<{
   id: RecommendationMode;
@@ -116,12 +199,69 @@ const getFailureCopy = (state: RecommendationLifecycleState | undefined) => {
   }
 };
 
+const sortByMatchDesc = <T extends { match?: number }>(items: readonly T[]): T[] =>
+  [...items].sort((a, b) => (b.match ?? -1) - (a.match ?? -1));
+
+const formatFileSize = (bytes: number | undefined): string => {
+  if (!bytes || bytes <= 0) return '0 B';
+  let value = bytes;
+  let unitIndex = 0;
+  while (value >= 1024 && unitIndex < BYTE_UNITS.length - 1) {
+    value /= 1024;
+    unitIndex += 1;
+  }
+  const precision = unitIndex === 0 || value >= 10 ? 0 : 1;
+  return `${value.toFixed(precision)} ${BYTE_UNITS[unitIndex]}`;
+};
+
+const formatUploadedDate = (iso: string | null | undefined): string => {
+  if (!iso) return 'an unknown date';
+  const parsed = new Date(iso);
+  if (Number.isNaN(parsed.getTime())) return 'an unknown date';
+  return parsed.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
+};
+
+function AiMatchInfoBanner({
+  action,
+  icon,
+  message,
+  title,
+}: {
+  action?: ReactNode;
+  icon: ReactNode;
+  message: string;
+  title?: string;
+}) {
+  return (
+    <Box role="status" sx={aiMatchPageSx.banner}>
+      <Box aria-hidden="true" sx={aiMatchPageSx.bannerIcon}>
+        {icon}
+      </Box>
+      <Box sx={aiMatchPageSx.bannerCopy}>
+        {title ? <Typography sx={aiMatchPageSx.bannerTitle}>{title}</Typography> : null}
+        <Typography sx={aiMatchPageSx.bannerMessage}>{message}</Typography>
+      </Box>
+      {action ? <Box sx={aiMatchPageSx.bannerAction}>{action}</Box> : null}
+    </Box>
+  );
+}
+
+function SourceJobLogo({ initial }: { initial: string }) {
+  return (
+    <Box aria-hidden="true" component="span" sx={aiMatchPageSx.sourceJobLogo}>
+      {initial}
+    </Box>
+  );
+}
+
 export function AiMatchPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const activeMode = getModeFromSearchParams(searchParams);
   const similarSourceJobId = searchParams.get('jobId') || undefined;
+  const similarAutoSourceSuppressed = searchParams.get(SIMILAR_AUTO_OFF_PARAM) === '1';
   const activeModeMeta =
     recommendationModes.find((mode) => mode.id === activeMode) ?? recommendationModes[0]!;
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
@@ -130,17 +270,23 @@ export function AiMatchPage() {
   const [resumeGeneratedOnce, setResumeGeneratedOnce] = useState(false);
   const [textGeneratedOnce, setTextGeneratedOnce] = useState(false);
   const [careerGeneratedOnce, setCareerGeneratedOnce] = useState(false);
-  const [selectedResumeId, setSelectedResumeId] = useState('');
   const [targetText, setTargetText] = useState('');
-  const [careerGoalText, setCareerGoalText] = useState('');
+  const [careerTargetRole, setCareerTargetRole] = useState('');
+  const [careerPath, setCareerPath] = useState('');
+  const [careerExperience, setCareerExperience] = useState<string>(DEFAULT_CAREER_EXPERIENCE);
+  const [careerWorkMode, setCareerWorkMode] = useState<string>(DEFAULT_CAREER_WORK_MODE);
+  const [careerCountry, setCareerCountry] = useState<string>(ANY_COUNTRY);
   const [savedSearchName, setSavedSearchName] = useState('');
   const [savedSearchQueryText, setSavedSearchQueryText] = useState('');
-  const [selectedSavedSearchId, setSelectedSavedSearchId] = useState('');
+  const [selectedSavedView, setSelectedSavedView] = useState<SavedView>('all');
+  const [showNewSavedSearchForm, setShowNewSavedSearchForm] = useState(false);
   const [savedSearchGeneratedOnce, setSavedSearchGeneratedOnce] = useState(false);
-  const [savedSearchNotice, setSavedSearchNotice] = useState<string | null>(null);
+  const [savedSearchResultCounts, setSavedSearchResultCounts] = useState<Record<string, number>>(
+    {},
+  );
+  const [savedSortOrder, setSavedSortOrder] = useState<'newest' | 'oldest'>('newest');
   const [dismissedIds, setDismissedIds] = useState<Record<string, boolean>>({});
   const [moreLikeThisIds, setMoreLikeThisIds] = useState<Record<string, boolean>>({});
-  const [feedbackNotice, setFeedbackNotice] = useState<string | null>(null);
   const [resumeRecommendations, setResumeRecommendations] = useState<
     ReturnType<typeof mapRecommendationDtoToCard>[]
   >([]);
@@ -151,7 +297,14 @@ export function AiMatchPage() {
   const [savedSearchRecommendations, setSavedSearchRecommendations] = useState<
     ReturnType<typeof mapRecommendationDtoToCard>[]
   >([]);
+  const [modeTabScrollState, setModeTabScrollState] =
+    useState<ModeTabScrollState>(NO_MODE_TAB_SCROLL);
+  const [savedChipsScrollState, setSavedChipsScrollState] =
+    useState<ModeTabScrollState>(NO_MODE_TAB_SCROLL);
+  const isCompactModeTabs = useMediaQuery(COMPACT_MODE_TABS_QUERY);
   const modeTabRefs = useRef<Array<HTMLButtonElement | null>>([]);
+  const modeTrackRef = useRef<HTMLDivElement | null>(null);
+  const savedChipsTrackRef = useRef<HTMLDivElement | null>(null);
   const trackedFeedbackKeys = useRef<Set<string>>(new Set());
 
   const readiness = useRecommendationReadiness();
@@ -174,10 +327,17 @@ export function AiMatchPage() {
   const deleteSavedSearch = useDeleteSavedSearch();
   const generateSavedSearch = useGenerateSavedSearchRecommendations();
   const feedback = useRecommendationFeedback();
+  const feedbackMutateAsyncRef = useRef(feedback.mutateAsync);
+  feedbackMutateAsyncRef.current = feedback.mutateAsync;
   const { saveJob, unsaveJob } = useSaveJob();
   const resumeProfile = useQuery({
     queryKey: ['resume', 'profile', 'me'],
     queryFn: () => resumeService.getMyProfile(),
+    enabled: activeMode === 'resume' || activeMode === 'career',
+  });
+  const resumesQuery = useQuery({
+    queryKey: ['resumes', 'list'],
+    queryFn: () => resumeService.listResumes(),
     enabled: activeMode === 'resume',
   });
   const savedQuery = useQuery({
@@ -189,11 +349,25 @@ export function AiMatchPage() {
       activeMode === 'text-career' ||
       activeMode === 'career' ||
       activeMode === 'saved' ||
-      (activeMode === 'similar' && Boolean(similarSourceJobId)),
+      activeMode === 'similar',
   });
+  const similarSourceCandidatesQuery = useQuery({
+    queryKey: SIMILAR_SOURCE_CANDIDATES_QUERY_KEY,
+    queryFn: () => applicationsService.listSimilarSourceCandidates(),
+    enabled: activeMode === 'similar',
+  });
+  const autoSimilarSourceJobId = useMemo(
+    () => pickLatestSimilarSourceJobId(similarSourceCandidatesQuery.data ?? []),
+    [similarSourceCandidatesQuery.data],
+  );
   const similarJobs = useSimilarJobs(similarSourceJobId, {
     enabled: activeMode === 'similar' && Boolean(similarSourceJobId),
     limit: 20,
+  });
+  const sourceJobQuery = useQuery({
+    queryKey: ['jobs', 'detail', similarSourceJobId ?? 'missing'],
+    queryFn: ({ signal }) => jobsService.getJob(similarSourceJobId as string, { signal }),
+    enabled: activeMode === 'similar' && Boolean(similarSourceJobId),
   });
   const savedSearches = useSavedSearches({ enabled: activeMode === 'saved' });
   const [optimisticSaved, setOptimisticSaved] = useState<Record<string, boolean>>({});
@@ -204,26 +378,11 @@ export function AiMatchPage() {
       const key = `${action}:${recommendationId}`;
       if (trackedFeedbackKeys.current.has(key)) return;
       trackedFeedbackKeys.current.add(key);
-      void feedback.mutateAsync({ recommendationId, action }).catch(() => {
-        trackedFeedbackKeys.current.delete(key);
-      });
+      // An interaction should produce at most one feedback event while this page is mounted.
+      void feedbackMutateAsyncRef.current({ recommendationId, action }).catch(() => undefined);
     },
-    [feedback],
+    [],
   );
-
-  useEffect(() => {
-    const sourceResumeId = resumeProfile.data?.sourceResumeId;
-    if (sourceResumeId && !selectedResumeId) {
-      setSelectedResumeId(sourceResumeId);
-    }
-  }, [resumeProfile.data?.sourceResumeId, selectedResumeId]);
-
-  useEffect(() => {
-    const firstSearchId = savedSearches.data?.items[0]?.id;
-    if (activeMode === 'saved' && firstSearchId && !selectedSavedSearchId) {
-      setSelectedSavedSearchId(firstSearchId);
-    }
-  }, [activeMode, savedSearches.data?.items, selectedSavedSearchId]);
 
   const savedIdSet = useMemo(() => {
     const ids = new Set(
@@ -285,6 +444,9 @@ export function AiMatchPage() {
   const lifecycleState = readiness.data?.lifecycleState;
   const isProcessingLifecycle = lifecycleState === 'QUEUED' || lifecycleState === 'PROCESSING';
   const isFailedLifecycle = lifecycleState ? failedLifecycleStates.has(lifecycleState) : false;
+  const showEmbeddingWarning = Boolean(
+    isEmbeddingPending && generatedOnce && isEmpty && !isProcessingLifecycle && !isFailedLifecycle,
+  );
   const profileActionPending = generate.isPending || refreshProfile.isPending;
 
   const generateError =
@@ -335,29 +497,33 @@ export function AiMatchPage() {
                   : generateSavedSearch.isError
                     ? 'Unable to generate saved-search recommendations.'
                     : null;
-  const similarCards = similarJobs.data?.cards ?? [];
-  const selectedResumeOption = resumeProfile.data?.sourceResumeId
-    ? [{ id: resumeProfile.data.sourceResumeId, label: 'Confirmed resume' }]
-    : [];
+  const similarCards = sortByMatchDesc(similarJobs.data?.cards ?? []);
+  const selectedResumeId = resumeProfile.data?.sourceResumeId ?? '';
+  const selectedResumeFile = resumesQuery.data?.find((resume) => resume.id === selectedResumeId);
   const trimmedTargetText = targetText.trim();
   const targetTextTooLong = trimmedTargetText.length > TARGET_TEXT_MAX_LENGTH;
-  const trimmedCareerGoalText = careerGoalText.trim();
-  const careerGoalTooLong = trimmedCareerGoalText.length > CAREER_GOAL_MAX_LENGTH;
   const trimmedSavedSearchName = savedSearchName.trim();
   const trimmedSavedSearchQuery = savedSearchQueryText.trim();
   const savedSearchesList = savedSearches.data?.items ?? [];
-  const selectedSavedSearch = savedSearchesList.find((item) => item.id === selectedSavedSearchId);
+  const selectedSavedSearch =
+    selectedSavedView !== 'all'
+      ? savedSearchesList.find((item) => item.id === selectedSavedView)
+      : undefined;
   const visibleResumeRecommendations = useMemo(
     () =>
-      resumeRecommendations.filter(
-        (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
+      sortByMatchDesc(
+        resumeRecommendations.filter(
+          (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
+        ),
       ),
     [dismissedIds, resumeRecommendations],
   );
   const visibleTextRecommendations = useMemo(
     () =>
-      textRecommendations.filter(
-        (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
+      sortByMatchDesc(
+        textRecommendations.filter(
+          (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
+        ),
       ),
     [dismissedIds, textRecommendations],
   );
@@ -365,33 +531,21 @@ export function AiMatchPage() {
     () => careerRecommendations.filter((item) => !dismissedIds[item.id]),
     [careerRecommendations, dismissedIds],
   );
-  const visibleSavedSearchRecommendations = savedSearchRecommendations.filter(
-    (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
+  const visibleSavedSearchRecommendations = sortByMatchDesc(
+    savedSearchRecommendations.filter(
+      (card) => !card.recommendationId || !dismissedIds[card.recommendationId],
+    ),
   );
+  const savedBookmarkCards = useMemo(() => {
+    const items = (savedQuery.data ?? []).map((app, index) =>
+      mapApplicationDtoToSavedJobCard(app, index),
+    );
+    const sorted = [...items].sort(
+      (a, b) => new Date(a.savedAt).getTime() - new Date(b.savedAt).getTime(),
+    );
+    return savedSortOrder === 'newest' ? sorted.reverse() : sorted;
+  }, [savedQuery.data, savedSortOrder]);
   const careerGroups = groupCareerRecommendations(visibleCareerRecommendations);
-  const viewedRecommendationIds = useMemo(
-    () =>
-      [
-        ...visibleCards.map((card) => card.recommendationId),
-        ...visibleResumeRecommendations.map((card) => card.recommendationId),
-        ...visibleTextRecommendations.map((card) => card.recommendationId),
-        ...visibleCareerRecommendations.map((item) => item.id),
-        ...visibleSavedSearchRecommendations.map((card) => card.recommendationId),
-      ].filter((id): id is string => Boolean(id)),
-    [
-      visibleCards,
-      visibleResumeRecommendations,
-      visibleTextRecommendations,
-      visibleCareerRecommendations,
-      visibleSavedSearchRecommendations,
-    ],
-  );
-
-  useEffect(() => {
-    for (const recommendationId of viewedRecommendationIds) {
-      trackRecommendationFeedback(recommendationId, 'VIEWED');
-    }
-  }, [trackRecommendationFeedback, viewedRecommendationIds]);
 
   const submitFeedback = (
     recommendationId: string,
@@ -409,11 +563,13 @@ export function AiMatchPage() {
     void feedback
       .mutateAsync({ recommendationId, action })
       .then(() => {
-        setFeedbackNotice(
-          action === 'MORE_LIKE_THIS'
-            ? 'Future matches will lean toward jobs like this.'
-            : 'Future matches will avoid jobs like this.',
-        );
+        showToast({
+          severity: 'success',
+          message:
+            action === 'MORE_LIKE_THIS'
+              ? 'Future matches will lean toward jobs like this.'
+              : 'Future matches will avoid jobs like this.',
+        });
       })
       .catch(() => {
         if (hidesCard) {
@@ -423,6 +579,200 @@ export function AiMatchPage() {
         }
       });
   };
+
+  const renderRecommendationJobCard = (job: JobCardData) => (
+    <JobCard
+      job={job}
+      isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+      onApply={handleRecommendedApply}
+      onDismiss={
+        job.recommendationId
+          ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
+          : undefined
+      }
+      onNotRelevant={
+        job.recommendationId
+          ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
+          : undefined
+      }
+      onMoreLikeThis={
+        job.recommendationId
+          ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
+          : undefined
+      }
+      onLessLikeThis={
+        job.recommendationId
+          ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
+          : undefined
+      }
+      isMoreLikeThis={Boolean(job.recommendationId && moreLikeThisIds[job.recommendationId])}
+      onOpen={(selected) => {
+        if (!selected.id) return;
+        trackRecommendationFeedback(job.recommendationId, 'OPENED');
+        void navigate(jobDetailPath(selected.id), {
+          state: { fromFeed: `${location.pathname}${location.search}` },
+        });
+      }}
+      onSave={handleRecommendedSave}
+    />
+  );
+
+  const renderBookmarkJobCard = (job: JobCardData) => (
+    <JobCard
+      job={job}
+      isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+      onApply={handleRecommendedApply}
+      onOpen={(selected) => {
+        if (!selected.id) return;
+        void navigate(jobDetailPath(selected.id), {
+          state: { fromFeed: `${location.pathname}${location.search}` },
+        });
+      }}
+      onSave={handleRecommendedSave}
+    />
+  );
+
+  const runGenerateResume = () => {
+    if (!selectedResumeId) return;
+    setResumeGeneratedOnce(true);
+    void generateResume
+      .mutateAsync(selectedResumeId)
+      .then((items) => setResumeRecommendations(items.map(mapRecommendationDtoToCard)))
+      .catch(() => undefined);
+  };
+
+  const runGenerateText = () => {
+    if (!trimmedTargetText || targetTextTooLong) return;
+    setTextGeneratedOnce(true);
+    void generateText
+      .mutateAsync(trimmedTargetText)
+      .then((items) => setTextRecommendations(items.map(mapRecommendationDtoToCard)))
+      .catch(() => undefined);
+  };
+
+  const buildCareerGoalText = (): string => {
+    const segments: string[] = [];
+    if (careerTargetRole.trim()) segments.push(`Target role: ${careerTargetRole.trim()}`);
+    if (careerPath.trim()) segments.push(`Career path: ${careerPath.trim()}`);
+    if (careerExperience !== DEFAULT_CAREER_EXPERIENCE) {
+      segments.push(`Experience level: ${careerExperience}`);
+    }
+    const preferences = mapCareerPreferences(
+      careerWorkMode as (typeof FOR_YOU_WORK_MODE_OPTIONS)[number],
+      careerCountry,
+    );
+    for (const segment of preferences.goalTextSegments) {
+      segments.push(segment);
+    }
+    return segments.length > 0
+      ? `${segments.join('. ')}.`
+      : 'Explore career opportunities aligned with my profile.';
+  };
+
+  const runGenerateCareerGoal = () => {
+    const preferences = mapCareerPreferences(
+      careerWorkMode as (typeof FOR_YOU_WORK_MODE_OPTIONS)[number],
+      careerCountry,
+    );
+    setCareerGeneratedOnce(true);
+    void generateCareerGoal
+      .mutateAsync({
+        goalText: buildCareerGoalText(),
+        structured: {
+          targetRole: careerTargetRole.trim(),
+          careerLevel: careerExperience,
+          locationScope: preferences.locationScope,
+          locations: preferences.locations,
+          ...(preferences.remotePreference
+            ? { remotePreference: preferences.remotePreference }
+            : {}),
+          summary: careerPath.trim(),
+          flexibilityMode: 'FLEXIBLE',
+        },
+      })
+      .then((items) => setCareerRecommendations(items))
+      .catch(() => undefined);
+  };
+
+  const handleSuggestCareerForMe = () => {
+    const details = resumeProfile.data?.personalDetails ?? {};
+    const suggestedTitle = typeof details.designation === 'string' ? details.designation : '';
+    const suggestedLocationRaw = typeof details.location === 'string' ? details.location : '';
+    const matchedCountry =
+      findCountryOptionByName(suggestedLocationRaw) ??
+      CAREER_COUNTRY_OPTIONS.find((option) =>
+        suggestedLocationRaw.toLowerCase().includes(option.name.toLowerCase()),
+      );
+
+    if (suggestedTitle) setCareerTargetRole(suggestedTitle);
+    if (matchedCountry) setCareerCountry(matchedCountry.name);
+
+    showToast({
+      message:
+        suggestedTitle || matchedCountry
+          ? 'Filled in suggestions from your profile.'
+          : 'Complete your profile to get personalized suggestions.',
+      severity: suggestedTitle || matchedCountry ? 'success' : 'info',
+    });
+  };
+
+  const runGenerateSavedSearch = (savedSearchId: string) => {
+    setSavedSearchGeneratedOnce(true);
+    void generateSavedSearch
+      .mutateAsync(savedSearchId)
+      .then((items) => {
+        setSavedSearchRecommendations(items.map(mapRecommendationDtoToCard));
+        setSavedSearchResultCounts((prev) => ({ ...prev, [savedSearchId]: items.length }));
+      })
+      .catch(() => undefined);
+  };
+
+  const clearSimilarSource = () => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.delete('jobId');
+    nextParams.set(SIMILAR_AUTO_OFF_PARAM, '1');
+    setSearchParams(nextParams);
+  };
+
+  useEffect(() => {
+    if (activeMode !== 'similar') {
+      return;
+    }
+
+    if (similarSourceJobId || similarAutoSourceSuppressed || !autoSimilarSourceJobId) {
+      return;
+    }
+
+    if (similarSourceCandidatesQuery.isPending) {
+      return;
+    }
+
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('mode', 'similar');
+    nextParams.set('jobId', autoSimilarSourceJobId);
+    nextParams.delete(SIMILAR_AUTO_OFF_PARAM);
+    setSearchParams(nextParams, { replace: true });
+  }, [
+    activeMode,
+    autoSimilarSourceJobId,
+    searchParams,
+    setSearchParams,
+    similarAutoSourceSuppressed,
+    similarSourceCandidatesQuery.isPending,
+    similarSourceJobId,
+  ]);
+
+  const resolvingSimilarSource =
+    activeMode === 'similar' &&
+    !similarSourceJobId &&
+    !similarAutoSourceSuppressed &&
+    (similarSourceCandidatesQuery.isPending || Boolean(autoSimilarSourceJobId));
+
+  const showSimilarPickSourceEmpty =
+    activeMode === 'similar' &&
+    !similarSourceJobId &&
+    !similarSourceCandidatesQuery.isPending &&
+    (similarAutoSourceSuppressed || !autoSimilarSourceJobId);
 
   const selectMode = (mode: RecommendationMode) => {
     setPage(1);
@@ -436,6 +786,9 @@ export function AiMatchPage() {
 
     if (mode !== 'similar') {
       nextParams.delete('jobId');
+      nextParams.delete(SIMILAR_AUTO_OFF_PARAM);
+    } else if (!nextParams.get('jobId')) {
+      nextParams.delete(SIMILAR_AUTO_OFF_PARAM);
     }
 
     setSearchParams(nextParams);
@@ -475,171 +828,231 @@ export function AiMatchPage() {
     }
   };
 
+  const updateModeTabScrollState = useCallback(() => {
+    const track = modeTrackRef.current;
+    if (!track) {
+      setModeTabScrollState(NO_MODE_TAB_SCROLL);
+      return;
+    }
+
+    const maxScrollLeft = track.scrollWidth - track.clientWidth;
+    setModeTabScrollState({
+      canScrollLeft: track.scrollLeft > JOB_FILTER_BAR_SCROLL.edgeThresholdPx,
+      canScrollRight: track.scrollLeft < maxScrollLeft - JOB_FILTER_BAR_SCROLL.edgeThresholdPx,
+    });
+  }, []);
+
+  useEffect(() => {
+    const track = modeTrackRef.current;
+    if (!track) return;
+
+    updateModeTabScrollState();
+    track.addEventListener('scroll', updateModeTabScrollState, { passive: true });
+
+    const resizeObserver = new ResizeObserver(() => updateModeTabScrollState());
+    resizeObserver.observe(track);
+
+    return () => {
+      track.removeEventListener('scroll', updateModeTabScrollState);
+      resizeObserver.disconnect();
+    };
+  }, [updateModeTabScrollState]);
+
+  const scrollModeTabsByDirection = (direction: -1 | 1) => {
+    const track = modeTrackRef.current;
+    if (!track) return;
+    const amount = Math.max(
+      track.clientWidth * MODE_TAB_SCROLL_STEP_RATIO,
+      JOB_FILTER_BAR_SCROLL.minStepPx,
+    );
+    track.scrollBy({ behavior: 'smooth', left: direction * amount });
+  };
+
+  const updateSavedChipsScrollState = useCallback(() => {
+    const track = savedChipsTrackRef.current;
+    if (!track) {
+      setSavedChipsScrollState(NO_MODE_TAB_SCROLL);
+      return;
+    }
+
+    const maxScrollLeft = track.scrollWidth - track.clientWidth;
+    setSavedChipsScrollState({
+      canScrollLeft: track.scrollLeft > JOB_FILTER_BAR_SCROLL.edgeThresholdPx,
+      canScrollRight: track.scrollLeft < maxScrollLeft - JOB_FILTER_BAR_SCROLL.edgeThresholdPx,
+    });
+  }, []);
+
+  useEffect(() => {
+    if (activeMode !== 'saved') return;
+
+    const track = savedChipsTrackRef.current;
+    if (!track) return;
+
+    updateSavedChipsScrollState();
+    track.addEventListener('scroll', updateSavedChipsScrollState, { passive: true });
+
+    const resizeObserver = new ResizeObserver(() => updateSavedChipsScrollState());
+    resizeObserver.observe(track);
+
+    return () => {
+      track.removeEventListener('scroll', updateSavedChipsScrollState);
+      resizeObserver.disconnect();
+    };
+  }, [activeMode, savedSearchesList.length, updateSavedChipsScrollState]);
+
+  const scrollSavedChipsByDirection = (direction: -1 | 1) => {
+    const track = savedChipsTrackRef.current;
+    if (!track) return;
+    const amount = Math.max(
+      track.clientWidth * MODE_TAB_SCROLL_STEP_RATIO,
+      JOB_FILTER_BAR_SCROLL.minStepPx,
+    );
+    track.scrollBy({ behavior: 'smooth', left: direction * amount });
+  };
+
+  const sourceJobCard = sourceJobQuery.data ? mapJobListDtoToCard(sourceJobQuery.data) : undefined;
+
   return (
-    <Box component="section" sx={{ display: 'grid', gap: 3, py: 2 }}>
-      <Box sx={{ display: 'grid', gap: 1 }}>
-        <Typography component="h1" sx={{ fontWeight: 800, fontSize: '1.5rem', m: 0 }}>
-          AI Match
-        </Typography>
-        <Typography sx={{ color: 'text.secondary' }}>
-          Personalized matches from your profile. Generation is explicit - loading this page never
-          starts a new run.
-        </Typography>
+    <Box component="section" sx={aiMatchPageSx.root}>
+      <Box sx={aiMatchPageSx.header}>
+        <Box aria-hidden="true" sx={aiMatchPageSx.headerIcon}>
+          <AutoAwesomeOutlinedIcon fontSize="medium" />
+        </Box>
+        <Box sx={aiMatchPageSx.headerCopy}>
+          <Typography component="h1" sx={aiMatchPageSx.title}>
+            {FOR_YOU_COPY.title}
+          </Typography>
+          <Typography sx={aiMatchPageSx.subtitle}>{FOR_YOU_COPY.subtitle}</Typography>
+        </Box>
       </Box>
 
-      <Box
-        aria-label="Recommendation modes"
-        role="tablist"
-        sx={{
-          borderBottom: '1px solid',
-          borderColor: 'divider',
-          display: 'flex',
-          gap: 1,
-          maxWidth: '100%',
-          overflowX: 'auto',
-          pb: 1,
-          scrollbarWidth: 'thin',
-        }}
-      >
-        {recommendationModes.map((mode, index) => {
-          const isActive = mode.id === activeMode;
+      <FilterShell>
+        {isCompactModeTabs ? (
+          <FilterScrollButton
+            aria-label={FOR_YOU_COPY.scrollModesLeftAria}
+            disabled={!modeTabScrollState.canScrollLeft}
+            onClick={() => scrollModeTabsByDirection(-1)}
+            type="button"
+          >
+            <ChevronLeftIcon fontSize="small" />
+          </FilterScrollButton>
+        ) : null}
 
-          return (
-            <Box
-              aria-controls={getPanelId(mode.id)}
-              aria-selected={isActive}
-              component="button"
-              id={getTabId(mode.id)}
-              key={mode.id}
-              onKeyDown={(event) => handleModeTabKeyDown(event, index)}
-              onClick={() => selectMode(mode.id)}
-              ref={(element: HTMLButtonElement | null) => {
-                modeTabRefs.current[index] = element;
-              }}
-              role="tab"
-              sx={{
-                alignItems: 'center',
-                bgcolor: isActive ? 'primary.main' : 'background.paper',
-                border: '1px solid',
-                borderColor: isActive ? 'primary.main' : 'divider',
-                borderRadius: 2,
-                color: isActive ? 'primary.contrastText' : 'text.primary',
-                cursor: 'pointer',
-                display: 'inline-flex',
-                flex: '0 0 auto',
-                font: 'inherit',
-                fontSize: '0.875rem',
-                fontWeight: 700,
-                gap: 1,
-                minHeight: 40,
-                px: 2,
-                py: 1,
-                whiteSpace: 'nowrap',
-                '&:focus-visible': {
-                  outline: '3px solid',
-                  outlineColor: 'primary.light',
-                  outlineOffset: 2,
-                },
-                '&:hover': {
-                  borderColor: 'primary.main',
-                },
-              }}
-              tabIndex={isActive ? 0 : -1}
-              type="button"
-            >
-              <span>{mode.label}</span>
-              {!mode.available ? (
-                <Box
-                  component="span"
-                  sx={{
-                    bgcolor: isActive ? 'rgba(255, 255, 255, 0.2)' : 'action.hover',
-                    borderRadius: 999,
-                    color: isActive ? 'primary.contrastText' : 'text.secondary',
-                    fontSize: '0.6875rem',
-                    fontWeight: 800,
-                    lineHeight: 1,
-                    px: 1,
-                    py: 0.5,
-                  }}
-                >
-                  Soon
-                </Box>
-              ) : null}
-            </Box>
-          );
-        })}
-      </Box>
+        <FilterTrack aria-label={FOR_YOU_COPY.modeTabsAria} ref={modeTrackRef} role="tablist">
+          {recommendationModes.map((mode, index) => {
+            const isActive = mode.id === activeMode;
 
-      {feedbackNotice ? (
-        <Alert onClose={() => setFeedbackNotice(null)} role="status" severity="success">
-          {feedbackNotice}
-        </Alert>
-      ) : null}
+            return (
+              <FilterButton
+                active={isActive}
+                aria-controls={getPanelId(mode.id)}
+                aria-selected={isActive}
+                id={getTabId(mode.id)}
+                key={mode.id}
+                onKeyDown={(event) => handleModeTabKeyDown(event, index)}
+                onClick={() => selectMode(mode.id)}
+                ref={(element: HTMLButtonElement | null) => {
+                  modeTabRefs.current[index] = element;
+                }}
+                role="tab"
+                tabIndex={isActive ? 0 : -1}
+                type="button"
+              >
+                <span>{mode.label}</span>
+                {!mode.available ? (
+                  <Box
+                    component="span"
+                    sx={{
+                      bgcolor: isActive ? 'rgba(255, 255, 255, 0.2)' : 'action.hover',
+                      borderRadius: 999,
+                      color: isActive ? 'primary.contrastText' : 'text.secondary',
+                      fontSize: '0.6875rem',
+                      fontWeight: 800,
+                      lineHeight: 1,
+                      px: 1,
+                      py: 0.5,
+                    }}
+                  >
+                    Soon
+                  </Box>
+                ) : null}
+              </FilterButton>
+            );
+          })}
+        </FilterTrack>
+
+        {isCompactModeTabs ? (
+          <FilterScrollButton
+            aria-label={FOR_YOU_COPY.scrollModesRightAria}
+            disabled={!modeTabScrollState.canScrollRight}
+            onClick={() => scrollModeTabsByDirection(1)}
+            type="button"
+          >
+            <ChevronRightIcon fontSize="small" />
+          </FilterScrollButton>
+        ) : null}
+      </FilterShell>
 
       {activeMode === 'resume' ? (
         <Box
           aria-labelledby={getTabId('resume')}
           id={getPanelId('resume')}
           role="tabpanel"
-          sx={{ display: 'grid', gap: 3 }}
+          sx={aiMatchPageSx.panel}
         >
           {resumeProfile.isPending ? (
-            <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-              <CircularProgress aria-label="Loading resume source" />
-            </Box>
+            <JobFeedLoadingState label={FOR_YOU_COPY.loadingResume} />
           ) : null}
 
           {resumeProfile.isError ? (
-            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
-              <Box role="alert">
-                <Typography>
-                  {resumeProfile.error instanceof Error
-                    ? resumeProfile.error.message
-                    : 'Unable to load your resume profile.'}
-                </Typography>
+            <JobFeedStatus
+              message={
+                resumeProfile.error instanceof Error
+                  ? resumeProfile.error.message
+                  : 'Unable to load your resume profile.'
+              }
+              onRetry={resumeProfile.isFetching ? undefined : () => void resumeProfile.refetch()}
+              title={FOR_YOU_COPY.loadResumeErrorTitle}
+              tone="error"
+            />
+          ) : null}
+
+          {!resumeProfile.isPending && !resumeProfile.isError && !selectedResumeId ? (
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                <DescriptionOutlinedIcon fontSize="medium" />
               </Box>
-              <Button
-                disabled={resumeProfile.isFetching}
-                onClick={() => void resumeProfile.refetch()}
-                size="small"
-              >
-                Retry
-              </Button>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                {FOR_YOU_COPY.resumeEmptyTitle}
+              </Typography>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
+                {FOR_YOU_COPY.resumeEmptyDescription}
+              </Typography>
+              <Box sx={aiMatchPageSx.emptyActions}>
+                <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
+                  {FOR_YOU_COPY.addResume}
+                </Button>
+              </Box>
             </Box>
           ) : null}
 
-          {!resumeProfile.isPending &&
-          !resumeProfile.isError &&
-          selectedResumeOption.length === 0 ? (
-            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
-              <Typography component="h2" sx={{ fontSize: '1rem', fontWeight: 800, m: 0 }}>
-                Resume recommendations
-              </Typography>
-              <Typography role="status" sx={{ color: 'text.secondary' }}>
-                Upload and confirm a parsed resume before generating resume-based matches.
-              </Typography>
-              <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
-                Add resume
-              </Button>
-            </Box>
-          ) : null}
-
-          {!resumeProfile.isPending && !resumeProfile.isError && selectedResumeOption.length > 0 ? (
-            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
-              <TextField
-                label="Completed resume"
-                onChange={(event) => setSelectedResumeId(event.target.value)}
-                select
-                size="small"
-                sx={{ maxWidth: 360, width: '100%' }}
-                value={selectedResumeId}
-              >
-                {selectedResumeOption.map((resume) => (
-                  <MenuItem key={resume.id} value={resume.id}>
-                    {resume.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+          {!resumeProfile.isPending && !resumeProfile.isError && selectedResumeId ? (
+            <>
+              <AiMatchInfoBanner
+                action={
+                  <Button
+                    disabled={generateResume.isPending}
+                    isLoading={generateResume.isPending}
+                    onClick={runGenerateResume}
+                    size="small"
+                    startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+                  >
+                    {FOR_YOU_COPY.generateMatches}
+                  </Button>
+                }
+                icon={<DescriptionOutlinedIcon fontSize="small" />}
+                message={FOR_YOU_COPY.resumeBanner}
+              />
 
               {generateResumeError ? (
                 <Typography role="alert" sx={{ color: 'error.main' }}>
@@ -647,84 +1060,103 @@ export function AiMatchPage() {
                 </Typography>
               ) : null}
 
-              <Button
-                disabled={!selectedResumeId || generateResume.isPending}
-                isLoading={generateResume.isPending}
-                onClick={() => {
-                  if (!selectedResumeId) return;
-                  setResumeGeneratedOnce(true);
-                  void generateResume
-                    .mutateAsync(selectedResumeId)
-                    .then((items) =>
-                      setResumeRecommendations(items.map(mapRecommendationDtoToCard)),
-                    )
-                    .catch(() => undefined);
-                }}
-                size="small"
-              >
-                Generate from resume
-              </Button>
-            </Box>
-          ) : null}
-
-          {resumeGeneratedOnce &&
-          !generateResume.isPending &&
-          !generateResume.isError &&
-          visibleResumeRecommendations.length === 0 ? (
-            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
-              No matching jobs were found for this resume.
-            </Typography>
-          ) : null}
-
-          {visibleResumeRecommendations.length > 0 ? (
-            <>
-              <Typography sx={{ color: 'text.secondary' }}>
-                {visibleResumeRecommendations.length} resume recommendation
-                {visibleResumeRecommendations.length === 1 ? '' : 's'}
+              <Typography component="h2" sx={aiMatchPageSx.sectionTitle}>
+                {FOR_YOU_COPY.resumeSectionTitle}
               </Typography>
-              <VirtualizedJobList
-                ariaLabel="Resume recommendations"
-                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
-                items={visibleResumeRecommendations}
-                renderItem={(job) => (
-                  <JobCard
-                    job={job}
-                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={handleRecommendedApply}
-                    onDismiss={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
-                        : undefined
-                    }
-                    onNotRelevant={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
-                        : undefined
-                    }
-                    onMoreLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
-                        : undefined
-                    }
-                    onLessLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
-                        : undefined
-                    }
-                    isMoreLikeThis={Boolean(
-                      job.recommendationId && moreLikeThisIds[job.recommendationId],
-                    )}
-                    onOpen={(selected) => {
-                      if (!selected.id) return;
-                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
-                      void navigate(jobDetailPath(selected.id), {
-                        state: { fromFeed: `${location.pathname}${location.search}` },
-                      });
-                    }}
-                    onSave={handleRecommendedSave}
-                  />
-                )}
-              />
+              <Box sx={aiMatchPageSx.resumeFileCard}>
+                <Box aria-hidden="true" sx={aiMatchPageSx.resumeFileIcon}>
+                  <PictureAsPdfOutlinedIcon fontSize="medium" />
+                </Box>
+                <Box sx={aiMatchPageSx.resumeFileCopy}>
+                  <Typography sx={aiMatchPageSx.resumeFileName}>
+                    {selectedResumeFile?.originalName ?? FOR_YOU_COPY.confirmedResume}{' '}
+                    <VerifiedUserOutlinedIcon
+                      aria-label={FOR_YOU_COPY.confirmedResume}
+                      fontSize="inherit"
+                    />
+                  </Typography>
+                  {selectedResumeFile ? (
+                    <Typography sx={aiMatchPageSx.resumeFileMeta}>
+                      {FOR_YOU_COPY.resumeMeta(
+                        formatUploadedDate(selectedResumeFile.uploadedAt),
+                        formatFileSize(selectedResumeFile.sizeBytes),
+                      )}
+                    </Typography>
+                  ) : null}
+                </Box>
+                <Box sx={aiMatchPageSx.resumeFileActions}>
+                  <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
+                    {FOR_YOU_COPY.replaceResume}
+                  </Button>
+                </Box>
+              </Box>
+
+              {!resumeGeneratedOnce ? (
+                <Box role="status" sx={aiMatchPageSx.dashedEmpty}>
+                  <Box aria-hidden="true" sx={aiMatchPageSx.dashedEmptyArt}>
+                    <DescriptionOutlinedIcon fontSize="inherit" />
+                  </Box>
+                  <Typography component="h2" sx={aiMatchPageSx.dashedEmptyTitle}>
+                    {FOR_YOU_COPY.resumeEmptyPending}
+                  </Typography>
+                  <Button
+                    disabled={generateResume.isPending}
+                    isLoading={generateResume.isPending}
+                    onClick={runGenerateResume}
+                    size="small"
+                    startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+                  >
+                    {FOR_YOU_COPY.generateMatches}
+                  </Button>
+                </Box>
+              ) : null}
+
+              {resumeGeneratedOnce &&
+              !generateResume.isPending &&
+              !generateResume.isError &&
+              visibleResumeRecommendations.length === 0 ? (
+                <Box role="status" sx={aiMatchPageSx.empty}>
+                  <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                    <DescriptionOutlinedIcon fontSize="medium" />
+                  </Box>
+                  <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                    {FOR_YOU_COPY.emptyAfterGenerateTitle}
+                  </Typography>
+                  <Typography sx={aiMatchPageSx.emptyDescription}>
+                    {FOR_YOU_COPY.resumeEmptyAfterGenerate}
+                  </Typography>
+                  <Box sx={aiMatchPageSx.emptyActions}>
+                    <Button
+                      component={RouterLink}
+                      size="small"
+                      to={ROUTES.JOB_FEED}
+                      variant="outline"
+                    >
+                      {FOR_YOU_COPY.browseJobs}
+                    </Button>
+                  </Box>
+                </Box>
+              ) : null}
+
+              {visibleResumeRecommendations.length > 0 ? (
+                <>
+                  <Box sx={aiMatchPageSx.listHeader}>
+                    <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
+                      {FOR_YOU_COPY.resumeResultCount(visibleResumeRecommendations.length)}
+                    </Typography>
+                  </Box>
+                  <Box sx={jobFeedPageSx.list}>
+                    <VirtualizedJobList
+                      ariaLabel="Resume recommendations"
+                      getKey={(job) =>
+                        job.recommendationId ?? job.id ?? `${job.company}-${job.title}`
+                      }
+                      items={visibleResumeRecommendations}
+                      renderItem={renderRecommendationJobCard}
+                    />
+                  </Box>
+                </>
+              ) : null}
             </>
           ) : null}
         </Box>
@@ -735,81 +1167,134 @@ export function AiMatchPage() {
           aria-labelledby={getTabId('similar')}
           id={getPanelId('similar')}
           role="tabpanel"
-          sx={{ display: 'grid', gap: 3 }}
+          sx={aiMatchPageSx.panel}
         >
-          {!similarSourceJobId ? (
-            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
-              <Typography component="h2" sx={{ fontSize: '1rem', fontWeight: 800, m: 0 }}>
-                Similar jobs
-              </Typography>
-              <Typography role="status" sx={{ color: 'text.secondary' }}>
-                Open a job detail page to choose the source job for this mode.
-              </Typography>
-              <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
-                Browse jobs
+          <AiMatchInfoBanner
+            action={
+              <Button
+                disabled={!similarSourceJobId || similarJobs.isFetching}
+                onClick={() => void similarJobs.refetch()}
+                size="small"
+                startIcon={<RefreshIcon fontSize="small" />}
+                variant="outline"
+              >
+                {FOR_YOU_COPY.refresh}
               </Button>
+            }
+            icon={<PeopleOutlineIcon fontSize="small" />}
+            message={FOR_YOU_COPY.similarBanner}
+          />
+
+          {similarSourceJobId && sourceJobCard ? (
+            <Box sx={aiMatchPageSx.sourceJobCard}>
+              <SourceJobLogo initial={sourceJobCard.logo} />
+              <Box sx={aiMatchPageSx.sourceJobCopy}>
+                <Typography sx={aiMatchPageSx.sourceJobLabel}>
+                  {FOR_YOU_COPY.similarSourceLabel}
+                </Typography>
+                <Typography sx={aiMatchPageSx.sourceJobTitle}>{sourceJobCard.title}</Typography>
+                <Typography sx={aiMatchPageSx.sourceJobMeta}>
+                  {sourceJobCard.company}
+                  {sourceJobCard.location ? ` • ${sourceJobCard.location}` : ''}
+                </Typography>
+              </Box>
+              <Button onClick={clearSimilarSource} size="small" variant="outline">
+                {FOR_YOU_COPY.similarChangeSource}
+              </Button>
+            </Box>
+          ) : null}
+
+          {!similarSourceJobId && resolvingSimilarSource ? (
+            <JobFeedLoadingState label={FOR_YOU_COPY.loadingSimilarSource} />
+          ) : null}
+
+          {showSimilarPickSourceEmpty ? (
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                <SwapHorizOutlinedIcon fontSize="medium" />
+              </Box>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                {FOR_YOU_COPY.similarEmptyTitle}
+              </Typography>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
+                {FOR_YOU_COPY.similarEmptyDescription}
+              </Typography>
+              <Box sx={aiMatchPageSx.emptyActions}>
+                <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
+                  {FOR_YOU_COPY.similarBrowse}
+                </Button>
+              </Box>
             </Box>
           ) : null}
 
           {similarSourceJobId && similarJobs.isPending ? (
-            <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-              <CircularProgress aria-label="Loading similar jobs" />
-            </Box>
+            <JobFeedLoadingState label={FOR_YOU_COPY.loadingSimilar} />
           ) : null}
 
           {similarSourceJobId && similarJobs.isError ? (
-            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
-              <Box role="alert">
-                <Typography>
-                  {similarJobs.error instanceof Error
-                    ? similarJobs.error.message
-                    : 'Unable to load similar jobs.'}
-                </Typography>
-              </Box>
-              <Button
-                disabled={similarJobs.isFetching}
-                onClick={() => void similarJobs.refetch()}
-                size="small"
-              >
-                Retry
-              </Button>
-            </Box>
+            <JobFeedStatus
+              message={
+                similarJobs.error instanceof Error
+                  ? similarJobs.error.message
+                  : 'Unable to load similar jobs.'
+              }
+              onRetry={similarJobs.isFetching ? undefined : () => void similarJobs.refetch()}
+              title={FOR_YOU_COPY.loadSimilarErrorTitle}
+              tone="error"
+            />
           ) : null}
 
           {similarSourceJobId &&
           !similarJobs.isPending &&
           !similarJobs.isError &&
           similarCards.length === 0 ? (
-            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
-              No similar jobs found for this job.
-            </Typography>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                <SwapHorizOutlinedIcon fontSize="medium" />
+              </Box>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                {FOR_YOU_COPY.emptyAfterGenerateTitle}
+              </Typography>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
+                {FOR_YOU_COPY.similarEmpty}
+              </Typography>
+              <Box sx={aiMatchPageSx.emptyActions}>
+                <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
+                  {FOR_YOU_COPY.browseJobs}
+                </Button>
+              </Box>
+            </Box>
           ) : null}
 
-          {similarCards.length > 0 ? (
+          {similarSourceJobId && similarCards.length > 0 ? (
             <>
-              <Typography sx={{ color: 'text.secondary' }}>
-                {similarCards.length} similar job{similarCards.length === 1 ? '' : 's'}
-              </Typography>
-              <VirtualizedJobList
-                ariaLabel="Similar jobs"
-                getKey={(job) => job.id ?? `${job.company}-${job.title}`}
-                items={similarCards}
-                renderItem={(job) => (
-                  <JobCard
-                    job={job}
-                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={handleRecommendedApply}
-                    onOpen={(selected) => {
-                      if (!selected.id) return;
-                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
-                      void navigate(jobDetailPath(selected.id), {
-                        state: { fromFeed: `${location.pathname}${location.search}` },
-                      });
-                    }}
-                    onSave={handleRecommendedSave}
-                  />
-                )}
-              />
+              <Box sx={aiMatchPageSx.listHeader}>
+                <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
+                  {FOR_YOU_COPY.similarResultCount(similarCards.length)}
+                </Typography>
+              </Box>
+              <Box sx={jobFeedPageSx.list}>
+                <VirtualizedJobList
+                  ariaLabel="Similar jobs"
+                  getKey={(job) => job.id ?? `${job.company}-${job.title}`}
+                  items={similarCards}
+                  renderItem={(job) => (
+                    <JobCard
+                      job={job}
+                      isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                      onApply={handleRecommendedApply}
+                      onOpen={(selected) => {
+                        if (!selected.id) return;
+                        trackRecommendationFeedback(job.recommendationId, 'OPENED');
+                        void navigate(jobDetailPath(selected.id), {
+                          state: { fromFeed: `${location.pathname}${location.search}` },
+                        });
+                      }}
+                      onSave={handleRecommendedSave}
+                    />
+                  )}
+                />
+              </Box>
             </>
           ) : null}
         </Box>
@@ -820,24 +1305,107 @@ export function AiMatchPage() {
           aria-labelledby={getTabId('career')}
           id={getPanelId('career')}
           role="tabpanel"
-          sx={{ display: 'grid', gap: 3 }}
+          sx={aiMatchPageSx.panel}
         >
-          <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
-            <TextField
-              error={careerGoalTooLong}
-              fullWidth
-              helperText={
-                careerGoalTooLong
-                  ? `Use ${CAREER_GOAL_MAX_LENGTH.toLocaleString()} characters or fewer.`
-                  : `${trimmedCareerGoalText.length.toLocaleString()} / ${CAREER_GOAL_MAX_LENGTH.toLocaleString()}`
-              }
-              label="Career goal"
-              multiline
-              minRows={5}
-              onChange={(event) => setCareerGoalText(event.target.value)}
-              placeholder="Describe the role, transition, or direction you want to pursue."
-              value={careerGoalText}
-            />
+          <AiMatchInfoBanner
+            icon={<TrackChangesOutlinedIcon fontSize="small" />}
+            message={FOR_YOU_COPY.careerBanner}
+          />
+
+          <Box sx={aiMatchPageSx.careerComposerCard}>
+            <Box sx={aiMatchPageSx.careerFormGrid}>
+              <TextField
+                fullWidth
+                label={FOR_YOU_COPY.careerTargetLabel}
+                onChange={(event) => setCareerTargetRole(event.target.value)}
+                placeholder={FOR_YOU_COPY.careerTargetPlaceholder}
+                size="small"
+                value={careerTargetRole}
+              />
+              <TextField
+                fullWidth
+                label={FOR_YOU_COPY.careerPathLabel}
+                onChange={(event) => setCareerPath(event.target.value)}
+                placeholder={FOR_YOU_COPY.careerPathPlaceholder}
+                size="small"
+                value={careerPath}
+              />
+              <Box sx={aiMatchPageSx.careerFormPreferences}>
+                <TextField
+                  fullWidth
+                  label={FOR_YOU_COPY.careerExperienceLabel}
+                  onChange={(event) => setCareerExperience(event.target.value)}
+                  select
+                  size="small"
+                  value={careerExperience}
+                >
+                  {FOR_YOU_EXPERIENCE_OPTIONS.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <TextField
+                  fullWidth
+                  label={FOR_YOU_COPY.careerWorkModeLabel}
+                  onChange={(event) => setCareerWorkMode(event.target.value)}
+                  select
+                  size="small"
+                  value={careerWorkMode}
+                >
+                  {FOR_YOU_WORK_MODE_OPTIONS.map((option) => (
+                    <MenuItem key={option} value={option}>
+                      {option}
+                    </MenuItem>
+                  ))}
+                </TextField>
+                <Autocomplete
+                  autoHighlight
+                  disableClearable={careerCountry === ANY_COUNTRY}
+                  fullWidth
+                  getOptionLabel={(option) => option}
+                  isOptionEqualToValue={(option, value) => option === value}
+                  onChange={(_event, value) => setCareerCountry(value ?? ANY_COUNTRY)}
+                  options={[ANY_COUNTRY, ...CAREER_COUNTRY_OPTIONS.map((option) => option.name)]}
+                  renderInput={(params) => (
+                    <TextField {...params} label={FOR_YOU_COPY.careerLocationLabel} size="small" />
+                  )}
+                  size="small"
+                  value={careerCountry}
+                />
+              </Box>
+            </Box>
+
+            <Box sx={aiMatchPageSx.careerPathsSection}>
+              <Typography component="h3" sx={aiMatchPageSx.composerHint}>
+                {FOR_YOU_COPY.careerPopularTitle}
+              </Typography>
+              <Box
+                aria-label={FOR_YOU_COPY.careerPopularTitle}
+                role="group"
+                sx={aiMatchPageSx.careerPathChips}
+              >
+                {FOR_YOU_CAREER_PATHS.map((path) => {
+                  const isActive = careerPath === path;
+
+                  return (
+                    <Box
+                      aria-pressed={isActive}
+                      component="button"
+                      key={path}
+                      onClick={() => setCareerPath(path)}
+                      sx={{
+                        ...aiMatchPageSx.careerPathChip,
+                        ...(isActive ? aiMatchPageSx.careerPathChipActive : {}),
+                      }}
+                      type="button"
+                    >
+                      {path}
+                    </Box>
+                  );
+                })}
+              </Box>
+            </Box>
 
             {generateCareerError ? (
               <Typography role="alert" sx={{ color: 'error.main' }}>
@@ -845,94 +1413,92 @@ export function AiMatchPage() {
               </Typography>
             ) : null}
 
-            <Button
-              disabled={!trimmedCareerGoalText || careerGoalTooLong || generateCareerGoal.isPending}
-              isLoading={generateCareerGoal.isPending}
-              onClick={() => {
-                if (!trimmedCareerGoalText || careerGoalTooLong) return;
-                setCareerGeneratedOnce(true);
-                void generateCareerGoal
-                  .mutateAsync(trimmedCareerGoalText)
-                  .then((items) => setCareerRecommendations(items))
-                  .catch(() => undefined);
-              }}
-              size="small"
-            >
-              Generate career matches
-            </Button>
+            <Box sx={aiMatchPageSx.careerComposerFooter}>
+              <Button
+                onClick={handleSuggestCareerForMe}
+                size="small"
+                startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+                variant="outline"
+              >
+                {FOR_YOU_COPY.careerSuggestCta}
+              </Button>
+              <Button
+                disabled={generateCareerGoal.isPending}
+                isLoading={generateCareerGoal.isPending}
+                onClick={runGenerateCareerGoal}
+                size="small"
+                startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+              >
+                {FOR_YOU_COPY.careerGenerate}
+              </Button>
+            </Box>
           </Box>
 
-          {!careerGeneratedOnce &&
-          !generateCareerGoal.isPending &&
-          careerRecommendations.length === 0 ? (
-            <Typography role="status" sx={{ color: 'text.secondary', py: 2 }}>
-              Enter a career goal to generate target, transition, stretch, and adjacent-path
-              matches.
-            </Typography>
+          <Box sx={aiMatchPageSx.careerPrivacy}>
+            <LockOutlinedIcon fontSize="inherit" />
+            {FOR_YOU_COPY.careerPrivacyNote}
+          </Box>
+
+          {!careerGeneratedOnce ? (
+            <Box role="status" sx={aiMatchPageSx.dashedEmpty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.dashedEmptyArt}>
+                <TrackChangesOutlinedIcon fontSize="inherit" />
+              </Box>
+              <Typography component="h2" sx={aiMatchPageSx.dashedEmptyTitle}>
+                {FOR_YOU_COPY.careerEmptyPending}
+              </Typography>
+            </Box>
           ) : null}
 
           {careerGeneratedOnce &&
           !generateCareerGoal.isPending &&
           !generateCareerGoal.isError &&
           visibleCareerRecommendations.length === 0 ? (
-            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
-              No matching jobs were found for this career goal.
-            </Typography>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                <TrackChangesOutlinedIcon fontSize="medium" />
+              </Box>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                {FOR_YOU_COPY.emptyAfterGenerateTitle}
+              </Typography>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
+                No matching jobs were found for this career search. Try adjusting your target role
+                or path.
+              </Typography>
+              <Box sx={aiMatchPageSx.emptyActions}>
+                <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
+                  {FOR_YOU_COPY.browseJobs}
+                </Button>
+              </Box>
+            </Box>
+          ) : null}
+
+          {visibleCareerRecommendations.length > 0 ? (
+            <Box sx={aiMatchPageSx.listHeader}>
+              <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
+                {FOR_YOU_COPY.careerResultCount(visibleCareerRecommendations.length)}
+              </Typography>
+            </Box>
           ) : null}
 
           {careerGroups.map(([category, items]) => (
-            <Box component="section" key={category} sx={{ display: 'grid', gap: 2 }}>
-              <Box sx={{ alignItems: 'baseline', display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                <Typography component="h2" sx={{ fontSize: '1rem', fontWeight: 800, m: 0 }}>
+            <Box component="section" key={category} sx={aiMatchPageSx.groupSection}>
+              <Box sx={aiMatchPageSx.groupHeader}>
+                <Typography component="h2" sx={aiMatchPageSx.groupTitle}>
                   {careerCategoryCopy[category] ?? formatRecommendationCategoryLabel(category)}
                 </Typography>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  {items.length} {items.length === 1 ? 'match' : 'matches'}
+                <Typography sx={aiMatchPageSx.groupMeta}>
+                  {FOR_YOU_COPY.jobCount(items.length)}
                 </Typography>
               </Box>
-              <VirtualizedJobList
-                ariaLabel={`${careerCategoryCopy[category] ?? category} career recommendations`}
-                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
-                items={items.map((item, index) => mapRecommendationDtoToCard(item, index))}
-                renderItem={(job) => (
-                  <JobCard
-                    job={job}
-                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={handleRecommendedApply}
-                    onDismiss={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
-                        : undefined
-                    }
-                    onNotRelevant={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
-                        : undefined
-                    }
-                    onMoreLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
-                        : undefined
-                    }
-                    onLessLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
-                        : undefined
-                    }
-                    isMoreLikeThis={Boolean(
-                      job.recommendationId && moreLikeThisIds[job.recommendationId],
-                    )}
-                    onOpen={(selected) => {
-                      if (!selected.id) return;
-                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
-                      void navigate(jobDetailPath(selected.id), {
-                        state: { fromFeed: `${location.pathname}${location.search}` },
-                      });
-                    }}
-                    onSave={handleRecommendedSave}
-                  />
-                )}
-              />
+              <Box sx={jobFeedPageSx.list}>
+                <VirtualizedJobList
+                  ariaLabel={`${careerCategoryCopy[category] ?? category} career recommendations`}
+                  getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
+                  items={items.map((item, index) => mapRecommendationDtoToCard(item, index))}
+                  renderItem={renderRecommendationJobCard}
+                />
+              </Box>
             </Box>
           ))}
         </Box>
@@ -943,22 +1509,25 @@ export function AiMatchPage() {
           aria-labelledby={getTabId('text-career')}
           id={getPanelId('text-career')}
           role="tabpanel"
-          sx={{ display: 'grid', gap: 3 }}
+          sx={aiMatchPageSx.panel}
         >
-          <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
+          <AiMatchInfoBanner
+            icon={<StickyNote2OutlinedIcon fontSize="small" />}
+            message={FOR_YOU_COPY.textBanner}
+          />
+
+          <Box sx={aiMatchPageSx.textComposerCard}>
             <TextField
               error={targetTextTooLong}
               fullWidth
               helperText={
-                targetTextTooLong
-                  ? `Use ${TARGET_TEXT_MAX_LENGTH.toLocaleString()} characters or fewer.`
-                  : `${trimmedTargetText.length.toLocaleString()} / ${TARGET_TEXT_MAX_LENGTH.toLocaleString()}`
+                targetTextTooLong ? FOR_YOU_COPY.textTooLong(TARGET_TEXT_MAX_LENGTH) : undefined
               }
-              label="Target role text"
+              label={FOR_YOU_COPY.textLabel}
               multiline
-              minRows={5}
+              minRows={4}
               onChange={(event) => setTargetText(event.target.value)}
-              placeholder="Paste a target role, career goal, or job-search brief."
+              placeholder={FOR_YOU_COPY.textPlaceholder}
               value={targetText}
             />
 
@@ -968,89 +1537,81 @@ export function AiMatchPage() {
               </Typography>
             ) : null}
 
-            <Button
-              disabled={!trimmedTargetText || targetTextTooLong || generateText.isPending}
-              isLoading={generateText.isPending}
-              onClick={() => {
-                if (!trimmedTargetText || targetTextTooLong) return;
-                setTextGeneratedOnce(true);
-                void generateText
-                  .mutateAsync(trimmedTargetText)
-                  .then((items) => setTextRecommendations(items.map(mapRecommendationDtoToCard)))
-                  .catch(() => undefined);
-              }}
-              size="small"
-            >
-              Generate from text
-            </Button>
+            <Box sx={aiMatchPageSx.textComposerFooter}>
+              <Typography sx={aiMatchPageSx.charCount}>
+                {trimmedTargetText.length.toLocaleString()} /{' '}
+                {TARGET_TEXT_MAX_LENGTH.toLocaleString()}
+              </Typography>
+              <Box sx={aiMatchPageSx.textComposerActions}>
+                <Button
+                  disabled={!targetText}
+                  onClick={() => setTargetText('')}
+                  size="small"
+                  variant="outline"
+                >
+                  {FOR_YOU_COPY.clear}
+                </Button>
+                <Button
+                  disabled={!trimmedTargetText || targetTextTooLong || generateText.isPending}
+                  isLoading={generateText.isPending}
+                  onClick={runGenerateText}
+                  size="small"
+                  startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+                >
+                  {FOR_YOU_COPY.textGenerate}
+                </Button>
+              </Box>
+            </Box>
           </Box>
 
-          {!textGeneratedOnce &&
-          !generateText.isPending &&
-          visibleTextRecommendations.length === 0 ? (
-            <Typography role="status" sx={{ color: 'text.secondary', py: 2 }}>
-              Paste a target role or career note to generate text-based matches.
-            </Typography>
+          {!textGeneratedOnce ? (
+            <Box role="status" sx={aiMatchPageSx.dashedEmpty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.dashedEmptyArt}>
+                <TravelExploreOutlinedIcon fontSize="inherit" />
+              </Box>
+              <Typography component="h2" sx={aiMatchPageSx.dashedEmptyTitle}>
+                {FOR_YOU_COPY.textEmptyPending}
+              </Typography>
+            </Box>
           ) : null}
 
           {textGeneratedOnce &&
           !generateText.isPending &&
           !generateText.isError &&
           visibleTextRecommendations.length === 0 ? (
-            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
-              No matching jobs were found for this text.
-            </Typography>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                <StickyNote2OutlinedIcon fontSize="medium" />
+              </Box>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                {FOR_YOU_COPY.emptyAfterGenerateTitle}
+              </Typography>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
+                {FOR_YOU_COPY.textEmptyAfterGenerate}
+              </Typography>
+              <Box sx={aiMatchPageSx.emptyActions}>
+                <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
+                  {FOR_YOU_COPY.browseJobs}
+                </Button>
+              </Box>
+            </Box>
           ) : null}
 
           {visibleTextRecommendations.length > 0 ? (
             <>
-              <Typography sx={{ color: 'text.secondary' }}>
-                {visibleTextRecommendations.length} text recommendation
-                {visibleTextRecommendations.length === 1 ? '' : 's'}
-              </Typography>
-              <VirtualizedJobList
-                ariaLabel="Text recommendations"
-                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
-                items={visibleTextRecommendations}
-                renderItem={(job) => (
-                  <JobCard
-                    job={job}
-                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={handleRecommendedApply}
-                    onDismiss={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
-                        : undefined
-                    }
-                    onNotRelevant={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
-                        : undefined
-                    }
-                    onMoreLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
-                        : undefined
-                    }
-                    onLessLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
-                        : undefined
-                    }
-                    isMoreLikeThis={Boolean(
-                      job.recommendationId && moreLikeThisIds[job.recommendationId],
-                    )}
-                    onOpen={(selected) => {
-                      if (!selected.id) return;
-                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
-                      void navigate(jobDetailPath(selected.id), {
-                        state: { fromFeed: `${location.pathname}${location.search}` },
-                      });
-                    }}
-                    onSave={handleRecommendedSave}
-                  />
-                )}
-              />
+              <Box sx={aiMatchPageSx.listHeader}>
+                <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
+                  {FOR_YOU_COPY.textResultCount(visibleTextRecommendations.length)}
+                </Typography>
+              </Box>
+              <Box sx={jobFeedPageSx.list}>
+                <VirtualizedJobList
+                  ariaLabel="Text recommendations"
+                  getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
+                  items={visibleTextRecommendations}
+                  renderItem={renderRecommendationJobCard}
+                />
+              </Box>
             </>
           ) : null}
         </Box>
@@ -1061,198 +1622,408 @@ export function AiMatchPage() {
           aria-labelledby={getTabId('saved')}
           id={getPanelId('saved')}
           role="tabpanel"
-          sx={{ display: 'grid', gap: 3 }}
+          sx={aiMatchPageSx.savedTabPanel}
         >
-          {savedSearches.isPending ? (
-            <Box sx={{ display: 'grid', placeItems: 'center', py: 8 }}>
-              <CircularProgress aria-label="Loading saved searches" />
-            </Box>
-          ) : null}
-
-          {savedSearchError ? (
-            <Typography role="alert" sx={{ color: 'error.main' }}>
-              {savedSearchError}
-            </Typography>
-          ) : null}
-
-          {savedSearchNotice ? (
-            <Alert onClose={() => setSavedSearchNotice(null)} role="status" severity="success">
-              {savedSearchNotice}
-            </Alert>
-          ) : null}
-
-          <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
-            <TextField
-              fullWidth
-              label="Saved search name"
-              onChange={(event) => setSavedSearchName(event.target.value)}
-              size="small"
-              value={savedSearchName}
-            />
-            <TextField
-              fullWidth
-              label="Search query"
-              multiline
-              minRows={3}
-              onChange={(event) => setSavedSearchQueryText(event.target.value)}
-              placeholder="Example: Remote TypeScript platform engineer"
-              value={savedSearchQueryText}
-            />
-            <Button
-              disabled={!trimmedSavedSearchName || createSavedSearch.isPending}
-              isLoading={createSavedSearch.isPending}
-              onClick={() => {
-                if (!trimmedSavedSearchName) return;
-                void createSavedSearch
-                  .mutateAsync({
-                    name: trimmedSavedSearchName,
-                    ...(trimmedSavedSearchQuery ? { query: trimmedSavedSearchQuery } : {}),
-                  })
-                  .then((savedSearch) => {
-                    setSelectedSavedSearchId(savedSearch.id);
-                    setSavedSearchName('');
-                    setSavedSearchQueryText('');
-                    setSavedSearchNotice('Saved search created.');
-                  })
-                  .catch(() => undefined);
-              }}
-              size="small"
-            >
-              Create saved search
-            </Button>
-          </Box>
-
-          {!savedSearches.isPending && !savedSearches.isError && savedSearchesList.length === 0 ? (
-            <Typography role="status" sx={{ color: 'text.secondary', py: 2 }}>
-              No saved searches yet.
-            </Typography>
-          ) : null}
-
-          {savedSearchesList.length > 0 ? (
-            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}>
-              <TextField
-                label="Saved search"
-                onChange={(event) => setSelectedSavedSearchId(event.target.value)}
-                select
+          <AiMatchInfoBanner
+            action={
+              <Button
+                onClick={() => {
+                  void savedSearches.refetch();
+                  void savedQuery.refetch();
+                }}
                 size="small"
-                sx={{ maxWidth: 420, width: '100%' }}
-                value={selectedSavedSearchId}
+                startIcon={<RefreshIcon fontSize="small" />}
+                variant="outline"
               >
-                {savedSearchesList.map((savedSearch) => (
-                  <MenuItem key={savedSearch.id} value={savedSearch.id}>
-                    {savedSearch.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+                {FOR_YOU_COPY.refresh}
+              </Button>
+            }
+            icon={<BookmarkOutlinedIcon fontSize="small" />}
+            message={FOR_YOU_COPY.savedBanner}
+          />
 
-              {selectedSavedSearch?.query ? (
-                <Typography sx={{ color: 'text.secondary' }}>
-                  {selectedSavedSearch.query}
-                </Typography>
+          {savedSearches.isError ? (
+            <JobFeedStatus
+              message={
+                savedSearches.error instanceof Error
+                  ? savedSearches.error.message
+                  : 'Unable to load saved searches.'
+              }
+              onRetry={savedSearches.isFetching ? undefined : () => void savedSearches.refetch()}
+              title={FOR_YOU_COPY.savedLoadErrorTitle}
+              tone="error"
+            />
+          ) : null}
+
+          {savedSearchError && !savedSearches.isError ? (
+            <JobFeedStatus
+              message={savedSearchError}
+              title={FOR_YOU_COPY.savedActionErrorTitle}
+              tone="error"
+            />
+          ) : null}
+
+          <Box sx={aiMatchPageSx.savedChipsShell}>
+            <Typography component="h2" sx={aiMatchPageSx.sectionTitle}>
+              {FOR_YOU_COPY.savedSearchesTitle}
+            </Typography>
+            <FilterShell>
+              {isCompactModeTabs ? (
+                <FilterScrollButton
+                  aria-label={FOR_YOU_COPY.scrollSavedSearchesLeftAria}
+                  disabled={!savedChipsScrollState.canScrollLeft}
+                  onClick={() => scrollSavedChipsByDirection(-1)}
+                  type="button"
+                >
+                  <ChevronLeftIcon fontSize="small" />
+                </FilterScrollButton>
               ) : null}
 
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1 }}>
-                <Button
-                  disabled={!selectedSavedSearchId || generateSavedSearch.isPending}
-                  isLoading={generateSavedSearch.isPending}
+              <FilterTrack
+                aria-label={FOR_YOU_COPY.savedSearchesTitle}
+                ref={savedChipsTrackRef}
+                role="group"
+              >
+                <Box
+                  component="button"
                   onClick={() => {
-                    if (!selectedSavedSearchId) return;
-                    setSavedSearchGeneratedOnce(true);
-                    void generateSavedSearch
-                      .mutateAsync(selectedSavedSearchId)
-                      .then((items) =>
-                        setSavedSearchRecommendations(items.map(mapRecommendationDtoToCard)),
-                      )
-                      .catch(() => undefined);
+                    setSelectedSavedView('all');
+                    setShowNewSavedSearchForm(false);
                   }}
-                  size="small"
+                  sx={{
+                    ...aiMatchPageSx.savedChip,
+                    ...(selectedSavedView === 'all' ? aiMatchPageSx.savedChipActive : {}),
+                  }}
+                  type="button"
                 >
-                  Rerun saved search
+                  <Box
+                    aria-hidden="true"
+                    sx={{
+                      ...aiMatchPageSx.savedChipIcon,
+                      ...(selectedSavedView === 'all' ? aiMatchPageSx.savedChipIconActive : {}),
+                    }}
+                  >
+                    <BookmarkOutlinedIcon fontSize="small" />
+                  </Box>
+                  <Typography sx={aiMatchPageSx.savedChipTitle}>
+                    {FOR_YOU_COPY.allSavedJobs}
+                  </Typography>
+                  <Typography sx={aiMatchPageSx.savedChipMeta}>
+                    {FOR_YOU_COPY.jobCount(savedBookmarkCards.length)}
+                  </Typography>
+                </Box>
+
+                {savedSearchesList.map((search) => (
+                  <Box
+                    component="button"
+                    key={search.id}
+                    onClick={() => {
+                      setSelectedSavedView(search.id);
+                      setShowNewSavedSearchForm(false);
+                      setSavedSearchGeneratedOnce(
+                        Boolean(savedSearchResultCounts[search.id] !== undefined),
+                      );
+                    }}
+                    sx={{
+                      ...aiMatchPageSx.savedChip,
+                      ...(selectedSavedView === search.id ? aiMatchPageSx.savedChipActive : {}),
+                    }}
+                    type="button"
+                  >
+                    <Box
+                      aria-hidden="true"
+                      sx={{
+                        ...aiMatchPageSx.savedChipIcon,
+                        ...(selectedSavedView === search.id
+                          ? aiMatchPageSx.savedChipIconActive
+                          : {}),
+                      }}
+                    >
+                      <BookmarkOutlinedIcon fontSize="small" />
+                    </Box>
+                    <Typography sx={aiMatchPageSx.savedChipTitle}>{search.name}</Typography>
+                    <Typography sx={aiMatchPageSx.savedChipMeta}>
+                      {savedSearchResultCounts[search.id] !== undefined
+                        ? FOR_YOU_COPY.jobCount(savedSearchResultCounts[search.id]!)
+                        : search.query?.trim() || FOR_YOU_COPY.savedNoQuery}
+                    </Typography>
+                  </Box>
+                ))}
+
+                <Box
+                  component="button"
+                  onClick={() => {
+                    setShowNewSavedSearchForm(true);
+                    setSelectedSavedView('all');
+                  }}
+                  sx={{ ...aiMatchPageSx.savedChip, ...aiMatchPageSx.savedChipNew }}
+                  type="button"
+                >
+                  <AddIcon fontSize="small" />
+                  <Typography sx={aiMatchPageSx.savedChipTitle}>
+                    {FOR_YOU_COPY.newSavedSearch}
+                  </Typography>
+                </Box>
+              </FilterTrack>
+
+              {isCompactModeTabs ? (
+                <FilterScrollButton
+                  aria-label={FOR_YOU_COPY.scrollSavedSearchesRightAria}
+                  disabled={!savedChipsScrollState.canScrollRight}
+                  onClick={() => scrollSavedChipsByDirection(1)}
+                  type="button"
+                >
+                  <ChevronRightIcon fontSize="small" />
+                </FilterScrollButton>
+              ) : null}
+            </FilterShell>
+
+            {savedSearchesList.length === 0 ? (
+              <Typography sx={aiMatchPageSx.composerHint}>
+                {FOR_YOU_COPY.savedEmptyDescription}
+              </Typography>
+            ) : null}
+          </Box>
+
+          {selectedSavedView !== 'all' && selectedSavedSearch ? (
+            <Box sx={aiMatchPageSx.savedSearchActions}>
+              <Box sx={aiMatchPageSx.savedSearchActionsCopy}>
+                <Typography sx={aiMatchPageSx.savedChipTitle}>
+                  {selectedSavedSearch.name}
+                </Typography>
+                <Typography sx={aiMatchPageSx.savedQueryChip}>
+                  {selectedSavedSearch.query || FOR_YOU_COPY.savedNoQuery}
+                </Typography>
+              </Box>
+              <Box sx={aiMatchPageSx.savedSearchActionsButtons}>
+                <Button
+                  aria-label={FOR_YOU_COPY.rerunSavedSearchAria}
+                  disabled={generateSavedSearch.isPending}
+                  isLoading={generateSavedSearch.isPending}
+                  onClick={() => runGenerateSavedSearch(selectedSavedSearch.id)}
+                  size="small"
+                  startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+                >
+                  {FOR_YOU_COPY.rerunSavedSearch}
                 </Button>
                 <Button
-                  disabled={!selectedSavedSearchId || deleteSavedSearch.isPending}
+                  aria-label={FOR_YOU_COPY.deleteSavedSearchAria}
+                  disabled={deleteSavedSearch.isPending}
                   isLoading={deleteSavedSearch.isPending}
                   onClick={() => {
-                    if (!selectedSavedSearchId) return;
-                    const deletedId = selectedSavedSearchId;
+                    const deletedId = selectedSavedSearch.id;
                     void deleteSavedSearch
                       .mutateAsync(deletedId)
                       .then(() => {
-                        setSelectedSavedSearchId('');
+                        setSelectedSavedView('all');
                         setSavedSearchRecommendations([]);
-                        setSavedSearchNotice('Saved search deleted.');
+                        setSavedSearchGeneratedOnce(false);
+                        showToast({
+                          message: FOR_YOU_COPY.savedDeleteToast,
+                          severity: 'success',
+                        });
                       })
                       .catch(() => undefined);
                   }}
                   size="small"
+                  startIcon={<DeleteOutlineIcon fontSize="small" />}
                   variant="outline"
                 >
-                  Delete saved search
+                  {FOR_YOU_COPY.deleteSavedSearch}
                 </Button>
               </Box>
             </Box>
           ) : null}
 
-          {savedSearchGeneratedOnce &&
-          !generateSavedSearch.isPending &&
-          !generateSavedSearch.isError &&
-          visibleSavedSearchRecommendations.length === 0 ? (
-            <Typography role="status" sx={{ color: 'text.secondary', py: 4 }}>
-              No matching jobs were found for this saved search.
-            </Typography>
+          {showNewSavedSearchForm || savedSearchesList.length === 0 ? (
+            <Box sx={aiMatchPageSx.composer}>
+              <Box sx={aiMatchPageSx.composerHeader}>
+                <Typography component="h2" sx={aiMatchPageSx.composerTitle}>
+                  {FOR_YOU_COPY.savedCreateTitle}
+                </Typography>
+                <Typography sx={aiMatchPageSx.composerDescription}>
+                  {FOR_YOU_COPY.savedCreateHint}
+                </Typography>
+              </Box>
+
+              <Box sx={aiMatchPageSx.savedCreateRow}>
+                <TextField
+                  label={FOR_YOU_COPY.savedNameLabel}
+                  onChange={(event) => setSavedSearchName(event.target.value)}
+                  placeholder={FOR_YOU_COPY.savedNamePlaceholder}
+                  size="small"
+                  value={savedSearchName}
+                />
+                <TextField
+                  label={FOR_YOU_COPY.savedQueryLabel}
+                  onChange={(event) => setSavedSearchQueryText(event.target.value)}
+                  placeholder={FOR_YOU_COPY.savedQueryPlaceholder}
+                  size="small"
+                  value={savedSearchQueryText}
+                />
+                <Button
+                  aria-label={FOR_YOU_COPY.createSavedSearchAria}
+                  disabled={!trimmedSavedSearchName || createSavedSearch.isPending}
+                  isLoading={createSavedSearch.isPending}
+                  onClick={() => {
+                    if (!trimmedSavedSearchName) return;
+                    void createSavedSearch
+                      .mutateAsync({
+                        name: trimmedSavedSearchName,
+                        ...(trimmedSavedSearchQuery ? { query: trimmedSavedSearchQuery } : {}),
+                      })
+                      .then((savedSearch) => {
+                        setSelectedSavedView(savedSearch.id);
+                        setSavedSearchName('');
+                        setSavedSearchQueryText('');
+                        setSavedSearchRecommendations([]);
+                        setSavedSearchGeneratedOnce(false);
+                        setShowNewSavedSearchForm(false);
+                        showToast({
+                          message: FOR_YOU_COPY.savedCreateToast,
+                          severity: 'success',
+                        });
+                      })
+                      .catch(() => undefined);
+                  }}
+                  size="small"
+                  startIcon={<AddIcon fontSize="small" />}
+                >
+                  {FOR_YOU_COPY.createSavedSearch}
+                </Button>
+              </Box>
+            </Box>
           ) : null}
 
-          {visibleSavedSearchRecommendations.length > 0 ? (
+          {selectedSavedView === 'all' ? (
             <>
-              <Typography sx={{ color: 'text.secondary' }}>
-                {visibleSavedSearchRecommendations.length} saved-search recommendation
-                {visibleSavedSearchRecommendations.length === 1 ? '' : 's'}
-              </Typography>
-              <VirtualizedJobList
-                ariaLabel="Saved search recommendations"
-                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
-                items={visibleSavedSearchRecommendations}
-                renderItem={(job) => (
-                  <JobCard
-                    job={job}
-                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={handleRecommendedApply}
-                    onDismiss={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
-                        : undefined
-                    }
-                    onNotRelevant={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
-                        : undefined
-                    }
-                    onMoreLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
-                        : undefined
-                    }
-                    onLessLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
-                        : undefined
-                    }
-                    isMoreLikeThis={Boolean(
-                      job.recommendationId && moreLikeThisIds[job.recommendationId],
-                    )}
-                    onOpen={(selected) => {
-                      if (!selected.id) return;
-                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
-                      void navigate(jobDetailPath(selected.id), {
-                        state: { fromFeed: `${location.pathname}${location.search}` },
-                      });
-                    }}
-                    onSave={handleRecommendedSave}
-                  />
-                )}
-              />
+              {savedQuery.isPending ? <JobFeedLoadingState label="Loading saved jobs" /> : null}
+
+              {savedQuery.isError ? (
+                <JobFeedStatus
+                  message={
+                    savedQuery.error instanceof Error
+                      ? savedQuery.error.message
+                      : 'Unable to load saved jobs.'
+                  }
+                  onRetry={savedQuery.isFetching ? undefined : () => void savedQuery.refetch()}
+                  title="Couldn't load saved jobs"
+                  tone="error"
+                />
+              ) : null}
+
+              {!savedQuery.isPending && !savedQuery.isError && savedBookmarkCards.length === 0 ? (
+                <Box role="status" sx={aiMatchPageSx.empty}>
+                  <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                    <DescriptionOutlinedIcon fontSize="medium" />
+                  </Box>
+                  <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                    {FOR_YOU_COPY.savedEmptyBookmarks}
+                  </Typography>
+                  <Box sx={aiMatchPageSx.emptyActions}>
+                    <Button
+                      component={RouterLink}
+                      size="small"
+                      to={ROUTES.JOB_FEED}
+                      variant="outline"
+                    >
+                      {FOR_YOU_COPY.browseJobs}
+                    </Button>
+                  </Box>
+                </Box>
+              ) : null}
+
+              {savedBookmarkCards.length > 0 ? (
+                <Box sx={aiMatchPageSx.savedJobsSection}>
+                  <Box component="hr" sx={aiMatchPageSx.savedDivider} />
+                  <Box sx={aiMatchPageSx.listHeader}>
+                    <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
+                      {FOR_YOU_COPY.savedJobsCount(savedBookmarkCards.length)}
+                    </Typography>
+                    <Box sx={aiMatchPageSx.sortControl}>
+                      <Typography
+                        component="label"
+                        htmlFor="saved-jobs-sort"
+                        sx={aiMatchPageSx.sortLabel}
+                      >
+                        {FOR_YOU_COPY.sortByLabel}
+                      </Typography>
+                      <TextField
+                        id="saved-jobs-sort"
+                        onChange={(event) =>
+                          setSavedSortOrder(event.target.value as 'newest' | 'oldest')
+                        }
+                        select
+                        size="small"
+                        sx={aiMatchPageSx.sortSelect}
+                        value={savedSortOrder}
+                      >
+                        <MenuItem value="newest">{FOR_YOU_COPY.savedSortNewest}</MenuItem>
+                        <MenuItem value="oldest">{FOR_YOU_COPY.savedSortOldest}</MenuItem>
+                      </TextField>
+                    </Box>
+                  </Box>
+                  <Box sx={jobFeedPageSx.list}>
+                    <VirtualizedJobList
+                      ariaLabel="Saved jobs"
+                      getKey={(job) => job.applicationId ?? job.id ?? `${job.company}-${job.title}`}
+                      items={savedBookmarkCards}
+                      renderItem={renderBookmarkJobCard}
+                    />
+                  </Box>
+                </Box>
+              ) : null}
             </>
-          ) : null}
+          ) : (
+            <>
+              {savedSearchGeneratedOnce &&
+              !generateSavedSearch.isPending &&
+              !generateSavedSearch.isError &&
+              visibleSavedSearchRecommendations.length === 0 ? (
+                <Box role="status" sx={aiMatchPageSx.empty}>
+                  <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                    <InfoOutlinedIcon fontSize="medium" />
+                  </Box>
+                  <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                    {FOR_YOU_COPY.emptyAfterGenerateTitle}
+                  </Typography>
+                  <Typography sx={aiMatchPageSx.emptyDescription}>
+                    {FOR_YOU_COPY.savedEmptyAfterGenerate}
+                  </Typography>
+                  <Box sx={aiMatchPageSx.emptyActions}>
+                    <Button
+                      component={RouterLink}
+                      size="small"
+                      to={ROUTES.JOB_FEED}
+                      variant="outline"
+                    >
+                      {FOR_YOU_COPY.browseJobs}
+                    </Button>
+                  </Box>
+                </Box>
+              ) : null}
+
+              {visibleSavedSearchRecommendations.length > 0 ? (
+                <>
+                  <Box sx={aiMatchPageSx.listHeader}>
+                    <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
+                      {FOR_YOU_COPY.savedResultCount(visibleSavedSearchRecommendations.length)}
+                    </Typography>
+                  </Box>
+                  <Box sx={jobFeedPageSx.list}>
+                    <VirtualizedJobList
+                      ariaLabel="Saved search recommendations"
+                      getKey={(job) =>
+                        job.recommendationId ?? job.id ?? `${job.company}-${job.title}`
+                      }
+                      items={visibleSavedSearchRecommendations}
+                      renderItem={renderRecommendationJobCard}
+                    />
+                  </Box>
+                </>
+              ) : null}
+            </>
+          )}
         </Box>
       ) : null}
 
@@ -1266,196 +2037,226 @@ export function AiMatchPage() {
           aria-labelledby={getTabId(activeMode)}
           id={getPanelId(activeMode)}
           role="tabpanel"
-          sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}
+          sx={aiMatchPageSx.panel}
         >
-          <Typography component="h2" sx={{ fontSize: '1rem', fontWeight: 800, m: 0 }}>
-            {activeModeMeta.panelLabel}
-          </Typography>
-          <Typography role="status" sx={{ color: 'text.secondary' }}>
-            This mode is being wired into the recommendation engine.
-          </Typography>
-          <Button onClick={() => selectMode('profile')} size="small" variant="outline">
-            View profile matches
-          </Button>
+          <Box role="status" sx={aiMatchPageSx.empty}>
+            <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+              <AutoAwesomeOutlinedIcon fontSize="medium" />
+            </Box>
+            <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+              {activeModeMeta.panelLabel}
+            </Typography>
+            <Typography sx={aiMatchPageSx.emptyDescription}>
+              {FOR_YOU_COPY.modeComingSoon}
+            </Typography>
+            <Button onClick={() => selectMode('profile')} size="small" variant="outline">
+              {FOR_YOU_COPY.viewProfileMatches}
+            </Button>
+          </Box>
         </Box>
       ) : null}
 
-      {activeMode === 'profile' && readiness.isError ? (
-        <Alert role="alert" severity="warning">
-          Could not load recommendation readiness. You can still browse saved recommendations below.
-        </Alert>
-      ) : null}
-
-      {activeMode === 'profile' && isStale ? (
-        <Alert role="status" severity="info">
-          <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-            <Typography component="span">
-              Your profile changed since these matches were generated. Refresh to update
-              recommendations.
-            </Typography>
-            <Button
-              disabled={profileActionPending}
-              isLoading={refreshProfile.isPending}
-              onClick={() => {
-                void refreshProfile.mutateAsync().catch(() => undefined);
-              }}
-              size="small"
-              variant="outline"
-            >
-              Refresh matches
-            </Button>
-          </Box>
-        </Alert>
-      ) : null}
-
-      {activeMode === 'profile' && isProcessingLifecycle ? (
-        <Alert role="status" severity="info">
-          <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1.5 }}>
-            <CircularProgress aria-label="Recommendations processing" size={20} />
-            <Typography component="span">
-              {lifecycleState === 'QUEUED'
-                ? 'Your recommendation run is queued.'
-                : 'Your recommendation run is processing.'}
-            </Typography>
-            <Button
-              disabled={readiness.isFetching}
-              onClick={() => void readiness.refetch()}
-              size="small"
-            >
-              Refresh status
-            </Button>
-          </Box>
-        </Alert>
-      ) : null}
-
-      {activeMode === 'profile' && isFailedLifecycle ? (
-        <Alert role="alert" severity="error">
-          <Box sx={{ display: 'grid', gap: 1, justifyItems: 'start' }}>
-            <Typography component="span">
-              {getFailureCopy(lifecycleState)}
-              {lifecycleState ? ` Code: ${lifecycleState}.` : ''}
-            </Typography>
-            <Button
-              disabled={!canGenerate || profileActionPending}
-              isLoading={refreshProfile.isPending}
-              onClick={() => {
-                void refreshProfile.mutateAsync().catch(() => undefined);
-              }}
-              size="small"
-            >
-              Retry recommendations
-            </Button>
-          </Box>
-        </Alert>
-      ) : null}
-
-      {activeMode === 'profile' && isEmbeddingPending ? (
-        <Alert role="status" severity="warning">
-          Job embedding index is still warming up. Results may be limited until indexing completes.
-        </Alert>
-      ) : null}
-
-      {activeMode === 'profile' && isPending ? (
+      {activeMode === 'profile' ? (
         <Box
           aria-labelledby={getTabId('profile')}
           id={getPanelId('profile')}
           role="tabpanel"
-          sx={{ display: 'grid', placeItems: 'center', py: 8 }}
+          sx={aiMatchPageSx.panel}
         >
-          <CircularProgress aria-label="Loading recommendations" />
-        </Box>
-      ) : null}
-
-      {activeMode === 'profile' && isError ? (
-        <Box
-          aria-labelledby={getTabId('profile')}
-          id={getPanelId('profile')}
-          role="tabpanel"
-          sx={{ display: 'grid', gap: 2, justifyItems: 'start' }}
-        >
-          <Box role="alert">
-            <Typography>
-              {error instanceof Error ? error.message : 'Unable to load recommendations.'}
-            </Typography>
-          </Box>
-          <Button disabled={isFetching} onClick={() => void refetch()} size="small">
-            Retry
-          </Button>
-        </Box>
-      ) : null}
-
-      {activeMode === 'profile' &&
-      !isPending &&
-      !isError &&
-      (isEmpty || visibleCards.length > 0) ? (
-        <Box
-          aria-labelledby={getTabId('profile')}
-          id={getPanelId('profile')}
-          role="tabpanel"
-          sx={{ display: 'grid', gap: 3 }}
-        >
-          {isEmpty && showProfileIncomplete ? (
-            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
-              <Typography role="status">
-                Complete your profile so we can score jobs against your skills and experience.
+          {readiness.isError ? (
+            <Box role="status" sx={aiMatchPageSx.banner}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.bannerIcon}>
+                <InfoOutlinedIcon fontSize="small" />
+              </Box>
+              <Typography sx={aiMatchPageSx.bannerMessage}>
+                {FOR_YOU_COPY.readinessWarning}
               </Typography>
-              <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
-                Complete profile
+            </Box>
+          ) : null}
+
+          {isStale ? (
+            <Box role="status" sx={aiMatchPageSx.banner}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.bannerIcon}>
+                <InfoOutlinedIcon fontSize="small" />
+              </Box>
+              <Box sx={aiMatchPageSx.bannerCopy}>
+                <Typography sx={aiMatchPageSx.bannerMessage}>
+                  {FOR_YOU_COPY.staleDescription}
+                </Typography>
+              </Box>
+              <Button
+                disabled={profileActionPending}
+                isLoading={refreshProfile.isPending}
+                onClick={() => {
+                  setGeneratedOnce(true);
+                  void refreshProfile.mutateAsync().catch(() => undefined);
+                }}
+                size="small"
+                startIcon={<RefreshIcon fontSize="small" />}
+                variant="outline"
+              >
+                {FOR_YOU_COPY.refreshMatches}
               </Button>
             </Box>
           ) : null}
 
-          {isEmpty && showProfileMissing ? (
-            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
-              <Typography role="status">
-                We could not find a candidate profile for your account. Complete onboarding to
-                continue.
+          {isProcessingLifecycle ? (
+            <Box role="status" sx={aiMatchPageSx.banner}>
+              <CircularProgress aria-label="Recommendations processing" size={22} />
+              <Typography sx={aiMatchPageSx.bannerMessage}>
+                {lifecycleState === 'QUEUED'
+                  ? FOR_YOU_COPY.processingQueued
+                  : FOR_YOU_COPY.processingRunning}
               </Typography>
-              <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
-                Set up profile
+              <Button
+                disabled={readiness.isFetching}
+                onClick={() => void readiness.refetch()}
+                size="small"
+                startIcon={<RefreshIcon fontSize="small" />}
+                variant="outline"
+              >
+                {FOR_YOU_COPY.refreshStatus}
               </Button>
             </Box>
           ) : null}
 
-          {isEmpty &&
+          {isFailedLifecycle ? (
+            <Box role="alert" sx={{ ...aiMatchPageSx.banner, ...aiMatchPageSx.bannerDanger }}>
+              <Box
+                aria-hidden="true"
+                sx={{ ...aiMatchPageSx.bannerIcon, ...aiMatchPageSx.bannerIconDanger }}
+              >
+                <ErrorOutlineIcon fontSize="small" />
+              </Box>
+              <Box sx={aiMatchPageSx.bannerCopy}>
+                <Typography sx={aiMatchPageSx.bannerMessage}>
+                  {getFailureCopy(lifecycleState)}
+                  {lifecycleState ? ` Code: ${lifecycleState}.` : ''}
+                </Typography>
+              </Box>
+              <Button
+                disabled={!canGenerate || profileActionPending}
+                isLoading={refreshProfile.isPending}
+                onClick={() => {
+                  setGeneratedOnce(true);
+                  void refreshProfile.mutateAsync().catch(() => undefined);
+                }}
+                size="small"
+                startIcon={<RefreshIcon fontSize="small" />}
+              >
+                {FOR_YOU_COPY.retryRecommendations}
+              </Button>
+            </Box>
+          ) : null}
+
+          {showEmbeddingWarning ? (
+            <Box role="status" sx={aiMatchPageSx.banner}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.bannerIcon}>
+                <InfoOutlinedIcon fontSize="small" />
+              </Box>
+              <Typography sx={aiMatchPageSx.bannerMessage}>
+                {FOR_YOU_COPY.embeddingWarning}
+              </Typography>
+            </Box>
+          ) : null}
+
+          {isPending ? <JobFeedLoadingState label={FOR_YOU_COPY.loading} /> : null}
+
+          {isError ? (
+            <JobFeedStatus
+              message={error instanceof Error ? error.message : 'Unable to load recommendations.'}
+              onRetry={isFetching ? undefined : () => void refetch()}
+              title={FOR_YOU_COPY.loadErrorTitle}
+              tone="error"
+            />
+          ) : null}
+
+          {!isPending && !isError && isEmpty && showProfileIncomplete ? (
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                <PersonOutlineIcon fontSize="medium" />
+              </Box>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                {FOR_YOU_COPY.completeProfileTitle}
+              </Typography>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
+                {FOR_YOU_COPY.completeProfileDescription}
+              </Typography>
+              <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
+                {FOR_YOU_COPY.completeProfile}
+              </Button>
+            </Box>
+          ) : null}
+
+          {!isPending && !isError && isEmpty && showProfileMissing ? (
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                <PersonOutlineIcon fontSize="medium" />
+              </Box>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
+                {FOR_YOU_COPY.missingProfileTitle}
+              </Typography>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
+                {FOR_YOU_COPY.missingProfileDescription}
+              </Typography>
+              <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
+                {FOR_YOU_COPY.setUpProfile}
+              </Button>
+            </Box>
+          ) : null}
+
+          {!isPending &&
+          !isError &&
+          isEmpty &&
           canGenerate &&
           !showProfileIncomplete &&
           !showProfileMissing &&
           !isProcessingLifecycle &&
           !isFailedLifecycle ? (
-            <Box sx={{ display: 'grid', gap: 2, justifyItems: 'start', py: 4 }}>
-              <Typography role="status">
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
+                <AutoAwesomeOutlinedIcon fontSize="medium" />
+              </Box>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {generatedOnce
-                  ? 'No matching jobs were found for your current profile. Try updating your skills or generate again later.'
-                  : 'No recommendations yet. Generate a personalized set from your profile when you are ready.'}
+                  ? FOR_YOU_COPY.emptyAfterGenerateTitle
+                  : FOR_YOU_COPY.emptyGenerateTitle}
+              </Typography>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
+                {generatedOnce
+                  ? FOR_YOU_COPY.emptyAfterGenerateDescription
+                  : FOR_YOU_COPY.emptyGenerateDescription}
               </Typography>
               {generateError ? (
                 <Typography role="alert" sx={{ color: 'error.main' }}>
                   {generateError}
                 </Typography>
               ) : null}
-              <Button
-                disabled={profileActionPending}
-                isLoading={generate.isPending}
-                onClick={() => {
-                  setGeneratedOnce(true);
-                  void generate.mutateAsync().catch(() => undefined);
-                }}
-                size="small"
-              >
-                Generate recommendations
-              </Button>
-              <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
-                Browse all jobs
-              </Button>
+              <Box sx={aiMatchPageSx.emptyActions}>
+                <Button
+                  disabled={profileActionPending}
+                  isLoading={generate.isPending}
+                  onClick={() => {
+                    setGeneratedOnce(true);
+                    void generate.mutateAsync().catch(() => undefined);
+                  }}
+                  size="small"
+                  startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+                >
+                  {FOR_YOU_COPY.generate}
+                </Button>
+                <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
+                  {FOR_YOU_COPY.browseJobs}
+                </Button>
+              </Box>
             </Box>
           ) : null}
 
-          {visibleCards.length > 0 ? (
+          {!isPending && !isError && visibleCards.length > 0 ? (
             <>
-              <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', alignItems: 'center' }}>
-                <Typography sx={{ color: 'text.secondary' }}>
-                  {data?.total ?? 0} recommendation{(data?.total ?? 0) === 1 ? '' : 's'}
+              <Box sx={aiMatchPageSx.listHeader}>
+                <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
+                  {FOR_YOU_COPY.resultCount(data?.total ?? 0)}
                 </Typography>
                 <Button
                   disabled={profileActionPending || isProcessingLifecycle}
@@ -1465,9 +2266,10 @@ export function AiMatchPage() {
                     void refreshProfile.mutateAsync().catch(() => undefined);
                   }}
                   size="small"
+                  startIcon={<RefreshIcon fontSize="small" />}
                   variant="outline"
                 >
-                  Refresh matches
+                  {FOR_YOU_COPY.refreshMatches}
                 </Button>
               </Box>
               {generateError || refreshError ? (
@@ -1475,71 +2277,38 @@ export function AiMatchPage() {
                   {generateError ?? refreshError}
                 </Typography>
               ) : null}
-              <VirtualizedJobList
-                ariaLabel="AI Match recommendations"
-                getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
-                items={visibleCards}
-                renderItem={(job) => (
-                  <JobCard
-                    job={job}
-                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={handleRecommendedApply}
-                    onDismiss={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'DISMISSED')
-                        : undefined
-                    }
-                    onNotRelevant={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'NOT_RELEVANT')
-                        : undefined
-                    }
-                    onMoreLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'MORE_LIKE_THIS')
-                        : undefined
-                    }
-                    onLessLikeThis={
-                      job.recommendationId
-                        ? (selected) => submitFeedback(selected.recommendationId!, 'LESS_LIKE_THIS')
-                        : undefined
-                    }
-                    isMoreLikeThis={Boolean(
-                      job.recommendationId && moreLikeThisIds[job.recommendationId],
-                    )}
-                    onOpen={(selected) => {
-                      if (!selected.id) return;
-                      trackRecommendationFeedback(job.recommendationId, 'OPENED');
-                      void navigate(jobDetailPath(selected.id), {
-                        state: { fromFeed: `${location.pathname}${location.search}` },
-                      });
-                    }}
-                    onSave={handleRecommendedSave}
-                  />
-                )}
-              />
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 2 }}>
-                <Button
-                  disabled={!data?.hasPreviousPage || isFetching}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  size="small"
-                  variant="outline"
-                >
-                  Previous
-                </Button>
-                <Typography>
-                  Page {data?.page ?? page}
-                  {data?.totalPages ? ` of ${data.totalPages}` : ''}
-                </Typography>
-                <Button
-                  disabled={!data?.hasNextPage || isFetching}
-                  onClick={() => setPage((p) => p + 1)}
-                  size="small"
-                  variant="outline"
-                >
-                  Next
-                </Button>
+              <Box sx={jobFeedPageSx.list}>
+                <VirtualizedJobList
+                  ariaLabel="AI Match recommendations"
+                  getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
+                  items={visibleCards}
+                  renderItem={renderRecommendationJobCard}
+                />
               </Box>
+              {data?.hasPreviousPage || data?.hasNextPage || (data?.totalPages ?? 0) > 1 ? (
+                <Box sx={aiMatchPageSx.pagination}>
+                  <Button
+                    disabled={!data?.hasPreviousPage || isFetching}
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                    size="small"
+                    variant="outline"
+                  >
+                    {FOR_YOU_COPY.paginationPrevious}
+                  </Button>
+                  <Typography sx={aiMatchPageSx.pageLabel}>
+                    Page {data?.page ?? page}
+                    {data?.totalPages ? ` of ${data.totalPages}` : ''}
+                  </Typography>
+                  <Button
+                    disabled={!data?.hasNextPage || isFetching}
+                    onClick={() => setPage((p) => p + 1)}
+                    size="small"
+                    variant="outline"
+                  >
+                    {FOR_YOU_COPY.paginationNext}
+                  </Button>
+                </Box>
+              ) : null}
             </>
           ) : null}
         </Box>
