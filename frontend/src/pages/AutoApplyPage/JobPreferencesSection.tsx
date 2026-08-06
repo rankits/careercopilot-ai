@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
+
 import {
   useUpsertApplicationAnswer,
 } from '@/features/auto-apply/hooks/useApplicationAnswers';
@@ -9,6 +10,7 @@ import {
   useCandidateProfile,
   useUpsertCandidateProfile,
 } from '@/features/auto-apply/hooks/useCandidateProfile';
+
 import type { WorkModePreference } from '@/features/auto-apply/types/autoApply.types';
 import {
   resolveRemotePreferences,
@@ -28,8 +30,8 @@ import {
   Typography,
 } from '@/lib/material';
 
-import { SetupSectionHeading } from './SetupSectionHeading';
 import { useSetupDirty } from './SetupDirtyContext';
+import { SetupSectionHeading } from './SetupSectionHeading';
 
 const ROLE_SUGGESTIONS = [
   'Software Engineer',

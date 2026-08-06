@@ -1,12 +1,12 @@
-import type { ReactElement } from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, render, screen } from '@testing-library/react';
+import type { ReactElement } from 'react';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+import { ConsentsTab } from '../ConsentsTab';
 import { ResumeVersionsTab } from '../ResumeVersionsTab';
 import { RulesTab } from '../RulesTab';
-import { ConsentsTab } from '../ConsentsTab';
 import { SetupChecklist } from '../SetupChecklist';
 
 vi.mock('@/features/auto-apply/hooks/useResumeVersions', () => ({

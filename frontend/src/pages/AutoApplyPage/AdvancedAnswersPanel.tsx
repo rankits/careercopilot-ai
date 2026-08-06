@@ -2,11 +2,13 @@ import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
+
 import {
   useApplicationAnswers,
   useCreateApplicationAnswer,
   useDeleteApplicationAnswer,
 } from '@/features/auto-apply/hooks/useApplicationAnswers';
+
 import {
   Accordion,
   AccordionDetails,

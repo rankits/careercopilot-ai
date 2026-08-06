@@ -12,10 +12,10 @@ import {
   usePrivacyAcknowledgement,
   useSavePrivacyAcknowledgement,
 } from '@/features/auto-apply/hooks/usePrivacyAcknowledgement';
-import { CURRENT_PRIVACY_POLICY_VERSION } from '@/features/auto-apply/constants/privacyPolicy';
-import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 
+import { CURRENT_PRIVACY_POLICY_VERSION } from '@/features/auto-apply/constants/privacyPolicy';
 import type { ConsentType } from '@/features/auto-apply/types/autoApply.types';
+import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 import {
   Alert,
   Box,
