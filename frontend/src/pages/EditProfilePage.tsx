@@ -168,9 +168,11 @@ export function EditProfilePage() {
   const [hasEditedFields, setHasEditedFields] = useState(false);
   const {
     formState: { errors },
+    getValues,
     handleSubmit,
     register,
     reset,
+    setValue,
     watch,
   } = useForm<ResumeProfileFormValues>({
     defaultValues: DEFAULT_VALUES,
@@ -202,6 +204,34 @@ export function EditProfilePage() {
   // Enable Save after any edit or a new resume parse. Required fields are validated on submit.
   const canSubmit =
     !profileMissing && !isLoadingProfile && (hasUnsavedChanges || Boolean(parser.resumeId));
+
+  const aiSuggestMutation = useMutation({
+    mutationFn: () => resumeService.suggestProfileFields(getValues()),
+    mutationKey: ['resume', 'profile-ai-suggest', 'edit'],
+    onError: (error) => {
+      setNotice({
+        message:
+          error instanceof Error ? error.message : 'Unable to generate AI suggestions right now.',
+        severity: 'error',
+      });
+    },
+    onSuccess: (suggestion) => {
+      if (!suggestion.summary.trim()) {
+        setNotice({
+          message: 'AI did not return a summary. Try again after adding more profile details.',
+          severity: 'error',
+        });
+        return;
+      }
+      setValue('summary', suggestion.summary, { shouldDirty: true, shouldValidate: true });
+      setHasEditedFields(true);
+      setExpandedSection('Professional Profile');
+      setNotice({
+        message: 'AI summary applied. Review and edit before saving.',
+        severity: 'success',
+      });
+    },
+  });
 
   useEffect(() => {
     let cancelled = false;
@@ -386,6 +416,27 @@ export function EditProfilePage() {
                   {...section}
                   errors={errors}
                   expanded={expandedSection === section.title}
+                  fieldActions={
+                    section.title === 'Professional Profile'
+                      ? {
+                          summary: (
+                            <Button
+                              disabled={aiSuggestMutation.isPending || isLoadingProfile}
+                              isLoading={aiSuggestMutation.isPending}
+                              onClick={() => {
+                                void aiSuggestMutation.mutateAsync();
+                              }}
+                              size="small"
+                              startIcon={<AutoAwesomeOutlinedIcon />}
+                              type="button"
+                              variant="outline"
+                            >
+                              AI Suggestion
+                            </Button>
+                          ),
+                        }
+                      : undefined
+                  }
                   key={section.title}
                   onFieldChange={() => setHasEditedFields(true)}
                   onToggle={() =>

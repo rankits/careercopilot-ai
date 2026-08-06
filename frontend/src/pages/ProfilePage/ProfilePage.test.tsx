@@ -301,7 +301,7 @@ describe('ProfilePage resume parsing', () => {
     await waitFor(() => expect(store.getState().auth.isProfileComplete).toBe(true), {
       timeout: 10_000,
     });
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/jobs-feed'), {
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/app'), {
       timeout: 10_000,
     });
   }, 30_000);

@@ -12,6 +12,7 @@ import {
   resumeUploadMiddleware,
   reparseResumeController,
   startParseController,
+  suggestProfileFieldsController,
   updateMyCandidateProfileController,
   uploadResumeController,
 } from '@/modules/resumes/controllers/resume.controller.js';
@@ -23,6 +24,7 @@ import { RESUME_PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
 import {
   candidateProfileParamsSchema,
   confirmProfileSchema,
+  profileAiSuggestSchema,
   resumeIdParamsSchema,
   resumeParseActionParamsSchema,
   resumeReparseSchema,
@@ -64,6 +66,14 @@ router.patch(
   requirePermission(RESUME_PERMISSIONS.UPDATE_OWN),
   validateResource(updateCandidateProfileSchema),
   updateMyCandidateProfileController,
+);
+router.post(
+  '/profile/ai-suggest',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.UPDATE_OWN),
+  resumeProcessingRateLimiter,
+  validateResource(profileAiSuggestSchema),
+  suggestProfileFieldsController,
 );
 router.get(
   '/profiles/:userId',
