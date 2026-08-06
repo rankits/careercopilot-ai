@@ -24,7 +24,8 @@ describe('AuthForm', () => {
     expect(screen.getByRole('textbox', { name: /last name/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm password/i, { selector: 'input' })).toBeInTheDocument();
-    expect(screen.getByTestId('PhoneOutlinedIcon')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /country dial code/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /phone number/i })).toBeInTheDocument();
     expect(screen.queryByText(/forgot password/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: /remember me/i })).not.toBeInTheDocument();
   });
@@ -51,7 +52,7 @@ describe('AuthForm', () => {
     );
     expect(screen.getByRole('textbox', { name: /phone number/i })).toHaveAttribute(
       'maxlength',
-      '16',
+      '15',
     );
     expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toHaveAttribute(
       'maxlength',
@@ -86,28 +87,24 @@ describe('AuthForm', () => {
     expect(passwordInput).toHaveValue('P'.repeat(128));
   });
 
-  it('submits the form and calls social handlers', async () => {
+  it('renders social actions as disabled coming soon controls', () => {
+    render(<AuthForm />);
+
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /continue with linkedin/i })).toBeDisabled();
+    expect(screen.getAllByText(/coming soon/i)).toHaveLength(2);
+  });
+
+  it('submits the form with credentials', async () => {
     const user = userEvent.setup();
-    const handleGoogle = vi.fn();
-    const handleLinkedIn = vi.fn();
     const handleSubmit = vi.fn();
 
-    render(
-      <AuthForm
-        onGoogleConnect={handleGoogle}
-        onLinkedInConnect={handleLinkedIn}
-        onValidSubmit={handleSubmit}
-      />,
-    );
+    render(<AuthForm onValidSubmit={handleSubmit} />);
 
-    await user.click(screen.getByRole('button', { name: /continue with google/i }));
-    await user.click(screen.getByRole('button', { name: /continue with linkedin/i }));
     await user.type(screen.getByRole('textbox', { name: /email address/i }), 'user@example.com');
     await user.type(screen.getByLabelText(/^password$/i, { selector: 'input' }), 'password123');
     await user.click(screen.getByRole('button', { name: /login/i }));
 
-    expect(handleGoogle).toHaveBeenCalledTimes(1);
-    expect(handleLinkedIn).toHaveBeenCalledTimes(1);
     await waitFor(() => expect(handleSubmit).toHaveBeenCalledTimes(1));
   });
 
@@ -143,14 +140,14 @@ describe('AuthForm', () => {
     expect(screen.getByRole('textbox', { name: /current role/i })).toBeInTheDocument();
   });
 
-  it('keeps +91 country code and digits in the phone number field', async () => {
+  it('keeps national phone digits without a leading plus when dial code is separate', async () => {
     const user = userEvent.setup();
     render(<AuthForm mode="register" />);
     const phoneInput = screen.getByRole('textbox', { name: /phone number/i });
 
     await user.type(phoneInput, '+91 98765@43210');
 
-    expect(phoneInput).toHaveValue('+919876543210');
+    expect(phoneInput).toHaveValue('919876543210');
   });
 
   it('disables submit action while submitting', () => {

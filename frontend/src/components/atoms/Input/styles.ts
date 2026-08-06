@@ -39,15 +39,45 @@ function getInputStyles(
   tone: InputTone,
   inputVariant: InputVariant,
   size: InputSize,
+  stabilizeHelper: boolean,
+  hasHelperMessage: boolean,
 ): SystemStyleObject<Theme> {
   const colors = toneStyles[tone];
 
   return {
+    position: 'relative',
     '& .MuiFormHelperText-root': {
+      '@keyframes inputHelperIn': {
+        from: {
+          opacity: 0,
+          transform: 'translateY(-2px)',
+        },
+        to: {
+          opacity: 1,
+          transform: 'translateY(0)',
+        },
+      },
       color: colors.helper,
       fontSize: fontSize.xs,
+      lineHeight: 1.25,
       marginInline: 0,
-      mt: spacing[2],
+      minHeight: stabilizeHelper ? '1.125rem' : undefined,
+      mt: spacing[1],
+      opacity: stabilizeHelper ? (hasHelperMessage ? 1 : 0) : 1,
+      overflow: 'hidden',
+      textOverflow: 'ellipsis',
+      transform: stabilizeHelper
+        ? hasHelperMessage
+          ? 'translateY(0)'
+          : 'translateY(-2px)'
+        : undefined,
+      transition: 'opacity 0.2s ease, transform 0.2s ease, color 0.2s ease',
+      whiteSpace: 'nowrap',
+      ...(stabilizeHelper && hasHelperMessage
+        ? {
+            animation: 'inputHelperIn 0.2s ease',
+          }
+        : {}),
     },
     '& .MuiInputBase-input': {
       color: colorTokens.textPrimary,
@@ -69,15 +99,24 @@ function getInputStyles(
       '&.Mui-disabled': {
         bgcolor: colorTokens.backgroundApp,
       },
+      '& .MuiOutlinedInput-notchedOutline': {
+        borderColor: colors.border,
+        borderWidth: '1px',
+      },
       '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
         borderColor: colors.focus,
-        borderWidth: '0.125rem',
+        borderWidth: '1px',
       },
       '&:hover .MuiOutlinedInput-notchedOutline': {
         borderColor: colors.focus,
       },
-      '& .MuiOutlinedInput-notchedOutline': {
-        borderColor: colors.border,
+      // Ensure the outline legend opens a gap under the floating label.
+      '& .MuiOutlinedInput-notchedOutline legend': {
+        maxWidth: '100%',
+      },
+      '& .MuiOutlinedInput-notchedOutline legend > span': {
+        paddingLeft: '4px',
+        paddingRight: '4px',
       },
     },
   };
@@ -85,16 +124,20 @@ function getInputStyles(
 
 export function getInputSx({
   consumerSx,
+  hasHelperMessage = false,
   inputVariant,
   size,
+  stabilizeHelper = false,
   tone,
 }: {
   consumerSx?: SxProps<Theme>;
+  hasHelperMessage?: boolean;
   inputVariant: InputVariant;
   size: InputSize;
+  stabilizeHelper?: boolean;
   tone: InputTone;
 }): SxProps<Theme> {
-  const inputStyles = getInputStyles(tone, inputVariant, size);
+  const inputStyles = getInputStyles(tone, inputVariant, size, stabilizeHelper, hasHelperMessage);
 
   return consumerSx ? ([inputStyles, consumerSx] as SxProps<Theme>) : [inputStyles];
 }

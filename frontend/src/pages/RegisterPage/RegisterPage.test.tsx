@@ -111,7 +111,9 @@ describe('RegisterPage', () => {
 
     expect(await screen.findByText(/enter a valid email address/i)).toBeInTheDocument();
     expect(screen.getByText(/enter a valid phone number/i)).toBeInTheDocument();
-    expect(screen.getByText(/password must be at least 8 characters/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/use 8\+ characters with uppercase, lowercase, number/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/passwords must match/i)).toBeInTheDocument();
     expect(registerMock).not.toHaveBeenCalled();
   }, 15_000);
@@ -225,7 +227,7 @@ describe('RegisterPage', () => {
       response: {
         data: {
           code: 'CONFLICT',
-          message: 'An account with this email already exists',
+          message: 'This email already exists',
           requestId: '7b5b53e2-fcb4-43c8-b081-7dc26240182b',
           status: 'error',
         },
@@ -236,8 +238,6 @@ describe('RegisterPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /an account with this email already exists/i,
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(/this email already exists/i);
   }, 15_000);
 });
