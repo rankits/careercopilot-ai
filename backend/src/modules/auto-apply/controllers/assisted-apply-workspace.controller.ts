@@ -3,11 +3,13 @@ import { successResponse } from '@/shared/utils/response.js';
 import { requireUserPrincipalId, getParam } from '@/modules/auto-apply/utils/require-user.util.js';
 import { PrismaJobApplicationRepository } from '@/modules/auto-apply/repositories/prisma-job-application.repository.js';
 import { PrismaApplicationPageAnalysisRepository } from '@/modules/auto-apply/repositories/prisma-application-page-analysis.repository.js';
+import { PrismaProfileJobMatchRepository } from '@/modules/auto-apply/repositories/prisma-profile-job-match.repository.js';
 import { AssistedApplyWorkspaceService } from '@/modules/auto-apply/services/assisted-apply-workspace.service.js';
 
 export const assistedApplyWorkspaceService = new AssistedApplyWorkspaceService(
   new PrismaJobApplicationRepository(),
   new PrismaApplicationPageAnalysisRepository(),
+  new PrismaProfileJobMatchRepository(),
 );
 
 export const getAssistedApplyWorkspaceController = async (

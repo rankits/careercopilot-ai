@@ -21,6 +21,7 @@ export { default as AccessTimeOutlinedIcon } from '@mui/icons-material/AccessTim
 export { default as CheckCircleOutlineIcon } from '@mui/icons-material/CheckCircleOutline';
 export { default as CloseIcon } from '@mui/icons-material/Close';
 export { default as CloudUploadOutlinedIcon } from '@mui/icons-material/CloudUploadOutlined';
+export { default as ContentCopyOutlinedIcon } from '@mui/icons-material/ContentCopyOutlined';
 export { default as DeleteOutlineIcon } from '@mui/icons-material/DeleteOutline';
 export { default as DescriptionOutlinedIcon } from '@mui/icons-material/DescriptionOutlined';
 export { default as DownloadIcon } from '@mui/icons-material/Download';
@@ -36,9 +37,12 @@ export { default as FolderOutlinedIcon } from '@mui/icons-material/FolderOutline
 export { default as FlagOutlinedIcon } from '@mui/icons-material/FlagOutlined';
 export { default as GoogleIcon } from '@mui/icons-material/Google';
 export { default as GridViewOutlinedIcon } from '@mui/icons-material/GridViewOutlined';
+export { default as HelpOutlineIcon } from '@mui/icons-material/HelpOutline';
 export { default as HistoryOutlinedIcon } from '@mui/icons-material/HistoryOutlined';
 export { default as HomeOutlinedIcon } from '@mui/icons-material/HomeOutlined';
 export { default as InfoOutlinedIcon } from '@mui/icons-material/InfoOutlined';
+export { default as NetworkCheckOutlinedIcon } from '@mui/icons-material/NetworkCheckOutlined';
+export { default as RemoveCircleOutlineIcon } from '@mui/icons-material/RemoveCircleOutline';
 export { default as InsightsOutlinedIcon } from '@mui/icons-material/InsightsOutlined';
 export { default as KeyboardArrowDownIcon } from '@mui/icons-material/KeyboardArrowDown';
 export { default as LocationOnOutlinedIcon } from '@mui/icons-material/LocationOnOutlined';

@@ -1,8 +1,8 @@
 import { useQuery } from '@tanstack/react-query';
 
 import { hasAuthSession } from '@/features/auth/utils/authSession';
-import { httpClient } from '@/services/httpClient';
 import type { BackendSuccessResponse } from '@/features/auto-apply/types/autoApply.types';
+import { httpClient } from '@/services/httpClient';
 
 export interface AssistedApplyRolloutFlags {
   workspace: boolean;
@@ -31,9 +31,7 @@ export function useAssistedApplyRolloutFlags() {
   });
 }
 
-export function isWorkspaceEnabledClient(
-  rollout: AssistedApplyRolloutFlags | undefined,
-): boolean {
+export function isWorkspaceEnabledClient(rollout: AssistedApplyRolloutFlags | undefined): boolean {
   if (import.meta.env.VITE_ASSISTED_APPLY_WORKSPACE === 'false') return false;
   if (rollout && rollout.workspace === false) return false;
   return true;

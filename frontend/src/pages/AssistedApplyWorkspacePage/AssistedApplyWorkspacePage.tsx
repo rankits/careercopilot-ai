@@ -1,14 +1,15 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 
-import {
-  useAssistedApplyWorkspace,
-  useUpdateWorkspaceProgressStep,
-} from '@/features/auto-apply/hooks/useAssistedApplyWorkspace';
 import {
   isWorkspaceEnabledClient,
   useAssistedApplyRolloutFlags,
 } from '@/features/auto-apply/hooks/useAssistedApplyRolloutFlags';
+import {
+  useAssistedApplyWorkspace,
+  useUpdateWorkspaceProgressStep,
+} from '@/features/auto-apply/hooks/useAssistedApplyWorkspace';
+import { useLatestJobAnalysis } from '@/features/auto-apply/hooks/useJobPageAnalysis';
 
 import { ROUTES } from '@/constants/routes';
 import type { WorkspaceStepId } from '@/features/auto-apply/types/autoApply.types';
@@ -21,27 +22,30 @@ import {
 import {
   Alert,
   Box,
+  ChevronLeftIcon,
+  Chip,
   IconButton,
   LinearProgress,
   Menu,
   MenuItem,
   MoreVertIcon,
   MuiButton,
+  RefreshIcon,
   Stack,
-  Tab,
-  Tabs,
-  Tooltip,
   Typography,
 } from '@/lib/material';
 import { trackEvent } from '@/shared/analytics/trackEvent';
 
 import { AbandonApplicationModal } from './AbandonApplicationModal';
 import { ActivityTimelinePanel } from './ActivityTimelinePanel';
+import { submissionCapabilityLabel } from './analysisRequirementViewModel';
 import { AnalysisStep } from './AnalysisStep';
+import { DoneStep } from './DoneStep';
 import { FitStep } from './FitStep';
 import { OpenApplicationStep } from './OpenApplicationStep';
 import { ResumeAnalysisStep } from './ResumeAnalysisStep';
 import { ResumeSelectionStep } from './ResumeSelectionStep';
+import { WorkspaceStepProgress } from './WorkspaceStepProgress';
 import { assistedApplyTouchTargetSx } from './WorkspaceStickyActions';
 
 const WORKSPACE_VITE_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_WORKSPACE !== 'false';
@@ -51,8 +55,7 @@ export function AssistedApplyWorkspacePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const rolloutQuery = useAssistedApplyRolloutFlags();
-  const workspaceEnabled =
-    WORKSPACE_VITE_ENABLED && isWorkspaceEnabledClient(rolloutQuery.data);
+  const workspaceEnabled = WORKSPACE_VITE_ENABLED && isWorkspaceEnabledClient(rolloutQuery.data);
   const workspaceQuery = useAssistedApplyWorkspace(
     workspaceEnabled ? jobApplicationId || undefined : undefined,
   );
@@ -64,6 +67,10 @@ export function AssistedApplyWorkspacePage() {
 
   const [continueError, setContinueError] = useState<string | null>(null);
   const [showSelectionFocus, setShowSelectionFocus] = useState(false);
+  const [analysisReanalyze, setAnalysisReanalyze] = useState<{
+    isPending: boolean;
+    reanalyze: () => void;
+  } | null>(null);
 
   const entrySignals = useMemo(
     () => (jobApplicationId ? readWorkspaceEntrySignals(jobApplicationId) : null),
@@ -79,6 +86,21 @@ export function AssistedApplyWorkspacePage() {
       progressStep: workspaceQuery.data.progressStep,
     });
   }, [workspaceQuery.data, searchParams]);
+
+  const jobIdForAnalysis = workspaceQuery.data?.application.jobId ?? undefined;
+  const latestAnalysisQuery = useLatestJobAnalysis(
+    activeStep === 'analysis' ? jobIdForAnalysis : undefined,
+  );
+  const applicationModeLabel = submissionCapabilityLabel(
+    latestAnalysisQuery.data?.submissionCapability ?? 'EXTERNAL_MANUAL',
+  );
+
+  const handleAnalysisControls = useCallback(
+    (state: { isPending: boolean; reanalyze: () => void }) => {
+      setAnalysisReanalyze(state);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!workspaceEnabled && !rolloutQuery.isLoading) {
@@ -119,7 +141,11 @@ export function AssistedApplyWorkspacePage() {
         <Typography color="text.secondary" sx={{ mb: 2 }}>
           It may have been removed, or it belongs to a different account.
         </Typography>
-        <MuiButton component={RouterLink} to={`${ROUTES.AUTO_APPLY}?tab=submissions`} variant="contained">
+        <MuiButton
+          component={RouterLink}
+          to={`${ROUTES.AUTO_APPLY}?tab=submissions`}
+          variant="contained"
+        >
           Back to your applications
         </MuiButton>
       </Box>
@@ -128,28 +154,50 @@ export function AssistedApplyWorkspacePage() {
 
   const data = workspaceQuery.data;
   const jobId = data.application.jobId;
-  const showDuplicate =
-    !dismissedDuplicate && (entrySignals?.possibleDuplicateCount ?? 0) > 0;
+  const showDuplicate = !dismissedDuplicate && (entrySignals?.possibleDuplicateCount ?? 0) > 0;
   const showReopened =
     !dismissedReopened && (data.wasReopened || entrySignals?.wasReopened === true);
 
   const renderStepBody = () => {
     if (activeStep === 'analysis' && jobId) {
-      return <AnalysisStep jobId={jobId} />;
+      return (
+        <AnalysisStep
+          company={data.application.companyName ?? data.application.company}
+          jobApplicationId={jobApplicationId}
+          jobId={jobId}
+          jobTitle={data.application.jobTitle}
+          onContinue={() => selectStep('fit')}
+          onReanalyzeStateChange={handleAnalysisControls}
+          viewLabel={data.viewLabel}
+          workplaceMode={data.application.workplaceMode ?? null}
+        />
+      );
     }
     if (activeStep === 'fit' && jobId) {
       return (
         <FitStep
+          company={data.application.companyName ?? data.application.company}
           jobApplicationId={jobApplicationId}
           jobId={jobId}
+          jobTitle={data.application.jobTitle}
+          onBack={() => selectStep('analysis')}
           onContinue={() => selectStep('resume')}
+          onRefresh={() => void workspaceQuery.refetch()}
+          profileMatch={data.fit?.profileMatch ?? null}
+          profileMatchLoading={workspaceQuery.isFetching && !data.fit?.profileMatch}
+          viewLabel={data.viewLabel}
+          workplaceMode={data.application.workplaceMode ?? null}
         />
       );
     }
     if (activeStep === 'resume') {
       return (
         <Stack spacing={3}>
-          <Box sx={{ display: showSelectionFocus || !data.resume?.resumeVersionId ? 'block' : 'block' }}>
+          <Box
+            sx={{
+              display: showSelectionFocus || !data.resume?.resumeVersionId ? 'block' : 'block',
+            }}
+          >
             <ResumeSelectionStep
               jobApplicationId={jobApplicationId}
               selectedResumeVersionId={data.resume?.resumeVersionId ?? null}
@@ -158,6 +206,7 @@ export function AssistedApplyWorkspacePage() {
           <ResumeAnalysisStep
             continueError={continueError}
             continuePending={progressMutation.isPending}
+            jobId={jobId!}
             jobApplicationId={jobApplicationId}
             onContinue={() => {
               setContinueError(null);
@@ -184,8 +233,12 @@ export function AssistedApplyWorkspacePage() {
           jobId={jobId}
           openedAt={data.handoff?.openedAt ?? null}
           viewState={data.viewState}
+          onAbandon={() => setAbandonOpen(true)}
         />
       );
+    }
+    if (activeStep === 'done') {
+      return <DoneStep status={data.application.status} submittedAt={data.handoff?.submittedAt} />;
     }
     return (
       <>
@@ -209,6 +262,18 @@ export function AssistedApplyWorkspacePage() {
         pb: { xs: 10, md: 4 },
       }}
     >
+      {jobId ? (
+        <MuiButton
+          component={RouterLink}
+          startIcon={<ChevronLeftIcon />}
+          sx={{ ...assistedApplyTouchTargetSx, mb: 1, px: 0, alignSelf: 'flex-start' }}
+          to={`/jobs/${jobId}`}
+          variant="text"
+        >
+          Back to job
+        </MuiButton>
+      ) : null}
+
       <Stack
         alignItems={{ xs: 'flex-start', sm: 'center' }}
         direction={{ xs: 'column', sm: 'row' }}
@@ -216,19 +281,35 @@ export function AssistedApplyWorkspacePage() {
         spacing={1}
         sx={{ mb: 2 }}
       >
-        <Box>
-          <Typography variant="h4">{data.application.jobTitle ?? 'Assisted Apply'}</Typography>
+        <Box sx={{ minWidth: 0 }}>
+          <Stack alignItems="center" direction="row" flexWrap="wrap" spacing={1} sx={{ mb: 0.5 }}>
+            <Typography variant="h4">Assisted Apply</Typography>
+            <Chip
+              label={`Application mode: ${applicationModeLabel}`}
+              size="small"
+              variant="outlined"
+            />
+          </Stack>
           <Typography color="text.secondary" variant="subtitle1">
-            {data.application.company ?? 'Company'}
+            {data.application.jobTitle ?? 'Job'}
+            {(data.application.companyName ?? data.application.company)
+              ? ` · ${data.application.companyName ?? data.application.company}`
+              : ''}
           </Typography>
           <Typography sx={{ mt: 0.5 }} variant="body2">
             {data.viewLabel}
           </Typography>
         </Box>
         <Stack direction="row" spacing={1}>
-          {jobId ? (
-            <MuiButton component={RouterLink} to={`/jobs/${jobId}`} variant="outlined">
-              Back to job
+          {activeStep === 'analysis' ? (
+            <MuiButton
+              disabled={!analysisReanalyze || analysisReanalyze.isPending}
+              onClick={() => analysisReanalyze?.reanalyze()}
+              startIcon={<RefreshIcon />}
+              sx={{ ...assistedApplyTouchTargetSx, display: { xs: 'none', md: 'inline-flex' } }}
+              variant="outlined"
+            >
+              {analysisReanalyze?.isPending ? 'Reanalyzing…' : 'Reanalyze'}
             </MuiButton>
           ) : null}
           <IconButton
@@ -277,78 +358,43 @@ export function AssistedApplyWorkspacePage() {
       ) : null}
 
       {showReopened ? (
-        <Alert
-          onClose={() => setDismissedReopened(true)}
-          severity="info"
-          sx={{ mb: 2 }}
-        >
+        <Alert onClose={() => setDismissedReopened(true)} severity="info" sx={{ mb: 2 }}>
           You previously withdrew this application. We&apos;ve reopened it — some details may need
           review.
         </Alert>
       ) : null}
 
-      <Tabs
-        allowScrollButtonsMobile
-        aria-label="Assisted Apply steps"
-        onChange={(_e, value: WorkspaceStepId) => selectStep(value)}
-        scrollButtons="auto"
-        sx={{
-          mb: 3,
-          borderBottom: 1,
-          borderColor: 'divider',
-          maxWidth: '100%',
-          '& .MuiTab-root': {
-            minHeight: 48,
-            minWidth: 72,
-            px: { xs: 1, sm: 2 },
-            fontSize: { xs: '0.8rem', sm: '0.875rem' },
-          },
-        }}
-        value={activeStep}
-        variant="scrollable"
-      >
-        {steps.map((step) => {
-          const enabled = isWorkspaceStepEnabled(steps, step.id);
-          const label = `${step.complete ? '✓ ' : ''}${step.label}`;
-          const tab = (
-            <Tab disabled={!enabled} key={step.id} label={label} value={step.id} />
-          );
-          if (enabled) return tab;
-          const previous = steps[steps.findIndex((s) => s.id === step.id) - 1];
-          return (
-            <Tooltip
-              key={step.id}
-              title={previous ? `Complete ${previous.label} first.` : 'Complete the previous step first.'}
-            >
-              <span>{tab}</span>
-            </Tooltip>
-          );
-        })}
-      </Tabs>
+      <WorkspaceStepProgress activeStep={activeStep} onSelect={selectStep} steps={steps} />
 
-      <Stack
-        direction={{ xs: 'column', md: 'row' }}
-        spacing={2}
-        sx={{ alignItems: 'stretch' }}
-      >
-        <Box
-          aria-live="polite"
-          sx={{
-            border: 1,
-            borderColor: 'divider',
-            borderRadius: 1,
-            p: { xs: 2, sm: 3 },
-            minHeight: 200,
-            flex: 1,
-            minWidth: 0,
-            maxWidth: '100%',
-            overflowX: 'hidden',
-          }}
-        >
+      {activeStep === 'analysis' ? (
+        <Box aria-live="polite" sx={{ minWidth: 0, maxWidth: '100%', overflowX: 'hidden' }}>
           {renderStepBody()}
         </Box>
-        {jobApplicationId ? <ActivityTimelinePanel jobApplicationId={jobApplicationId} /> : null}
-      </Stack>
+      ) : (
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: 'stretch' }}>
+          <Box
+            aria-live="polite"
+            sx={{
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1,
+              p: { xs: 2, sm: 3 },
+              minHeight: 200,
+              flex: 1,
+              minWidth: 0,
+              maxWidth: '100%',
+              overflowX: 'hidden',
+            }}
+          >
+            {renderStepBody()}
+          </Box>
+          {jobApplicationId ? (
+            <Box sx={{ display: { xs: 'none', lg: 'block' }, width: { lg: 300 }, flexShrink: 0 }}>
+              <ActivityTimelinePanel jobApplicationId={jobApplicationId} />
+            </Box>
+          ) : null}
+        </Stack>
+      )}
     </Box>
   );
 }

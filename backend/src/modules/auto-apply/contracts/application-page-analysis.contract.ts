@@ -1,11 +1,12 @@
+import type { ApplicationMatchSnapshot } from '@/modules/auto-apply/types/application-match.types.js';
+import type { ApplicationReadinessResult } from '@/modules/auto-apply/types/application-readiness.types.js';
+import type { JobApplicationDto } from '@/modules/auto-apply/types/job-application.types.js';
+import type { ProfileJobMatchResult } from '@/modules/auto-apply/types/profile-job-match.types.js';
 import type {
   AnalyzeJobPageInput,
   ApplicationPageAnalysisDto,
   PrepareApplicationInput,
 } from '@/modules/auto-apply/types/application-page-analysis.types.js';
-import type { ApplicationMatchSnapshot } from '@/modules/auto-apply/types/application-match.types.js';
-import type { ApplicationReadinessResult } from '@/modules/auto-apply/types/application-readiness.types.js';
-import type { JobApplicationDto } from '@/modules/auto-apply/types/job-application.types.js';
 
 export interface IApplicationPageAnalysisRepository {
   findLatestByJobId(jobId: string): Promise<ApplicationPageAnalysisDto | null>;
@@ -30,11 +31,17 @@ export interface ApplicationPackageStub {
   analysisId: string;
   matchStatus?: ApplicationMatchSnapshot['status'];
   overallScore?: number | null;
+  /** Application-specific profile match (authoritative for Fit). */
+  profileMatch?: ProfileJobMatchResult | null;
+  /** Cached recommendation score — historical/fallback only. */
+  recommendationScoreFallback?: number | null;
 }
 
 export interface PrepareApplicationResult {
   analysis: ApplicationPageAnalysisDto;
+  /** @deprecated Prefer profileMatch — recommendation cache snapshot. */
   match: ApplicationMatchSnapshot;
+  profileMatch: ProfileJobMatchResult | null;
   readiness: ApplicationReadinessResult;
   package: ApplicationPackageStub;
   application?: JobApplicationDto | null;

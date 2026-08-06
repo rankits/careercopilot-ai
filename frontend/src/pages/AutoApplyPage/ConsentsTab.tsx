@@ -17,7 +17,6 @@ import { CURRENT_PRIVACY_POLICY_VERSION } from '@/features/auto-apply/constants/
 import type { ConsentType } from '@/features/auto-apply/types/autoApply.types';
 import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 import {
-  Alert,
   Box,
   Checkbox,
   Chip,
@@ -121,7 +120,11 @@ export function ConsentsTab() {
 
   if (consentsLoading || privacyLoading) {
     return (
-      <Box aria-busy="true" aria-label="Loading consents" sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+      <Box
+        aria-busy="true"
+        aria-label="Loading consents"
+        sx={{ display: 'flex', justifyContent: 'center', py: 4 }}
+      >
         <CircularProgress size={28} />
       </Box>
     );
@@ -134,8 +137,8 @@ export function ConsentsTab() {
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
     >
       <Typography color="text.secondary" variant="body2">
-        Grant only the permissions you understand. You can revoke resume usage at any time — doing so
-        blocks Assisted Apply until you grant it again.
+        Grant only the permissions you understand. You can revoke resume usage at any time — doing
+        so blocks Assisted Apply until you grant it again.
       </Typography>
 
       <Paper variant="outlined">

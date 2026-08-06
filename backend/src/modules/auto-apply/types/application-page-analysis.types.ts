@@ -138,6 +138,8 @@ export interface ApplicationPageAnalysisDto {
   formStatus: FormInspectionStatus;
   submissionCapability: SubmissionCapability;
   outcomeStatus: AnalysisOutcomeStatus;
+  status?: 'COMPLETE' | 'LIMITED' | 'FAILED';
+  previousAnalysisId?: string;
 
   requirements: ExtractedRequirement[];
   fields: ExtractedApplicationField[];

@@ -9,10 +9,12 @@ import type { IApplicationReadinessService } from '@/modules/auto-apply/contract
 import type { IJobApplicationRepository } from '@/modules/auto-apply/contracts/job-application.contract.js';
 import type { PrepareApplicationInput } from '@/modules/auto-apply/types/application-page-analysis.types.js';
 import { applyModeToMatchTrigger } from '@/modules/auto-apply/types/application-match.types.js';
+import type { ProfileJobMatchService } from '@/modules/auto-apply/services/profile-job-match.service.js';
+import type { ProfileJobMatchResult } from '@/modules/auto-apply/types/profile-job-match.types.js';
 
 /**
- * Orchestrates analyze → optional match (consent-gated) → readiness → package stub.
- * Does not submit applications.
+ * Orchestrates analyze → profile match → optional recommendation context → readiness → package.
+ * Does not submit applications. Does not use resume content for profile match.
  */
 export class PrepareApplicationService implements IPrepareApplicationService {
   constructor(
@@ -20,6 +22,7 @@ export class PrepareApplicationService implements IPrepareApplicationService {
     private readonly matchPort: IApplicationMatchPort,
     private readonly readiness: IApplicationReadinessService,
     private readonly jobApplications: IJobApplicationRepository,
+    private readonly profileJobMatch?: ProfileJobMatchService,
   ) {}
 
   async prepare(input: PrepareApplicationInput): Promise<PrepareApplicationResult> {
@@ -34,6 +37,7 @@ export class PrepareApplicationService implements IPrepareApplicationService {
       .filter((requirement) => requirement.importance === 'REQUIRED')
       .map((requirement) => requirement.code);
 
+    // Recommendation cache — historical/fallback context only (not authoritative Fit match).
     const match = await this.matchPort.ensureMatch({
       userId: input.userId,
       jobId: input.jobId,
@@ -49,11 +53,31 @@ export class PrepareApplicationService implements IPrepareApplicationService {
       },
     });
 
-    if (
+    let profileMatch: ProfileJobMatchResult | null = null;
+    if (this.profileJobMatch && input.jobApplicationId) {
+      profileMatch = await this.profileJobMatch.ensureMatch({
+        userId: input.userId,
+        jobId: input.jobId,
+        jobApplicationId: input.jobApplicationId,
+        analysis,
+        recommendationScoreFallback: match.overallScore,
+        forceRefresh: input.forceRefreshAnalysis,
+      });
+
+      // Stamp application matchScore from profile alignment (0..1), not recommendation cache.
+      if (profileMatch.overallAlignment != null) {
+        await this.jobApplications.updateMatchScore(
+          input.userId,
+          input.jobApplicationId,
+          profileMatch.overallAlignment,
+        );
+      }
+    } else if (
       match.overallScore != null &&
       input.jobApplicationId &&
       (match.status === 'READY' || match.status === 'CACHED')
     ) {
+      // Fallback only when profile matcher is unavailable.
       await this.jobApplications.updateMatchScore(
         input.userId,
         input.jobApplicationId,
@@ -86,12 +110,15 @@ export class PrepareApplicationService implements IPrepareApplicationService {
       selectedResumeId: match.resumeVersionId ?? null,
       analysisId: analysis.id,
       matchStatus: match.status,
-      overallScore: match.overallScore,
+      overallScore: profileMatch?.overallAlignment ?? null,
+      profileMatch,
+      recommendationScoreFallback: match.overallScore,
     };
 
     return {
       analysis,
       match,
+      profileMatch,
       readiness,
       package: pkg,
       application: application ?? null,

@@ -15,7 +15,9 @@ export type JobApplicationStatusValue =
   | 'CONFIRMATION_RECEIVED'
   | 'SUBMISSION_FAILED'
   | 'ACTION_REQUIRED'
-  | 'WITHDRAWN';
+  | 'WITHDRAWN'
+  | 'COULD_NOT_APPLY'
+  | 'JOB_CLOSED';
 
 export type AutoApplyChannelValue =
   'EMAIL' | 'EXTERNAL_MANUAL' | 'ATS_API' | 'BROWSER_ASSISTED' | 'UNSUPPORTED';

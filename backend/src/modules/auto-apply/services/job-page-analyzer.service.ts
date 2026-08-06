@@ -79,14 +79,24 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
       return existingFlight;
     }
 
-    const work = this.runAnalysis(input).finally(() => {
+    let previousAnalysisId: string | undefined;
+    if (input.forceRefresh) {
+      const latest = await this.repository.findLatestByJobId(input.jobId);
+      if (latest) {
+        previousAnalysisId = latest.id;
+      }
+    }
+
+    const work = this.runAnalysis({ ...input, previousAnalysisId }).finally(() => {
       if (inFlight.get(lockKey) === work) inFlight.delete(lockKey);
     });
     inFlight.set(lockKey, work);
     return work;
   }
 
-  private async runAnalysis(input: AnalyzeJobPageInput): Promise<ApplicationPageAnalysisDto> {
+  private async runAnalysis(
+    input: AnalyzeJobPageInput & { previousAnalysisId?: string },
+  ): Promise<ApplicationPageAnalysisDto> {
     const started = Date.now();
     const now = new Date();
     if (!input.forceRefresh) {
@@ -337,6 +347,10 @@ export class JobPageAnalyzerService implements IJobPageAnalyzerService {
       reviewRequiredCount: requirements.filter((r) => r.reviewStatus === 'REVIEW_REQUIRED').length,
       fromCache: false,
     });
+
+    if (input.previousAnalysisId) {
+      created.previousAnalysisId = input.previousAnalysisId;
+    }
 
     return created;
   }
