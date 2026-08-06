@@ -119,11 +119,14 @@ model ApprovedResumeVersion {
   category   String   @db.VarChar(60)
   /// Role/skill tags used to pick the right resume for a job (e.g. "mobile", "backend").
   tags       String[] @default([])
+  /// Optional pin to Resume Builder `ResumeVersion.id` (Int). Plain field — no cross-file FK.
+  builderResumeVersionId Int? @map("builder_resume_version_id")
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@index([userId, isActive])
+  @@index([userId, resumeId])
   @@map("approved_resume_versions")
 }
 
