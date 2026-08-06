@@ -16,7 +16,7 @@ describe('SocialConnectButton', () => {
     expect(screen.queryByTestId('GoogleIcon')).not.toBeInTheDocument();
   });
 
-  it('handles provider click events', async () => {
+  it('handles provider click events when enabled', async () => {
     const user = userEvent.setup();
     const handleClick = vi.fn();
 
@@ -25,5 +25,15 @@ describe('SocialConnectButton', () => {
     await user.click(screen.getByRole('button', { name: /continue with linkedin/i }));
 
     expect(handleClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows a Coming Soon badge when disabled', () => {
+    const handleClick = vi.fn();
+
+    render(<SocialConnectButton comingSoon onClick={handleClick} provider="google" />);
+
+    const button = screen.getByRole('button', { name: /continue with google/i });
+    expect(button).toBeDisabled();
+    expect(screen.getByText(/coming soon/i)).toBeInTheDocument();
   });
 });
