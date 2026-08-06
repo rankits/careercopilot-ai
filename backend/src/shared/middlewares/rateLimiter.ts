@@ -1,6 +1,7 @@
 import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import { cacheService } from '@/infrastructure/cache/index.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
+import { isDevelopment } from '@/shared/config/env.conf.js';
 import { securityConfig } from '@/shared/config/security.conf.js';
 import { APPLICATION_MANAGEMENT_RATE_LIMIT } from '@/modules/application-management/constants/application-management.rate-limit.constant.js';
 import { COPILOT_RATE_LIMIT } from '@/modules/copilot/constants/copilot.rate-limit.constant.js';
@@ -8,6 +9,8 @@ import { JOBS_INGESTION_RATE_LIMIT } from '@/modules/jobs/constants/jobs.rate-li
 import { RESUME_ANALYSIS_RATE_LIMIT } from '@/modules/resume-analysis/constants/resume-analysis.rate-limit.constant.js';
 import { RESUME_PROCESSING_RATE_LIMIT } from '@/modules/resumes/constants/resumes.rate-limit.constant.js';
 import { USER_RATE_LIMIT } from '@/modules/user/constants/user.rate-limit.constant.js';
+
+const RATE_LIMIT_USER_MESSAGE = 'Something went wrong. Please try again later.';
 
 interface RateLimiterOptions {
   windowMinutes: number;
@@ -48,13 +51,19 @@ const buildLimiter = (options: RateLimiterOptions): RequestHandler => {
   const keyGenerator = options.keyGenerator ?? defaultKeyGenerator;
 
   return (req: Request, _res: Response, next: NextFunction): void => {
+    // Local QA retries should not get stuck behind a shared Redis counter.
+    if (isDevelopment) {
+      next();
+      return;
+    }
+
     const cacheKey = `careercopilot:ratelimit:${options.prefix}:${keyGenerator(req)}`;
 
     cacheService
       .increment(cacheKey, windowSeconds)
       .then((count) => {
         if (count > options.max) {
-          next(new AppError('Too many requests, please try again later', 429, 'TOO_MANY_REQUESTS'));
+          next(new AppError(RATE_LIMIT_USER_MESSAGE, 429, 'TOO_MANY_REQUESTS'));
           return;
         }
         next();
