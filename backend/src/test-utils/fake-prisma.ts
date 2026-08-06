@@ -448,7 +448,6 @@ export class FakeDb {
     const now = new Date();
     const app: FakeApplication = {
       id: randomUUID(),
-      userId: overrides.userId,
       jobId: null,
       companyId: null,
       jobTitle: 'Backend Engineer',
@@ -483,7 +482,6 @@ export class FakeDb {
 
   seedJob(overrides: Partial<FakeJob> & { id: string }): FakeJob {
     const job: FakeJob = {
-      id: overrides.id,
       title: 'Backend Engineer',
       companyId: null,
       companySlug: null,
