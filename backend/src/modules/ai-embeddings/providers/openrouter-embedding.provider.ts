@@ -13,6 +13,7 @@ import {
   recordDimensionMismatch,
   recordOpenRouterRequest,
 } from '@/modules/ai-embeddings/observability/embedding.metrics.js';
+import { fingerprintCircuitBreakerScope } from '@/modules/ai-embeddings/utils/embedding-circuit-breaker.js';
 import { logger } from '@/shared/logger/logger.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
@@ -45,7 +46,10 @@ export class OpenRouterEmbeddingProvider extends BaseEmbeddingProvider {
   private cachedAvailability?: boolean;
 
   constructor(options: OpenRouterEmbeddingProviderOptions, http?: EmbeddingHttpClient) {
-    super(options);
+    super({
+      ...options,
+      breakerScope: fingerprintCircuitBreakerScope(options.provider, options.apiKey),
+    });
     this.requestDimensions = options.requestDimensions;
     this.isConfigured = Boolean(options.apiKey?.trim());
 
