@@ -36,6 +36,7 @@ import type {
   SafeUser,
 } from '@/modules/auth/types/auth.types.js';
 import { isDevelopment } from '@/shared/config/env.conf.js';
+import { logger } from '@/shared/logger/logger.js';
 
 const assertLoginable = (user: UserWithRole): void => {
   if (!user.isEmailVerified || user.status === Status.PendingVerification) {
@@ -125,7 +126,10 @@ const publishAuthUpdated = async (
       timestamp: new Date().toISOString(),
     })
     .catch((err: unknown) =>
-      console.error('[AuthService] Failed to publish auth.updated event:', err),
+      logger.warn(
+        { err, event: 'auth.publish_failed', reason: 'auth.updated' },
+        'Failed to publish auth.updated event',
+      ),
     );
 };
 
@@ -238,7 +242,12 @@ export const login = async (input: LoginInput, context: RequestContext): Promise
       email: user.email,
       timestamp: new Date().toISOString(),
     })
-    .catch((err: unknown) => console.error('[AuthService] Failed to publish signin event:', err));
+    .catch((err: unknown) =>
+      logger.warn(
+        { err, event: 'auth.publish_failed', reason: 'auth.signin' },
+        'Failed to publish signin event',
+      ),
+    );
 
   return { user: safeUser, tokens };
 };
