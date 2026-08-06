@@ -15,9 +15,7 @@ function isCompleted(analysis: AnalysisResult | null | undefined): boolean {
 }
 
 /** Backend AI gate rejected Target Role / JD (ATS forced to 0). */
-export function isInvalidTargetAnalysis(
-  analysis: AnalysisResult | null | undefined,
-): boolean {
+export function isInvalidTargetAnalysis(analysis: AnalysisResult | null | undefined): boolean {
   if (!isCompleted(analysis)) return false;
   if (analysis!.invalidTarget === true) return true;
   if (
@@ -30,9 +28,7 @@ export function isInvalidTargetAnalysis(
   return /oops!.*wrong target role|invalid.?target/i.test(message);
 }
 
-export function getInvalidTargetMessage(
-  analysis: AnalysisResult | null | undefined,
-): string {
+export function getInvalidTargetMessage(analysis: AnalysisResult | null | undefined): string {
   const fromApi =
     analysis?.invalidTargetMessage?.trim() ||
     (isInvalidTargetAnalysis(analysis) ? analysis?.weaknesses?.[0]?.trim() : '');
@@ -53,9 +49,7 @@ export function isLowJdMatch(analysis: AnalysisResult | null | undefined): boole
 }
 
 /** Analyze step must not advance to Optimize. */
-export function shouldBlockAnalyzeContinue(
-  analysis: AnalysisResult | null | undefined,
-): boolean {
+export function shouldBlockAnalyzeContinue(analysis: AnalysisResult | null | undefined): boolean {
   return isInvalidTargetAnalysis(analysis) || isLowJdMatch(analysis);
 }
 

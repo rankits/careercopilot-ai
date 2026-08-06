@@ -16,12 +16,7 @@ type AnalysisGateBannerProps = {
 };
 
 /** Shared alert strip for Analyze-step gates (invalid target / low JD match). */
-export function AnalysisGateBanner({
-  title,
-  body,
-  primary,
-  secondary,
-}: AnalysisGateBannerProps) {
+export function AnalysisGateBanner({ title, body, primary, secondary }: AnalysisGateBannerProps) {
   return (
     <Box className="invalid-target-banner" role="alert">
       <Typography className="invalid-title">{title}</Typography>
@@ -31,11 +26,7 @@ export function AnalysisGateBanner({
           {primary.label}
         </Button>
         {secondary ? (
-          <Button
-            size="small"
-            variant={secondary.variant ?? 'outline'}
-            onClick={secondary.onClick}
-          >
+          <Button size="small" variant={secondary.variant ?? 'outline'} onClick={secondary.onClick}>
             {secondary.label}
           </Button>
         ) : null}

@@ -44,12 +44,7 @@ export const visibleAddApplicationEntryModes = addApplicationEntryModes.filter(
 
 export const MAX_APPLICATION_NOTE_LENGTH = 10_000;
 
-const addApplicationStatusValues = new Set([
-  'preparing',
-  'applied',
-  'screening',
-  'interview',
-]);
+const addApplicationStatusValues = new Set(['preparing', 'applied', 'screening', 'interview']);
 
 export const addApplicationStatusOptions = applicationStatusOptions.filter((option) =>
   addApplicationStatusValues.has(option.value),

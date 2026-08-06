@@ -62,7 +62,10 @@ export function buildJdCoverageExtras(input: {
       category: 'skills',
       originalText: current,
       suggestedText: uniqSkills([
-        ...current.split(/[,|]/).map((item) => item.trim()).filter(Boolean),
+        ...current
+          .split(/[,|]/)
+          .map((item) => item.trim())
+          .filter(Boolean),
         ...missing,
       ]).join(', '),
       impact: 'HIGH',
@@ -85,10 +88,7 @@ export function buildJdCoverageExtras(input: {
   }
 
   const exp = input.experience;
-  if (
-    exp?.optimizedText?.trim() &&
-    !suggestionCoversCategory(input.existing, 'experience')
-  ) {
+  if (exp?.optimizedText?.trim() && !suggestionCoversCategory(input.existing, 'experience')) {
     extras.push({
       id: 'coverage-jd-experience',
       title: role ? `Reframe experience toward ${role}` : 'Strengthen an experience bullet',

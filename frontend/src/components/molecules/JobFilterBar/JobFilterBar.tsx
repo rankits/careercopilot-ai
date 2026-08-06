@@ -72,10 +72,7 @@ export function JobFilterBar({ filters, onFilterClick }: JobFilterBarProps) {
   const scrollByDirection = (direction: -1 | 1) => {
     const track = trackRef.current;
     if (!track) return;
-    const amount = Math.max(
-      track.clientWidth * SCROLL_STEP_RATIO,
-      JOB_FILTER_BAR_SCROLL.minStepPx,
-    );
+    const amount = Math.max(track.clientWidth * SCROLL_STEP_RATIO, JOB_FILTER_BAR_SCROLL.minStepPx);
     track.scrollBy({ behavior: 'smooth', left: direction * amount });
   };
 
