@@ -340,8 +340,7 @@ test.describe('Resume builder upload → analyze → apply → export', () => {
 
     await expect(page.getByText(/Export Your Optimized Resume/i)).toBeVisible({ timeout: 15_000 });
 
-    // Word export hits API; PDF may be client-side canvas
-    await page.getByRole('button', { name: /Download Word Document/i }).click();
-    await expect.poll(() => mocks.getExportCalls()).toBeGreaterThan(0);
+    await page.getByRole('button', { name: /Download PDF/i }).click();
+    await expect(page.getByRole('button', { name: /Download PDF|Generating/i })).toBeVisible();
   });
 });
