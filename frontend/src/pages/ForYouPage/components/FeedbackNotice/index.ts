@@ -1,0 +1,1 @@
+export { FeedbackNotice } from './FeedbackNotice';
