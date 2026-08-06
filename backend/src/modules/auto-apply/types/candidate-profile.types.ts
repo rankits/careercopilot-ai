@@ -31,6 +31,9 @@ export interface CandidateApplicationLinks {
   linkedin?: string;
   github?: string;
   portfolio?: string;
+  behance?: string;
+  stackoverflow?: string;
+  medium?: string;
 }
 
 export interface FieldVerification {
