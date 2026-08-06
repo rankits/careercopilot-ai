@@ -24,6 +24,8 @@ export const loadSavedJobsPage = () => import('@/pages/SavedJobsPage');
 export const loadApplicationsPage = () => import('@/pages/ApplicationsPage');
 export const loadApplicationDetailPage = () => import('@/pages/ApplicationDetailPage');
 export const loadAutoApplyPage = () => import('@/pages/AutoApplyPage');
+export const loadAssistedApplicationsPage = () => import('@/pages/AssistedApplicationsPage');
+export const loadBrowserExtensionPage = () => import('@/pages/BrowserExtensionPage');
 export const loadAssistedApplyWorkspacePage = () =>
   import('@/pages/AssistedApplyWorkspacePage/AssistedApplyWorkspacePage');
 export const loadSavedResumesPage = () => import('@/pages/SavedResumesPage');
@@ -46,6 +48,11 @@ export const LazyApplicationDetailPage = lazyNamed(
   'ApplicationDetailPage',
 );
 export const LazyAutoApplyPage = lazyNamed(loadAutoApplyPage, 'AutoApplyPage');
+export const LazyAssistedApplicationsPage = lazyNamed(
+  loadAssistedApplicationsPage,
+  'AssistedApplicationsPage',
+);
+export const LazyBrowserExtensionPage = lazyNamed(loadBrowserExtensionPage, 'BrowserExtensionPage');
 export const LazyAssistedApplyWorkspacePage = lazyNamed(
   loadAssistedApplyWorkspacePage,
   'AssistedApplyWorkspacePage',
