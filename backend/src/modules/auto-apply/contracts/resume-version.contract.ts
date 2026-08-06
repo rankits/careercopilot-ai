@@ -16,11 +16,18 @@ export interface IApprovedResumeVersionRepository {
     category: string;
     tags: string[];
     isActive: boolean;
+    builderResumeVersionId?: number | null;
   }): Promise<ApprovedResumeVersionDto>;
   update(
     userId: string,
     id: string,
-    data: { label?: string; category?: string; tags?: string[]; isActive?: boolean },
+    data: {
+      label?: string;
+      category?: string;
+      tags?: string[];
+      isActive?: boolean;
+      builderResumeVersionId?: number | null;
+    },
   ): Promise<ApprovedResumeVersionDto>;
   delete(userId: string, id: string): Promise<DeleteApprovedResumeVersionResult>;
 }
