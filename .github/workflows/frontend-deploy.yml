@@ -21,7 +21,8 @@ concurrency:
 jobs:
   validate:
     name: Validate Frontend Before Deployment
-    runs-on: self-hosted
+    # runs-on: self-hosted
+    runs-on: ubuntu-latest
     # Self-hosted runner user has no sudo, so `playwright install --with-deps`
     # (which shells out to apt-get) always fails. Run inside the official
     # Playwright image instead, it ships the matching browsers and OS
@@ -67,7 +68,8 @@ jobs:
   deploy:
     name: Deploy Frontend to S3 & CloudFront
     needs: validate
-    runs-on: self-hosted
+    # runs-on: self-hosted
+    runs-on: ubuntu-latest
     environment:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
     defaults:
