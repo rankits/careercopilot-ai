@@ -24,7 +24,7 @@ jobs:
     runs-on: self-hosted
     # Self-hosted runner user has no sudo, so `playwright install --with-deps`
     # (which shells out to apt-get) always fails. Run inside the official
-    # Playwright image instead — it ships the matching browsers and OS
+    # Playwright image instead, it ships the matching browsers and OS
     # dependencies preinstalled, so no privilege escalation is needed.
     container:
       image: mcr.microsoft.com/playwright:v1.62.1-noble
