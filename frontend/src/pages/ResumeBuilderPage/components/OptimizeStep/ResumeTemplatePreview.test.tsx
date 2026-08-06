@@ -102,11 +102,11 @@ describe('computePageOffsets', () => {
 
     expect(offsets[0]).toBe(0);
     for (let i = 1; i < offsets.length; i += 1) {
-      expect(offsets[i]).toBeGreaterThan(offsets[i - 1]);
+      expect(offsets[i]).toBeGreaterThan(offsets[i - 1]!);
     }
     expect(offsets[1]).toBe(400);
     for (let i = 0; i < offsets.length - 1; i += 1) {
-      expect(offsets[i + 1] - offsets[i]).toBeLessThanOrEqual(pageInner);
+      expect(offsets[i + 1]! - offsets[i]!).toBeLessThanOrEqual(pageInner);
     }
   });
 
