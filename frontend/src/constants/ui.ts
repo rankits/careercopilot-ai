@@ -267,7 +267,7 @@ export const AUTH_FORM_CONTENT: Record<AuthFormMode, AuthFormContent> = {
 export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
   login: [
     {
-      autoComplete: 'email',
+      autoComplete: 'username',
       label: 'Email address',
       maxLength: AUTH_FIELD_LIMITS.email,
       name: 'email',
@@ -397,18 +397,21 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
     password: yup
       .string()
       .required('Password is required')
-      .min(8, 'Password must be at least 8 characters')
+      .min(8, 'Use 8+ characters with uppercase, lowercase, number & special character')
       .max(AUTH_FIELD_LIMITS.password, 'Password must be 128 characters or fewer')
-      .matches(/[A-Z]/, 'Password must include an uppercase letter')
-      .matches(/[a-z]/, 'Password must include a lowercase letter')
-      .matches(/\d/, 'Password must include a number')
-      .matches(/[^A-Za-z0-9]/, 'Password must include a symbol'),
+      .matches(/[A-Z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/[a-z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/\d/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(
+        /[^A-Za-z0-9]/,
+        'Use 8+ characters with uppercase, lowercase, number & special character',
+      ),
     phone: yup
       .string()
       .required('Phone number is required')
-      .matches(/^(\d{10}|\+[1-9]\d{7,14}|[1-9]\d{7,14})$/, {
+      .matches(/^(\d{7,15}|\+[1-9]\d{7,14})$/, {
         excludeEmptyString: true,
-        message: 'Enter a valid phone number, e.g. 9876543210 or +919876543210',
+        message: 'Enter a valid phone number',
       }),
   }),
 } as const;
