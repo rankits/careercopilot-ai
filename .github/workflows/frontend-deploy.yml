@@ -1,4 +1,4 @@
-name: Deploy Frontend to AWS Production
+name: Deploy Frontend to AWS
 
 on:
   push:
@@ -21,7 +21,13 @@ concurrency:
 jobs:
   validate:
     name: Validate Frontend Before Deployment
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    # Self-hosted runner user has no sudo, so `playwright install --with-deps`
+    # (which shells out to apt-get) always fails. Run inside the official
+    # Playwright image instead, it ships the matching browsers and OS
+    # dependencies preinstalled, so no privilege escalation is needed.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
     defaults:
       run:
         working-directory: frontend
@@ -53,17 +59,17 @@ jobs:
         run: npm run build
 
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
 
       - name: Run E2E Smoke test
         run: npm run test:e2e
 
   deploy:
-    name: Deploy Frontend to Production S3 & CloudFront
+    name: Deploy Frontend to S3 & CloudFront
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
-      name: production
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
     defaults:
       run:
         working-directory: frontend
@@ -198,7 +204,7 @@ jobs:
             fi
             echo ""
             echo "## Deployment Details"
-            echo "- **Environment:** production"
+            echo "- **Environment:** ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
             echo "- **Git Branch:** \`${{ github.ref_name }}\`"
             echo "- **Commit SHA:** \`${{ github.sha }}\`"
             echo "- **S3 Bucket:** \`${{ vars.FRONTEND_S3_BUCKET }}\`"

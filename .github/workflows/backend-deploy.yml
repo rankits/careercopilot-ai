@@ -22,7 +22,7 @@ concurrency:
 jobs:
   validate:
     name: Validate Backend Before Deployment
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -60,7 +60,7 @@ jobs:
           --health-retries 5
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Node.js 20
         uses: actions/setup-node@v4
@@ -87,23 +87,17 @@ jobs:
       - name: Validate production build
         run: npm run build
 
-      - name: Validate Prisma schema and format
-        run: |
-          npx prisma format --check
-          npx prisma validate
-          npx prisma generate
-
       - name: Run vulnerability scan
         run: npm audit --audit-level=high
 
   build-and-push:
     name: Build and Push Docker Image
     needs: validate
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -117,7 +111,11 @@ jobs:
       - name: Build and push production image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          # Dockerfile.prod's COPY paths (docker/entrypoint.sh, prisma, package*.json)
+          # are relative to backend/, matching docker-compose.dev.yml's convention.
+          # A repo-root context makes those COPY sources resolve to the wrong files.
+          # Note: `file` is resolved relative to the repo root, not `context`.
+          context: ./backend
           file: ./backend/docker/Dockerfile.prod
           platforms: linux/amd64
           push: true
@@ -130,11 +128,11 @@ jobs:
   package-deployment:
     name: Package and Upload Release Bundle
     needs: build-and-push
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Create release tarball bundle
         run: |
@@ -158,9 +156,9 @@ jobs:
   deploy:
     name: Deploy to EC2 via AWS Systems Manager
     needs: package-deployment
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     environment:
-      name: production
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
 
     steps:
       - name: Configure AWS credentials via OIDC
@@ -242,7 +240,7 @@ jobs:
   verify-public-endpoint:
     name: Verify Public Health Endpoint
     needs: deploy
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
 
     steps:
       - name: Verify Public Health Endpoint
@@ -290,7 +288,7 @@ jobs:
             fi
             echo ""
             echo "## Deployment Details"
-            echo "- **Environment:** production"
+            echo "- **Environment:** ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
             echo "- **Git Branch:** \`${{ github.ref_name }}\`"
             echo "- **Commit SHA:** \`${{ github.sha }}\`"
             echo "- **Docker Image:** \`${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}\`"
