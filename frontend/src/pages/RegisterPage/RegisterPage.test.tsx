@@ -110,7 +110,7 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(await screen.findByText(/enter a valid email address/i)).toBeInTheDocument();
-    expect(screen.getByText(/phone number must be 10 digits/i)).toBeInTheDocument();
+    expect(screen.getByText(/enter a valid phone number/i)).toBeInTheDocument();
     expect(screen.getByText(/password must be at least 8 characters/i)).toBeInTheDocument();
     expect(screen.getByText(/passwords must match/i)).toBeInTheDocument();
     expect(registerMock).not.toHaveBeenCalled();
