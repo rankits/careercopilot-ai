@@ -23,6 +23,27 @@ Improved suggestion apply flow
     expect(projects[0]?.details).toContain('Stripe');
   });
 
+  it('never leaves blank titles that would render as Role', () => {
+    const projects = parseProjectBlocks(`
+Vendor Management System
+- Built vendor onboarding workflows
+- Integrated reporting dashboards
+`);
+    expect(projects[0]?.title).toMatch(/Vendor Management System/i);
+    expect(projects[0]?.details).toMatch(/vendor onboarding/i);
+  });
+
+  it('parses Project name: labeled headers', () => {
+    const projects = parseProjectBlocks(`
+Project name: Fieldwork
+Responsibilities:
+- Captured field survey data
+- Built mobile forms
+`);
+    expect(projects[0]?.title).toMatch(/Fieldwork/i);
+    expect(projects[0]?.details).toMatch(/field survey/i);
+  });
+
   it('parses Title — Subtitle project headers and Stack lines', () => {
     const projects = parseProjectBlocks(`
 Seedify  —  Web3 / Blockchain Platform
