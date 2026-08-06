@@ -2,7 +2,12 @@ import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
-import { DashboardMetricCard, FilterDropdown } from '@/components/molecules';
+import {
+  DashboardMetricCard,
+  FilterDropdown,
+  JobFeedLoadingState,
+  JobFeedStatus,
+} from '@/components/molecules';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import {
@@ -37,14 +42,18 @@ import {
   ApplicationsRoot,
   ApplicationsTable,
   EmptyState,
+  EmptyStateDescription,
+  EmptyStateIcon,
+  EmptyStateTitle,
   FilterActionsBar,
   FilterDropdownWrap,
   FilterPanel,
   MetricsGrid,
-  PageEyebrow,
   PageHeader,
   PageHeaderActions,
   PageHeaderContent,
+  PageHeaderCopy,
+  PageHeaderIcon,
   PageSubtitle,
   PageTitle,
   PaginationBar,
@@ -65,8 +74,10 @@ import {
 } from '@/features/applications/styles';
 import type { ApplicationRecord } from '@/features/applications/types/application.view.types';
 import { mapUiStatusToApi } from '@/features/applications/utils/applicationMappers';
+import { APPLICATIONS_EXPORT_EMPTY_MESSAGE } from '@/features/applications/utils/exportApplicationsCsv';
 import {
   AddIcon,
+  BusinessCenterOutlinedIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   FileDownloadOutlinedIcon,
@@ -109,20 +120,13 @@ export function ApplicationsPage() {
     pageSize,
     searchQuery,
     sortBy,
+    sourceFilter,
     statusFilter,
   };
 
   const { data, error, isError, isLoading, refetch } = useApplications(listFilters);
 
-  const visibleRecords = useMemo(() => {
-    const records = data?.records ?? [];
-
-    if (sourceFilter === 'all') {
-      return records;
-    }
-
-    return records.filter((record) => record.source === sourceFilter);
-  }, [data?.records, sourceFilter]);
+  const visibleRecords = data?.records ?? [];
 
   const pagination = data?.pagination;
   const displayTotal = pagination?.totalItems ?? 0;
@@ -248,6 +252,14 @@ export function ApplicationsPage() {
   };
 
   const handleExport = async () => {
+    if (displayTotal === 0) {
+      showToast({
+        message: APPLICATIONS_EXPORT_EMPTY_MESSAGE,
+        severity: 'warning',
+      });
+      return;
+    }
+
     try {
       const exportedCount = await exportApplications.mutateAsync({
         activeTab,
@@ -282,9 +294,13 @@ export function ApplicationsPage() {
     <ApplicationsRoot aria-label="Applications page">
       <PageHeader>
         <PageHeaderContent>
-          <PageEyebrow>Career Workspace</PageEyebrow>
-          <PageTitle>Applications</PageTitle>
-          <PageSubtitle>Track and manage all your job applications in one place.</PageSubtitle>
+          <PageHeaderIcon aria-hidden="true">
+            <BusinessCenterOutlinedIcon fontSize="medium" />
+          </PageHeaderIcon>
+          <PageHeaderCopy>
+            <PageTitle>Applications</PageTitle>
+            <PageSubtitle>Track and manage all your job applications in one place.</PageSubtitle>
+          </PageHeaderCopy>
         </PageHeaderContent>
 
         <PageHeaderActions>
@@ -386,7 +402,10 @@ export function ApplicationsPage() {
             <FilterDropdown
               fullWidth
               label="Recently updated"
-              onChange={setSortBy}
+              onChange={(value) => {
+                setSortBy(value);
+                setCurrentPage(1);
+              }}
               options={applicationSortOptions}
               prefix="Sort"
               value={sortBy}
@@ -395,131 +414,148 @@ export function ApplicationsPage() {
         </FilterActionsBar>
       </FilterPanel>
 
-      <TablePanel>
-        <TableToolbar>
-          <TableToolbarText>{resultsLabel}</TableToolbarText>
-          <ViewToggleGroup aria-label="View mode">
-            <ViewToggleButton
-              active={viewMode === 'list'}
-              aria-label="List view"
-              aria-pressed={viewMode === 'list'}
-              onClick={() => setViewMode('list')}
-              size="small"
-            >
-              <ViewListOutlinedIcon fontSize="small" />
-            </ViewToggleButton>
-            <ViewToggleButton
-              active={viewMode === 'grid'}
-              aria-label="Grid view"
-              aria-pressed={viewMode === 'grid'}
-              onClick={() => setViewMode('grid')}
-              size="small"
-            >
-              <GridViewOutlinedIcon fontSize="small" />
-            </ViewToggleButton>
-          </ViewToggleGroup>
-        </TableToolbar>
+      {isLoading ? <JobFeedLoadingState label="Loading applications..." /> : null}
 
-        {isError ? (
-          <EmptyState>
-            <p>{error instanceof Error ? error.message : 'Something went wrong.'}</p>
-            <Button onClick={() => void refetch()} variant="outline">
-              Try again
-            </Button>
-          </EmptyState>
-        ) : isLoading ? (
-          <EmptyState>Loading applications...</EmptyState>
-        ) : visibleRecords.length === 0 ? (
-          <EmptyState>No applications found.</EmptyState>
-        ) : effectiveViewMode === 'grid' ? (
-          <ApplicationsGrid aria-label="Applications grid">
-            {visibleRecords.map((record, index) => (
-              <ApplicationGridCard
-                handlers={rowHandlers}
-                key={record.id}
-                record={record}
-                selected={index === 0 && safePage === 1}
-                showArchiveState={showArchiveState}
+      {isError ? (
+        <JobFeedStatus
+          message={error instanceof Error ? error.message : 'Unable to load applications.'}
+          onRetry={() => void refetch()}
+          title="Couldn't load applications"
+          tone="error"
+        />
+      ) : null}
+
+      {!isLoading && !isError && visibleRecords.length === 0 ? (
+        <EmptyState role="status">
+          <EmptyStateIcon aria-hidden="true">
+            <BusinessCenterOutlinedIcon fontSize="medium" />
+          </EmptyStateIcon>
+          <EmptyStateTitle>No applications found</EmptyStateTitle>
+          <EmptyStateDescription>
+            Try adjusting your filters, or add an application to start tracking.
+          </EmptyStateDescription>
+          <Button onClick={() => setAddDialogOpen(true)} size="small" startIcon={<AddIcon />}>
+            Add application
+          </Button>
+        </EmptyState>
+      ) : null}
+
+      {!isLoading && !isError && visibleRecords.length > 0 ? (
+        <TablePanel>
+          <TableToolbar>
+            <TableToolbarText>{resultsLabel}</TableToolbarText>
+            <ViewToggleGroup aria-label="View mode">
+              <ViewToggleButton
+                active={viewMode === 'list'}
+                aria-label="List view"
+                aria-pressed={viewMode === 'list'}
+                onClick={() => setViewMode('list')}
+                size="small"
+              >
+                <ViewListOutlinedIcon fontSize="small" />
+              </ViewToggleButton>
+              <ViewToggleButton
+                active={viewMode === 'grid'}
+                aria-label="Grid view"
+                aria-pressed={viewMode === 'grid'}
+                onClick={() => setViewMode('grid')}
+                size="small"
+              >
+                <GridViewOutlinedIcon fontSize="small" />
+              </ViewToggleButton>
+            </ViewToggleGroup>
+          </TableToolbar>
+
+          {effectiveViewMode === 'grid' ? (
+            <ApplicationsGrid aria-label="Applications grid">
+              {visibleRecords.map((record, index) => (
+                <ApplicationGridCard
+                  handlers={rowHandlers}
+                  key={record.id}
+                  record={record}
+                  selected={index === 0 && safePage === 1}
+                  showArchiveState={showArchiveState}
+                />
+              ))}
+            </ApplicationsGrid>
+          ) : (
+            <TableScroll>
+              <ApplicationsTable>
+                <thead>
+                  <tr>
+                    <TableHeadCell scope="col">Application</TableHeadCell>
+                    <TableHeadCell scope="col">Source</TableHeadCell>
+                    <TableHeadCell scope="col">Status</TableHeadCell>
+                    <TableHeadCell scope="col">Priority</TableHeadCell>
+                    <TableHeadCell scope="col">Interest</TableHeadCell>
+                    <TableHeadCell scope="col">Applied date</TableHeadCell>
+                    {showArchiveState ? <TableHeadCell scope="col">Archive</TableHeadCell> : null}
+                    <TableStickyHeadCell scope="col">Actions</TableStickyHeadCell>
+                  </tr>
+                </thead>
+                <tbody>
+                  {visibleRecords.map((record) => (
+                    <ApplicationTableRow
+                      handlers={rowHandlers}
+                      key={record.id}
+                      record={record}
+                      showArchiveState={showArchiveState}
+                    />
+                  ))}
+                </tbody>
+              </ApplicationsTable>
+            </TableScroll>
+          )}
+
+          <PaginationBar>
+            <PaginationControls aria-label="Pagination">
+              <PaginationButton
+                aria-label="Previous page"
+                disabled={safePage <= 1 || isLoading}
+                onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
+              >
+                <ChevronLeftIcon fontSize="small" />
+              </PaginationButton>
+              {Array.from({ length: totalPages }, (_, index) => {
+                const pageNumber = index + 1;
+
+                return (
+                  <PaginationButton
+                    active={pageNumber === safePage}
+                    aria-current={pageNumber === safePage ? 'page' : undefined}
+                    aria-label={`Page ${pageNumber}`}
+                    disabled={isLoading}
+                    key={pageNumber}
+                    onClick={() => setCurrentPage(pageNumber)}
+                  >
+                    {pageNumber}
+                  </PaginationButton>
+                );
+              })}
+              <PaginationButton
+                aria-label="Next page"
+                disabled={safePage >= totalPages || isLoading}
+                onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
+              >
+                <ChevronRightIcon fontSize="small" />
+              </PaginationButton>
+            </PaginationControls>
+
+            <PaginationPageSize>
+              <FilterDropdown
+                fullWidth={isMobile}
+                label="10 per page"
+                onChange={(value) => {
+                  setPageSize(value);
+                  setCurrentPage(1);
+                }}
+                options={applicationPageSizeOptions}
+                value={pageSize}
               />
-            ))}
-          </ApplicationsGrid>
-        ) : (
-          <TableScroll>
-            <ApplicationsTable>
-              <thead>
-                <tr>
-                  <TableHeadCell scope="col">Application</TableHeadCell>
-                  <TableHeadCell scope="col">Source</TableHeadCell>
-                  <TableHeadCell scope="col">Status</TableHeadCell>
-                  <TableHeadCell scope="col">Priority</TableHeadCell>
-                  <TableHeadCell scope="col">Interest</TableHeadCell>
-                  <TableHeadCell scope="col">Applied date</TableHeadCell>
-                  {showArchiveState ? <TableHeadCell scope="col">Archive</TableHeadCell> : null}
-                  <TableStickyHeadCell scope="col">Actions</TableStickyHeadCell>
-                </tr>
-              </thead>
-              <tbody>
-                {visibleRecords.map((record) => (
-                  <ApplicationTableRow
-                    handlers={rowHandlers}
-                    key={record.id}
-                    record={record}
-                    showArchiveState={showArchiveState}
-                  />
-                ))}
-              </tbody>
-            </ApplicationsTable>
-          </TableScroll>
-        )}
-
-        <PaginationBar>
-          <PaginationControls aria-label="Pagination">
-            <PaginationButton
-              aria-label="Previous page"
-              disabled={safePage <= 1 || isLoading}
-              onClick={() => setCurrentPage((page) => Math.max(1, page - 1))}
-            >
-              <ChevronLeftIcon fontSize="small" />
-            </PaginationButton>
-            {Array.from({ length: totalPages }, (_, index) => {
-              const pageNumber = index + 1;
-
-              return (
-                <PaginationButton
-                  active={pageNumber === safePage}
-                  aria-current={pageNumber === safePage ? 'page' : undefined}
-                  aria-label={`Page ${pageNumber}`}
-                  disabled={isLoading}
-                  key={pageNumber}
-                  onClick={() => setCurrentPage(pageNumber)}
-                >
-                  {pageNumber}
-                </PaginationButton>
-              );
-            })}
-            <PaginationButton
-              aria-label="Next page"
-              disabled={safePage >= totalPages || isLoading}
-              onClick={() => setCurrentPage((page) => Math.min(totalPages, page + 1))}
-            >
-              <ChevronRightIcon fontSize="small" />
-            </PaginationButton>
-          </PaginationControls>
-
-          <PaginationPageSize>
-            <FilterDropdown
-              fullWidth={isMobile}
-              label="10 per page"
-              onChange={(value) => {
-                setPageSize(value);
-                setCurrentPage(1);
-              }}
-              options={applicationPageSizeOptions}
-              value={pageSize}
-            />
-          </PaginationPageSize>
-        </PaginationBar>
-      </TablePanel>
+            </PaginationPageSize>
+          </PaginationBar>
+        </TablePanel>
+      ) : null}
 
       <AddApplicationDialog onClose={() => setAddDialogOpen(false)} open={addDialogOpen} />
 

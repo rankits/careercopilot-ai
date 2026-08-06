@@ -11,6 +11,10 @@ const makeRepo = () => ({
   findById: vi.fn(),
 });
 
+const makeApplicationRepo = () => ({
+  findSavedJobIds: vi.fn(),
+});
+
 describe('JobListingService.searchJobs', () => {
   it('delegates directly when the storage age filter is disabled', async () => {
     vi.spyOn(jobAgePolicy, 'getStorageCutoffDate').mockReturnValue(null);
@@ -86,6 +90,44 @@ describe('JobListingService.searchJobs', () => {
       }),
     );
   });
+
+  it('enriches items with isSaved when userId is provided', async () => {
+    vi.spyOn(jobAgePolicy, 'getStorageCutoffDate').mockReturnValue(null);
+    const repo = makeRepo();
+    const applicationRepo = makeApplicationRepo();
+    repo.search.mockResolvedValue({
+      items: [{ id: 'job-1' }, { id: 'job-2' }],
+      pagination: { page: 1, totalItems: 2 },
+    });
+    applicationRepo.findSavedJobIds.mockResolvedValue(['job-2']);
+
+    const service = new JobListingService(repo as never, applicationRepo);
+    const result = await service.searchJobs(
+      { filters: {}, pagination: { page: 1, limit: 20 }, sortBy: 'newest' },
+      'user-1',
+    );
+
+    expect(applicationRepo.findSavedJobIds).toHaveBeenCalledWith('user-1', ['job-1', 'job-2']);
+    expect(result.items).toEqual([
+      { id: 'job-1', isSaved: false },
+      { id: 'job-2', isSaved: true },
+    ]);
+  });
+
+  it('skips saved lookup when userId is omitted', async () => {
+    vi.spyOn(jobAgePolicy, 'getStorageCutoffDate').mockReturnValue(null);
+    const repo = makeRepo();
+    const applicationRepo = makeApplicationRepo();
+    repo.search.mockResolvedValue({
+      items: [{ id: 'job-1' }],
+      pagination: { page: 1, totalItems: 1 },
+    });
+
+    const service = new JobListingService(repo as never, applicationRepo);
+    await service.searchJobs({ filters: {}, pagination: { page: 1, limit: 20 }, sortBy: 'newest' });
+
+    expect(applicationRepo.findSavedJobIds).not.toHaveBeenCalled();
+  });
 });
 
 describe('JobListingService.getJobDetails', () => {
@@ -96,5 +138,18 @@ describe('JobListingService.getJobDetails', () => {
 
     await expect(service.getJobDetails('job-1')).resolves.toEqual({ id: 'job-1' });
     expect(repo.findById).toHaveBeenCalledWith('job-1');
+  });
+
+  it('adds isSaved when userId is provided', async () => {
+    const repo = makeRepo();
+    const applicationRepo = makeApplicationRepo();
+    repo.findById.mockResolvedValue({ id: 'job-1' });
+    applicationRepo.findSavedJobIds.mockResolvedValue(['job-1']);
+    const service = new JobListingService(repo as never, applicationRepo);
+
+    await expect(service.getJobDetails('job-1', 'user-1')).resolves.toEqual({
+      id: 'job-1',
+      isSaved: true,
+    });
   });
 });

@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import {
+  getMaxAllowedAppliedAtDate,
   getTodayDateInputValue,
   parseAppliedAtDate,
   resolveAppliedAt,
@@ -19,6 +20,11 @@ describe('applied-at util', () => {
     expect(() => parseAppliedAtDate('2999-01-01')).toThrowError(
       new AppError('Applied date cannot be in the future', 400, 'INVALID_APPLIED_AT'),
     );
+  });
+
+  it('allows one calendar day ahead of UTC today for client timezone skew', () => {
+    expect(getMaxAllowedAppliedAtDate(new Date('2026-08-06T19:21:00.000Z'))).toBe('2026-08-07');
+    expect(getMaxAllowedAppliedAtDate(new Date('2026-08-06T00:00:00.000Z'))).toBe('2026-08-07');
   });
 
   it('uses the provided applied date when creating an application', () => {

@@ -263,8 +263,7 @@ describe('ApplicationsPage', () => {
   it('renders the applications dashboard mockup content', () => {
     renderApplicationsPage();
 
-    expect(screen.getByText(/career workspace/i)).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /applications/i })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /^applications$/i })).toBeInTheDocument();
     expect(
       screen.getByText(/track and manage all your job applications in one place/i),
     ).toBeInTheDocument();

@@ -20,6 +20,7 @@ export const SAVED_JOBS_COPY = {
   removeSaved: 'Remove from saved',
   removedToast: 'Removed from saved jobs',
   removeFailedToast: 'Unable to remove this saved job.',
+  savedToast: 'Job saved successfully',
   sortPrefix: 'Sort by',
   subtitle: "Jobs you've saved for later.",
   title: 'Saved Jobs',

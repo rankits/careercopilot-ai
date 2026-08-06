@@ -88,6 +88,8 @@ export interface JobCardData {
   type: string;
   /** When true, show the verified badge beside the title. */
   verified?: boolean;
+  /** Server-provided saved state for authenticated users. */
+  isSaved?: boolean;
 }
 
 export interface JobCardProps {

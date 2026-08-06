@@ -340,6 +340,11 @@ export const FieldLabel = styled('label')({
   lineHeight: 1.3,
 });
 
+export const RequiredMark = styled('span')({
+  color: colorTokens.feedbackError,
+  marginLeft: '0.125rem',
+});
+
 export const FieldHint = styled('span')({
   color: colorTokens.textTertiary,
   fontSize: fontSize.xs,
@@ -672,11 +677,12 @@ export const DialogFooterNote = styled('p')({
   alignItems: 'center',
   color: colorTokens.textSecondary,
   display: 'flex',
+  flex: '1 1 auto',
   fontSize: fontSize.sm,
   gap: spacing[2],
   lineHeight: 1.4,
   margin: 0,
-  maxWidth: '18rem',
+  minWidth: 0,
 
   '& svg': {
     color: colorTokens.actionPrimary,
@@ -684,7 +690,6 @@ export const DialogFooterNote = styled('p')({
   },
 
   [mobileBreakpoint]: {
-    maxWidth: 'none',
     width: '100%',
   },
 });

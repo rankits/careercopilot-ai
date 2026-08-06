@@ -512,18 +512,28 @@ export const SIDEBAR_NAV_LABELS = {
   savedResumes: 'Saved Resumes',
 } as const;
 
+/** Short labels for the 5-item mobile bottom bar (avoids ellipsis truncation). */
+export const SIDEBAR_BOTTOM_NAV_LABELS = {
+  applications: 'Apps',
+  aiMatch: 'AI Match',
+  dashboard: 'Home',
+  jobsFeed: 'Jobs',
+} as const;
+
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
   {
     href: ROUTES.DASHBOARD,
     icon: HomeOutlinedIcon,
     id: 'dashboard',
     label: SIDEBAR_NAV_LABELS.dashboard,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.dashboard,
   },
   {
     href: ROUTES.JOB_FEED,
     icon: SearchOutlinedIcon,
     id: 'jobs-feed',
     label: SIDEBAR_NAV_LABELS.jobsFeed,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.jobsFeed,
   },
   {
     href: ROUTES.SAVED_JOBS,
@@ -536,12 +546,14 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     icon: TuneOutlinedIcon,
     id: 'ai-match',
     label: SIDEBAR_NAV_LABELS.aiMatch,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.aiMatch,
   },
   {
     href: ROUTES.APPLICATIONS,
     icon: BusinessCenterOutlinedIcon,
     id: 'applications',
     label: SIDEBAR_NAV_LABELS.applications,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.applications,
   },
   {
     href: ROUTES.RESUME_BUILDER,

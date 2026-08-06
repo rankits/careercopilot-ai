@@ -18,24 +18,13 @@ export interface ApplicationListFilters {
   pageSize: string;
   searchQuery: string;
   sortBy: string;
+  sourceFilter: string;
   statusFilter: string;
 }
 
 export interface ApplicationListResult {
   pagination: ApplicationPagination;
   records: ApplicationRecord[];
-}
-
-function sortRecords(records: ApplicationRecord[], sortBy: string): ApplicationRecord[] {
-  if (sortBy !== 'priority') {
-    return records;
-  }
-
-  const priorityOrder = { high: 0, medium: 1, low: 2 };
-
-  return [...records].sort(
-    (left, right) => priorityOrder[left.priority] - priorityOrder[right.priority],
-  );
 }
 
 export function useApplications(filters: ApplicationListFilters) {
@@ -57,6 +46,8 @@ export function useApplications(filters: ApplicationListFilters) {
     pageSize: filters.pageSize,
     search: debouncedSearch || undefined,
     sortBy: filters.sortBy,
+    sourceFilter: filters.sourceFilter,
+    sourceType: listParams.sourceType,
     status: listParams.status,
     statusFilter: filters.statusFilter,
   };
@@ -68,7 +59,7 @@ export function useApplications(filters: ApplicationListFilters) {
 
       return {
         pagination: response.pagination,
-        records: sortRecords(response.items.map(mapApplicationDtoToRecord), filters.sortBy),
+        records: response.items.map(mapApplicationDtoToRecord),
       };
     },
     queryKey: applicationQueryKeys.list(queryParams),

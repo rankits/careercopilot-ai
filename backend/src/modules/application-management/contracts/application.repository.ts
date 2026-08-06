@@ -26,6 +26,7 @@ export interface IApplicationRepository {
   findById(userId: string, applicationId: string): Promise<ApplicationDetailDto | null>;
   findByJobId(userId: string, jobId: string): Promise<ApplicationDto | null>;
   findByNormalisedUrl(userId: string, normalisedJobUrl: string): Promise<ApplicationDto | null>;
+  findSavedJobIds(userId: string, jobIds: string[]): Promise<string[]>;
 
   list(options: ApplicationListOptions): Promise<PaginatedApplicationResult<ApplicationDto>>;
 
