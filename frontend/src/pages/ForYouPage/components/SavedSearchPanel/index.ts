@@ -1,0 +1,1 @@
+export { SavedSearchPanel } from './SavedSearchPanel';
