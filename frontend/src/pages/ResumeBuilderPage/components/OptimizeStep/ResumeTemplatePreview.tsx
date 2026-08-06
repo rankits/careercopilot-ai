@@ -283,13 +283,26 @@ function collectPageAtoms(container: HTMLElement): PageAtom[] {
   const nodes = container.querySelectorAll<HTMLElement>(
     '.header, .entry, .entry-top, .bullets li, .skills-list, .skill-item, .block > .heading, .block > .body',
   );
-  return Array.from(nodes)
+  const atoms = Array.from(nodes)
     .map((el) => {
       const top = relativeTop(container, el);
       return { top, bottom: top + el.offsetHeight };
     })
     .filter((atom) => Number.isFinite(atom.top) && atom.bottom > atom.top)
     .sort((a, b) => a.top - b.top || a.bottom - b.bottom);
+
+  // Prefer leaf atoms (bullets) over parents that fully contain them — keeps
+  // page breaks between bullets instead of cutting through a tall entry.
+  return atoms.filter(
+    (atom) =>
+      !atoms.some(
+        (other) =>
+          other !== atom &&
+          other.top >= atom.top - 0.5 &&
+          other.bottom <= atom.bottom + 0.5 &&
+          other.bottom - other.top < atom.bottom - atom.top - 0.5,
+      ),
+  );
 }
 
 /**
@@ -438,8 +451,15 @@ export const ResumeTemplatePreview = forwardRef<HTMLDivElement, ResumeTemplatePr
           <Box ref={scaleHostRef} sx={{ maxWidth: '100%', minWidth: 0, width: '100%' }}>
             {pageOffsets.map((offsetY, index) => {
               const nextOffset = pageOffsets[index + 1];
-              const sliceHeight =
-                nextOffset != null ? Math.max(1, nextOffset - offsetY) : A4_PAGE_CONTENT_HEIGHT_PX;
+              const remaining =
+                nextOffset != null
+                  ? Math.max(1, nextOffset - offsetY)
+                  : Math.max(
+                      1,
+                      (measureRef.current?.scrollHeight ?? A4_PAGE_CONTENT_HEIGHT_PX) - offsetY,
+                    );
+              // Cap to one page; never stretch the last slice past remaining content + padding.
+              const sliceHeight = Math.min(A4_PAGE_CONTENT_HEIGHT_PX, remaining);
 
               return (
                 <Box

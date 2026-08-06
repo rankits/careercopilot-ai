@@ -14,7 +14,7 @@ export const SectionEditorShell = styled(Box)({
 export const ScrollableEntries = styled(Box)({
   display: 'grid',
   gap: spacing[3],
-  maxHeight: '22rem',
+  maxHeight: 'min(32rem, 55vh)',
   minWidth: 0,
   overflowX: 'hidden',
   overflowY: 'auto',

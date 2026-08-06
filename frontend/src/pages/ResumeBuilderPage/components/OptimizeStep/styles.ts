@@ -31,6 +31,40 @@ export const OptimizeShell = styled(Box)({
   },
 });
 
+/** Right column: sticky layout; only the resume sheet scrolls. */
+export const PreviewColumn = styled(Box)({
+  alignSelf: 'start',
+  display: 'grid',
+  gap: spacing[2],
+  gridTemplateRows: 'minmax(0, 1fr) auto auto',
+  minWidth: 0,
+  overflow: 'visible',
+  width: '100%',
+  '@media (min-width: 76.01rem)': {
+    maxHeight: 'calc(100vh - 5rem)',
+    overflow: 'hidden',
+    position: 'sticky',
+    top: spacing[3],
+  },
+});
+
+/** Scroll only the resume pages — header / themes stay put. */
+export const PreviewResumeScroll = styled(Box)({
+  minHeight: '16rem',
+  minWidth: 0,
+  overflowX: 'hidden',
+  overflowY: 'auto',
+  overscrollBehavior: 'contain',
+  scrollbarWidth: 'thin',
+  width: '100%',
+  '@media (min-width: 76.01rem)': {
+    maxHeight: '100%',
+  },
+  '@media (max-width: 76rem)': {
+    maxHeight: 'min(70vh, 42rem)',
+  },
+});
+
 export const OptimizeMain = styled(Box)({
   ...panel,
   background: colorTokens.backgroundCard,
@@ -62,12 +96,13 @@ export const ScoreStrip = styled(Box)({
   alignItems: 'center',
   background: `linear-gradient(135deg, ${t.primarySofter}, ${colorTokens.backgroundCard})`,
   border,
-  borderRadius: borderRadius['2xl'],
+  borderRadius: borderRadius.xl,
   display: 'grid',
-  gap: spacing[3],
+  flexShrink: 0,
+  gap: spacing[2],
   gridTemplateColumns: 'auto auto minmax(0, 1fr) auto',
   minWidth: 0,
-  padding: spacing[4],
+  padding: `${spacing[2]} ${spacing[3]}`,
   width: '100%',
   '@media (max-width: 64rem)': {
     gridTemplateColumns: 'auto auto minmax(0, 1fr)',
@@ -77,65 +112,64 @@ export const ScoreStrip = styled(Box)({
     gridTemplateColumns: '1fr',
   },
 
-  '& .label': { ...muted, fontSize: fontSize.xs },
+  '& .label': {
+    ...muted,
+    fontSize: '0.65rem',
+    fontWeight: fontWeight.semiBold,
+    letterSpacing: '0.02em',
+    lineHeight: 1.2,
+  },
   '& .current': {
     color: colorTokens.feedbackError,
-    fontSize: fontSize['2xl'],
-    fontWeight: fontWeight.extraBold,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.bold,
+    lineHeight: 1.2,
   },
   '& .improved': {
     color: tone.success.color,
-    fontSize: fontSize['2xl'],
-    fontWeight: fontWeight.extraBold,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.bold,
+    lineHeight: 1.2,
   },
   '& .badge': {
     ...pill,
     background: tone.success.background,
     border: `1px solid ${tone.success.border}`,
     color: tone.success.color,
+    fontSize: '0.65rem',
+    fontWeight: fontWeight.semiBold,
     justifySelf: 'start',
+    padding: `${spacing[1]} ${spacing[2]}`,
+  },
+  '& svg': {
+    fontSize: '1.1rem',
   },
 });
 
 export const OptimizeLayout = styled(Box)({
   display: 'grid',
-  gap: spacing[4],
-  gridTemplateColumns: 'minmax(0, 14.5rem) minmax(0, 1fr)',
+  gap: spacing[3],
+  gridTemplateColumns: '1fr',
   maxWidth: '100%',
   minWidth: 0,
   overflowX: 'clip',
   width: '100%',
-  '@media (max-width: 64rem)': {
-    gridTemplateColumns: '1fr',
-  },
-  '@media (max-width: 48rem)': {
-    gap: spacing[3],
-  },
 });
 
 export const SectionNav = styled(Box)({
   border,
   borderRadius: borderRadius['2xl'],
-  display: 'grid',
+  display: 'flex',
+  flexWrap: 'nowrap',
   gap: spacing[2],
-  height: 'fit-content',
+  alignItems: 'center',
+  maxWidth: '100%',
   minWidth: 0,
-  padding: spacing[3],
-
-  '& .nav-title': {
-    color: t.primary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.extraBold,
-    letterSpacing: '0.04em',
-    textTransform: 'uppercase',
-  },
-
-  '@media (max-width: 64rem)': {
-    display: 'flex',
-    flexWrap: 'wrap',
-    gap: spacing[2],
-    '& .nav-title': { width: '100%' },
-  },
+  overflowX: 'auto',
+  overflowY: 'hidden',
+  padding: spacing[2],
+  scrollbarWidth: 'thin',
+  WebkitOverflowScrolling: 'touch',
 });
 
 export const SectionNavButton = styled('button', {
@@ -147,21 +181,20 @@ export const SectionNavButton = styled('button', {
   borderRadius: borderRadius.lg,
   color: active ? t.primary : t.text,
   cursor: 'pointer',
-  display: 'flex',
+  display: 'inline-flex',
+  flex: '0 0 auto',
   fontFamily: 'inherit',
   fontSize: fontSize.sm,
   fontWeight: fontWeight.semiBold,
-  gap: spacing[2],
-  justifyContent: 'space-between',
+  gap: spacing[1],
+  justifyContent: 'center',
   maxWidth: '100%',
-  minHeight: '2.75rem',
+  minHeight: '2.5rem',
   minWidth: 0,
   padding: `${spacing[2]} ${spacing[3]}`,
-  textAlign: 'left',
+  textAlign: 'center',
+  whiteSpace: 'nowrap',
   transition: 'background 140ms ease, border-color 140ms ease, color 140ms ease',
-  '@media (max-width: 64rem)': {
-    flex: '1 1 auto',
-  },
   '&:hover': {
     background: t.primarySofter,
     borderColor: 'rgba(37, 99, 235, 0.28)',
@@ -453,25 +486,23 @@ export const EditorFooterBar = styled(ActionBar)({
 
 export const PreviewPanel = styled(Box)({
   ...panel,
-  alignSelf: 'start',
   background: colorTokens.backgroundCard,
+  // Header + themes fixed; resume body is the only scroll child.
+  display: 'grid',
   gap: spacing[3],
-  maxHeight: 'calc(100vh - 8rem)',
-  overflowY: 'auto',
-  padding: spacing[5],
-  position: 'sticky',
-  top: spacing[4],
-  '@media (max-width: 76rem)': {
-    maxHeight: 'none',
-    position: 'relative',
-    top: 0,
-  },
+  gridTemplateRows: 'auto auto minmax(0, 1fr)',
+  maxHeight: '100%',
+  minHeight: 0,
+  minWidth: 0,
+  overflow: 'hidden',
+  padding: spacing[4],
+  position: 'relative',
 
   '& .preview-header': {
     alignItems: 'flex-start',
     display: 'flex',
     flexWrap: 'wrap',
-    gap: spacing[3],
+    gap: spacing[2],
     justifyContent: 'space-between',
     maxWidth: '100%',
     minWidth: 0,

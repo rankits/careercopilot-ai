@@ -1,0 +1,1 @@
+export { ResumeRecommendationsPanel } from './ResumeRecommendationsPanel';
