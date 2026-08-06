@@ -14,6 +14,7 @@ import { recommendationsRoutes } from '@/modules/recommendations/index.js';
 import { notificationsRoutes } from '@/modules/notifications/index.js';
 import { careerRoutes } from '@/modules/career/index.js';
 import { copilotRoutes } from '@/modules/copilot/index.js';
+import extensionRoutes from '@/modules/extension/index.js';
 
 const router = express.Router();
 
@@ -35,5 +36,6 @@ router.use('/job-recommendations', recommendationsRoutes);
 router.use('/notifications', notificationsRoutes);
 router.use('/career', careerRoutes);
 router.use('/copilot', copilotRoutes);
+router.use('/extension', extensionRoutes);
 
 export default router;
