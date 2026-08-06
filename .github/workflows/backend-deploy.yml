@@ -160,7 +160,7 @@ jobs:
     needs: package-deployment
     runs-on: ubuntu-latest
     environment:
-      name: production
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
 
     steps:
       - name: Configure AWS credentials via OIDC
@@ -290,7 +290,7 @@ jobs:
             fi
             echo ""
             echo "## Deployment Details"
-            echo "- **Environment:** production"
+            echo "- **Environment:** ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
             echo "- **Git Branch:** \`${{ github.ref_name }}\`"
             echo "- **Commit SHA:** \`${{ github.sha }}\`"
             echo "- **Docker Image:** \`${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}\`"
