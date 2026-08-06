@@ -1,5 +1,7 @@
+import type { FileStorageDriver } from '@/infrastructure/storage/file-storage.interface.js';
+
 export type ParserEngine = 'RULE_BASED' | 'AI';
-export type ResumeStorageDriverName = 'LOCAL' | 'S3';
+export type ResumeStorageDriverName = FileStorageDriver;
 
 export type ProfessionalLabelCategory = 'ROLE' | 'SPECIALISATION' | 'TECH_STACK' | 'DOMAIN';
 export type ProfessionalLabelSource = 'EXPLICIT' | 'INFERRED';
