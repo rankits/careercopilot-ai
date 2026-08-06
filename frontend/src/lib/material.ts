@@ -46,6 +46,7 @@ export { default as LinkedInIcon } from '@mui/icons-material/LinkedIn';
 export { default as LightbulbOutlinedIcon } from '@mui/icons-material/LightbulbOutlined';
 export { default as LockOutlinedIcon } from '@mui/icons-material/LockOutlined';
 export { default as LogoutIcon } from '@mui/icons-material/Logout';
+export { default as MoreHorizIcon } from '@mui/icons-material/MoreHoriz';
 export { default as MoreVertIcon } from '@mui/icons-material/MoreVert';
 export { default as NavigateBeforeIcon } from '@mui/icons-material/NavigateBefore';
 export { default as NavigateNextIcon } from '@mui/icons-material/NavigateNext';

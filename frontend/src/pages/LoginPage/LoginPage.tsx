@@ -38,6 +38,9 @@ export function LoginPage() {
       <ForgotPasswordDialog
         open={isForgotPasswordOpen}
         onClose={() => setIsForgotPasswordOpen(false)}
+        onPasswordResetSuccess={(message) => {
+          showToast({ message, severity: 'success' });
+        }}
       />
     </AuthPageLayout>
   );
