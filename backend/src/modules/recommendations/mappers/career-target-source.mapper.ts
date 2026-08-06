@@ -1,7 +1,9 @@
 import type {
   CandidateProfileSourcePayload,
+  RecommendationFilterMode,
   RecommendationFlexibilityMode,
 } from '@/modules/recommendations/types/recommendations.types.js';
+import { extractHeuristicTargetContext } from '@/modules/recommendations/providers/heuristic-target-text-extraction.provider.js';
 
 type JsonRecord = Record<string, unknown>;
 
@@ -73,26 +75,72 @@ const normalizeFlexibilityMode = (value: unknown): RecommendationFlexibilityMode
   return undefined;
 };
 
+const filterModeForFlexibility = (
+  flexibilityMode: RecommendationFlexibilityMode,
+): RecommendationFilterMode => (flexibilityMode === 'STRICT' ? 'STRICT' : 'FLEXIBLE');
+
 export const buildCareerGoalRecommendationPayload = (
   target: CareerTargetSourceRecord,
   profile: CandidateProfileSourcePayload,
 ): CandidateProfileSourcePayload => {
   const structured = asRecord(target.structured);
+  const goalExtraction = extractHeuristicTargetContext(target.goalText);
   const currentRole = firstString(structured, ['currentRole', 'fromRole']);
-  const targetRole = firstString(structured, ['targetRole', 'desiredRole', 'role']);
+  const structuredTargetRole = firstString(structured, ['targetRole', 'desiredRole', 'role']);
   const summary = firstString(structured, ['summary', 'description']);
-  const targetTitles = uniqueStrings(
-    [targetRole, ...listFromKeys(structured, ['targetTitles', 'targetRoles', 'roles'])].filter(
-      (item): item is string => Boolean(item),
-    ),
+  const structuredTargetTitles = uniqueStrings(
+    [
+      structuredTargetRole,
+      ...listFromKeys(structured, ['targetTitles', 'targetRoles', 'roles']),
+    ].filter((item): item is string => Boolean(item)),
   );
-  const targetSkills = uniqueStrings(
-    listFromKeys(structured, ['requiredSkills', 'targetSkills', 'skills']),
-  );
+  const targetTitles = uniqueStrings([...structuredTargetTitles, ...goalExtraction.targetTitles]);
+  const targetRole = structuredTargetRole ?? targetTitles[0];
+  const targetSkills = uniqueStrings([
+    ...listFromKeys(structured, ['requiredSkills', 'targetSkills', 'skills']),
+    ...goalExtraction.requiredSkills,
+  ]);
   const preferredSkills = uniqueStrings(listFromKeys(structured, ['preferredSkills']));
-  const targetIndustries = uniqueStrings(
-    listFromKeys(structured, ['targetIndustries', 'industries', 'preferredIndustries']),
-  );
+  const targetIndustries = uniqueStrings([
+    ...listFromKeys(structured, ['targetIndustries', 'industries', 'preferredIndustries']),
+    ...goalExtraction.industries,
+  ]);
+  const flexibilityMode = normalizeFlexibilityMode(structured.flexibilityMode) ?? 'FLEXIBLE';
+  const structuredLocations = listFromKeys(structured, ['locations']);
+  const extractedLocations = goalExtraction.locations;
+  const structuredRemotePreference = firstString(structured, ['remotePreference', 'workMode']);
+  const locationScope = firstString(structured, ['locationScope']);
+  const resolveExplicitScope = (): 'ANY' | 'WORK_MODE' | 'GEOGRAPHIC' | 'COMBINED' | undefined => {
+    if (locationScope === 'ANY') return 'ANY';
+    if (locationScope === 'WORK_MODE') return 'WORK_MODE';
+    if (locationScope === 'GEOGRAPHIC') return 'GEOGRAPHIC';
+    if (locationScope === 'COMBINED') return 'COMBINED';
+    if (structuredLocations.length > 0 && structuredRemotePreference) return 'COMBINED';
+    if (structuredLocations.length > 0) return 'GEOGRAPHIC';
+    if (structuredRemotePreference) return 'WORK_MODE';
+    return undefined;
+  };
+  const explicitScope = resolveExplicitScope();
+  const resolvedLocations =
+    explicitScope === 'ANY'
+      ? []
+      : explicitScope === 'WORK_MODE'
+        ? []
+        : explicitScope === 'GEOGRAPHIC' || explicitScope === 'COMBINED'
+          ? uniqueStrings([...structuredLocations, ...extractedLocations])
+          : structuredLocations.length > 0
+            ? uniqueStrings([...structuredLocations, ...extractedLocations])
+            : uniqueStrings([...extractedLocations, ...(profile.locations ?? [])]);
+  const resolvedRemotePreference =
+    explicitScope === 'ANY'
+      ? undefined
+      : explicitScope === 'GEOGRAPHIC'
+        ? undefined
+        : explicitScope === 'WORK_MODE' || explicitScope === 'COMBINED'
+          ? (structuredRemotePreference ?? goalExtraction.remotePreference)
+          : (structuredRemotePreference ??
+            goalExtraction.remotePreference ??
+            profile.remotePreference);
 
   return {
     ...profile,
@@ -106,26 +154,26 @@ export const buildCareerGoalRecommendationPayload = (
     preferredSkills: uniqueStrings([...preferredSkills, ...(profile.preferredSkills ?? [])]),
     careerLevel: firstString(structured, ['careerLevel', 'seniority']) ?? profile.careerLevel,
     industries: targetIndustries.length > 0 ? targetIndustries : (profile.industries ?? []),
-    locations: uniqueStrings([
-      ...listFromKeys(structured, ['locations']),
-      ...(profile.locations ?? []),
-    ]),
-    remotePreference:
-      firstString(structured, ['remotePreference', 'workMode']) ?? profile.remotePreference,
+    locations: resolvedLocations,
+    remotePreference: resolvedRemotePreference,
     employmentTypes: uniqueStrings([
       ...listFromKeys(structured, ['employmentTypes', 'jobTypes']),
+      ...goalExtraction.employmentTypes,
       ...(profile.employmentTypes ?? []),
     ]),
-    flexibilityMode: normalizeFlexibilityMode(structured.flexibilityMode) ?? 'FLEXIBLE',
+    // Career goals are exploratory: flexibilityMode defaults to FLEXIBLE and must
+    // drive filterMode, otherwise profile location preferences hard-exclude matches.
+    flexibilityMode,
+    filterMode: filterModeForFlexibility(flexibilityMode),
     goalIntent: {
       currentRole,
-      targetRole: targetRole ?? targetTitles[0],
+      targetRole,
       summary: summary ?? target.goalText,
       targetIndustries,
       timeframe: firstString(structured, ['timeframe', 'timeline']),
     },
     currentRole: currentRole ?? profile.currentRole,
-    targetRole: targetRole ?? targetTitles[0] ?? profile.targetRole,
+    targetRole: targetRole ?? profile.targetRole,
     careerTransitionSummary: summary ?? target.goalText,
     transferableSkillsHint: uniqueStrings(
       listFromKeys(structured, ['transferableSkills', 'transferableSkillsHint']),

@@ -22,9 +22,32 @@ export const panel = {
   border,
   borderRadius: borderRadius['2xl'],
   boxShadow: t.cardShadow,
+  boxSizing: 'border-box' as const,
   display: 'grid',
   gap: spacing[3],
-  padding: spacing[4],
+  padding: spacing[5],
+} as const;
+
+/** Shared outer padding for step panels — aligns with Root inset. */
+export const stepPadding = {
+  padding: 0,
+  '@media (max-width: 48rem)': {
+    padding: 0,
+  },
+} as const;
+
+/** Fixed-height multiline fields with internal scroll. */
+export const scrollableMultilineSx = {
+  '& .MuiInputBase-root': {
+    alignItems: 'flex-start',
+    maxHeight: '14rem',
+    overflowY: 'auto',
+  },
+  '& .MuiInputBase-inputMultiline': {
+    maxHeight: '12.5rem',
+    overflowY: 'auto !important',
+    resize: 'none',
+  },
 } as const;
 
 export const title = {

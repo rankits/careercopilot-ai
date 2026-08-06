@@ -50,12 +50,19 @@ const MONTHS: Record<string, string> = {
   dec: '12',
 };
 
+const isPresentDateToken = (value: string): boolean =>
+  /^(present|current|now|till\s+date|to\s+date|ongoing)$/i.test(value.trim());
+
 const normaliseResumeDate = (value: string | null | undefined): string | null => {
   if (!value) {
     return null;
   }
 
   const trimmed = value.trim();
+
+  if (isPresentDateToken(trimmed)) {
+    return null;
+  }
 
   if (/^\d{4}-\d{2}$/.test(trimmed)) {
     return trimmed;
@@ -65,17 +72,138 @@ const normaliseResumeDate = (value: string | null | undefined): string | null =>
     return `${trimmed}-01`;
   }
 
-  if (/^present$/i.test(trimmed)) {
-    return null;
+  const numericMonthYear = /^(\d{1,2})[/-](\d{4})$/.exec(trimmed);
+  if (numericMonthYear) {
+    const month = Number(numericMonthYear[1]);
+    if (month >= 1 && month <= 12) {
+      return `${numericMonthYear[2]}-${String(month).padStart(2, '0')}`;
+    }
   }
 
-  const monthYear = /^([A-Za-z]{3,9})\s+(\d{4})$/.exec(trimmed);
+  const yearMonthNumeric = /^(\d{4})[/-](\d{1,2})$/.exec(trimmed);
+  if (yearMonthNumeric) {
+    const month = Number(yearMonthNumeric[2]);
+    if (month >= 1 && month <= 12) {
+      return `${yearMonthNumeric[1]}-${String(month).padStart(2, '0')}`;
+    }
+  }
+
+  const monthYear = /^([A-Za-z]{3,9})\.?\s+(\d{4})$/.exec(trimmed);
   if (monthYear) {
     const month = MONTHS[monthYear[1].slice(0, 3).toLowerCase()];
     return month ? `${monthYear[2]}-${month}` : null;
   }
 
+  const yearMonthName = /^(\d{4})\s+([A-Za-z]{3,9})\.?$/.exec(trimmed);
+  if (yearMonthName) {
+    const month = MONTHS[yearMonthName[2].slice(0, 3).toLowerCase()];
+    return month ? `${yearMonthName[1]}-${month}` : null;
+  }
+
+  // Keep the first year when the model returns a compact range in one field.
+  const yearOnlyInRange = /\b((?:19|20)\d{2})\b/.exec(trimmed);
+  if (yearOnlyInRange && /[-–—to]/i.test(trimmed)) {
+    return `${yearOnlyInRange[1]}-01`;
+  }
+
   return null;
+};
+
+const splitDateRange = (
+  value: unknown,
+): { startDate: string | null; endDate: string | null; isCurrent: boolean } => {
+  const text = toNullableText(value);
+  if (!text) {
+    return { startDate: null, endDate: null, isCurrent: false };
+  }
+
+  const parts = text
+    .split(/\s*(?:-|–|—|to|till|until)\s*/i)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length >= 2) {
+    const endToken = parts[parts.length - 1] ?? '';
+    const startToken = parts[0] ?? '';
+    const isCurrent = isPresentDateToken(endToken);
+    return {
+      startDate: normaliseResumeDate(startToken),
+      endDate: isCurrent ? null : normaliseResumeDate(endToken),
+      isCurrent,
+    };
+  }
+
+  return {
+    startDate: normaliseResumeDate(text),
+    endDate: null,
+    isCurrent: isPresentDateToken(text),
+  };
+};
+
+const extractStatedExperienceYears = (
+  ...sources: Array<string | null | undefined>
+): number | null => {
+  for (const source of sources) {
+    if (!source) {
+      continue;
+    }
+
+    const match =
+      /(\d+(?:\.\d+)?)\s*\+?\s*(?:years?|yrs?)\s+(?:of\s+)?(?:experience|exp\b)/i.exec(source) ??
+      /(?:experience|exp)\s*(?:of|:)?\s*(\d+(?:\.\d+)?)\s*\+?\s*(?:years?|yrs?)/i.exec(source);
+
+    if (match) {
+      const years = Number(match[1]);
+      if (Number.isFinite(years) && years > 0 && years < 60) {
+        return years;
+      }
+    }
+  }
+
+  return null;
+};
+
+const toPositiveExperienceNumber = (value: unknown): number | null => {
+  if (typeof value === 'number' && Number.isFinite(value) && value > 0) {
+    return value;
+  }
+
+  if (typeof value === 'string') {
+    const parsed = Number(value.trim());
+    if (Number.isFinite(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
+const resolveTotalExperience = (input: {
+  experience: CanonicalResume['employmentHistory'];
+  declaredYears?: unknown;
+  declaredMonths?: unknown;
+  summary?: string | null;
+  headline?: string | null;
+}): { totalExperienceMonths: number; totalExperienceYears: number } => {
+  const calculatedMonths = calculateTotalExperienceMonths(input.experience);
+  const declaredMonths = toPositiveExperienceNumber(input.declaredMonths);
+  const declaredYears = toPositiveExperienceNumber(input.declaredYears);
+  const statedYears = extractStatedExperienceYears(input.summary, input.headline);
+
+  const monthsFromDeclaredYears = declaredYears !== null ? Math.round(declaredYears * 12) : null;
+  const monthsFromStatedYears = statedYears !== null ? Math.round(statedYears * 12) : null;
+
+  const totalExperienceMonths = Math.max(
+    calculatedMonths,
+    declaredMonths ?? 0,
+    monthsFromDeclaredYears ?? 0,
+    monthsFromStatedYears ?? 0,
+  );
+
+  return {
+    totalExperienceMonths,
+    totalExperienceYears: Number((totalExperienceMonths / 12).toFixed(1)),
+  };
 };
 
 const normaliseProficiency = (
@@ -338,23 +466,40 @@ const mapExperience = (value: unknown): CanonicalResume['employmentHistory'] => 
       firstDefined(item.title, item.position, item.role, item.job_title),
     );
     const company = toNullableText(item.company);
+    const range = splitDateRange(
+      firstDefined(
+        item.dateRange,
+        item.date_range,
+        item.duration,
+        item.period,
+        item.dates,
+        item.tenure,
+      ),
+    );
+    const startDate =
+      normaliseResumeDate(
+        toNullableText(firstDefined(item.startDate, item.start_date, item.from, item.start)),
+      ) ?? range.startDate;
+    const endDate =
+      normaliseResumeDate(
+        toNullableText(firstDefined(item.endDate, item.end_date, item.to, item.end)),
+      ) ?? range.endDate;
+    const endText = toText(item.endDate ?? item.end_date ?? item.to ?? item.end);
+    const isCurrent =
+      item.isCurrent === true ||
+      item.current === true ||
+      range.isCurrent ||
+      isPresentDateToken(endText) ||
+      (!endDate && Boolean(startDate) && (item.endDate === null || item.end_date === null));
 
     return [
       {
         company,
         title,
         location: toNullableText(item.location),
-        startDate: normaliseResumeDate(
-          toNullableText(firstDefined(item.startDate, item.start_date)),
-        ),
-        endDate: normaliseResumeDate(toNullableText(firstDefined(item.endDate, item.end_date))),
-        isCurrent:
-          item.isCurrent === true ||
-          item.current === true ||
-          toText(item.endDate ?? item.end_date).toLowerCase() === 'present' ||
-          (!item.endDate && !item.end_date) ||
-          item.endDate === null ||
-          item.end_date === null,
+        startDate,
+        endDate: isCurrent ? null : endDate,
+        isCurrent,
         description: toNullableText(item.description),
         responsibilities: normalizeStringArray(item.responsibilities),
         achievements: normalizeStringArray(item.achievements),
@@ -701,9 +846,16 @@ const deriveProfessionalProfile = (input: {
   experience: CanonicalResume['employmentHistory'];
   skills: CanonicalResume['skills'];
   labels: CanonicalResume['professionalLabels'];
+  declaredYears?: unknown;
+  declaredMonths?: unknown;
 }): CanonicalResume['professionalProfile'] => {
-  const totalExperienceMonths = calculateTotalExperienceMonths(input.experience);
-  const totalExperienceYears = Number((totalExperienceMonths / 12).toFixed(1));
+  const { totalExperienceMonths, totalExperienceYears } = resolveTotalExperience({
+    experience: input.experience,
+    declaredYears: input.declaredYears,
+    declaredMonths: input.declaredMonths,
+    summary: input.professionalSummary,
+    headline: input.headline,
+  });
   const currentTitle =
     input.currentPosition.title ?? input.experience.find((item) => item.isCurrent)?.title ?? null;
   const primaryRole =
@@ -724,36 +876,62 @@ const deriveProfessionalProfile = (input: {
 
 const buildCanonicalResume = (value: unknown): CanonicalResume => {
   const data = isRecord(value) ? value : {};
+  // Models often put contact fields at the top level instead of nesting them
+  // under personalInformation. Prefer nested objects, then fall back to the
+  // root payload so name/email/phone are not dropped during normalisation.
   const personalInformationRaw = firstDefined(
     data.personal_information,
     data.personalInformation,
     data.personal_info,
+    data.personalDetails,
+    data.contact,
+    data.contactInformation,
+    data.contact_information,
   );
-  const personalInformation = mapPersonalInformation(personalInformationRaw);
   const personalInfoRecord = isRecord(personalInformationRaw) ? personalInformationRaw : {};
+  // Nested contact objects win; otherwise accept top-level name/email/phone.
+  const personalInformation = mapPersonalInformation({
+    ...data,
+    ...personalInfoRecord,
+  });
   const links = normalizeLinks(
     firstDefined(
       data.links,
       personalInfoRecord.links,
       personalInfoRecord.social_links,
       personalInfoRecord.urls,
+      personalInformation.links,
     ),
   );
   const employmentHistory = mapExperience(
     firstDefined(
       data.employmentHistory,
+      data.employment_history,
       data.work_experience,
       data.workExperience,
+      data.workHistory,
+      data.work_history,
       data.experience,
+      data.experiences,
+      data.jobs,
+      data.employment,
     ),
   );
-  const education = mapEducation(firstDefined(data.education, data.academics, data.qualifications));
+  const education = mapEducation(
+    firstDefined(
+      data.education,
+      data.educationHistory,
+      data.education_history,
+      data.academics,
+      data.qualifications,
+    ),
+  );
   const certifications = mapCertifications(
     firstDefined(data.certifications, data.certificates, data.licenses),
   );
   const skills = mapSkills(firstDefined(data.skills, data.skillBlocks, data.skillset));
   const projects = mapProjects(
-    firstDefined(data.projects, data.projectHighlights, data.project_history),
+    firstDefined(data.projects, data.projectHighlights, data.project_history, data.projectHistory),
   );
   const languages = mapLanguages(firstDefined(data.languages, data.spokenLanguages));
   const professionalSummary = toNullableText(
@@ -815,6 +993,24 @@ const buildCanonicalResume = (value: unknown): CanonicalResume => {
     experience: employmentHistory,
     skills,
     labels: professionalLabels,
+    declaredYears: firstDefined(
+      data.totalExperienceYears,
+      data.total_experience_years,
+      data.yearsOfExperience,
+      data.years_of_experience,
+      isRecord(data.professionalProfile)
+        ? data.professionalProfile.totalExperienceYears
+        : undefined,
+      personalInfoRecord.totalExperience,
+      personalInfoRecord.total_experience,
+    ),
+    declaredMonths: firstDefined(
+      data.totalExperienceMonths,
+      data.total_experience_months,
+      isRecord(data.professionalProfile)
+        ? data.professionalProfile.totalExperienceMonths
+        : undefined,
+    ),
   }) as NonNullable<CanonicalResume['professionalProfile']>;
 
   return ExpandedCanonicalResumeSchema.parse({

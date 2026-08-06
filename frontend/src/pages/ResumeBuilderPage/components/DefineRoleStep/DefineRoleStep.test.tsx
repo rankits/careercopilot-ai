@@ -1,14 +1,14 @@
-import { fireEvent, render, screen } from '@testing-library/react';
-import { describe, expect, it, vi } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DefineRoleStep } from './DefineRoleStep';
 
 describe('DefineRoleStep', () => {
   const props = {
     targetRole: 'Java Developer',
-    industry: 'Software',
+    industry: 'technology',
     experienceLevel: 'mid' as const,
-    employmentType: 'Full-time',
+    employmentType: 'full-time',
     skills: ['Java'],
     jobDescription: 'Need Java Spring Boot',
     startingAnalysis: false,
@@ -34,11 +34,16 @@ describe('DefineRoleStep', () => {
     onStartAnalysis: vi.fn(),
   };
 
-  it('renders role form and starts analysis', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('renders role form without bottom Back/Next actions', () => {
     render(<DefineRoleStep {...props} />);
 
     expect(screen.getByDisplayValue('Java Developer')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: /^Next$/i }));
-    expect(props.onStartAnalysis).toHaveBeenCalled();
+    expect(screen.queryByText(/JD skill preview/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Next$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Back$/i })).not.toBeInTheDocument();
   });
 });

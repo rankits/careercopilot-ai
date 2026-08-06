@@ -13,8 +13,6 @@ import {
   DescriptionOutlinedIcon,
   DownloadIcon,
   MenuItem,
-  NavigateBeforeIcon,
-  NavigateNextIcon,
   Typography,
 } from '@/lib/material';
 import type {
@@ -26,12 +24,12 @@ import type {
 import { formatFileSize, formatResumeDate, getResumeExtension } from '../../utils';
 
 import {
-  DefineRoleNextButtonSx,
   DefineRoleShell,
   EmptyText,
   FileTile,
   FormInputSx,
   FormLabel,
+  JobDescriptionInputSx,
   ScoreBadge,
 } from './styles';
 
@@ -86,7 +84,13 @@ export function DefineRoleStep({
   onJobDescriptionChange,
   onStartAnalysis,
 }: DefineRoleStepProps) {
+  // Navigation is handled by the page header Back / Next controls.
+  void startingAnalysis;
+  void onBack;
+  void onStartAnalysis;
+
   const [skillInput, setSkillInput] = useState('');
+
   const selectedResumeExtension = getResumeExtension(selectedResume?.originalName ?? '');
   const selectedResumeSize = formatFileSize(selectedResume?.sizeBytes);
   const atsScore = analysis?.status === 'COMPLETED' ? analysis.atsScore : null;
@@ -111,20 +115,19 @@ export function DefineRoleStep({
 
   return (
     <DefineRoleShell>
-      <Box className="main">
-        <Box className="section-heading">
-          <Typography className="step-title" component="h2">
-            Step 2: <Box component="span">Define Your Target Role</Box>
-          </Typography>
-          <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-            Add role details, skills, and an optional job description so ATS scoring matches the
-            real JD.
-          </Typography>
-        </Box>
+      <Box className="section-heading">
+        <Typography className="step-title" component="h2">
+          Step 2: <Box component="span">Define Your Target Role</Box>
+        </Typography>
+        <Typography sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
+          Add role details and paste the job description so ATS scoring matches the real JD.
+        </Typography>
+      </Box>
 
+      <Box className="content-row">
         <Box className="role-card">
           <Box className="form-group">
-            <FormLabel>Target job title</FormLabel>
+            <FormLabel>Target job title *</FormLabel>
             <Input
               value={targetRole}
               onChange={(event) => onTargetRoleChange(event.target.value)}
@@ -190,7 +193,7 @@ export function DefineRoleStep({
 
           <Box className="form-group">
             <FormLabel>Skills (chip-wise)</FormLabel>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1.5 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mb: 1 }}>
               {skills.map((skill) => (
                 <Chip
                   key={skill}
@@ -202,14 +205,14 @@ export function DefineRoleStep({
                 />
               ))}
             </Box>
-            <Box sx={{ display: 'flex', gap: 1 }}>
+            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
               <Input
                 value={skillInput}
                 onChange={(event) => setSkillInput(event.target.value)}
                 onKeyDown={onSkillKeyDown}
                 placeholder="Type a skill and press Enter"
                 size="medium"
-                sx={FormInputSx}
+                sx={{ ...FormInputSx, flex: '1 1 12rem', minWidth: 0 }}
               />
               <Button size="medium" startIcon={<AddIcon fontSize="small" />} onClick={addSkill}>
                 Add
@@ -218,122 +221,87 @@ export function DefineRoleStep({
           </Box>
 
           <Box className="form-group">
-            <FormLabel>Job description (for ATS match)</FormLabel>
+            <FormLabel>Job description *</FormLabel>
             <Input
               value={jobDescription}
               onChange={(event) => onJobDescriptionChange(event.target.value)}
               placeholder="Paste the full job description here. ATS scoring and keywords will use this."
               size="medium"
               multiline
-              minRows={6}
-              sx={FormInputSx}
+              rows={6}
+              sx={JobDescriptionInputSx}
             />
           </Box>
-
-          <Box className="role-tip">
-            <AutoAwesomeOutlinedIcon fontSize="small" />
-            <Box>
-              <Typography className="tip-title">Tip</Typography>
-              <Typography className="tip-text">
-                Paste the real JD for strongest keyword/skill-gap analysis. Skills chips help target
-                role matching even without a JD.
-              </Typography>
-            </Box>
-            <Box className="tip-actions">
-              <Button
-                size="medium"
-                startIcon={<NavigateBeforeIcon fontSize="small" />}
-                onClick={onBack}
-                variant="outline"
-              >
-                Back
-              </Button>
-              <Button
-                disabled={startingAnalysis || !targetRole.trim() || !selectedResume}
-                endIcon={<NavigateNextIcon fontSize="small" />}
-                isLoading={startingAnalysis}
-                onClick={onStartAnalysis}
-                size="medium"
-                sx={DefineRoleNextButtonSx}
-              >
-                Next
-              </Button>
-            </Box>
-          </Box>
-        </Box>
-      </Box>
-
-      <Box className="aside">
-        <Box className="aside-card">
-          <Typography className="aside-title">Uploaded Resume</Typography>
-          {selectedResume ? (
-            <>
-              <Box className="uploaded-resume">
-                <FileTile extension={selectedResumeExtension}>
-                  <DescriptionOutlinedIcon fontSize="small" />
-                  {selectedResumeExtension}
-                </FileTile>
-                <Box sx={{ minWidth: 0 }}>
-                  <Typography className="resume-name">{selectedResume.originalName}</Typography>
-                  <Typography className="resume-subtext">
-                    Uploaded on {formatResumeDate(selectedResume.createdAt)}
-                    {selectedResumeSize ? ` - ${selectedResumeSize}` : ''}
-                  </Typography>
-                </Box>
-              </Box>
-              <Box className="stats-grid">
-                <Box>
-                  <Typography className="stat-label">Status</Typography>
-                  <Typography className="stat-value">{selectedResume.status}</Typography>
-                </Box>
-                <Box>
-                  <Typography className="stat-label">ATS Score</Typography>
-                  <Typography className="stat-value">
-                    {atsScore === null ? 'Not analyzed' : `${atsScore}/100`}
-                  </Typography>
-                </Box>
-              </Box>
-            </>
-          ) : (
-            <EmptyText>Upload or select a resume before running analysis.</EmptyText>
-          )}
         </Box>
 
-        <Box className="aside-card">
-          <Typography className="aside-title">What happens next?</Typography>
-          <Box className="next-list">
-            {nextItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <Box key={item.title} className="next-item">
-                  <Box className="next-icon">
-                    <Icon fontSize="small" />
+        <Box className="aside">
+          <Box className="aside-card">
+            <Typography className="aside-title">Uploaded Resume</Typography>
+            {selectedResume ? (
+              <>
+                <Box className="uploaded-resume">
+                  <FileTile extension={selectedResumeExtension}>
+                    <DescriptionOutlinedIcon fontSize="small" />
+                    {selectedResumeExtension}
+                  </FileTile>
+                  <Box sx={{ minWidth: 0 }}>
+                    <Typography className="resume-name">{selectedResume.originalName}</Typography>
+                    <Typography className="resume-subtext">
+                      Uploaded on {formatResumeDate(selectedResume.createdAt)}
+                      {selectedResumeSize ? ` - ${selectedResumeSize}` : ''}
+                    </Typography>
                   </Box>
-                  <Typography className="next-text">{item.title}</Typography>
                 </Box>
-              );
-            })}
+                <Box className="stats-grid">
+                  <Box>
+                    <Typography className="stat-label">Status</Typography>
+                    <Typography className="stat-value">{selectedResume.status}</Typography>
+                  </Box>
+                  <Box>
+                    <Typography className="stat-label">ATS Score</Typography>
+                    <Typography className="stat-value">
+                      {atsScore === null ? 'Not analyzed' : `${atsScore}/100`}
+                    </Typography>
+                  </Box>
+                </Box>
+              </>
+            ) : (
+              <EmptyText>Upload or select a resume before running analysis.</EmptyText>
+            )}
           </Box>
-        </Box>
 
-        <Box className="version-grid">
-          {versions.length === 0 ? (
-            <Box className="version-card">
-              <EmptyText>No saved versions yet.</EmptyText>
+          <Box className="aside-card">
+            <Typography className="aside-title">What happens next?</Typography>
+            <Box className="next-list">
+              {nextItems.map((item) => {
+                const Icon = item.icon;
+                return (
+                  <Box key={item.title} className="next-item">
+                    <Box className="next-icon">
+                      <Icon fontSize="small" />
+                    </Box>
+                    <Typography className="next-text">{item.title}</Typography>
+                  </Box>
+                );
+              })}
             </Box>
-          ) : (
-            versions.map((version) => (
-              <Box key={version.id} className="version-card">
-                <Box className="version-header">
-                  <Typography className="version-title">{version.label}</Typography>
-                  <ScoreBadge score={version.atsScore}>{version.atsScore}/100</ScoreBadge>
+          </Box>
+
+          {versions.length > 0 ? (
+            <Box className="version-grid">
+              {versions.map((version) => (
+                <Box key={version.id} className="version-card">
+                  <Box className="version-header">
+                    <Typography className="version-title">{version.label}</Typography>
+                    <ScoreBadge score={version.atsScore}>{version.atsScore}/100</ScoreBadge>
+                  </Box>
+                  <Typography className="resume-subtext">
+                    {formatResumeDate(version.createdAt)}
+                  </Typography>
                 </Box>
-                <Typography className="resume-subtext">
-                  {formatResumeDate(version.createdAt)}
-                </Typography>
-              </Box>
-            ))
-          )}
+              ))}
+            </Box>
+          ) : null}
         </Box>
       </Box>
     </DefineRoleShell>

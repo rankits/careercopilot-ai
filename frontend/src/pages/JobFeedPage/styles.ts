@@ -1,6 +1,10 @@
 import type { SxProps, Theme } from '@/lib/material';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
+/** Matches AppLayout compact breakpoint (760px). */
+const compactBreakpoint = '@media (max-width: 47.5rem)';
+const desktopBreakpoint = '@media (min-width: 64.01rem)';
+
 export const jobFeedPageSx = {
   activeChips: {
     alignItems: 'center',
@@ -12,19 +16,78 @@ export const jobFeedPageSx = {
     display: 'grid',
     gap: spacing[1],
   },
+  /**
+   * Always stacked rows so chips never fight Salary/Sort for width.
+   * Desktop: search + controls share the first row; chips get a full scroll row.
+   */
   filters: {
+    alignItems: 'stretch',
+    display: 'grid',
+    gap: spacing[3],
+    gridTemplateAreas: `
+      "search"
+      "chips"
+      "controls"
+    `,
+    gridTemplateColumns: '1fr',
+    width: '100%',
+
+    [desktopBreakpoint]: {
+      alignItems: 'center',
+      gap: spacing[3],
+      gridTemplateAreas: `
+        "search controls"
+        "chips chips"
+      `,
+      gridTemplateColumns: 'minmax(0, 1fr) auto',
+    },
+  },
+  search: {
+    gridArea: 'search',
+    minWidth: 0,
+    position: 'relative',
+    width: '100%',
+    zIndex: 1,
+  },
+  chips: {
+    gridArea: 'chips',
+    minWidth: 0,
+    position: 'relative',
+    width: '100%',
+    zIndex: 0,
+  },
+  controls: {
     alignItems: 'center',
     display: 'flex',
     flexWrap: 'nowrap',
     gap: spacing[2],
+    gridArea: 'controls',
+    minWidth: 0,
 
-    '& > [aria-label="Job filters"]': {
-      flex: '0 1 auto',
-    },
-
-    '@media (max-width: 78rem)': {
+    [compactBreakpoint]: {
+      display: 'grid',
       flexWrap: 'wrap',
+      gridTemplateColumns: '1fr 1fr',
+      width: '100%',
+
+      '& > button': {
+        gridColumn: '1 / -1',
+      },
     },
+  },
+  listHeader: {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    justifyContent: 'flex-start',
+    minWidth: 0,
+    width: '100%',
+  },
+  resultCount: {
+    color: colorTokens.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
   },
   list: {
     display: 'grid',
@@ -34,9 +97,11 @@ export const jobFeedPageSx = {
   root: {
     display: 'grid',
     gap: spacing[5],
-    marginInline: 'auto',
-    maxWidth: '82rem',
     width: '100%',
+
+    [compactBreakpoint]: {
+      gap: spacing[4],
+    },
   },
   subtitle: {
     color: colorTokens.textSecondary,
@@ -49,5 +114,9 @@ export const jobFeedPageSx = {
     fontWeight: fontWeight.extraBold,
     lineHeight: 1.2,
     margin: 0,
+
+    [compactBreakpoint]: {
+      fontSize: fontSize.xl,
+    },
   },
 } satisfies Record<string, SxProps<Theme>>;

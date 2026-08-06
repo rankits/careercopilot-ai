@@ -62,8 +62,7 @@ describe('authService register', () => {
   });
 
   it('propagates API failures for the caller to handle', async () => {
-    const failure = new Error('Request failed');
-    postMock.mockRejectedValue(failure);
+    postMock.mockRejectedValue(new Error('Request failed'));
 
     await expect(
       authService.register({
@@ -73,7 +72,7 @@ describe('authService register', () => {
         password: 'password123',
         phone: '+919876543210',
       }),
-    ).rejects.toBe(failure);
+    ).rejects.toThrow('Unable to create your account. Please try again.');
   });
 });
 
@@ -136,13 +135,71 @@ describe('authService login', () => {
     ).resolves.toMatchObject({ user: { isProfileCreated: false } });
   });
 
-  it('propagates login API failures for the caller to handle', async () => {
-    const failure = new Error('Request failed');
-    postMock.mockRejectedValue(failure);
+  it('falls back to the top-level user and normalises an admin role', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        accessToken: 'token',
+        accessTokenExpiresInSeconds: 3600,
+        user: { email: 'root@example.com', id: '9', role: 'ADMIN' },
+      },
+    });
+
+    await expect(
+      authService.login({ email: 'root@example.com', password: 'password123' }),
+    ).resolves.toEqual({
+      accessToken: 'token',
+      accessTokenExpiresInSeconds: 3600,
+      user: {
+        email: 'root@example.com',
+        id: '9',
+        isProfileCreated: false,
+        name: 'root@example.com',
+        role: 'admin',
+      },
+    });
+  });
+
+  it('keeps unknown roles as-is', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        accessToken: 'token',
+        data: {
+          user: { email: 'mg@example.com', id: '3', name: 'M', role: 'MANAGER' },
+        },
+      },
+    });
+
+    await expect(
+      authService.login({ email: 'mg@example.com', password: 'password123' }),
+    ).resolves.toMatchObject({ user: { role: 'MANAGER' } });
+  });
+
+  it('throws when the response omits a user', async () => {
+    postMock.mockResolvedValue({ data: { accessToken: 'token' } });
 
     await expect(
       authService.login({ email: 'ada@example.com', password: 'password123' }),
-    ).rejects.toBe(failure);
+    ).rejects.toThrow('Missing user data in auth response');
+  });
+
+  it('throws when the response omits an access token', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        data: { user: { email: 'ada@example.com', id: '1', name: 'Ada', role: 'user' } },
+      },
+    });
+
+    await expect(
+      authService.login({ email: 'ada@example.com', password: 'password123' }),
+    ).rejects.toThrow('Missing access token in auth response');
+  });
+
+  it('propagates login API failures for the caller to handle', async () => {
+    postMock.mockRejectedValue(new Error('Request failed'));
+
+    await expect(
+      authService.login({ email: 'ada@example.com', password: 'password123' }),
+    ).rejects.toThrow('Unable to log in. Please try again.');
   });
 });
 

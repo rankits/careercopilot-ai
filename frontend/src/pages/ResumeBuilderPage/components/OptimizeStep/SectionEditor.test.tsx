@@ -21,7 +21,7 @@ describe('SectionEditor', () => {
     );
   });
 
-  it('adds a skill chip from the skills editor', () => {
+  it('adds a skill from JD suggestion text', () => {
     const onChange = vi.fn();
     const draft = createEmptyDraft('Engineer');
 
@@ -34,7 +34,7 @@ describe('SectionEditor', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('+ Java'));
+    fireEvent.click(screen.getByRole('button', { name: '+ Java' }));
 
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ skillsList: expect.arrayContaining(['Java']) }),

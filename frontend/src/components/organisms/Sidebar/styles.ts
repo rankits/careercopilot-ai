@@ -39,7 +39,7 @@ export const SidebarRoot = styled('aside', {
     boxShadow: shadows.card,
     color: dark ? colorTokens.textInverse : colorTokens.textPrimary,
     display: 'grid',
-    gridTemplateRows: 'auto minmax(0, 1fr) auto auto',
+    gridTemplateRows: 'auto minmax(0, 1fr) auto',
     height: '100vh',
     overflow: 'visible',
     padding: spacing[3],
@@ -77,7 +77,8 @@ export const SidebarToggle = styled(IconButton)({
   right: '-1.5rem',
   bottom: spacing[6],
   width: spacing[10],
-  zIndex: 3,
+  // Stay above profile sticky action bars that sit near the bottom of content.
+  zIndex: 1200,
 });
 
 export const SidebarLogoImage = styled('img', {
@@ -154,12 +155,6 @@ export const SidebarPanel = styled(Box)({
   display: 'grid',
   gap: spacing[3],
   padding: spacing[3],
-});
-
-export const SidebarGoal = styled(Box)({
-  display: 'grid',
-  gap: spacing[2],
-  marginTop: spacing[4],
 });
 
 export const BottomNav = styled('nav')({

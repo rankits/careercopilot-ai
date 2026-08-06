@@ -3,11 +3,12 @@ import { createAsyncThunk, createSlice, type PayloadAction } from '@reduxjs/tool
 import { STORAGE_KEYS } from '@/constants/storage';
 import { authService } from '@/features/auth/services/auth.service';
 import type { AuthResponse, AuthState, LoginPayload } from '@/features/auth/types/auth.types';
+import { getAuthErrorMessage } from '@/features/auth/utils/apiError';
 import {
-  clearAuthSession,
   getAccessToken,
   getStoredUser,
   hasAuthSession,
+  invalidateAuthSession,
   persistAuthSession,
 } from '@/features/auth/utils/authSession';
 import { storage } from '@/utils/storage';
@@ -24,9 +25,18 @@ const initialState: AuthState = {
   error: null,
 };
 
-export const login = createAsyncThunk<AuthResponse, LoginPayload>('auth/login', async (payload) => {
-  return authService.login(payload);
-});
+export const login = createAsyncThunk<AuthResponse, LoginPayload, { rejectValue: string }>(
+  'auth/login',
+  async (payload, { rejectWithValue }) => {
+    try {
+      return await authService.login(payload);
+    } catch (error) {
+      const message = getAuthErrorMessage(error, 'Unable to log in. Please try again.');
+
+      return rejectWithValue(message);
+    }
+  },
+);
 
 const persistProfileComplete = (isComplete: boolean) => {
   storage.set(STORAGE_KEYS.PROFILE_COMPLETE, isComplete);
@@ -43,7 +53,7 @@ const authSlice = createSlice({
       state.isProfileComplete = false;
       state.isSessionResolved = true;
       state.error = null;
-      clearAuthSession();
+      invalidateAuthSession();
       storage.remove(STORAGE_KEYS.PROFILE_COMPLETE);
     },
     setProfileComplete(state, action: PayloadAction<boolean>) {
@@ -58,6 +68,9 @@ const authSlice = createSlice({
       state.isSessionResolved = action.payload;
     },
     setAccessToken(state, action: PayloadAction<string>) {
+      if (!state.user) {
+        return;
+      }
       state.accessToken = action.payload;
       state.isAuthenticated = true;
     },
@@ -80,10 +93,10 @@ const authSlice = createSlice({
         persistAuthSession(action.payload.accessToken, action.payload.user);
         persistProfileComplete(isProfileComplete);
       })
-      .addCase(login.rejected, (state) => {
+      .addCase(login.rejected, (state, action) => {
         state.isLoading = false;
         state.isSessionResolved = true;
-        state.error = 'Unable to log in. Please try again.';
+        state.error = action.payload ?? 'Unable to log in. Please try again.';
       });
   },
 });

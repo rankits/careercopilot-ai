@@ -87,10 +87,73 @@ describe('JobDetailPage', () => {
     renderDetail();
 
     expect(await screen.findByRole('heading', { name: /backend engineer/i })).toBeInTheDocument();
-    expect(screen.getByText(/acme/i)).toBeInTheDocument();
+    expect(screen.getByText(/acme · remote/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/job attributes/i)).toHaveTextContent(/full time/i);
+    expect(screen.getByLabelText(/job attributes/i)).toHaveTextContent(/remote/i);
+    expect(screen.getByLabelText(/job attributes/i)).toHaveTextContent(/verified/i);
+    expect(screen.getByText(/not disclosed/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /about this role/i })).toBeInTheDocument();
     expect(screen.getByText(/build apis/i)).toBeInTheDocument();
     expect(document.body.innerHTML).not.toMatch(/<script>/i);
     expect(screen.getByRole('button', { name: /apply now/i })).toBeDisabled();
+  });
+
+  it('renders HTML descriptions from descriptionText when descriptionHtml is empty', async () => {
+    getJobMock.mockResolvedValue({
+      ...baseJob,
+      descriptionHtml: '',
+      descriptionText:
+        '<div class="content-intro"><h2>Join us in building the future of finance.</h2><p>Our mission is to democratize finance for all.</p></div>',
+    });
+
+    renderDetail();
+
+    expect(
+      await screen.findByRole('heading', {
+        level: 2,
+        name: /join us in building the future of finance/i,
+      }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/<div class="content-intro"/i)).not.toBeInTheDocument();
+  });
+
+  it('shows See more for long descriptions', async () => {
+    getJobMock.mockResolvedValue({
+      ...baseJob,
+      descriptionHtml: '',
+      descriptionText: 'Role overview. '.repeat(40),
+    });
+
+    renderDetail();
+
+    expect(await screen.findByRole('button', { name: /see more/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /see less/i })).not.toBeInTheDocument();
+  });
+
+  it('hides empty structured sections when backend returns unstructured prose', async () => {
+    getJobMock.mockResolvedValue({
+      ...baseJob,
+      employmentType: null,
+      company: { ...baseJob.company, verified: false },
+      location: { formatted: 'Bucharest, Romania', remoteType: 'ONSITE' },
+      skills: ['Remote', 'Sample', 'Senior'],
+      descriptionHtml:
+        'We are searching for a professional Marketeer. Job benefits: Salary: 5,000-7,000 EUR',
+      descriptionText:
+        'We are searching for a professional Marketeer. Job benefits: Salary: 5,000-7,000 EUR',
+      benefits: [],
+    });
+
+    renderDetail();
+
+    expect(await screen.findByRole('heading', { name: /backend engineer/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/job attributes/i)).toHaveTextContent(/on-site/i);
+    expect(screen.getByLabelText(/skills/i)).toHaveTextContent(/remote/i);
+    expect(screen.queryByRole('heading', { name: /responsibilities/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /requirements/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /benefits/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /about this role/i })).toBeInTheDocument();
+    expect(screen.getByText(/professional marketeer/i)).toBeInTheDocument();
   });
 
   it('opens a safe apply URL in a new tab', async () => {

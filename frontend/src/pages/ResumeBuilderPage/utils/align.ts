@@ -8,6 +8,8 @@ export interface JobAlignContext {
   recommendedSkills?: string[];
   /** AI-optimized summary when JD and current profile summary diverge. */
   optimizedSummary?: string;
+  /** Target role — used as the subtitle under the candidate name. */
+  targetRole?: string;
 }
 
 function evidencedIn(blob: string, skill: string) {
@@ -16,6 +18,12 @@ function evidencedIn(blob: string, skill: string) {
     'i',
   );
   return pattern.test(blob);
+}
+
+function alignRole(draft: ResumeDraft, context: JobAlignContext): ResumeDraft {
+  const role = context.targetRole?.trim();
+  if (!role) return draft;
+  return { ...draft, role };
 }
 
 function alignSkills(draft: ResumeDraft, context: JobAlignContext): ResumeDraft {
@@ -84,17 +92,7 @@ function alignSummary(draft: ResumeDraft, context: JobAlignContext): ResumeDraft
   return draft;
 }
 
-/** Align skills + profile summary to the job description / AI optimizations. */
+/** Align role subtitle, skills + profile summary to the job description / AI optimizations. */
 export function alignDraftToJob(draft: ResumeDraft, context: JobAlignContext = {}): ResumeDraft {
-  return alignSummary(alignSkills(draft, context), context);
+  return alignSummary(alignSkills(alignRole(draft, context), context), context);
 }
-
-/** @deprecated Prefer alignDraftToJob — kept for existing imports. */
-export function alignDraftSkillsToJob(
-  draft: ResumeDraft,
-  context: JobAlignContext = {},
-): ResumeDraft {
-  return alignDraftToJob(draft, context);
-}
-
-export type { JobAlignContext as JobSkillContext };

@@ -2,6 +2,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
+import { JOB_CARD_COPY } from '@/constants/ui';
+
 import { JobCard, type JobCardData } from './JobCard';
 
 const baseJob: JobCardData = {
@@ -68,13 +70,12 @@ describe('JobCard', () => {
     );
   });
 
-  it('shows logo placeholder and hides empty skills', () => {
+  it('shows company initial avatar and hides empty skills', () => {
     render(
       <JobCard
         job={{
           ...baseJob,
           logo: 'A',
-          logoUrl: undefined,
           salary: 'Not disclosed',
           skills: [],
         }}
@@ -86,6 +87,38 @@ describe('JobCard', () => {
     expect(screen.getByText(/not disclosed/i)).toBeInTheDocument();
   });
 
+  it('hides experience placeholders and only shows verified badge when verified', () => {
+    const { rerender } = render(
+      <JobCard
+        job={{
+          ...baseJob,
+          experience: '',
+          location: '',
+          verified: false,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+    expect(screen.queryByText(/experience not listed/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/verified company/i)).not.toBeInTheDocument();
+
+    rerender(
+      <JobCard
+        job={{
+          ...baseJob,
+          experience: '',
+          location: 'Berlin',
+          verified: true,
+        }}
+      />,
+    );
+
+    expect(screen.getByText('Acme')).toBeInTheDocument();
+    expect(screen.getByText('Berlin')).toBeInTheDocument();
+    expect(screen.getByLabelText(/verified company/i)).toBeInTheDocument();
+  });
+
   it('disables Apply when applyUrl is missing', () => {
     render(<JobCard job={{ ...baseJob, applyUrl: null }} onApply={vi.fn()} />);
     expect(
@@ -93,48 +126,103 @@ describe('JobCard', () => {
     ).toBeDisabled();
   });
 
-  it('expands recommendation details with reasons and skill gaps', async () => {
+  it('runs recommendation feedback actions from the overflow menu', async () => {
     const user = userEvent.setup();
+    const onMoreLikeThis = vi.fn();
+    const onLessLikeThis = vi.fn();
+    const onNotRelevant = vi.fn();
+    const onDismiss = vi.fn();
+
     render(
       <JobCard
-        job={{
-          ...baseJob,
-          recommendationId: 'rec-1',
-          isRecommended: true,
-          match: 91,
-          recommendationDetails: {
-            summary: '91% match with strong skill evidence',
-            bullets: [
-              {
-                label: 'Required skills',
-                score: 0.9,
-                message: 'Strong required-skill overlap',
-                evidence: ['React'],
-              },
-            ],
-            skillGap: {
-              exact: ['React'],
-              alias: [],
-              related: ['TypeScript'],
-              transferable: [],
-              missing: ['GraphQL'],
-            },
-          },
-        }}
+        job={{ ...baseJob, match: 78 }}
+        onDismiss={onDismiss}
+        onLessLikeThis={onLessLikeThis}
+        onMoreLikeThis={onMoreLikeThis}
+        onNotRelevant={onNotRelevant}
       />,
     );
 
-    const detailsButton = screen.getByRole('button', { name: /details/i });
-    expect(detailsButton).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByText(JOB_CARD_COPY.moreLikeThis)).not.toBeInTheDocument();
 
-    await user.click(detailsButton);
+    await user.click(screen.getByRole('button', { name: /more actions for frontend engineer/i }));
 
-    expect(detailsButton).toHaveAttribute('aria-expanded', 'true');
-    expect(screen.getByText(/91% match with strong skill evidence/i)).toBeInTheDocument();
-    expect(screen.getByText(/required skills - 90%/i)).toBeInTheDocument();
-    expect(screen.getByText(/related/i)).toBeInTheDocument();
-    expect(screen.getByText(/typescript/i)).toBeInTheDocument();
-    expect(screen.getByText(/missing/i)).toBeInTheDocument();
-    expect(screen.getByText(/graphql/i)).toBeInTheDocument();
+    expect(screen.getByText(JOB_CARD_COPY.moreLikeThis)).toBeInTheDocument();
+    expect(screen.getByText(JOB_CARD_COPY.lessLikeThis)).toBeInTheDocument();
+    expect(screen.getByText(JOB_CARD_COPY.notRelevant)).toBeInTheDocument();
+    expect(screen.getByText(JOB_CARD_COPY.dismiss)).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole('menuitem', { name: /show more jobs like frontend engineer/i }),
+    );
+
+    expect(onMoreLikeThis).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Frontend Engineer' }),
+    );
+
+    await user.click(screen.getByRole('button', { name: /more actions for frontend engineer/i }));
+    await user.click(
+      screen.getByRole('menuitem', { name: /show fewer jobs like frontend engineer/i }),
+    );
+
+    expect(onLessLikeThis).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Frontend Engineer' }),
+    );
+
+    await user.click(screen.getByRole('button', { name: /more actions for frontend engineer/i }));
+    await user.click(
+      screen.getByRole('menuitem', { name: /mark frontend engineer as not relevant/i }),
+    );
+
+    expect(onNotRelevant).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'Frontend Engineer' }),
+    );
+
+    await user.click(screen.getByRole('button', { name: /more actions for frontend engineer/i }));
+    await user.click(
+      screen.getByRole('menuitem', { name: /dismiss frontend engineer recommendation/i }),
+    );
+
+    expect(onDismiss).toHaveBeenCalledWith(expect.objectContaining({ title: 'Frontend Engineer' }));
+  });
+
+  it('opens the job details page without expanding recommendation data in the list', async () => {
+    const user = userEvent.setup();
+    const onOpen = vi.fn();
+    const job: JobCardData = {
+      ...baseJob,
+      id: 'job-1',
+      recommendationId: 'rec-1',
+      isRecommended: true,
+      match: 91,
+      recommendationDetails: {
+        summary: '91% match with strong skill evidence',
+        bullets: [
+          {
+            label: 'Required skills',
+            score: 0.9,
+            message: 'Strong required-skill overlap',
+            evidence: ['React'],
+          },
+        ],
+        skillGap: {
+          exact: ['React'],
+          alias: [],
+          related: ['TypeScript'],
+          transferable: [],
+          missing: ['GraphQL'],
+        },
+      },
+    };
+
+    render(<JobCard job={job} onOpen={onOpen} />);
+
+    await user.click(screen.getByRole('button', { name: /more actions for frontend engineer/i }));
+
+    await user.click(screen.getByRole('menuitem', { name: /view details for frontend engineer/i }));
+
+    expect(onOpen).toHaveBeenCalledOnce();
+    expect(onOpen).toHaveBeenCalledWith(job);
+    expect(screen.queryByText(/91% match with strong skill evidence/i)).not.toBeInTheDocument();
   });
 });
