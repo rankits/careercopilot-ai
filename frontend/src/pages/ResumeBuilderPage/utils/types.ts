@@ -111,7 +111,7 @@ export const SECTION_ALIASES: Record<ResumeSectionId, RegExp> = {
   experience:
     /^(work\s+)?experience$|^employment(\s+history)?$|^work\s+history$|^professional\s+experience$|^career\s+history$|^professional\s+background$|^relevant\s+experience$/i,
   skills:
-    /^skills$|^technical\s+skills$|^core\s+competencies$|^technologies$|^tech\s+stack$|^tools(\s+&\s+technologies)?$|^technical\s+proficiencies$|^key\s+skills$/i,
+    /^(technical\s+|core\s+|key\s+|professional\s+|relevant\s+)?skills(\s*&\s*technologies)?$|^core\s+competencies$|^technologies$|^tech\s+stack$|^tools(\s*&\s*technologies)?$|^technical\s+proficiencies$|^skills\s*\/\s*technologies$|^competencies$/i,
   education: /^education$|^academic(\s+background)?$|^qualifications$|^academic\s+qualifications$/i,
   projects:
     /^projects?$|^personal\s+projects$|^key\s+projects$|^selected\s+projects$|^academic\s+projects$/i,
