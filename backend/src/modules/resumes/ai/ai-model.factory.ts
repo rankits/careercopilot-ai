@@ -8,7 +8,7 @@ import { resumeConfig } from '@/modules/resumes/config/resume.config.js';
 
 const createGoogleModel = (): StructuredAiModel => {
   const profile = getParserProfile();
-  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY;
+  const apiKey = resumeConfig.ai.googleApiKey;
 
   if (!apiKey) {
     throw new AppError('GOOGLE_API_KEY is required for the resume parser AI provider', 500);
