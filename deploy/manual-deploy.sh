@@ -259,7 +259,7 @@ determine_version() {
   stage "Determine immutable version"
   cd "${REPO_ROOT}"
 
-  if [[ -n "$(git status --porcelain)" ]]; then
+  if [[ -n "$(git status --porcelain 2>/dev/null || true)" ]]; then
     if [[ "${ALLOW_DIRTY}" == "true" ]]; then
       warn "Git working tree is dirty; continuing because --allow-dirty was set."
     else
@@ -270,7 +270,7 @@ determine_version() {
   if [[ -n "${VERSION_OVERRIDE}" ]]; then
     VERSION="${VERSION_OVERRIDE}"
   else
-    VERSION="$(git rev-parse --short=12 HEAD)"
+    VERSION="$(git rev-parse --short=12 HEAD 2>/dev/null || echo "manual-$(date +%s)")"
   fi
 
   [[ -n "${VERSION}" ]] || die "VERSION resolved empty."
