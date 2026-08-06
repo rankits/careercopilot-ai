@@ -172,6 +172,50 @@ export const resumeBuilderService = {
     return unwrap(res);
   },
 
+  async getResumeStatus(
+    resumeId: string,
+  ): Promise<{ id: string; status: string; failureReason?: string | null }> {
+    const res = await httpClient.get<{
+      data: { id: string; status: string; failureReason?: string | null };
+    }>(`${BASE}/resumes/${resumeId}/status`);
+    return unwrap(res);
+  },
+
+  /**
+   * Wait until parse finishes, then reject unreadable / image-only resumes.
+   */
+  async waitForReadableResume(
+    resumeId: string,
+    options?: { maxAttempts?: number; intervalMs?: number },
+  ): Promise<{ ok: true } | { ok: false; message: string }> {
+    const maxAttempts = options?.maxAttempts ?? 20;
+    const intervalMs = options?.intervalMs ?? 500;
+    const invalidMessage =
+      'Please upload a valid resume (PDF or DOCX) to continue with ATS analysis.';
+
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+      try {
+        const status = await this.getResumeStatus(resumeId);
+        const normalized = String(status.status || '').toUpperCase();
+        if (normalized === 'FAILED') {
+          return {
+            ok: false,
+            message: status.failureReason?.trim() || invalidMessage,
+          };
+        }
+        if (normalized === 'PROCESSED' || normalized === 'COMPLETED') {
+          return { ok: true };
+        }
+      } catch {
+        // Status endpoint may briefly 404 while row settles — keep polling.
+      }
+      await new Promise((resolve) => setTimeout(resolve, intervalMs));
+    }
+
+    // Timed out still processing — allow continue; Analyze will surface issues.
+    return { ok: true };
+  },
+
   async listResumes(): Promise<UploadedResume[]> {
     const res = await httpClient.get<{ data: UploadedResume[] }>(`${BASE}/resumes`);
     return unwrap(res) ?? [];
