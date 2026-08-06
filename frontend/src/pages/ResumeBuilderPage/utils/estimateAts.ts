@@ -8,6 +8,7 @@ export type LiveSkillAnalysis = {
   matchedSkills: string[];
   missingSkills: string[];
   transferableSkills: string[];
+  additionalSkills?: string[];
   recommendedSkills: string[];
 };
 
@@ -29,22 +30,60 @@ function escapeRegExp(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
-/** Word-aware skill match aligned with backend `termAppearsIn`. */
+function compactSkillToken(value: string): string {
+  return value
+    .toLowerCase()
+    .replace(/\.js$/i, 'js')
+    .replace(/[\s._/-]+/g, '');
+}
+
+/** Word-aware skill match aligned with backend `skillAppearsIn` (React ≈ React.js ≈ ReactJS). */
 export function contentHasSkill(content: string, skill: string): boolean {
   const cleaned = skill.trim();
   if (!cleaned || !content) return false;
+  const softened = content
+    .replace(/\u00ad/g, '')
+    .replace(/\u200b/g, '')
+    .replace(/\u200c/g, '')
+    .replace(/\u200d/g, '')
+    .replace(/\ufeff/g, '')
+    .replace(/\b([A-Za-z]{2,20})\s*\.\s*js\b/gi, '$1.js')
+    .replace(/\b(React|Node|Next|Vue|Express)(?:[._\s-])*js\b/gi, '$1.js');
 
-  const escaped = escapeRegExp(cleaned).replace(/\s+/g, '\\s+');
-  const startsWithWord = /^[A-Za-z0-9]/.test(cleaned);
-  const endsWithWord = /[A-Za-z0-9]$/.test(cleaned);
-  const prefix = startsWithWord ? '\\b' : '(?<![A-Za-z0-9])';
-  const suffix = endsWithWord ? '\\b' : '(?![A-Za-z0-9])';
+  const base = cleaned.replace(/\.js$/i, '');
+  const variants = Array.from(
+    new Set([
+      cleaned,
+      base,
+      `${base}.js`,
+      `${base}js`,
+      `${base} js`,
+      cleaned.endsWith('.js') || cleaned.endsWith('.JS') ? cleaned : `${cleaned}.js`,
+    ]),
+  ).filter((item) => item.length >= 1);
 
-  try {
-    return new RegExp(`${prefix}${escaped}${suffix}`, 'i').test(content);
-  } catch {
-    return content.toLowerCase().includes(cleaned.toLowerCase());
+  for (const variant of variants) {
+    const escaped = escapeRegExp(variant).replace(/\s+/g, '\\s+');
+    const startsWithWord = /^[A-Za-z0-9]/.test(variant);
+    const endsWithWord = /[A-Za-z0-9]$/.test(variant);
+    const prefix = startsWithWord ? '\\b' : '(?<![A-Za-z0-9])';
+    const suffix = endsWithWord ? '\\b' : '(?![A-Za-z0-9])';
+
+    try {
+      if (new RegExp(`${prefix}${escaped}${suffix}`, 'i').test(softened)) return true;
+    } catch {
+      if (softened.toLowerCase().includes(variant.toLowerCase())) return true;
+    }
   }
+
+  const want = compactSkillToken(cleaned);
+  if (want.length >= 4) {
+    const contentCompact = compactSkillToken(softened);
+    if (contentCompact.includes(want)) return true;
+    if (!want.endsWith('js') && contentCompact.includes(`${want}js`)) return true;
+  }
+
+  return false;
 }
 
 /**
@@ -77,6 +116,21 @@ export function refreshSkillAnalysisFromContent(
     };
   }
 
+  // Empty content must NEVER flip matched → missing (Analysis page race / stale state).
+  if (!content.trim()) {
+    return {
+      matchedSkills: uniqSkills(base.matchedSkills),
+      missingSkills: uniqSkills([...base.missingSkills, ...base.recommendedSkills]).filter(
+        (skill) =>
+          !base.matchedSkills.some((matched) => matched.toLowerCase() === skill.toLowerCase()),
+      ),
+      transferableSkills: base.transferableSkills,
+      recommendedSkills: uniqSkills(
+        base.recommendedSkills.length ? base.recommendedSkills : base.missingSkills,
+      ),
+    };
+  }
+
   const matchedSkills = pool.filter((skill) => contentHasSkill(content, skill));
   const missingSkills = pool.filter((skill) => !contentHasSkill(content, skill));
 
@@ -99,11 +153,19 @@ export function estimateImprovedAtsScore(input: {
   content: string;
   missingSkills?: string[];
   missingKeywords?: string[];
+  matchedSkills?: string[];
   appliedCount: number;
   highAppliedCount?: number;
 }): number {
   const baseline = Math.min(100, Math.max(0, Math.round(input.baseline)));
   const contentLower = (input.content || '').toLowerCase();
+  const appliedCount = Math.max(0, input.appliedCount);
+  const highAppliedCount = Math.max(0, input.highAppliedCount ?? 0);
+
+  const pool = uniqSkills([...(input.matchedSkills ?? []), ...(input.missingSkills ?? [])]);
+  const liveMatched = pool.filter((skill) => contentHasSkill(input.content || '', skill));
+  const liveSkillMatch =
+    pool.length > 0 ? Math.round((100 * liveMatched.length) / pool.length) : null;
 
   const recoveredSkills = (input.missingSkills ?? []).filter((skill) =>
     contentHasSkill(input.content || '', skill),
@@ -112,20 +174,32 @@ export function estimateImprovedAtsScore(input: {
     contentLower.includes(term.trim().toLowerCase()),
   ).length;
 
-  const uplift = Math.min(
-    26,
-    recoveredSkills * 2.2 +
-      recoveredKeywords * 1.6 +
-      (input.highAppliedCount ?? 0) * 3 +
-      input.appliedCount * 1.2,
-  );
+  const skillsRecoveredWell =
+    pool.length > 0 &&
+    ((liveSkillMatch ?? 0) >= 80 ||
+      ((input.missingSkills?.length ?? 0) > 0 &&
+        recoveredSkills / (input.missingSkills?.length ?? 1) >= 0.7));
+  const markedApplied = appliedCount > 0 || highAppliedCount > 0;
+  // Mirror backend scoreEditedResume.optimizeSucceeded so Optimize ≈ Export.
+  const optimizeSucceeded =
+    (skillsRecoveredWell && markedApplied) ||
+    ((liveSkillMatch ?? 0) >= 90 && (markedApplied || recoveredSkills >= 2)) ||
+    ((liveSkillMatch ?? 0) >= 95 && recoveredKeywords >= 1) ||
+    ((liveSkillMatch ?? 0) >= 100 && markedApplied);
 
-  if (uplift < 2) return baseline;
+  // Align uplift with backend scoreEditedResume (optimizeSucceeded max +45).
+  const uplift = Math.min(
+    optimizeSucceeded ? 45 : 26,
+    recoveredSkills * 2.4 + recoveredKeywords * 1.8 + highAppliedCount * 3.5 + appliedCount * 1.5,
+  );
 
   const recoveredSkillRatio =
     (input.missingSkills?.length ?? 0) > 0
       ? recoveredSkills / (input.missingSkills?.length ?? 1)
-      : 0;
+      : liveSkillMatch != null
+        ? liveSkillMatch / 100
+        : 0;
+
   const softCeiling =
     recoveredSkillRatio >= 0.9
       ? 94
@@ -135,11 +209,35 @@ export function estimateImprovedAtsScore(input: {
           ? 86
           : 84;
 
-  return Math.min(
-    softCeiling,
-    baseline + Math.max(2, Math.round(uplift * 0.55)),
-    baseline + (recoveredSkillRatio >= 0.85 ? 26 : 18),
-  );
+  let score: number;
+  if (liveSkillMatch != null) {
+    const contentBased = Math.round(
+      liveSkillMatch * 0.62 + Math.min(baseline + uplift, softCeiling) * 0.38,
+    );
+    score = Math.min(softCeiling, Math.max(baseline, contentBased));
+  } else if (uplift < 2) {
+    score = baseline;
+  } else {
+    score = Math.min(
+      softCeiling,
+      baseline + Math.max(2, Math.round(uplift * 0.55)),
+      baseline + (recoveredSkillRatio >= 0.85 ? 26 : 18),
+    );
+  }
+
+  // Mirror backend optimize floor (74–80) so strip matches Export recheck.
+  if (optimizeSucceeded) {
+    const optimizeFloor =
+      (liveSkillMatch ?? 0) >= 95 && recoveredKeywords >= 1
+        ? 80
+        : (liveSkillMatch ?? 0) >= 90 ||
+            ((liveSkillMatch ?? 0) >= 85 && (markedApplied || highAppliedCount >= 1))
+          ? 78
+          : 74;
+    score = Math.max(score, Math.min(optimizeFloor, softCeiling, baseline + 45));
+  }
+
+  return Math.min(100, Math.max(baseline, Math.round(score)));
 }
 
 export function scoreTone(score: number): 'success' | 'warning' | 'error' {

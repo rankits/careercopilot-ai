@@ -107,6 +107,12 @@ export const pickPrimarySummary = (
   profile: CandidateProfileSourceInput,
   resume?: CandidateProfileSourceInput | null,
 ): string | undefined => {
+  const asOptionalString = (value: unknown): string | undefined =>
+    typeof value === 'string' ? value : undefined;
+
+  const resolveSummaryField = (record: Record<string, unknown>): string | undefined =>
+    asOptionalString(record.summary) ?? asOptionalString(record.professionalSummary);
+
   const profileRecord =
     typeof profile.personalDetails === 'object' && profile.personalDetails !== null
       ? (profile.personalDetails as Record<string, unknown>)
@@ -115,16 +121,6 @@ export const pickPrimarySummary = (
     resume && typeof resume.personalDetails === 'object' && resume.personalDetails !== null
       ? (resume.personalDetails as Record<string, unknown>)
       : {};
-  return pickPrimaryString(
-    typeof profileRecord.summary === 'string'
-      ? profileRecord.summary
-      : typeof profileRecord.professionalSummary === 'string'
-        ? profileRecord.professionalSummary
-        : undefined,
-    typeof resumeRecord.summary === 'string'
-      ? resumeRecord.summary
-      : typeof resumeRecord.professionalSummary === 'string'
-        ? resumeRecord.professionalSummary
-        : undefined,
-  );
+
+  return pickPrimaryString(resolveSummaryField(profileRecord), resolveSummaryField(resumeRecord));
 };

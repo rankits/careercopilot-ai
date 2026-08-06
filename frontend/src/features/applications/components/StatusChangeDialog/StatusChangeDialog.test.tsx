@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
 import { StatusChangeDialog } from './StatusChangeDialog';
 
 const mutateAsyncMock = vi.fn();
@@ -22,9 +23,7 @@ describe('StatusChangeDialog', () => {
     mutateAsyncMock.mockResolvedValue({});
   });
 
-  const renderDialog = (
-    props: Partial<React.ComponentProps<typeof StatusChangeDialog>> = {},
-  ) => {
+  const renderDialog = (props: Partial<React.ComponentProps<typeof StatusChangeDialog>> = {}) => {
     const handleClose = vi.fn();
     const result = render(
       <ToastProvider>
@@ -78,9 +77,7 @@ describe('StatusChangeDialog', () => {
     await user.click(updateButton);
 
     expect(mutateAsyncMock).not.toHaveBeenCalled();
-    expect(
-      await screen.findByText(/select a different status to continue\./i),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/select a different status to continue\./i)).toBeInTheDocument();
   });
 
   it('submits a status transition with an optional note successfully', async () => {

@@ -10,7 +10,11 @@ import {
   NavigateNextIcon,
   Typography,
 } from '@/lib/material';
-import type { AnalysisResult, SuggestionItem } from '@/services/resumeBuilder.service';
+import type {
+  AnalysisResult,
+  RecheckResult,
+  SuggestionItem,
+} from '@/services/resumeBuilder.service';
 
 import {
   RESUME_SECTIONS,
@@ -18,6 +22,7 @@ import {
   alignDraftToJob,
   applyTextReplaceToDraft,
   buildFallbackSuggestions,
+  consolidatePendingSkillSuggestions,
   estimateImprovedAtsScore,
   getSectionText,
   isLocalSuggestionId,
@@ -27,7 +32,8 @@ import {
   refreshSkillAnalysisFromContent,
   sanitizeExtractedText,
   serializeResumeDraft,
-  skillFromSuggestion,
+  skillsFromSuggestion,
+  type LiveSkillAnalysis,
   type ResumeDraft,
   type ResumeSectionId,
   type ResumeTemplateId,
@@ -41,13 +47,16 @@ import {
   AiBanner,
   DiffBlock,
   EditorCard,
+  EditorFooterBar,
   EmptyHint,
   ImpactPill,
   OptimizeHeader,
   OptimizeLayout,
   OptimizeMain,
   OptimizeShell,
+  PreviewColumn,
   PreviewPanel,
+  PreviewResumeScroll,
   ScoreStrip,
   SectionNav,
   SectionNavButton,
@@ -63,6 +72,8 @@ interface OptimizeStepProps {
   editedContent: string;
   jobDescription?: string;
   preferredSkills?: string[];
+  /** Server recheck after Apply All — keeps Optimize strip aligned with Export. */
+  recheckResult?: RecheckResult | null;
   saving: boolean;
   suggestions: SuggestionItem[];
   targetRole: string;
@@ -71,6 +82,8 @@ interface OptimizeStepProps {
   onApplyAllSuggestions: (ids: number[], content: string) => void;
   onIgnoreSuggestion: (id: number) => void;
   onEditedContentChange: (value: string) => void;
+  /** Keep parent analysis.atsScore in sync with the live Optimize estimate. */
+  onLiveAtsChange?: (score: number, skillAnalysis?: LiveSkillAnalysis) => void;
   onExportStep: () => void;
   onSaveContent: () => void;
   onTemplateChange: (template: ResumeTemplateId) => void;
@@ -82,6 +95,7 @@ export function OptimizeStep({
   editedContent,
   jobDescription = '',
   preferredSkills = [],
+  recheckResult = null,
   saving,
   suggestions,
   targetRole,
@@ -90,10 +104,13 @@ export function OptimizeStep({
   onApplyAllSuggestions,
   onIgnoreSuggestion,
   onEditedContentChange,
+  onLiveAtsChange,
   onExportStep,
   onSaveContent,
   onTemplateChange,
 }: OptimizeStepProps) {
+  void saving;
+  void onSaveContent;
   const { showToast } = useToast();
   const previewRef = useRef<HTMLDivElement>(null);
   const lastParseKey = useRef<string>('');
@@ -111,78 +128,38 @@ export function OptimizeStep({
   }, [draft]);
 
   const [localOverrides, setLocalOverrides] = useState<SuggestionItem[]>([]);
+  const skillBundleServerIdsRef = useRef<number[]>([]);
 
-  const handlePrint = () => {
-    const node = previewRef.current;
-    if (!node) return;
-
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000');
-    if (!printWindow) {
-      window.print();
-      return;
-    }
-
-    printWindow.document.write(`<!doctype html><html><head><title>${
-      draft.fullName || 'Resume'
-    }</title>
-      <style>
-        body { margin: 0; font-family: Segoe UI, Arial, sans-serif; background: #fff; }
-        * { box-sizing: border-box; }
-      </style>
-      </head><body>${node.innerHTML}</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  };
-
-  // Re-parse once per analysis for clean professional structure (do not re-wipe user edits).
+  // Re-parse once per analysis into the app's structured default draft.
   useEffect(() => {
     const source = analysis?.editedContent || editedContent;
     if (!source) return;
     const parseKey =
-      analysis?.id != null ? `analysis:${analysis.id}:v10` : `local:${source.slice(0, 64)}`;
+      analysis?.id != null
+        ? `analysis:${analysis.id}:${analysis.resumeId}:v12`
+        : `local:${source.slice(0, 96)}:${source.length}`;
     if (lastParseKey.current === parseKey) return;
     lastParseKey.current = parseKey;
     const parsed = parseResumeContent(source, targetRole || analysis?.targetRole || '');
-    setDraft((previous) => {
-      const aligned = alignDraftToJob(parsed, {
-        preferredSkills,
-        jobDescription,
-        matchedSkills: analysis?.skillAnalysis?.matchedSkills,
-        recommendedSkills: [
-          ...(analysis?.skillAnalysis?.recommendedSkills ?? []),
-          ...(analysis?.skillAnalysis?.missingSkills ?? []),
-        ],
-        optimizedSummary: analysis?.optimizedSummary,
-        targetRole: targetRole || analysis?.targetRole || '',
-      });
-      // Never blank identity / experience if AI text omitted the name or sections.
-      return {
-        ...aligned,
-        fullName: aligned.fullName || previous.fullName,
-        email: aligned.email || previous.email,
-        phone: aligned.phone || previous.phone,
-        location: aligned.location || previous.location,
-        linkedin: aligned.linkedin || previous.linkedin,
-        experiences:
-          aligned.experiences.some((item) => item.company || item.title || item.details)
-            ? aligned.experiences
-            : previous.experiences,
-        projectsList:
-          aligned.projectsList.some((item) => item.title || item.details)
-            ? aligned.projectsList
-            : previous.projectsList,
-        education: aligned.education || previous.education,
-        certifications: aligned.certifications || previous.certifications,
-        achievements: aligned.achievements || previous.achievements,
-        skillsList: aligned.skillsList.length > 0 ? aligned.skillsList : previous.skillsList,
-        summary: aligned.summary || previous.summary,
-        originalText: aligned.originalText || previous.originalText || source,
-      };
+    const aligned = alignDraftToJob(parsed, {
+      preferredSkills,
+      jobDescription,
+      matchedSkills: analysis?.skillAnalysis?.matchedSkills,
+      recommendedSkills: [
+        ...(analysis?.skillAnalysis?.recommendedSkills ?? []),
+        ...(analysis?.skillAnalysis?.missingSkills ?? []),
+      ],
+      optimizedSummary: analysis?.optimizedSummary,
+      targetRole: targetRole || analysis?.targetRole || '',
     });
+    // Fresh upload/analysis: trust the new parse. Do not merge stale previous sections.
+    draftRef.current = aligned;
+    setDraft(aligned);
+    const serialized = serializeResumeDraft(aligned);
+    if (serialized) onEditedContentChange(serialized);
     // Intentionally omit editedContent / preferredSkills — user edits merge via separate effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysis?.id, analysis?.editedContent]);
+  }, [analysis?.id, analysis?.resumeId, analysis?.editedContent]);
 
   // Merge Define-Role preferred skills into the live draft without re-parsing.
   // Do NOT depend on skillAnalysis — recheck after Apply must not reshuffle suggestions/skills.
@@ -275,10 +252,7 @@ export function OptimizeStep({
       setLocalOverrides((prev) => {
         const overrideIds = new Set(localSpelling.map((item) => item.id));
         const rest = prev.filter((item) => !overrideIds.has(item.id));
-        return [
-          ...rest,
-          ...localSpelling.map((item) => ({ ...item, status: 'APPLIED' as const })),
-        ];
+        return [...rest, ...localSpelling.map((item) => ({ ...item, status: 'APPLIED' as const }))];
       });
     }
   }, [
@@ -312,22 +286,24 @@ export function OptimizeStep({
         ? merged
         : (() => {
             const overrideIds = new Set(localOverrides.map((item) => item.id));
-            return [
-              ...localOverrides,
-              ...merged.filter((item) => !overrideIds.has(item.id)),
-            ];
+            return [...localOverrides, ...merged.filter((item) => !overrideIds.has(item.id))];
           })();
 
     const haveSkills = new Set(draft.skillsList.map((skill) => skill.toLowerCase()));
-    return withOverrides.map((item) => {
+    const marked = withOverrides.map((item) => {
       if (normalizeSuggestionCategory(item.category) !== 'skills') return item;
       if (item.status !== 'PENDING') return item;
-      const skill = skillFromSuggestion(item);
-      if (skill && haveSkills.has(skill.toLowerCase())) {
+      const skills = skillsFromSuggestion(item);
+      if (skills.length > 0 && skills.every((skill) => haveSkills.has(skill.toLowerCase()))) {
         return { ...item, status: 'APPLIED' as const };
       }
       return item;
     });
+
+    // One Skills card for all missing skills (API + fallback), not one card per skill.
+    const consolidated = consolidatePendingSkillSuggestions(marked);
+    skillBundleServerIdsRef.current = consolidated.bundledServerIds;
+    return consolidated.items;
   }, [draft.skillsList, frozenFallbacks, localOverrides, suggestions]);
 
   const pendingSuggestions = useMemo(
@@ -382,27 +358,39 @@ export function OptimizeStep({
       ...(analysis?.skillAnalysis?.missingSkills ?? []),
       ...(analysis?.skillAnalysis?.recommendedSkills ?? []),
     ],
+    matchedSkills: analysis?.skillAnalysis?.matchedSkills ?? liveSkillAnalysis.matchedSkills,
     missingKeywords,
     appliedCount,
     highAppliedCount,
   });
-  // Prefer server recheck score when it exceeds the local estimate (after Apply).
-  const improvedScore = Math.max(estimatedScore, analysis?.atsScore ?? 0);
+  void recheckResult;
+  // Optimize strip is the source of truth for uplift — Export must show the same number.
+  // Do not prefer server recheck here (its optimize floor was jumping 66 → 76).
+  const improvedScore = estimatedScore;
   const scoreDelta = Math.max(0, improvedScore - currentScore);
   const activeMeta = RESUME_SECTIONS.find((section) => section.id === activeSection);
   const isSentenceSection = activeSection === 'experience' || activeSection === 'projects';
   const applyingAll = applyingId === -1;
 
-  const commitAppliedDraft = (next: ResumeDraft) => {
-    const serialized =
-      serializeResumeDraft(next) ||
-      editedContent ||
-      analysis?.editedContent ||
-      '';
+  // Keep parent analysis + Export page on the same improved ATS the strip shows.
+  const liveSkillsKey = `${liveSkillAnalysis.matchedSkills.join('\0')}::${liveSkillAnalysis.missingSkills.join('\0')}`;
+  useEffect(() => {
+    if (!onLiveAtsChange) return;
+    onLiveAtsChange(improvedScore, liveSkillAnalysis);
+    // liveSkillAnalysis identity changes often; key tracks real skill moves.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed
+  }, [improvedScore, liveSkillsKey, onLiveAtsChange]);
+
+  const pushDraftToParent = (next: ResumeDraft) => {
+    const serialized = serializeResumeDraft(next) || editedContent || analysis?.editedContent || '';
     draftRef.current = next;
     setDraft(next);
     if (serialized) onEditedContentChange(serialized);
     return serialized;
+  };
+
+  const commitAppliedDraft = (next: ResumeDraft) => {
+    return pushDraftToParent(next);
   };
 
   const markLocalApplied = (suggestion: SuggestionItem) => {
@@ -417,13 +405,15 @@ export function OptimizeStep({
     const current = draftRef.current;
 
     if (sectionId === 'skills') {
-      const skill = skillFromSuggestion(suggestion);
-      const alreadyHave = current.skillsList.some(
-        (item) => item.toLowerCase() === skill.toLowerCase(),
-      );
-      if (alreadyHave || !skill) {
+      const skills = skillsFromSuggestion(suggestion);
+      const have = new Set(current.skillsList.map((item) => item.toLowerCase()));
+      const missing = skills.filter((skill) => !have.has(skill.toLowerCase()));
+      if (skills.length === 0 || missing.length === 0) {
         markLocalApplied(suggestion);
-        if (!isLocalSuggestionId(suggestion.id)) {
+        const bundleIds = skillBundleServerIdsRef.current;
+        if (bundleIds.length > 0) {
+          onApplyAllSuggestions(bundleIds, serializeResumeDraft(current) || editedContent);
+        } else if (!isLocalSuggestionId(suggestion.id)) {
           onApplySuggestion(suggestion.id, serializeResumeDraft(current) || editedContent);
         }
         setSelectedSuggestionId(null);
@@ -436,16 +426,43 @@ export function OptimizeStep({
         current,
         sectionId,
         sectionId === 'skills' ? '' : suggestion.originalText,
-        sectionId === 'skills' ? skillFromSuggestion(suggestion) : suggestion.suggestedText,
+        sectionId === 'skills'
+          ? skillsFromSuggestion(suggestion).join(', ')
+          : suggestion.suggestedText,
       ),
       role: targetRole || analysis?.targetRole || current.role || '',
       originalText: current.originalText,
     };
     const serialized = commitAppliedDraft(next);
+    setSelectedSuggestionId(null);
+
+    if (sectionId === 'skills') {
+      markLocalApplied(suggestion);
+      const bundleIds = skillBundleServerIdsRef.current;
+      if (bundleIds.length > 1 && serialized) {
+        onApplyAllSuggestions(bundleIds, serialized);
+        return;
+      }
+      if (bundleIds.length === 1 && serialized) {
+        onApplySuggestion(bundleIds[0]!, serialized);
+        return;
+      }
+      if (isLocalSuggestionId(suggestion.id)) {
+        if (serialized) onApplyAllSuggestions([], serialized);
+        else {
+          showToast({
+            message: 'Improvement applied successfully',
+            severity: 'success',
+          });
+        }
+        return;
+      }
+      onApplySuggestion(suggestion.id, serialized);
+      return;
+    }
 
     if (isLocalSuggestionId(suggestion.id)) {
       markLocalApplied(suggestion);
-      setSelectedSuggestionId(null);
       // Persist + recheck so ATS / skill match refresh without a server suggestion id.
       if (serialized) onApplyAllSuggestions([], serialized);
       else {
@@ -458,7 +475,6 @@ export function OptimizeStep({
     }
 
     onApplySuggestion(suggestion.id, serialized);
-    setSelectedSuggestionId(null);
   };
 
   const applyAllSuggestions = () => {
@@ -468,21 +484,26 @@ export function OptimizeStep({
     const appliedLocals: SuggestionItem[] = [];
     const serverIds: number[] = [];
 
-    for (const suggestion of pendingSuggestions) {
+    // HIGH impact first so each section lands its biggest wins before softer edits.
+    const ordered = [...pendingSuggestions].sort((a, b) => {
+      const rank = (impact: string) => (/high/i.test(impact) ? 0 : /medium/i.test(impact) ? 1 : 2);
+      return rank(a.impact) - rank(b.impact);
+    });
+
+    for (const suggestion of ordered) {
       const sectionId = normalizeSuggestionCategory(suggestion.category);
 
       if (sectionId === 'skills') {
-        const skill = skillFromSuggestion(suggestion);
-        if (
-          !skill ||
-          next.skillsList.some((item) => item.toLowerCase() === skill.toLowerCase())
-        ) {
+        const skills = skillsFromSuggestion(suggestion);
+        const have = new Set(next.skillsList.map((item) => item.toLowerCase()));
+        const missing = skills.filter((skill) => !have.has(skill.toLowerCase()));
+        if (skills.length === 0 || missing.length === 0) {
           if (isLocalSuggestionId(suggestion.id)) appliedLocals.push(suggestion);
           else serverIds.push(suggestion.id);
           continue;
         }
         next = {
-          ...applyTextReplaceToDraft(next, 'skills', '', skill),
+          ...applyTextReplaceToDraft(next, 'skills', '', missing.join(', ')),
           role: targetRole || analysis?.targetRole || next.role || '',
           originalText: next.originalText,
         };
@@ -506,20 +527,35 @@ export function OptimizeStep({
     const serialized = commitAppliedDraft(next);
     setSelectedSuggestionId(null);
 
-    if (appliedLocals.length > 0) {
-      setLocalOverrides((prev) => {
-        const overrideIds = new Set(appliedLocals.map((item) => item.id));
-        const rest = prev.filter((item) => !overrideIds.has(item.id));
-        return [
-          ...rest,
-          ...appliedLocals.map((item) => ({ ...item, status: 'APPLIED' as const })),
-        ];
-      });
-    }
+    // Mark every applied suggestion locally so HIGH IMPACT cards flip to APPLIED per section immediately.
+    setLocalOverrides((prev) => {
+      const appliedIds = new Set([
+        ...appliedLocals.map((item) => item.id),
+        ...serverIds,
+        ...skillBundleServerIdsRef.current,
+      ]);
+      const rest = prev.filter((item) => !appliedIds.has(item.id));
+      const marked = ordered
+        .filter((item) => appliedIds.has(item.id) || isLocalSuggestionId(item.id))
+        .map((item) => ({ ...item, status: 'APPLIED' as const }));
+      // Also mark any server id we queued even if not in ordered (skill bundle extras).
+      const orderedIds = new Set(ordered.map((item) => item.id));
+      const extras = [...appliedIds]
+        .filter((id) => !orderedIds.has(id))
+        .map((id) => {
+          const fromPending = pendingSuggestions.find((item) => item.id === id);
+          return fromPending ? { ...fromPending, status: 'APPLIED' as const } : null;
+        })
+        .filter((item): item is SuggestionItem => item != null);
+      return [...rest, ...marked, ...extras];
+    });
 
-    if (serverIds.length > 0 && serialized) {
-      onApplyAllSuggestions(serverIds, serialized);
-    } else if (serialized && appliedLocals.length > 0) {
+    const bundleIds = skillBundleServerIdsRef.current;
+    const allServerIds = Array.from(new Set([...serverIds, ...bundleIds]));
+
+    if (allServerIds.length > 0 && serialized) {
+      onApplyAllSuggestions(allServerIds, serialized);
+    } else if (serialized && (appliedLocals.length > 0 || ordered.length > 0)) {
       onApplyAllSuggestions([], serialized);
     }
   };
@@ -532,9 +568,9 @@ export function OptimizeStep({
             Step 4: Optimize Your Resume
           </Typography>
           <Typography className="subtitle">
-            Edit fields on the left. Live preview keeps your uploaded resume design by default —
-            switch themes only if you want a new look. Open Skills to add AI JD suggestions (e.g.
-            Java).
+            Edit fields on the left. Live preview always uses our structured default layout —
+            experience, projects, skills and other sections parsed from your upload. Switch themes
+            only if you want a different look.
           </Typography>
         </OptimizeHeader>
 
@@ -550,7 +586,7 @@ export function OptimizeStep({
               <Typography className="text">
                 Apply every pending fix in one click, or review cards one by one.
               </Typography>
-              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1.5 }}>
+              <Box className="actions">
                 {RESUME_SECTIONS.filter(
                   (section) => suggestionsBySection[section.id].length > 0,
                 ).map((section) => (
@@ -609,7 +645,6 @@ export function OptimizeStep({
 
         <OptimizeLayout>
           <SectionNav>
-            <Typography className="nav-title">Sections</Typography>
             {RESUME_SECTIONS.map((section) => {
               const count = suggestionsBySection[section.id].length;
               return (
@@ -673,107 +708,110 @@ export function OptimizeStep({
                 </EmptyHint>
               ) : (
                 sectionSuggestions.map((suggestion) => {
-                  const skillLabel =
+                  const skillLabels =
                     normalizeSuggestionCategory(suggestion.category) === 'skills'
-                      ? skillFromSuggestion(suggestion)
-                      : '';
+                      ? skillsFromSuggestion(suggestion)
+                      : [];
+                  const skillLabel = skillLabels.join(', ');
                   const alreadyAdded =
-                    Boolean(skillLabel) &&
-                    draft.skillsList.some(
-                      (item) => item.toLowerCase() === skillLabel.toLowerCase(),
+                    skillLabels.length > 0 &&
+                    skillLabels.every((skill) =>
+                      draft.skillsList.some((item) => item.toLowerCase() === skill.toLowerCase()),
                     );
 
                   return (
-                  <SuggestionCard
-                    key={suggestion.id}
-                    selected={selectedSuggestion?.id === suggestion.id}
-                    onClick={() => setSelectedSuggestionId(suggestion.id)}
-                  >
-                    <SuggestionMeta>
-                      <Typography className="title">
-                        {isSentenceSection
-                          ? suggestion.title || 'Sentence improvement'
-                          : suggestion.title}
-                      </Typography>
-                      <ImpactPill impact={suggestion.impact}>{suggestion.impact} IMPACT</ImpactPill>
-                    </SuggestionMeta>
-
-                    {suggestion.reason ? (
-                      <SuggestionReason>{suggestion.reason}</SuggestionReason>
-                    ) : null}
-
-                    <DiffBlock>
-                      <Box className="pane before">
-                        <Typography className="label">
-                          {isSentenceSection ? 'Current sentence' : 'Before'}
-                        </Typography>
-                        <Typography className="body">
-                          {normalizeSuggestionCategory(suggestion.category) === 'skills'
-                            ? draft.skillsList.join(', ') || 'No skills yet'
-                            : suggestion.originalText ||
-                              getSectionText(draft, activeSection) ||
-                              'No excerpt available'}
-                        </Typography>
-                      </Box>
-                      <Box className="pane after">
-                        <Typography className="label">
+                    <SuggestionCard
+                      key={suggestion.id}
+                      selected={selectedSuggestion?.id === suggestion.id}
+                      onClick={() => setSelectedSuggestionId(suggestion.id)}
+                    >
+                      <SuggestionMeta>
+                        <Typography className="title">
                           {isSentenceSection
-                            ? 'Improved sentence'
-                            : normalizeSuggestionCategory(suggestion.category) === 'skills'
-                              ? 'Skill to add'
-                              : 'After (AI)'}
+                            ? suggestion.title || 'Sentence improvement'
+                            : suggestion.title}
                         </Typography>
-                        <Typography className="body">
-                          {normalizeSuggestionCategory(suggestion.category) === 'skills'
-                            ? skillFromSuggestion(suggestion)
-                            : suggestion.suggestedText}
-                        </Typography>
-                      </Box>
-                    </DiffBlock>
+                        <ImpactPill impact={suggestion.impact}>
+                          {suggestion.impact} IMPACT
+                        </ImpactPill>
+                      </SuggestionMeta>
 
-                    <ActionBar>
-                      <Button
-                        size="small"
-                        variant="ghost"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (isLocalSuggestionId(suggestion.id)) {
-                            setLocalOverrides((prev) => {
-                              const rest = prev.filter((item) => item.id !== suggestion.id);
-                              return [...rest, { ...suggestion, status: 'IGNORED' }];
-                            });
-                            return;
-                          }
-                          onIgnoreSuggestion(suggestion.id);
-                        }}
-                      >
-                        Ignore
-                      </Button>
-                      <Button
-                        size="small"
-                        variant="outline"
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          setSelectedSuggestionId(suggestion.id);
-                        }}
-                      >
-                        Edit Manually
-                      </Button>
-                      <Button
-                        size="small"
-                        tone="success"
-                        disabled={alreadyAdded}
-                        isLoading={applyingId === suggestion.id}
-                        onClick={(event) => {
-                          event.stopPropagation();
-                          if (alreadyAdded) return;
-                          applySuggestion(suggestion);
-                        }}
-                      >
-                        {alreadyAdded ? 'Already Added' : 'Apply Fix'}
-                      </Button>
-                    </ActionBar>
-                  </SuggestionCard>
+                      {suggestion.reason ? (
+                        <SuggestionReason>{suggestion.reason}</SuggestionReason>
+                      ) : null}
+
+                      <DiffBlock>
+                        <Box className="pane before">
+                          <Typography className="label">
+                            {isSentenceSection ? 'Current sentence' : 'Before'}
+                          </Typography>
+                          <Typography className="body">
+                            {normalizeSuggestionCategory(suggestion.category) === 'skills'
+                              ? draft.skillsList.join(', ') || 'No skills yet'
+                              : suggestion.originalText ||
+                                getSectionText(draft, activeSection) ||
+                                'No excerpt available'}
+                          </Typography>
+                        </Box>
+                        <Box className="pane after">
+                          <Typography className="label">
+                            {isSentenceSection
+                              ? 'Improved sentence'
+                              : normalizeSuggestionCategory(suggestion.category) === 'skills'
+                                ? 'Skill to add'
+                                : 'After (AI)'}
+                          </Typography>
+                          <Typography className="body">
+                            {normalizeSuggestionCategory(suggestion.category) === 'skills'
+                              ? skillLabel || suggestion.suggestedText
+                              : suggestion.suggestedText}
+                          </Typography>
+                        </Box>
+                      </DiffBlock>
+
+                      <ActionBar>
+                        <Button
+                          size="small"
+                          variant="ghost"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (isLocalSuggestionId(suggestion.id)) {
+                              setLocalOverrides((prev) => {
+                                const rest = prev.filter((item) => item.id !== suggestion.id);
+                                return [...rest, { ...suggestion, status: 'IGNORED' }];
+                              });
+                              return;
+                            }
+                            onIgnoreSuggestion(suggestion.id);
+                          }}
+                        >
+                          Ignore
+                        </Button>
+                        <Button
+                          size="small"
+                          variant="outline"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            setSelectedSuggestionId(suggestion.id);
+                          }}
+                        >
+                          Edit Manually
+                        </Button>
+                        <Button
+                          size="small"
+                          tone="success"
+                          disabled={alreadyAdded}
+                          isLoading={applyingId === suggestion.id}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            if (alreadyAdded) return;
+                            applySuggestion(suggestion);
+                          }}
+                        >
+                          {alreadyAdded ? 'Already Added' : 'Apply Fix'}
+                        </Button>
+                      </ActionBar>
+                    </SuggestionCard>
                   );
                 })
               )}
@@ -783,22 +821,78 @@ export function OptimizeStep({
               section={activeSection}
               draft={draft}
               recommendedSkills={liveSkillAnalysis.missingSkills}
-              onChange={setDraft}
+              onChange={pushDraftToParent}
             />
 
-            <ActionBar>
-              <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
-                <LightbulbOutlinedIcon fontSize="small" color="primary" />
-                <Typography sx={{ color: 'text.secondary', fontSize: '0.75rem' }}>
-                  Uploaded = original text. Other themes = styled layouts of your edits.
+            <EditorFooterBar>
+              <Box
+                sx={{
+                  alignItems: 'flex-start',
+                  display: 'flex',
+                  gap: 1,
+                  minWidth: 0,
+                  width: '100%',
+                }}
+              >
+                <LightbulbOutlinedIcon
+                  fontSize="small"
+                  color="primary"
+                  sx={{ flexShrink: 0, mt: 0.25 }}
+                />
+                <Typography
+                  sx={{
+                    color: 'text.secondary',
+                    fontSize: '0.75rem',
+                    lineHeight: 1.45,
+                    minWidth: 0,
+                    overflowWrap: 'anywhere',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  Uploaded resume is parsed into Summary, Experience, Skills, Projects, and more.
                 </Typography>
               </Box>
-              <Button isLoading={saving} onClick={onSaveContent}>
-                {saving ? 'Saving...' : 'Save Changes'}
-              </Button>
-            </ActionBar>
+            </EditorFooterBar>
           </EditorCard>
         </OptimizeLayout>
+      </OptimizeMain>
+
+      <PreviewColumn>
+        <PreviewPanel>
+          <Box className="preview-header">
+            <Box>
+              <Typography className="preview-title">Live Resume Preview</Typography>
+              <Typography className="preview-meta">
+                {template === 'original'
+                  ? 'Default template (your resume content)'
+                  : `Theme: ${RESUME_TEMPLATES.find((item) => item.id === template)?.label}`}
+              </Typography>
+            </Box>
+          </Box>
+
+          <TemplatePicker>
+            {RESUME_TEMPLATES.map((item) => (
+              <TemplateOption
+                key={item.id}
+                type="button"
+                active={template === item.id}
+                onClick={() => onTemplateChange(item.id)}
+              >
+                <span className="label">{item.label}</span>
+                <span className="desc">{item.description}</span>
+              </TemplateOption>
+            ))}
+          </TemplatePicker>
+
+          <PreviewResumeScroll>
+            <ResumeTemplatePreview
+              ref={previewRef}
+              draft={draft}
+              template={template}
+              targetRole={targetRole || analysis?.targetRole || ''}
+            />
+          </PreviewResumeScroll>
+        </PreviewPanel>
 
         <ScoreStrip>
           <Box>
@@ -826,52 +920,22 @@ export function OptimizeStep({
           <Box>
             <Typography className="title">Ready for the final ATS boost?</Typography>
             <Typography className="text">
-              Continue to Export to run a real ATS recheck. The estimate above updates as you apply
-              JD skills and suggestions.
+              Export shows the same ATS score as above after your edits.
             </Typography>
           </Box>
-          <Button startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />} onClick={onExportStep}>
+          <Button
+            startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
+            onClick={() => {
+              // Flush latest editor draft + ATS so Export shows the same score.
+              pushDraftToParent(draftRef.current);
+              onLiveAtsChange?.(improvedScore, liveSkillAnalysis);
+              onExportStep();
+            }}
+          >
             Continue to Export
           </Button>
         </AiBanner>
-      </OptimizeMain>
-
-      <PreviewPanel>
-        <Box className="preview-header">
-          <Box>
-            <Typography className="preview-title">Live Resume Preview</Typography>
-            <Typography className="preview-meta">
-              {template === 'original'
-                ? 'Showing your uploaded resume text'
-                : `Theme: ${RESUME_TEMPLATES.find((item) => item.id === template)?.label}`}
-            </Typography>
-          </Box>
-          <Button size="small" variant="outline" onClick={handlePrint}>
-            Print preview
-          </Button>
-        </Box>
-
-        <TemplatePicker>
-          {RESUME_TEMPLATES.map((item) => (
-            <TemplateOption
-              key={item.id}
-              type="button"
-              active={template === item.id}
-              onClick={() => onTemplateChange(item.id)}
-            >
-              <span className="label">{item.label}</span>
-              <span className="desc">{item.description}</span>
-            </TemplateOption>
-          ))}
-        </TemplatePicker>
-
-        <ResumeTemplatePreview
-          ref={previewRef}
-          draft={draft}
-          template={template}
-          targetRole={targetRole || analysis?.targetRole || ''}
-        />
-      </PreviewPanel>
+      </PreviewColumn>
     </OptimizeShell>
   );
 }

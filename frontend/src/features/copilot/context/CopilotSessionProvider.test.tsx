@@ -4,18 +4,12 @@ import { describe, expect, it } from 'vitest';
 
 import { useCopilotSession } from '../hooks/useCopilotSession';
 import { COPILOT_WELCOME_MESSAGE } from '../types/copilot.types';
+
 import { CopilotSessionProvider } from './CopilotSessionProvider';
 
 function TestConsumer() {
-  const {
-    addMessage,
-    clearMessages,
-    hasUserMessages,
-    isOpen,
-    messages,
-    setIsOpen,
-    toggleOpen,
-  } = useCopilotSession();
+  const { addMessage, clearMessages, hasUserMessages, isOpen, messages, setIsOpen, toggleOpen } =
+    useCopilotSession();
 
   return (
     <div>

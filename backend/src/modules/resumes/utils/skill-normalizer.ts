@@ -4,9 +4,24 @@
  */
 
 const SHORT_ALLOWED = new Set(
-  ['c', 'c++', 'c#', 'r', 'go', 'ai', 'ml', 'ui', 'ux', 'sql', 'aws', 'gcp', 'jvm', 'jpa', 'jwt', 's3'].map(
-    (item) => item.toLowerCase(),
-  ),
+  [
+    'c',
+    'c++',
+    'c#',
+    'r',
+    'go',
+    'ai',
+    'ml',
+    'ui',
+    'ux',
+    'sql',
+    'aws',
+    'gcp',
+    'jvm',
+    'jpa',
+    'jwt',
+    's3',
+  ].map((item) => item.toLowerCase()),
 );
 
 /** Canonical skill catalog (display form). */
@@ -168,16 +183,16 @@ const SKILL_ALIASES: Record<string, string> = {
   'node.js': 'Node.js',
   react: 'React',
   reactjs: 'React',
-  'react.js': 'React.js',
+  'react.js': 'React',
   'react native': 'React Native',
-  vue: 'Vue.js',
-  vuejs: 'Vue.js',
-  'vue.js': 'Vue.js',
+  vue: 'Vue',
+  vuejs: 'Vue',
+  'vue.js': 'Vue',
   nextjs: 'Next.js',
   'next.js': 'Next.js',
-  express: 'Express.js',
-  expressjs: 'Express.js',
-  'express.js': 'Express.js',
+  express: 'Express',
+  expressjs: 'Express',
+  'express.js': 'Express',
   nestjs: 'NestJS',
   postgres: 'PostgreSQL',
   postgresql: 'PostgreSQL',
@@ -352,9 +367,7 @@ const ROLE_TITLE_ENDING =
 const ACTION_STARTERS =
   /^(?:ability to|able to|build|built|create|created|contribute|develop|developed|drive|driving|excellent|good|manage|managed|required|preferred|responsible|strong|support|supported|troubleshoot|write|working)\b/i;
 
-const catalogByKey = new Map(
-  SKILL_CATALOG.map((skill) => [skill.toLowerCase(), skill] as const),
-);
+const catalogByKey = new Map(SKILL_CATALOG.map((skill) => [skill.toLowerCase(), skill] as const));
 
 const aliasKey = (value: string): string =>
   value
@@ -382,14 +395,21 @@ export const normalizeProfessionalSkill = (value: unknown): string | null => {
 
   const key = cleaned.toLowerCase();
   if (SKILL_BLACKLIST.has(key)) return null;
-  if (key.length < 2 && !SHORT_ALLOWED.has(key)) return null;
-  if (key.length === 2 && !SHORT_ALLOWED.has(key) && !catalogByKey.has(key)) return null;
 
+  // Aliases first so "js" → JavaScript and "react.js" → React before short-token rejects.
   const aliased = SKILL_ALIASES[aliasKey(cleaned)] ?? SKILL_ALIASES[key];
   if (aliased) return aliased;
 
+  if (key.length < 2 && !SHORT_ALLOWED.has(key)) return null;
+  if (key.length === 2 && !SHORT_ALLOWED.has(key) && !catalogByKey.has(key)) return null;
+
+  // Collapse catalog duplicates: React.js → React, Node.js stays Node.js via alias above.
   const catalogHit = catalogByKey.get(key);
-  if (catalogHit) return catalogHit;
+  if (catalogHit) {
+    const catalogAlias =
+      SKILL_ALIASES[aliasKey(catalogHit)] ?? SKILL_ALIASES[catalogHit.toLowerCase()];
+    return catalogAlias ?? catalogHit;
+  }
 
   // Reject anything not in the taxonomy — no free-form Title Case guessing.
   return null;
@@ -410,8 +430,14 @@ export const normalizeProfessionalSkills = (values: unknown): string[] => {
 export const extractProfessionalSkillsFromText = (text: string): string[] => {
   if (!text?.trim()) return [];
 
-  const candidates = text
-    .replace(/[•●]/g, ',')
+  // Soften OCR / PDF glue: ReactJS, Node. js, zero-width chars.
+  const softened = text
+    .replace(/[\u00ad\u200b\u200c\u200d\ufeff]/g, '')
+    .replace(/\b([A-Za-z]{2,20})\s*\.\s*js\b/gi, '$1.js')
+    .replace(/\b(React|Node|Next|Vue|Express)[\s._-]*js\b/gi, '$1.js');
+
+  const candidates = softened
+    .replace(/[•●▪◦]/g, ',')
     .split(/[,|;\n/]+/)
     .map((part) =>
       part
@@ -419,23 +445,123 @@ export const extractProfessionalSkillsFromText = (text: string): string[] => {
           /^(?:required|preferred|skills?|technologies|tools|requirements?|qualifications?|experience with|knowledge of|proficient in)\s*:?\s*/i,
           '',
         )
+        // Keep first skill-looking token when OCR glues a sentence after it ("Kafka. Ability…").
+        .replace(/^([A-Za-z0-9+#._-]{2,40})[.].*$/, '$1')
         .trim(),
     )
     .filter(Boolean);
 
-  const multiWordHits: string[] = [];
+  const catalogHits: string[] = [];
   for (const skill of SKILL_CATALOG) {
-    if (skill.split(/\s+/).length < 2 && !skill.includes('.') && !skill.includes('/')) continue;
-    const pattern = new RegExp(
-      `\\b${skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+')}\\b`,
-      'i',
-    );
-    if (pattern.test(text)) multiWordHits.push(skill);
+    // Skip ultra-short ambiguous tokens (C, R, Go handled via careful boundaries below).
+    if (skill.length <= 2 && !SHORT_ALLOWED.has(skill.toLowerCase())) continue;
+    const escaped = skill.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+    // Allow React ≈ React.js ≈ ReactJS in catalog scans.
+    const flexible =
+      /\.js$/i.test(skill) || /^(react|node|next|vue|express)$/i.test(skill)
+        ? `\\b${escaped.replace(/\\\.js$/i, '')}(?:[\\s._-]*js|\\.js)?\\b`
+        : `\\b${escaped}\\b`;
+    const pattern = new RegExp(flexible, 'i');
+    if (pattern.test(softened)) catalogHits.push(skill);
   }
 
   const knownShapeMatches =
-    text.match(/\b(?:C\+\+|C#|\.NET|CI\/CD|Node\.js|Next\.js|Vue\.js|Express\.js|React\.js)\b/gi) ??
-    [];
+    softened.match(
+      /\b(?:C\+\+|C#|\.NET|CI\/CD|Node\.?js|Next\.?js|Vue\.?js|Express\.?js|React\.?js|ReactJS|NodeJS|NextJS|VueJS|ExpressJS)\b/gi,
+    ) ?? [];
 
-  return normalizeProfessionalSkills([...candidates, ...multiWordHits, ...knownShapeMatches]);
+  return normalizeProfessionalSkills([...candidates, ...catalogHits, ...knownShapeMatches]);
+};
+
+/**
+ * Canonical key for overlap checks so React ≈ React.js, Node ≈ Node.js, etc.
+ */
+export const skillMatchKey = (value: string): string => {
+  const normalized = normalizeProfessionalSkill(value) ?? value.trim();
+  return normalized.toLowerCase().replace(/\.js$/i, '').replace(/\s+/g, ' ').trim();
+};
+
+const compactSkillToken = (value: string): string =>
+  value
+    .toLowerCase()
+    .replace(/\.js$/i, 'js')
+    .replace(/[\s._/-]+/g, '');
+
+/** Variant spellings to probe inside resume/JD text. */
+export const skillMatchVariants = (value: string): string[] => {
+  const normalized = normalizeProfessionalSkill(value) ?? value.trim();
+  if (!normalized) return [];
+  const variants = new Set<string>([normalized, value.trim()]);
+  const key = normalized.toLowerCase();
+  const base = key.replace(/\.js$/i, '').trim();
+  if (base) {
+    variants.add(base);
+    variants.add(`${base}.js`);
+    variants.add(`${base}js`);
+    variants.add(`${base} js`);
+    // Title-case base (react → React)
+    variants.add(base.replace(/\b[a-z]/g, (ch) => ch.toUpperCase()));
+  }
+  // Include any alias that maps to this skill or its base.
+  for (const [alias, canonical] of Object.entries(SKILL_ALIASES)) {
+    if (skillMatchKey(canonical) === skillMatchKey(normalized)) {
+      variants.add(alias);
+      variants.add(canonical);
+    }
+  }
+  return Array.from(variants).filter(Boolean);
+};
+
+/**
+ * True when a skill (or a known equivalent spelling) appears in content.
+ * Fixes React vs React.js / ReactJS / Node vs Node.js false misses.
+ */
+export const skillAppearsIn = (content: string, skill: string): boolean => {
+  if (!content?.trim() || !skill?.trim()) return false;
+
+  const softened = content
+    .replace(/[\u00ad\u200b\u200c\u200d\ufeff]/g, '')
+    .replace(/\b([A-Za-z]{2,20})\s*\.\s*js\b/gi, '$1.js')
+    .replace(/\b(React|Node|Next|Vue|Express)[\s._-]*js\b/gi, '$1.js');
+
+  for (const variant of skillMatchVariants(skill)) {
+    if (termAppearsInLocal(softened, variant)) return true;
+  }
+
+  // Compact overlap: resume "ReactJS" / "NodeJS" ↔ skill "React" / "Node.js"
+  const want = compactSkillToken(skillMatchKey(skill) || skill);
+  if (want.length < 2) return false;
+
+  const extracted = extractProfessionalSkillsFromText(softened);
+  for (const hit of extracted) {
+    if (compactSkillToken(skillMatchKey(hit) || hit) === want) return true;
+  }
+
+  // Direct compact scan for glued tokens (ReactJS) that catalog word-boundaries miss.
+  if (want.length >= 4) {
+    const contentCompact = compactSkillToken(softened);
+    if (contentCompact.includes(want)) return true;
+    // Also accept content token that starts with skill base + js (reactjs for react)
+    if (!want.endsWith('js')) {
+      if (contentCompact.includes(`${want}js`)) return true;
+    }
+  }
+
+  return false;
+};
+
+/** Local copy of word-aware match to avoid circular imports with resume-analysis. */
+const termAppearsInLocal = (content: string, term: string): boolean => {
+  const cleaned = term.trim();
+  if (!cleaned || !content) return false;
+  const escaped = cleaned.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  const startsWithWord = /^[A-Za-z0-9]/.test(cleaned);
+  const endsWithWord = /[A-Za-z0-9]$/.test(cleaned);
+  const prefix = startsWithWord ? '\\b' : '(?<![A-Za-z0-9])';
+  const suffix = endsWithWord ? '\\b' : '(?![A-Za-z0-9])';
+  try {
+    return new RegExp(`${prefix}${escaped}${suffix}`, 'i').test(content);
+  } catch {
+    return content.toLowerCase().includes(cleaned.toLowerCase());
+  }
 };

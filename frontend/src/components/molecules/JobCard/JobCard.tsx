@@ -1,45 +1,45 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 
-import { useCachedCompanyLogo } from '@/features/jobs/hooks/useCachedCompanyLogo';
-
-import {
-  APP_ACTIONS,
-  JOB_CARD_ARIA,
-  JOB_CARD_COPY,
-  JOB_CARD_LIMITS,
-  JOB_UI,
-  SKILL_GAP_SECTIONS,
-} from '@/constants/ui';
+import { APP_ACTIONS, JOB_CARD_ARIA, JOB_CARD_COPY, JOB_UI } from '@/constants/ui';
 import {
   BookmarkBorderOutlinedIcon,
   BookmarkOutlinedIcon,
+  BlockOutlinedIcon,
   BusinessCenterOutlinedIcon,
-  ExpandMoreIcon,
+  DescriptionOutlinedIcon,
+  FlagOutlinedIcon,
   HistoryOutlinedIcon,
   LocationOnOutlinedIcon,
+  MenuItem,
+  MoreVertIcon,
   PersonOutlineIcon,
   SmartToyOutlinedIcon,
+  ThumbDownOutlinedIcon,
+  ThumbUpOutlinedIcon,
   Typography,
   WorkOutlineOutlinedIcon,
 } from '@/lib/material';
 
 import {
   Accent,
+  CardBody,
   CompanyLogo,
+  HeaderEnd,
+  HeaderRow,
   JobActions,
+  JobActionsMenu,
   JobCardRoot,
   JobDetails,
   JobMeta,
   MatchPill,
   MatchRing,
+  MainRow,
+  MoreActionsButton,
   OpenJobButton,
-  RecommendationDetails,
-  RecommendationDetailsGrid,
-  RecommendationDetailSkillGroup,
   RecommendationPill,
-  SaveButton,
+  saveActionButtonSx,
   SkillList,
   SkillPill,
   TitleRow,
@@ -73,8 +73,6 @@ export interface JobCardData {
   experience: string;
   experienceBand: string;
   logo: string;
-  /** Optional company logo image; falls back to `logo` initial. */
-  logoUrl?: string;
   location: string;
   /** Real recommendation score only — omit while mock/unwired. */
   match?: number;
@@ -95,6 +93,8 @@ export interface JobCardData {
 export interface JobCardProps {
   job: JobCardData;
   isSaved?: boolean;
+  /** Adds an elevated hover treatment (border/shadow/lift) — used by premium feed surfaces. */
+  premiumHover?: boolean;
   onApply?: (job: JobCardData) => void;
   onOpen?: (job: JobCardData) => void;
   onSave?: (job: JobCardData) => void;
@@ -110,6 +110,7 @@ const toDomId = (value: string) => value.replace(/[^a-zA-Z0-9_-]+/g, '-').replac
 export function JobCard({
   job,
   isSaved = false,
+  premiumHover = false,
   onApply,
   onOpen,
   onSave,
@@ -120,92 +121,246 @@ export function JobCard({
   isMoreLikeThis = false,
 }: JobCardProps) {
   const showMatch = typeof job.match === 'number';
-  const showWiredActions = Boolean(
-    onApply || onSave || onDismiss || onMoreLikeThis || onLessLikeThis || onNotRelevant,
-  );
+  const showPrimaryActions = Boolean(onApply || onSave);
   const canApply = Boolean(job.applyUrl);
-  const { src: logoSrc, failed: logoFailed, onLogoError } = useCachedCompanyLogo(job.logoUrl);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const showLogoImage = Boolean(logoSrc) && !logoFailed;
+  const [actionsMenuAnchor, setActionsMenuAnchor] = useState<HTMLElement | null>(null);
   const details = job.recommendationDetails;
-  const detailsId = `${toDomId(job.recommendationId ?? job.id ?? `${job.company}-${job.title}`)}-recommendation-details`;
+  const actionsMenuId = `${toDomId(job.recommendationId ?? job.id ?? `${job.company}-${job.title}`)}-actions`;
   const hasSkillGap = details?.skillGap
     ? Object.values(details.skillGap).some((values) => values.length > 0)
     : false;
   const hasDetails = Boolean(
     details && (details.summary || details.bullets.length > 0 || hasSkillGap),
   );
-  const showActions = showWiredActions || hasDetails;
+  const canOpenDetails = Boolean(onOpen && hasDetails);
+  const showOverflowMenu = Boolean(
+    onDismiss || onNotRelevant || onMoreLikeThis || onLessLikeThis || canOpenDetails,
+  );
+  const showHeaderEnd = showMatch || showOverflowMenu;
   const hasExperience = Boolean(job.experience.trim());
   const hasLocation = Boolean(job.location.trim());
+  const actionsMenuOpen = Boolean(actionsMenuAnchor);
+
+  const openActionsMenu = (event: MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setActionsMenuAnchor(event.currentTarget);
+  };
+
+  const closeActionsMenu = () => {
+    setActionsMenuAnchor(null);
+  };
+
+  const runAction = (action: () => void) => {
+    closeActionsMenu();
+    action();
+  };
 
   return (
     <JobCardRoot
       onClick={onOpen ? () => onOpen(job) : undefined}
+      premiumHover={premiumHover}
       sx={onOpen ? { cursor: 'pointer' } : undefined}
     >
       <Accent tone={job.accent} />
-      <CompanyLogo aria-label={JOB_CARD_ARIA.companyLogo(job.company)}>
-        {showLogoImage ? (
-          <img alt="" loading="lazy" onError={onLogoError} src={logoSrc} />
-        ) : (
-          job.logo || '?'
-        )}
-      </CompanyLogo>
+      <CardBody>
+        {job.isRecommended || showHeaderEnd ? (
+          <HeaderRow>
+            {job.isRecommended ? (
+              <RecommendationPill>
+                <SmartToyOutlinedIcon fontSize="small" />
+                {JOB_CARD_COPY.aiRecommended}
+              </RecommendationPill>
+            ) : (
+              <span />
+            )}
 
-      <JobDetails>
-        {job.isRecommended ? (
-          <RecommendationPill>
-            <SmartToyOutlinedIcon fontSize="small" />
-            {JOB_CARD_COPY.aiRecommended}
-          </RecommendationPill>
+            {showHeaderEnd ? (
+              <HeaderEnd>
+                {typeof job.match === 'number' ? (
+                  <MatchPill aria-label={JOB_CARD_ARIA.match(job.match, job.matchSubtitle)}>
+                    {job.match}
+                    {JOB_UI.MATCH_SUFFIX}
+                    <MatchRing aria-hidden="true" />
+                  </MatchPill>
+                ) : null}
+                {showOverflowMenu ? (
+                  <>
+                    <MoreActionsButton
+                      aria-controls={actionsMenuOpen ? actionsMenuId : undefined}
+                      aria-expanded={actionsMenuOpen}
+                      aria-haspopup="menu"
+                      aria-label={`More actions for ${job.title}`}
+                      data-action="more"
+                      onClick={openActionsMenu}
+                    >
+                      <MoreVertIcon fontSize="small" />
+                    </MoreActionsButton>
+                    <JobActionsMenu
+                      anchorEl={actionsMenuAnchor}
+                      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                      id={actionsMenuId}
+                      onClick={(event) => event.stopPropagation()}
+                      onClose={closeActionsMenu}
+                      open={actionsMenuOpen}
+                      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    >
+                      {onMoreLikeThis ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.moreLikeThis(isMoreLikeThis, job.title)}
+                          aria-pressed={isMoreLikeThis}
+                          disabled={isMoreLikeThis}
+                          onClick={() => runAction(() => onMoreLikeThis(job))}
+                        >
+                          <ThumbUpOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.moreLikeThis}
+                        </MenuItem>
+                      ) : null}
+                      {onLessLikeThis ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.lessLikeThis(job.title)}
+                          onClick={() => runAction(() => onLessLikeThis(job))}
+                        >
+                          <ThumbDownOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.lessLikeThis}
+                        </MenuItem>
+                      ) : null}
+                      {onNotRelevant ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.notRelevant(job.title)}
+                          onClick={() => runAction(() => onNotRelevant(job))}
+                        >
+                          <BlockOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.notRelevant}
+                        </MenuItem>
+                      ) : null}
+                      {onDismiss ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.dismiss(job.title)}
+                          onClick={() => runAction(() => onDismiss(job))}
+                        >
+                          <FlagOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.dismiss}
+                        </MenuItem>
+                      ) : null}
+                      {canOpenDetails ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.details(job.title)}
+                          data-action="details"
+                          onClick={() => runAction(() => onOpen?.(job))}
+                        >
+                          <DescriptionOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.details}
+                        </MenuItem>
+                      ) : null}
+                    </JobActionsMenu>
+                  </>
+                ) : null}
+              </HeaderEnd>
+            ) : null}
+          </HeaderRow>
         ) : null}
 
-        <TitleRow>
-          <div>
-            <Typography component="h2">
-              {onOpen ? (
-                <OpenJobButton
-                  aria-label={JOB_CARD_ARIA.open(job.title, job.company)}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onOpen(job);
-                  }}
-                  type="button"
-                >
-                  {job.title}
-                </OpenJobButton>
-              ) : (
-                job.title
-              )}
-            </Typography>
-            <Typography component="p">{job.company}</Typography>
-            {job.matchSubtitle ? <Typography component="p">{job.matchSubtitle}</Typography> : null}
-          </div>
-          {job.verified ? (
-            <VerifiedIcon fontSize="small" aria-label={JOB_CARD_COPY.verifiedCompany} />
-          ) : null}
-        </TitleRow>
+        <MainRow>
+          <CompanyLogo aria-label={JOB_CARD_ARIA.companyLogo(job.company)}>
+            {job.logo || '?'}
+          </CompanyLogo>
+
+          <JobDetails>
+            <TitleRow>
+              <div>
+                <Typography component="h2">
+                  {onOpen ? (
+                    <OpenJobButton
+                      aria-label={JOB_CARD_ARIA.open(job.title, job.company)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpen(job);
+                      }}
+                      type="button"
+                    >
+                      {job.title}
+                    </OpenJobButton>
+                  ) : (
+                    job.title
+                  )}
+                </Typography>
+                <Typography component="p">{job.company}</Typography>
+                {job.matchSubtitle ? (
+                  <Typography component="p">{job.matchSubtitle}</Typography>
+                ) : null}
+              </div>
+              {job.verified ? (
+                <VerifiedIcon fontSize="small" aria-label={JOB_CARD_COPY.verifiedCompany} />
+              ) : null}
+            </TitleRow>
+          </JobDetails>
+        </MainRow>
+
+        {showPrimaryActions ? (
+          <JobActions>
+            {onSave ? (
+              <Button
+                data-action="save"
+                aria-label={JOB_CARD_ARIA.save(isSaved, job.title)}
+                aria-pressed={isSaved}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSave(job);
+                }}
+                size="small"
+                startIcon={
+                  isSaved ? (
+                    <BookmarkOutlinedIcon fontSize="small" />
+                  ) : (
+                    <BookmarkBorderOutlinedIcon fontSize="small" />
+                  )
+                }
+                sx={saveActionButtonSx}
+                variant="outline"
+              >
+                <span className="save-action-label">
+                  {isSaved ? APP_ACTIONS.SAVED : APP_ACTIONS.SAVE_FOR_LATER}
+                </span>
+              </Button>
+            ) : null}
+            {onApply ? (
+              <Button
+                data-action="apply"
+                aria-label={JOB_CARD_ARIA.apply(job.title, canApply)}
+                disabled={!canApply}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (!canApply) return;
+                  onApply(job);
+                }}
+                size="small"
+                variant="outline"
+              >
+                {APP_ACTIONS.APPLY_NOW}
+              </Button>
+            ) : null}
+          </JobActions>
+        ) : null}
 
         <JobMeta>
           <span>
-            <BusinessCenterOutlinedIcon fontSize="small" /> {job.salary}
+            <BusinessCenterOutlinedIcon fontSize="inherit" /> {job.salary}
           </span>
           {hasExperience ? (
             <span>
-              <PersonOutlineIcon fontSize="small" /> {job.experience}
+              <PersonOutlineIcon fontSize="inherit" /> {job.experience}
             </span>
           ) : null}
           <span>
-            <WorkOutlineOutlinedIcon fontSize="small" /> {job.type}
+            <WorkOutlineOutlinedIcon fontSize="inherit" /> {job.type}
           </span>
           {hasLocation ? (
             <span>
-              <LocationOnOutlinedIcon fontSize="small" /> {job.location}
+              <LocationOnOutlinedIcon fontSize="inherit" /> {job.location}
             </span>
           ) : null}
           <span>
-            <HistoryOutlinedIcon fontSize="small" /> {job.postedAt}
+            <HistoryOutlinedIcon fontSize="inherit" /> {job.postedAt}
           </span>
         </JobMeta>
 
@@ -216,176 +371,7 @@ export function JobCard({
             ))}
           </SkillList>
         ) : null}
-      </JobDetails>
-
-      {showMatch || showActions ? (
-        <JobActions>
-          {showMatch ? (
-            <MatchPill aria-label={JOB_CARD_ARIA.match(job.match, job.matchSubtitle)}>
-              {job.match}
-              {JOB_UI.MATCH_SUFFIX}
-              <MatchRing aria-hidden="true" />
-            </MatchPill>
-          ) : null}
-          {onDismiss ? (
-            <Button
-              aria-label={JOB_CARD_ARIA.dismiss(job.title)}
-              onClick={(event) => {
-                event.stopPropagation();
-                onDismiss(job);
-              }}
-              size="small"
-              variant="ghost"
-            >
-              {JOB_CARD_COPY.dismiss}
-            </Button>
-          ) : null}
-          {onNotRelevant ? (
-            <Button
-              aria-label={JOB_CARD_ARIA.notRelevant(job.title)}
-              onClick={(event) => {
-                event.stopPropagation();
-                onNotRelevant(job);
-              }}
-              size="small"
-              variant="ghost"
-            >
-              {JOB_CARD_COPY.notRelevant}
-            </Button>
-          ) : null}
-          {onMoreLikeThis ? (
-            <Button
-              aria-label={JOB_CARD_ARIA.moreLikeThis(isMoreLikeThis, job.title)}
-              aria-pressed={isMoreLikeThis}
-              disabled={isMoreLikeThis}
-              onClick={(event) => {
-                event.stopPropagation();
-                onMoreLikeThis(job);
-              }}
-              size="small"
-              variant="ghost"
-            >
-              {JOB_CARD_COPY.moreLikeThis}
-            </Button>
-          ) : null}
-          {onLessLikeThis ? (
-            <Button
-              aria-label={JOB_CARD_ARIA.lessLikeThis(job.title)}
-              onClick={(event) => {
-                event.stopPropagation();
-                onLessLikeThis(job);
-              }}
-              size="small"
-              variant="ghost"
-            >
-              {JOB_CARD_COPY.lessLikeThis}
-            </Button>
-          ) : null}
-          {onSave ? (
-            <SaveButton
-              aria-label={JOB_CARD_ARIA.save(isSaved, job.title)}
-              aria-pressed={isSaved}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSave(job);
-              }}
-            >
-              {isSaved ? (
-                <BookmarkOutlinedIcon fontSize="small" />
-              ) : (
-                <BookmarkBorderOutlinedIcon fontSize="small" />
-              )}
-            </SaveButton>
-          ) : null}
-          {onApply ? (
-            <Button
-              aria-label={JOB_CARD_ARIA.apply(job.title, canApply)}
-              disabled={!canApply}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (!canApply) return;
-                onApply(job);
-              }}
-              size="small"
-              variant="outline"
-            >
-              {APP_ACTIONS.APPLY_NOW}
-            </Button>
-          ) : null}
-          {hasDetails ? (
-            <Button
-              aria-controls={detailsId}
-              aria-expanded={detailsOpen}
-              aria-label={JOB_CARD_ARIA.details(detailsOpen, job.title)}
-              onClick={(event) => {
-                event.stopPropagation();
-                setDetailsOpen((open) => !open);
-              }}
-              size="small"
-              startIcon={
-                <ExpandMoreIcon
-                  fontSize="small"
-                  sx={{ transform: detailsOpen ? 'rotate(180deg)' : undefined }}
-                />
-              }
-              variant="ghost"
-            >
-              {JOB_CARD_COPY.details}
-            </Button>
-          ) : null}
-        </JobActions>
-      ) : null}
-
-      {hasDetails && detailsOpen ? (
-        <RecommendationDetails
-          aria-label={JOB_CARD_ARIA.recommendationDetails(job.title)}
-          id={detailsId}
-          role="region"
-        >
-          {details?.summary ? <Typography component="p">{details.summary}</Typography> : null}
-
-          {details?.bullets.length ? (
-            <RecommendationDetailsGrid>
-              {details.bullets.slice(0, JOB_CARD_LIMITS.maxBullets).map((bullet) => (
-                <div key={`${bullet.label}-${bullet.message}`}>
-                  <Typography component="h3">
-                    {bullet.label}
-                    {typeof bullet.score === 'number'
-                      ? ` - ${Math.round(bullet.score * JOB_CARD_LIMITS.percentScale)}%`
-                      : ''}
-                  </Typography>
-                  <Typography component="p">{bullet.message}</Typography>
-                  {bullet.evidence.length ? (
-                    <Typography component="p">
-                      {bullet.evidence.slice(0, JOB_CARD_LIMITS.maxEvidence).join(', ')}
-                    </Typography>
-                  ) : null}
-                </div>
-              ))}
-            </RecommendationDetailsGrid>
-          ) : null}
-
-          {hasSkillGap && details?.skillGap ? (
-            <RecommendationDetailsGrid>
-              {SKILL_GAP_SECTIONS.map(({ key, label }) => {
-                const values = details.skillGap[key];
-                if (!values.length) return null;
-
-                return (
-                  <RecommendationDetailSkillGroup key={label}>
-                    <Typography component="h3">{label}</Typography>
-                    <div>
-                      {values.map((skill) => (
-                        <span key={`${label}-${skill}`}>{skill}</span>
-                      ))}
-                    </div>
-                  </RecommendationDetailSkillGroup>
-                );
-              })}
-            </RecommendationDetailsGrid>
-          ) : null}
-        </RecommendationDetails>
-      ) : null}
+      </CardBody>
     </JobCardRoot>
   );
 }

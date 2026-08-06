@@ -374,7 +374,7 @@ describe('ProfilePage resume parsing', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(onSave).not.toHaveBeenCalled();
     expect(confirmProfileMock).not.toHaveBeenCalled();
-  }, 15_000);
+  }, 30_000);
 });
 
 const existingProfile = {

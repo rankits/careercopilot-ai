@@ -98,6 +98,10 @@ export const resumeRepository = {
     });
   },
 
+  deleteResume(id: string): Promise<Resume> {
+    return prisma.resume.delete({ where: { id } });
+  },
+
   findLatestExtraction(resumeId: string): Promise<ResumeExtraction | null> {
     return prisma.resumeExtraction.findFirst({
       where: { resumeId },

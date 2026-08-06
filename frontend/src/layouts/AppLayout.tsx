@@ -25,19 +25,21 @@ export function AppLayout() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
   const activeItemId =
-    pathname === ROUTES.SAVED_JOBS
-      ? 'saved-jobs'
-      : pathname === ROUTES.FOR_YOU
-        ? 'for-you'
-        : pathname === ROUTES.APPLICATIONS
-          ? 'applications'
-          : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
-            ? 'jobs-feed'
-            : pathname === ROUTES.SAVED_RESUMES || pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
-              ? 'saved-resumes'
-              : pathname.startsWith(ROUTES.RESUME_BUILDER)
-                ? 'resume-builder'
-                : 'dashboard';
+    pathname === ROUTES.PROFILE_EDIT || pathname.startsWith(`${ROUTES.PROFILE}/`)
+      ? 'settings'
+      : pathname === ROUTES.SAVED_JOBS
+        ? 'saved-jobs'
+        : pathname === ROUTES.AI_MATCH
+          ? 'ai-match'
+          : pathname === ROUTES.APPLICATIONS
+            ? 'applications'
+            : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
+              ? 'jobs-feed'
+              : pathname === ROUTES.SAVED_RESUMES || pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
+                ? 'saved-resumes'
+                : pathname.startsWith(ROUTES.RESUME_BUILDER)
+                  ? 'resume-builder'
+                  : 'dashboard';
 
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);

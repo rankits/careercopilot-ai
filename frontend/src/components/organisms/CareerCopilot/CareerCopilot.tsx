@@ -65,8 +65,7 @@ export function CareerCopilot() {
       });
       addMessage({ role: 'assistant', text: result.reply });
     } catch (error) {
-      const errorText =
-        error instanceof Error ? error.message : CAREER_COPILOT_COPY.unavailable;
+      const errorText = error instanceof Error ? error.message : CAREER_COPILOT_COPY.unavailable;
       setLastFailedMessage(message);
       addMessage({
         error: true,

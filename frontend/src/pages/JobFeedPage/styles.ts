@@ -70,7 +70,7 @@ export const jobFeedPageSx = {
       gridTemplateColumns: '1fr 1fr',
       width: '100%',
 
-      '& > :nth-child(n + 3)': {
+      '& > :nth-of-type(n + 3)': {
         gridColumn: '1 / -1',
       },
     },

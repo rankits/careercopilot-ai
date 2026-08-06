@@ -1,6 +1,12 @@
 import { NextFunction, Request, Response } from 'express';
 import { resumeAnalysisService } from '@/modules/resume-analysis/services/resume-analysis.service.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
 import { successResponse } from '@/shared/utils/response.js';
+
+const requirePrincipalId = (req: Request): string => {
+  if (!req.user) throw new AppError('Authentication required', 401);
+  return String(req.user.principalId);
+};
 
 export const startAnalysisController = async (req: Request, res: Response, next: NextFunction) => {
   try {
@@ -12,6 +18,7 @@ export const startAnalysisController = async (req: Request, res: Response, next:
 
     const result = await resumeAnalysisService.startAnalysis({
       resumeId: String(req.params.resumeId),
+      userId: requirePrincipalId(req),
       targetRole,
       experienceLevel,
       jobDescription,
@@ -29,7 +36,10 @@ export const getAnalysisController = async (req: Request, res: Response, next: N
     res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
     res.set('Pragma', 'no-cache');
     res.removeHeader('ETag');
-    const analysis = await resumeAnalysisService.getAnalysis(String(req.params.resumeId));
+    const analysis = await resumeAnalysisService.getAnalysis(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
     if (!analysis) {
       return res.status(200).json(successResponse('No analysis yet', null));
     }
@@ -43,6 +53,7 @@ export const updateStepController = async (req: Request, res: Response, next: Ne
   try {
     const updated = await resumeAnalysisService.updateStep(
       String(req.params.resumeId),
+      requirePrincipalId(req),
       (req.body as { step: number }).step,
     );
     if (!updated) {
@@ -56,7 +67,10 @@ export const updateStepController = async (req: Request, res: Response, next: Ne
 
 export const getKeywordsController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const keywords = await resumeAnalysisService.getKeywords(String(req.params.resumeId));
+    const keywords = await resumeAnalysisService.getKeywords(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
     return res.status(200).json(successResponse('Keywords retrieved', keywords));
   } catch (error) {
     return next(error);
@@ -65,7 +79,10 @@ export const getKeywordsController = async (req: Request, res: Response, next: N
 
 export const getSuggestionsController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const suggestions = await resumeAnalysisService.getSuggestions(String(req.params.resumeId));
+    const suggestions = await resumeAnalysisService.getSuggestions(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
     return res.status(200).json(successResponse('Suggestions retrieved', suggestions));
   } catch (error) {
     return next(error);
@@ -84,6 +101,7 @@ export const applySuggestionController = async (
     const result = await resumeAnalysisService.applySuggestion(
       String(req.params.resumeId),
       Number(req.params.suggestionId),
+      requirePrincipalId(req),
       { preserveContent },
     );
     return res.status(200).json(successResponse('Suggestion applied', result));
@@ -100,6 +118,7 @@ export const ignoreSuggestionController = async (
   try {
     const result = await resumeAnalysisService.ignoreSuggestion(
       String(req.params.resumeId),
+      requirePrincipalId(req),
       Number(req.params.suggestionId),
     );
     return res.status(200).json(successResponse('Suggestion ignored', result));
@@ -112,6 +131,7 @@ export const updateContentController = async (req: Request, res: Response, next:
   try {
     const result = await resumeAnalysisService.updateContent(
       String(req.params.resumeId),
+      requirePrincipalId(req),
       (req.body as { content: string }).content,
     );
     return res.status(200).json(successResponse('Content updated', result));
@@ -122,7 +142,10 @@ export const updateContentController = async (req: Request, res: Response, next:
 
 export const recheckAtsController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const result = await resumeAnalysisService.recheckAts(String(req.params.resumeId));
+    const result = await resumeAnalysisService.recheckAts(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
     return res.status(200).json(successResponse('ATS rechecked', result));
   } catch (error) {
     return next(error);
@@ -134,6 +157,7 @@ export const saveVersionController = async (req: Request, res: Response, next: N
     const body = req.body as { label: string; content?: string };
     const version = await resumeAnalysisService.saveVersion(
       String(req.params.resumeId),
+      requirePrincipalId(req),
       body.label,
       body.content,
     );
@@ -145,7 +169,10 @@ export const saveVersionController = async (req: Request, res: Response, next: N
 
 export const getVersionsController = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const versions = await resumeAnalysisService.getVersions(String(req.params.resumeId));
+    const versions = await resumeAnalysisService.getVersions(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+    );
     return res.status(200).json(successResponse('Versions retrieved', versions));
   } catch (error) {
     return next(error);
@@ -153,12 +180,12 @@ export const getVersionsController = async (req: Request, res: Response, next: N
 };
 
 export const listSavedVersionsController = async (
-  _req: Request,
+  req: Request,
   res: Response,
   next: NextFunction,
 ) => {
   try {
-    const versions = await resumeAnalysisService.listSavedVersions();
+    const versions = await resumeAnalysisService.listSavedVersions(requirePrincipalId(req));
     return res.status(200).json(successResponse('Saved resumes retrieved', versions));
   } catch (error) {
     return next(error);
@@ -171,7 +198,10 @@ export const getSavedVersionController = async (
   next: NextFunction,
 ) => {
   try {
-    const version = await resumeAnalysisService.getSavedVersion(Number(req.params.versionId));
+    const version = await resumeAnalysisService.getSavedVersion(
+      Number(req.params.versionId),
+      requirePrincipalId(req),
+    );
     return res.status(200).json(successResponse('Saved resume retrieved', version));
   } catch (error) {
     return next(error);
@@ -184,7 +214,10 @@ export const deleteSavedVersionController = async (
   next: NextFunction,
 ) => {
   try {
-    const result = await resumeAnalysisService.deleteSavedVersion(Number(req.params.versionId));
+    const result = await resumeAnalysisService.deleteSavedVersion(
+      Number(req.params.versionId),
+      requirePrincipalId(req),
+    );
     return res.status(200).json(successResponse('Saved resume deleted', result));
   } catch (error) {
     return next(error);
@@ -194,7 +227,11 @@ export const deleteSavedVersionController = async (
 export const exportResumeController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const format = (req.query.format as 'pdf' | 'docx' | 'txt') ?? 'txt';
-    const result = await resumeAnalysisService.exportResume(String(req.params.resumeId), format);
+    const result = await resumeAnalysisService.exportResume(
+      String(req.params.resumeId),
+      requirePrincipalId(req),
+      format,
+    );
     return res.status(200).json(successResponse('Export ready', result));
   } catch (error) {
     return next(error);

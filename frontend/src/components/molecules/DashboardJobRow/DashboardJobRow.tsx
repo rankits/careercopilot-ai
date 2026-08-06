@@ -72,7 +72,10 @@ export function DashboardJobRow({ featured = false, job, onApply, onSave }: Dash
     showActions ? (
       <ActionGroup>
         {onSave ? (
-          <SaveAction aria-label={DASHBOARD_JOB_ROW_COPY.saveJobAria(job.title)} onClick={() => onSave(job)}>
+          <SaveAction
+            aria-label={DASHBOARD_JOB_ROW_COPY.saveJobAria(job.title)}
+            onClick={() => onSave(job)}
+          >
             <BookmarkBorderOutlinedIcon fontSize="small" />
             {APP_ACTIONS.SAVE}
           </SaveAction>

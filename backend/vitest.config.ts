@@ -37,7 +37,22 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html'],
-      include: ['src/modules/auth/**', 'src/modules/user/**', 'src/modules/admin/**'],
+      include: [
+        'src/modules/auth/**',
+        'src/modules/user/**',
+        'src/modules/admin/**',
+        'src/modules/resumes/**',
+        'src/modules/resume-analysis/**',
+        'src/modules/application-management/**',
+        'src/shared/middlewares/**',
+        'src/shared/rbac/**',
+      ],
+      thresholds: {
+        lines: 40,
+        functions: 40,
+        branches: 30,
+        statements: 40,
+      },
     },
   },
   resolve: {

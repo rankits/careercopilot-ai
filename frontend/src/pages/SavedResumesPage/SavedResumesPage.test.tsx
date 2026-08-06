@@ -3,6 +3,8 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
 import type { SavedResumeVersion } from '@/services/resumeBuilder.service';
 
 import { SavedResumesPage } from './SavedResumesPage';
@@ -43,8 +45,6 @@ vi.mock('@/pages/ResumeBuilderPage/components/OptimizeStep/ResumeTemplatePreview
   ),
 }));
 
-let alertSpy: ReturnType<typeof vi.spyOn>;
-
 const version = (overrides: Partial<SavedResumeVersion> = {}): SavedResumeVersion => ({
   id: 1,
   label: 'v1',
@@ -60,12 +60,14 @@ const version = (overrides: Partial<SavedResumeVersion> = {}): SavedResumeVersio
 
 function renderPage(initialPath = '/resume-builder/saved') {
   return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <Routes>
-        <Route path="/resume-builder/saved" element={<SavedResumesPage />} />
-        <Route path="/resume-builder" element={<p>Resume Builder</p>} />
-      </Routes>
-    </MemoryRouter>,
+    <ToastProvider>
+      <MemoryRouter initialEntries={[initialPath]}>
+        <Routes>
+          <Route path="/resume-builder/saved" element={<SavedResumesPage />} />
+          <Route path="/resume-builder" element={<p>Resume Builder</p>} />
+        </Routes>
+      </MemoryRouter>
+    </ToastProvider>,
   );
 }
 
@@ -84,7 +86,6 @@ describe('SavedResumesPage', () => {
       mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
       fileName: 'resume.docx',
     });
-    alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => undefined);
   });
 
   afterEach(() => {
@@ -289,7 +290,7 @@ describe('SavedResumesPage', () => {
     });
   });
 
-  it('alerts when download fails', async () => {
+  it('shows an error toast when download fails', async () => {
     const user = userEvent.setup();
     listSavedVersionsMock.mockResolvedValueOnce([version()]);
     parseResumeContentMock.mockImplementation(() => {
@@ -300,9 +301,7 @@ describe('SavedResumesPage', () => {
     await screen.findByText('Java Developer');
     await user.click(screen.getByRole('button', { name: /^PDF$/i }));
 
-    await waitFor(() => {
-      expect(alertSpy).toHaveBeenCalledWith('Download failed. Please try again.');
-    });
+    expect(await screen.findByText('Download failed. Please try again.')).toBeInTheDocument();
   });
 
   it('downloads using empty role when targetRole is blank', async () => {

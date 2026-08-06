@@ -21,7 +21,7 @@ describe('SectionEditor', () => {
     );
   });
 
-  it('adds a skill chip from the skills editor', () => {
+  it('adds a skill from JD suggestion text', () => {
     const onChange = vi.fn();
     const draft = createEmptyDraft('Engineer');
 
@@ -34,11 +34,29 @@ describe('SectionEditor', () => {
       />,
     );
 
-    fireEvent.click(screen.getByText('+ Java'));
+    fireEvent.click(screen.getByRole('button', { name: '+ Java' }));
 
     expect(onChange).toHaveBeenCalledWith(
       expect.objectContaining({ skillsList: expect.arrayContaining(['Java']) }),
     );
+  });
+
+  it('shows contact only on summary — not on experience', () => {
+    const onChange = vi.fn();
+    const draft = {
+      ...createEmptyDraft('Engineer'),
+      fullName: 'Alex',
+      summary: 'Keep me',
+    };
+
+    const { rerender } = render(
+      <SectionEditor section="summary" draft={draft} onChange={onChange} />,
+    );
+    expect(screen.getByLabelText(/full name/i)).toBeInTheDocument();
+
+    rerender(<SectionEditor section="experience" draft={draft} onChange={onChange} />);
+    expect(screen.queryByLabelText(/full name/i)).not.toBeInTheDocument();
+    expect(screen.getByText(/companies \/ roles/i)).toBeInTheDocument();
   });
 
   it('updates contact fields without wiping other draft data', () => {

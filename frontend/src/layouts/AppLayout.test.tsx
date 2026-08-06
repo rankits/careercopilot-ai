@@ -8,10 +8,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
+import * as useLogoutModule from '@/features/auth/hooks/useLogout';
+
 import { ROUTES } from '@/constants/routes';
 import { STORAGE_KEYS } from '@/constants/storage';
 import { authReducer } from '@/features/auth/authSlice';
-import * as useLogoutModule from '@/features/auth/hooks/useLogout';
 import type { User } from '@/features/auth/types/auth.types';
 import type { UploadedResumeVersion } from '@/features/resume/types/resume.types';
 import * as material from '@/lib/material';
@@ -38,7 +39,7 @@ vi.mock('@/features/resume/services/resume.service', () => ({
 }));
 
 vi.mock('@/lib/material', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/material')>('@/lib/material');
+  const actual = await vi.importActual<typeof material>('@/lib/material');
   return {
     ...actual,
     useMediaQuery: vi.fn(),
@@ -83,12 +84,14 @@ function renderLayout({
                 <Route element={<AppLayout />}>
                   <Route path="/app" element={<h1>Dashboard</h1>} />
                   <Route path={ROUTES.SAVED_JOBS} element={<h1>Saved Jobs Page</h1>} />
-                  <Route path={ROUTES.FOR_YOU} element={<h1>For You Page</h1>} />
                   <Route path={ROUTES.APPLICATIONS} element={<h1>Applications Page</h1>} />
                   <Route path={ROUTES.JOB_FEED} element={<h1>Job Feed Page</h1>} />
                   <Route path="/jobs/123" element={<h1>Job Details Page</h1>} />
                   <Route path={ROUTES.SAVED_RESUMES} element={<h1>Saved Resumes Page</h1>} />
-                  <Route path={`${ROUTES.SAVED_RESUMES}/123`} element={<h1>Resume Detail Page</h1>} />
+                  <Route
+                    path={`${ROUTES.SAVED_RESUMES}/123`}
+                    element={<h1>Resume Detail Page</h1>}
+                  />
                   <Route path={ROUTES.RESUME_BUILDER} element={<h1>Resume Builder Page</h1>} />
                   <Route
                     path={`${ROUTES.RESUME_BUILDER}/123`}
@@ -157,7 +160,9 @@ describe('AppLayout', () => {
       expect(await screen.findByText(/logged out successfully/i)).toBeInTheDocument();
       expect(store.getState().auth.isAuthenticated).toBe(false);
       expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
-      expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: /login destination/i }),
+      ).toBeInTheDocument();
     });
 
     it('does not offer Upload Resume in the user menu', async () => {
@@ -179,9 +184,11 @@ describe('AppLayout', () => {
       await user.click(screen.getByRole('menuitem', { name: /logout/i }));
 
       await waitFor(() => expect(logoutMock).toHaveBeenCalledTimes(1));
-      expect(await screen.findByText(/unable to log out\. please try again/i)).toBeInTheDocument();
+      expect(await screen.findByText(/signed out locally/i)).toBeInTheDocument();
       expect(store.getState().auth.isAuthenticated).toBe(false);
-      expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: /login destination/i }),
+      ).toBeInTheDocument();
     });
 
     it('does not invoke logout again if isLoggingOut is already true', async () => {
@@ -216,7 +223,6 @@ describe('AppLayout', () => {
 
     it.each([
       [ROUTES.SAVED_JOBS, 'Saved Jobs Page', 'Saved Jobs'],
-      [ROUTES.FOR_YOU, 'For You Page', 'For You'],
       [ROUTES.APPLICATIONS, 'Applications Page', 'Applications'],
       [ROUTES.JOB_FEED, 'Job Feed Page', 'Jobs Feed'],
       ['/jobs/123', 'Job Details Page', 'Jobs Feed'],
@@ -357,7 +363,9 @@ describe('AppLayout', () => {
       const versionsButton = screen.getByRole('button', { name: /view all versions/i });
       await user.click(versionsButton);
 
-      expect(await screen.findByRole('dialog', { name: /uploaded resume versions/i })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('dialog', { name: /uploaded resume versions/i }),
+      ).toBeInTheDocument();
 
       const dialogDownloadBtn = screen.getByRole('button', { name: /download/i });
       await user.click(dialogDownloadBtn);

@@ -29,13 +29,15 @@ interface ExportStepProps {
   editedContent: string;
   exportingFormat: 'pdf' | 'docx' | null;
   jobDescription: string;
+  /** ATS score shown on Optimize — Export New ATS must match this. */
+  optimizedAtsScore?: number | null;
   preferredSkills: string[];
   recheckResult: RecheckResult | null;
   rechecking: boolean;
   savingVersion: boolean;
   targetRole: string;
   template: ResumeTemplateId;
-  onBack: () => void;
+  onBack?: () => void;
   onDone: () => void;
   onExport: (format: 'pdf' | 'docx', previewRoot?: HTMLElement | null) => void;
   onTemplateChange: (template: ResumeTemplateId) => void;
@@ -46,13 +48,13 @@ export function ExportStep({
   editedContent,
   exportingFormat,
   jobDescription,
+  optimizedAtsScore = null,
   preferredSkills,
   recheckResult,
   rechecking,
   savingVersion,
   targetRole,
   template,
-  onBack,
   onDone,
   onExport,
   onTemplateChange,
@@ -92,8 +94,10 @@ export function ExportStep({
 
   const previousScore =
     recheckResult?.previousAtsScore ?? analysis?.baselineAtsScore ?? analysis?.atsScore ?? 0;
-  const finalScore = recheckResult?.atsScore ?? previousScore;
-  const improvement = recheckResult?.improvement ?? finalScore - previousScore;
+  // Same number the Optimize strip showed — never jump on a higher server floor.
+  const finalScore =
+    optimizedAtsScore ?? recheckResult?.atsScore ?? analysis?.atsScore ?? previousScore;
+  const improvement = Math.max(0, finalScore - previousScore);
   const scoreColor = (score: number) =>
     score >= 80
       ? colorTokens.feedbackSuccess
@@ -205,10 +209,7 @@ export function ExportStep({
           </Button>
         </Box>
 
-        <ActionsRow sx={{ justifyContent: 'space-between' }}>
-          <Button variant="outline" onClick={onBack}>
-            ← Back
-          </Button>
+        <ActionsRow sx={{ justifyContent: 'flex-end' }}>
           <Button
             disabled={savingVersion || anyExporting || rechecking}
             isLoading={savingVersion}

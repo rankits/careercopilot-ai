@@ -2,10 +2,11 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { BRAND_NAME, CAREER_COPILOT_COPY, CHAT_INPUT_COPY } from '@/constants/ui';
 import { useCopilotChatMutation } from '@/features/copilot/hooks/useCopilotChatMutation';
 import { useCopilotPageContext } from '@/features/copilot/hooks/useCopilotPageContext';
 import { useCopilotSession } from '@/features/copilot/hooks/useCopilotSession';
+
+import { BRAND_NAME, CAREER_COPILOT_COPY, CHAT_INPUT_COPY } from '@/constants/ui';
 import { COPILOT_SUGGESTED_PROMPTS } from '@/features/copilot/types/copilot.types';
 import * as material from '@/lib/material';
 
@@ -17,7 +18,7 @@ vi.mock('@/features/copilot/hooks/useCopilotPageContext');
 vi.mock('@/features/copilot/hooks/useCopilotChatMutation');
 
 vi.mock('@/lib/material', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/material')>('@/lib/material');
+  const actual = await vi.importActual<typeof material>('@/lib/material');
   return {
     ...actual,
     useMediaQuery: vi.fn(),
@@ -100,7 +101,12 @@ describe('CareerCopilot', () => {
       hasUserMessages: false,
       isOpen: true,
       messages: [
-        { createdAt: '2026-08-06T10:00:00Z', id: '1', role: 'assistant', text: 'Welcome to Career Copilot!' },
+        {
+          createdAt: '2026-08-06T10:00:00Z',
+          id: '1',
+          role: 'assistant',
+          text: 'Welcome to Career Copilot!',
+        },
       ],
       setIsOpen: mockSetIsOpen,
       toggleOpen: mockToggleOpen,

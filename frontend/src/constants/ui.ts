@@ -17,6 +17,7 @@ import {
   HomeOutlinedIcon,
   InsightsOutlinedIcon,
   LockOutlinedIcon,
+  PersonOutlineIcon,
   SearchOutlinedIcon,
   SecurityOutlinedIcon,
   TuneOutlinedIcon,
@@ -32,7 +33,10 @@ export const APP_ACTIONS = {
   APPLY_NOW: 'Apply Now',
   RETRY: 'Retry',
   SAVE: 'Save',
+  SAVE_FOR_LATER: 'Save for later',
+  SAVED: 'Saved',
   UPLOAD_RESUME: 'Upload Resume',
+  VIEW_JOB: 'View Job',
 } as const;
 
 export const JOB_UI = {
@@ -97,25 +101,30 @@ export const JOB_CARD_COPY = {
   dismiss: 'Dismiss',
   lessLikeThis: 'Less like this',
   moreLikeThis: 'More like this',
+  moreActions: 'More actions',
   notRelevant: 'Not relevant',
+  saveJob: 'Save job',
+  unsaveJob: 'Unsave job',
   verifiedCompany: 'Verified company',
 } as const;
 
 /** Accessible names composed from job data at render time. */
 export const JOB_CARD_ARIA = {
-  apply: (title: string, available: boolean) => `Apply to ${title}${available ? '' : ' unavailable'}`,
+  apply: (title: string, available: boolean) =>
+    `Apply to ${title}${available ? '' : ' unavailable'}`,
   companyLogo: (company: string) => `${company} logo`,
-  details: (open: boolean, title: string) => `${open ? 'Hide' : 'Show'} details for ${title}`,
+  details: (title: string) => `View details for ${title}`,
   dismiss: (title: string) => `Dismiss ${title} recommendation`,
   lessLikeThis: (title: string) => `Show fewer jobs like ${title}`,
   match: (match: number, subtitle?: string) =>
     `${match} percent match${subtitle ? `, ${subtitle}` : ''}`,
+  moreActions: (title: string) => `More actions for ${title}`,
   moreLikeThis: (selected: boolean, title: string) =>
     selected ? `More jobs like ${title} selected` : `Show more jobs like ${title}`,
   notRelevant: (title: string) => `Mark ${title} as not relevant`,
   open: (title: string, company: string) => `Open ${title} at ${company}`,
-  recommendationDetails: (title: string) => `${title} recommendation details`,
   save: (saved: boolean, title: string) => `${saved ? 'Unsave' : 'Save'} ${title}`,
+  viewJob: (title: string) => `View ${title}`,
 } as const;
 
 export const JOB_CARD_LIMITS = {
@@ -232,6 +241,13 @@ export const APP_HEADER_DEFAULTS = {
  * AuthForm
  * -------------------------------------------------------------------------- */
 
+export const AUTH_FIELD_LIMITS = {
+  email: 300,
+  name: 80,
+  password: 128,
+  phone: 10,
+} as const;
+
 export const AUTH_FORM_CONTENT: Record<AuthFormMode, AuthFormContent> = {
   login: {
     footerActionLabel: 'Create account',
@@ -254,6 +270,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'email',
       label: 'Email address',
+      maxLength: AUTH_FIELD_LIMITS.email,
       name: 'email',
       placeholder: 'you@example.com',
       startIcon: 'email',
@@ -263,6 +280,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
       autoComplete: 'current-password',
       endIcon: 'visibilityOff',
       label: 'Password',
+      maxLength: AUTH_FIELD_LIMITS.password,
       name: 'password',
       placeholder: 'Enter your password',
       startIcon: 'lock',
@@ -273,6 +291,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'given-name',
       label: 'First name',
+      maxLength: AUTH_FIELD_LIMITS.name,
       name: 'firstName',
       placeholder: 'Jane',
       startIcon: 'person',
@@ -281,6 +300,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'family-name',
       label: 'Last name',
+      maxLength: AUTH_FIELD_LIMITS.name,
       name: 'lastName',
       placeholder: 'Doe',
       startIcon: 'person',
@@ -289,6 +309,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'email',
       label: 'Email address',
+      maxLength: AUTH_FIELD_LIMITS.email,
       name: 'email',
       placeholder: 'you@example.com',
       startIcon: 'email',
@@ -297,8 +318,9 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
     {
       autoComplete: 'tel',
       label: 'Phone number',
+      maxLength: AUTH_FIELD_LIMITS.phone,
       name: 'phone',
-      placeholder: '+1 555 123 4567',
+      placeholder: '9876543210',
       startIcon: 'phone',
       type: 'tel',
     },
@@ -306,6 +328,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
       autoComplete: 'new-password',
       endIcon: 'visibilityOff',
       label: 'Password',
+      maxLength: AUTH_FIELD_LIMITS.password,
       name: 'password',
       placeholder: 'Enter your password',
       startIcon: 'lock',
@@ -315,6 +338,7 @@ export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
       autoComplete: 'new-password',
       endIcon: 'visibilityOff',
       label: 'Confirm password',
+      maxLength: AUTH_FIELD_LIMITS.password,
       name: 'confirmPassword',
       placeholder: 'Confirm your password',
       startIcon: 'lock',
@@ -338,22 +362,44 @@ export const AUTH_FORM_ARIA = {
 
 export const AUTH_FORM_VALIDATION_SCHEMAS = {
   login: yup.object({
-    email: yup.string().email('Enter a valid email address').required('Email is required'),
-    password: yup.string().required('Password is required'),
+    email: yup
+      .string()
+      .max(AUTH_FIELD_LIMITS.email, 'Email address must be 300 characters or fewer')
+      .email('Enter a valid email address')
+      .required('Email is required'),
+    password: yup
+      .string()
+      .required('Password is required')
+      .min(8, 'Password must be at least 8 characters')
+      .max(AUTH_FIELD_LIMITS.password, 'Password must be 128 characters or fewer'),
     rememberMe: yup.boolean().default(true),
   }),
   register: yup.object({
     confirmPassword: yup
       .string()
+      .max(AUTH_FIELD_LIMITS.password, 'Confirm password must be 128 characters or fewer')
       .oneOf([yup.ref('password')], 'Passwords must match')
       .required('Confirm password is required'),
-    email: yup.string().email('Enter a valid email address').required('Email is required'),
-    firstName: yup.string().trim().required('First name is required'),
-    lastName: yup.string().trim().required('Last name is required'),
+    email: yup
+      .string()
+      .max(AUTH_FIELD_LIMITS.email, 'Email address must be 300 characters or fewer')
+      .email('Enter a valid email address')
+      .required('Email is required'),
+    firstName: yup
+      .string()
+      .trim()
+      .max(AUTH_FIELD_LIMITS.name, 'First name must be 80 characters or fewer')
+      .required('First name is required'),
+    lastName: yup
+      .string()
+      .trim()
+      .max(AUTH_FIELD_LIMITS.name, 'Last name must be 80 characters or fewer')
+      .required('Last name is required'),
     password: yup
       .string()
       .required('Password is required')
       .min(8, 'Password must be at least 8 characters')
+      .max(AUTH_FIELD_LIMITS.password, 'Password must be 128 characters or fewer')
       .matches(/[A-Z]/, 'Password must include an uppercase letter')
       .matches(/[a-z]/, 'Password must include a lowercase letter')
       .matches(/\d/, 'Password must include a number')
@@ -361,7 +407,8 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
     phone: yup
       .string()
       .required('Phone number is required')
-      .matches(/^\+?(?=(?:\D*\d){10,15}\D*$)[\d\s()-]+$/, {
+      .length(AUTH_FIELD_LIMITS.phone, 'Phone number must be 10 digits')
+      .matches(/^\d{10}$/, {
         excludeEmptyString: true,
         message: 'Enter a valid phone number',
       }),
@@ -458,11 +505,11 @@ export const SIDEBAR_NAV_LABELS = {
   applications: 'Applications',
   aiMatch: 'AI Match',
   dashboard: 'Dashboard',
-  forYou: 'For You',
   jobsFeed: 'Jobs Feed',
   resumeBuilder: 'Resume Builder',
   savedJobs: 'Saved Jobs',
   savedResumes: 'Saved Resumes',
+  settings: 'Profile',
 } as const;
 
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
@@ -485,10 +532,10 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     label: SIDEBAR_NAV_LABELS.savedJobs,
   },
   {
-    href: ROUTES.FOR_YOU,
+    href: ROUTES.AI_MATCH,
     icon: TuneOutlinedIcon,
-    id: 'for-you',
-    label: SIDEBAR_NAV_LABELS.forYou,
+    id: 'ai-match',
+    label: SIDEBAR_NAV_LABELS.aiMatch,
   },
   {
     href: ROUTES.APPLICATIONS,
@@ -508,13 +555,22 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     id: 'saved-resumes',
     label: SIDEBAR_NAV_LABELS.savedResumes,
   },
-  { icon: TuneOutlinedIcon, id: 'ai-match', label: SIDEBAR_NAV_LABELS.aiMatch },
   {
-    icon: BusinessCenterOutlinedIcon,
-    id: 'applications',
-    label: SIDEBAR_NAV_LABELS.applications,
+    href: ROUTES.PROFILE_EDIT,
+    icon: PersonOutlineIcon,
+    id: 'settings',
+    label: SIDEBAR_NAV_LABELS.settings,
   },
 ];
+
+/** Primary destinations shown in the mobile bottom bar (max 5). */
+export const DEFAULT_BOTTOM_NAV_IDS = [
+  'dashboard',
+  'jobs-feed',
+  'ai-match',
+  'applications',
+  'settings',
+] as const;
 
 /** Static user-facing copy and defaults for the Sidebar. */
 export const SIDEBAR_COPY = {
