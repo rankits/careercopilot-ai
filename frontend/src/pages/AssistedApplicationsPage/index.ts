@@ -1,0 +1,1 @@
+export { AssistedApplicationsPage } from './AssistedApplicationsPage';

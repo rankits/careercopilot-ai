@@ -110,12 +110,12 @@ function ListSkeleton() {
   );
 }
 
-export function AssistedApplicationsList() {
+export function AssistedApplicationsList({ hideHeading = false }: { hideHeading?: boolean } = {}) {
   const { data: submissions, isLoading, isError, refetch, isFetching } = useSubmissions();
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 820 }}>
-      <Typography variant="h6">Assisted applications</Typography>
+      {hideHeading ? null : <Typography variant="h6">Assisted applications</Typography>}
 
       {isLoading ? (
         <Paper variant="outlined">
