@@ -145,6 +145,11 @@ jobs:
           mkdir -p bundle
           tar -czvf bundle/backend-deployment.tar.gz -C deploy/backend .
           echo "Release bundle created successfully."
+          
+      - name: Print GitHub OIDC claims
+        uses: github/actions-oidc-debugger@main
+        with:
+          audience: sts.amazonaws.com
 
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
@@ -167,6 +172,12 @@ jobs:
       name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
 
     steps:
+
+      - name: Print GitHub OIDC claims
+        uses: github/actions-oidc-debugger@main
+        with:
+          audience: sts.amazonaws.com
+          
       - name: Configure AWS credentials via OIDC
         uses: aws-actions/configure-aws-credentials@v4
         with:
