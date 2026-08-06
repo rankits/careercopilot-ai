@@ -117,7 +117,11 @@ jobs:
       - name: Build and push production image
         uses: docker/build-push-action@v6
         with:
-          context: .
+          # Dockerfile.prod's COPY paths (docker/entrypoint.sh, prisma, package*.json)
+          # are relative to backend/, matching docker-compose.dev.yml's convention.
+          # A repo-root context makes those COPY sources resolve to the wrong files.
+          # Note: `file` is resolved relative to the repo root, not `context`.
+          context: ./backend
           file: ./backend/docker/Dockerfile.prod
           platforms: linux/amd64
           push: true
