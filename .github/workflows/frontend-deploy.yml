@@ -1,4 +1,4 @@
-name: Deploy Frontend to AWS Production
+name: Deploy Frontend to AWS
 
 on:
   push:
@@ -59,11 +59,11 @@ jobs:
         run: npm run test:e2e
 
   deploy:
-    name: Deploy Frontend to Production S3 & CloudFront
+    name: Deploy Frontend to S3 & CloudFront
     needs: validate
     runs-on: ubuntu-latest
     environment:
-      name: production
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
     defaults:
       run:
         working-directory: frontend
@@ -198,7 +198,7 @@ jobs:
             fi
             echo ""
             echo "## Deployment Details"
-            echo "- **Environment:** production"
+            echo "- **Environment:** ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
             echo "- **Git Branch:** \`${{ github.ref_name }}\`"
             echo "- **Commit SHA:** \`${{ github.sha }}\`"
             echo "- **S3 Bucket:** \`${{ vars.FRONTEND_S3_BUCKET }}\`"
