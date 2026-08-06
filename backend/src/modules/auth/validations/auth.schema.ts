@@ -29,7 +29,10 @@ const nameSchema = z.string().trim().min(1, 'This field is required').max(80, 'T
 const phoneSchema = z
   .string()
   .trim()
-  .regex(/^\+?[1-9]\d{7,14}$/, 'Phone must be a valid E.164 number, e.g. +14155552671');
+  .regex(
+    /^(\d{10}|\+?[1-9]\d{7,14})$/,
+    'Enter a valid phone number, e.g. 9876543210 or +919876543210',
+  );
 
 const otpCodeSchema = z
   .string()
