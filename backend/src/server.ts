@@ -1,6 +1,6 @@
 import type { Server } from 'node:http';
 import app from '@/app.js';
-import { env } from '@/shared/config/env.conf.js';
+import { env, isProduction } from '@/shared/config/env.conf.js';
 import { logger } from '@/shared/logger/logger.js';
 import { connectDatabase, disconnectDatabase } from '@/shared/config/db.conf.js';
 import { startEmailWorker } from '@/workers/email.worker.js';
@@ -9,7 +9,8 @@ import { jobsService } from '@/modules/jobs/JobModule.js';
 import { JobIngestionStartupHook } from '@/modules/jobs/startup/job-ingestion-startup.hook.js';
 
 const PORT = env.PORT;
-const BASE_URL = env.BASE_URL || `http://localhost:${PORT}`;
+const BASE_URL =
+  env.BASE_URL || (isProduction ? `http://0.0.0.0:${PORT}` : `http://localhost:${PORT}`);
 const GRACEFUL_SHUTDOWN_TIMEOUT_MS = 10_000;
 
 let httpServer: Server | undefined;

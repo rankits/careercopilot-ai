@@ -139,6 +139,9 @@ const envSchema = z
     // Run database seeds automatically when the server starts (dev only)
     RUN_SEEDS_ON_STARTUP: booleanFromString(true),
 
+    // CORS — comma-separated origins. Empty → localhost defaults only outside production.
+    CORS_ORIGIN: z.preprocess(emptyToUndefined, z.string().optional()),
+
     // Default admin bootstrap (consumed by prisma/seed/admin.seed.ts)
     ADMIN_DEFAULT_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),
     ADMIN_DEFAULT_PASSWORD: z.preprocess(emptyToUndefined, z.string().min(8).optional()),
@@ -189,6 +192,14 @@ const envSchema = z
         code: z.ZodIssueCode.custom,
         path: ['JWT_REFRESH_SECRET'],
         message: 'JWT_REFRESH_SECRET must differ from JWT_ACCESS_SECRET',
+      });
+    }
+
+    if (!value.CORS_ORIGIN?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CORS_ORIGIN'],
+        message: 'CORS_ORIGIN must be set in production (comma-separated allowlist)',
       });
     }
   });
