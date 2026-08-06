@@ -14,11 +14,16 @@ function toDto(record: {
   label: string;
   category: string;
   tags: string[];
+  builderResumeVersionId?: number | null;
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
 }): ApprovedResumeVersionDto {
-  return { ...record, tags: record.tags ?? [] };
+  return {
+    ...record,
+    tags: record.tags ?? [],
+    builderResumeVersionId: record.builderResumeVersionId ?? null,
+  };
 }
 
 export class PrismaApprovedResumeVersionRepository implements IApprovedResumeVersionRepository {
@@ -42,6 +47,7 @@ export class PrismaApprovedResumeVersionRepository implements IApprovedResumeVer
     category: string;
     tags: string[];
     isActive: boolean;
+    builderResumeVersionId?: number | null;
   }): Promise<ApprovedResumeVersionDto> {
     return prisma.$transaction(async (tx) => {
       const existing = await tx.approvedResumeVersion.findMany({
@@ -72,7 +78,13 @@ export class PrismaApprovedResumeVersionRepository implements IApprovedResumeVer
   async update(
     userId: string,
     id: string,
-    data: { label?: string; category?: string; tags?: string[]; isActive?: boolean },
+    data: {
+      label?: string;
+      category?: string;
+      tags?: string[];
+      isActive?: boolean;
+      builderResumeVersionId?: number | null;
+    },
   ): Promise<ApprovedResumeVersionDto> {
     const existing = await prisma.approvedResumeVersion.findFirst({ where: { id, userId } });
     if (!existing) {
