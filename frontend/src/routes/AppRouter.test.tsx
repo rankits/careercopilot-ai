@@ -88,6 +88,32 @@ function renderRoute(path: string, store = createStore()) {
   );
 }
 
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    clear: () => {
+      store = {};
+    },
+    getItem: (key: string) => store[key] ?? null,
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() {
+      return Object.keys(store).length;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: localStorageMock,
+  writable: true,
+});
+
 describe('AppRouter routing flow', () => {
   beforeEach(() => {
     localStorage.clear();
