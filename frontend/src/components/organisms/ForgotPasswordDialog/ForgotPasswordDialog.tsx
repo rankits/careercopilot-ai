@@ -72,8 +72,15 @@ export function ForgotPasswordDialog({
   const passwordError = errors.password?.message;
   const confirmPasswordError = errors.confirmPassword?.message;
 
+  // useEffect(() => {
+  //   if (open) otpRefs.current[0]?.focus();
+  // }, [open, step]);
   useEffect(() => {
-    if (open) otpRefs.current[0]?.focus();
+    if (open && step === 2) {
+      requestAnimationFrame(() => {
+        otpRefs.current[0]?.focus();
+      });
+    }
   }, [open, step]);
 
   function handleClose() {
@@ -109,7 +116,11 @@ export function ForgotPasswordDialog({
   function handleOtpChange(index: number, value: string) {
     const digit = value.replace(/\D/g, '').slice(-1);
 
-    setOtp((current) => current.map((item, itemIndex) => (itemIndex === index ? digit : item)));
+    setOtp((prev) => {
+      const updated = [...prev];
+      updated[index] = digit;
+      return updated;
+    });
 
     if (digit && index < otp.length - 1) {
       setTimeout(() => {
@@ -119,7 +130,11 @@ export function ForgotPasswordDialog({
   }
 
   function handleOtpKeyDown(index: number, key: string) {
-    if (key === 'Backspace' && !otp[index] && index > 0) otpRefs.current[index - 1]?.focus();
+    if (key === 'Backspace' && !otp[index] && index > 0) {
+      setTimeout(() => {
+        otpRefs.current[index - 1]?.focus();
+      }, 0);
+    }
   }
 
   const passwordStrength = password.length >= 10 ? 'Strong' : password.length >= 6 ? 'Medium' : '';
@@ -299,15 +314,12 @@ export function ForgotPasswordDialog({
                   >
                     {otp.map((value, index) => (
                       <Input
-                        aria-label={`OTP digit ${index + 1}`}
-                        autoFocus={index === 0}
-                        inputProps={{
-                          maxLength: 1,
-                        }}
-                        inputRef={(element: HTMLInputElement | null) => {
+                        key={index}
+                        ref={(element: HTMLInputElement | null) => {
                           otpRefs.current[index] = element;
                         }}
-                        key={index}
+                        autoFocus={index === 0}
+                        inputProps={{ maxLength: 1 }}
                         onChange={(event) => handleOtpChange(index, event.target.value)}
                         onKeyDown={(event) => handleOtpKeyDown(index, event.key)}
                         sx={forgotPasswordDialogSx.otpInput}
