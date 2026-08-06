@@ -56,10 +56,23 @@ describe('draft utils', () => {
     expect(hasPreviewContent(draft)).toBe(true);
     const serialized = serializeResumeDraft(draft);
     expect(serialized).toContain('Alex Rivera');
-    expect(serialized).toContain('SUMMARY');
+    expect(serialized).toContain('PROFESSIONAL SUMMARY');
+    expect(serialized).toContain('WORK EXPERIENCE');
     expect(serialized).toContain('SKILLS');
     expect(serialized).toContain('Java, Spring Boot');
     expect(getSectionText(draft, 'skills')).toBe('Java, Spring Boot');
+  });
+
+  it('creates an experience entry when applying to an empty experience section', () => {
+    const draft = createEmptyDraft();
+    const next = applyTextReplaceToDraft(
+      draft,
+      'experience',
+      '',
+      'Delivered high-impact APIs for JD keywords',
+    );
+    expect(next.experiences).toHaveLength(1);
+    expect(next.experiences[0]?.details).toContain('Delivered high-impact APIs');
   });
 
   it('applies suggestion replacements by section', () => {

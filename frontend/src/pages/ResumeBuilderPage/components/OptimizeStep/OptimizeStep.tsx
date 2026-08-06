@@ -10,7 +10,11 @@ import {
   NavigateNextIcon,
   Typography,
 } from '@/lib/material';
-import type { AnalysisResult, SuggestionItem } from '@/services/resumeBuilder.service';
+import type {
+  AnalysisResult,
+  RecheckResult,
+  SuggestionItem,
+} from '@/services/resumeBuilder.service';
 
 import {
   RESUME_SECTIONS,
@@ -50,7 +54,9 @@ import {
   OptimizeLayout,
   OptimizeMain,
   OptimizeShell,
+  PreviewColumn,
   PreviewPanel,
+  PreviewResumeScroll,
   ScoreStrip,
   SectionNav,
   SectionNavButton,
@@ -66,6 +72,8 @@ interface OptimizeStepProps {
   editedContent: string;
   jobDescription?: string;
   preferredSkills?: string[];
+  /** Server recheck after Apply All — keeps Optimize strip aligned with Export. */
+  recheckResult?: RecheckResult | null;
   saving: boolean;
   suggestions: SuggestionItem[];
   targetRole: string;
@@ -87,6 +95,7 @@ export function OptimizeStep({
   editedContent,
   jobDescription = '',
   preferredSkills = [],
+  recheckResult = null,
   saving,
   suggestions,
   targetRole,
@@ -120,29 +129,6 @@ export function OptimizeStep({
 
   const [localOverrides, setLocalOverrides] = useState<SuggestionItem[]>([]);
   const skillBundleServerIdsRef = useRef<number[]>([]);
-
-  const handlePrint = () => {
-    const node = previewRef.current;
-    if (!node) return;
-
-    const printWindow = window.open('', '_blank', 'noopener,noreferrer,width=900,height=1000');
-    if (!printWindow) {
-      window.print();
-      return;
-    }
-
-    printWindow.document.write(`<!doctype html><html><head><title>${
-      draft.fullName || 'Resume'
-    }</title>
-      <style>
-        body { margin: 0; font-family: Segoe UI, Arial, sans-serif; background: #fff; }
-        * { box-sizing: border-box; }
-      </style>
-      </head><body>${node.innerHTML}</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  };
 
   // Re-parse once per analysis into the app's structured default draft.
   useEffect(() => {
@@ -377,8 +363,10 @@ export function OptimizeStep({
     appliedCount,
     highAppliedCount,
   });
-  // Prefer server recheck score when it exceeds the local estimate (after Apply).
-  const improvedScore = Math.max(estimatedScore, analysis?.atsScore ?? 0);
+  void recheckResult;
+  // Optimize strip is the source of truth for uplift — Export must show the same number.
+  // Do not prefer server recheck here (its optimize floor was jumping 66 → 76).
+  const improvedScore = estimatedScore;
   const scoreDelta = Math.max(0, improvedScore - currentScore);
   const activeMeta = RESUME_SECTIONS.find((section) => section.id === activeSection);
   const isSentenceSection = activeSection === 'experience' || activeSection === 'projects';
@@ -496,7 +484,13 @@ export function OptimizeStep({
     const appliedLocals: SuggestionItem[] = [];
     const serverIds: number[] = [];
 
-    for (const suggestion of pendingSuggestions) {
+    // HIGH impact first so each section lands its biggest wins before softer edits.
+    const ordered = [...pendingSuggestions].sort((a, b) => {
+      const rank = (impact: string) => (/high/i.test(impact) ? 0 : /medium/i.test(impact) ? 1 : 2);
+      return rank(a.impact) - rank(b.impact);
+    });
+
+    for (const suggestion of ordered) {
       const sectionId = normalizeSuggestionCategory(suggestion.category);
 
       if (sectionId === 'skills') {
@@ -533,20 +527,35 @@ export function OptimizeStep({
     const serialized = commitAppliedDraft(next);
     setSelectedSuggestionId(null);
 
-    if (appliedLocals.length > 0) {
-      setLocalOverrides((prev) => {
-        const overrideIds = new Set(appliedLocals.map((item) => item.id));
-        const rest = prev.filter((item) => !overrideIds.has(item.id));
-        return [...rest, ...appliedLocals.map((item) => ({ ...item, status: 'APPLIED' as const }))];
-      });
-    }
+    // Mark every applied suggestion locally so HIGH IMPACT cards flip to APPLIED per section immediately.
+    setLocalOverrides((prev) => {
+      const appliedIds = new Set([
+        ...appliedLocals.map((item) => item.id),
+        ...serverIds,
+        ...skillBundleServerIdsRef.current,
+      ]);
+      const rest = prev.filter((item) => !appliedIds.has(item.id));
+      const marked = ordered
+        .filter((item) => appliedIds.has(item.id) || isLocalSuggestionId(item.id))
+        .map((item) => ({ ...item, status: 'APPLIED' as const }));
+      // Also mark any server id we queued even if not in ordered (skill bundle extras).
+      const orderedIds = new Set(ordered.map((item) => item.id));
+      const extras = [...appliedIds]
+        .filter((id) => !orderedIds.has(id))
+        .map((id) => {
+          const fromPending = pendingSuggestions.find((item) => item.id === id);
+          return fromPending ? { ...fromPending, status: 'APPLIED' as const } : null;
+        })
+        .filter((item): item is SuggestionItem => item != null);
+      return [...rest, ...marked, ...extras];
+    });
 
     const bundleIds = skillBundleServerIdsRef.current;
     const allServerIds = Array.from(new Set([...serverIds, ...bundleIds]));
 
     if (allServerIds.length > 0 && serialized) {
       onApplyAllSuggestions(allServerIds, serialized);
-    } else if (serialized && appliedLocals.length > 0) {
+    } else if (serialized && (appliedLocals.length > 0 || ordered.length > 0)) {
       onApplyAllSuggestions([], serialized);
     }
   };
@@ -636,7 +645,6 @@ export function OptimizeStep({
 
         <OptimizeLayout>
           <SectionNav>
-            <Typography className="nav-title">Sections</Typography>
             {RESUME_SECTIONS.map((section) => {
               const count = suggestionsBySection[section.id].length;
               return (
@@ -847,6 +855,44 @@ export function OptimizeStep({
             </EditorFooterBar>
           </EditorCard>
         </OptimizeLayout>
+      </OptimizeMain>
+
+      <PreviewColumn>
+        <PreviewPanel>
+          <Box className="preview-header">
+            <Box>
+              <Typography className="preview-title">Live Resume Preview</Typography>
+              <Typography className="preview-meta">
+                {template === 'original'
+                  ? 'Default template (your resume content)'
+                  : `Theme: ${RESUME_TEMPLATES.find((item) => item.id === template)?.label}`}
+              </Typography>
+            </Box>
+          </Box>
+
+          <TemplatePicker>
+            {RESUME_TEMPLATES.map((item) => (
+              <TemplateOption
+                key={item.id}
+                type="button"
+                active={template === item.id}
+                onClick={() => onTemplateChange(item.id)}
+              >
+                <span className="label">{item.label}</span>
+                <span className="desc">{item.description}</span>
+              </TemplateOption>
+            ))}
+          </TemplatePicker>
+
+          <PreviewResumeScroll>
+            <ResumeTemplatePreview
+              ref={previewRef}
+              draft={draft}
+              template={template}
+              targetRole={targetRole || analysis?.targetRole || ''}
+            />
+          </PreviewResumeScroll>
+        </PreviewPanel>
 
         <ScoreStrip>
           <Box>
@@ -874,59 +920,22 @@ export function OptimizeStep({
           <Box>
             <Typography className="title">Ready for the final ATS boost?</Typography>
             <Typography className="text">
-              Continue to Export to run a real ATS recheck. The estimate above updates as you apply
-              JD skills and suggestions.
+              Export shows the same ATS score as above after your edits.
             </Typography>
           </Box>
           <Button
             startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
             onClick={() => {
-              // Flush latest editor draft so Export recheck uses the improved resume.
+              // Flush latest editor draft + ATS so Export shows the same score.
               pushDraftToParent(draftRef.current);
+              onLiveAtsChange?.(improvedScore, liveSkillAnalysis);
               onExportStep();
             }}
           >
             Continue to Export
           </Button>
         </AiBanner>
-      </OptimizeMain>
-
-      <PreviewPanel>
-        <Box className="preview-header">
-          <Box>
-            <Typography className="preview-title">Live Resume Preview</Typography>
-            <Typography className="preview-meta">
-              {template === 'original'
-                ? 'Default template (your resume content)'
-                : `Theme: ${RESUME_TEMPLATES.find((item) => item.id === template)?.label}`}
-            </Typography>
-          </Box>
-          <Button size="small" variant="outline" onClick={handlePrint}>
-            Print preview
-          </Button>
-        </Box>
-
-        <TemplatePicker>
-          {RESUME_TEMPLATES.map((item) => (
-            <TemplateOption
-              key={item.id}
-              type="button"
-              active={template === item.id}
-              onClick={() => onTemplateChange(item.id)}
-            >
-              <span className="label">{item.label}</span>
-              <span className="desc">{item.description}</span>
-            </TemplateOption>
-          ))}
-        </TemplatePicker>
-
-        <ResumeTemplatePreview
-          ref={previewRef}
-          draft={draft}
-          template={template}
-          targetRole={targetRole || analysis?.targetRole || ''}
-        />
-      </PreviewPanel>
+      </PreviewColumn>
     </OptimizeShell>
   );
 }

@@ -42,9 +42,10 @@ export function SectionEditor({
   recommendedSkills = [],
   onChange,
 }: SectionEditorProps) {
+  // Scope editors to the active section so Experience only shows experience, etc.
   return (
     <SectionEditorShell>
-      <ContactEditor draft={draft} onChange={onChange} />
+      {section === 'summary' ? <ContactEditor draft={draft} onChange={onChange} /> : null}
 
       {section === 'skills' ? (
         <SkillsTextEditor draft={draft} recommendedSkills={recommendedSkills} onChange={onChange} />
@@ -64,7 +65,7 @@ export function SectionEditor({
         />
       )}
 
-      <CustomFieldsEditor draft={draft} onChange={onChange} />
+      {section === 'achievements' ? <CustomFieldsEditor draft={draft} onChange={onChange} /> : null}
     </SectionEditorShell>
   );
 }

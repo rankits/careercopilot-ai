@@ -98,18 +98,19 @@ export function serializeResumeDraft(draft: ResumeDraft): string {
     .map((field) => `${field.label}\n${field.value}`.trim())
     .join('\n\n');
 
+  // Clear section headers so parse + preview keep content under the right block.
   return (
     [
       draft.fullName,
       draft.role,
       contact,
-      draft.summary && `SUMMARY\n${draft.summary}`,
-      experienceText && `EXPERIENCE\n${experienceText}`,
-      draft.education && `EDUCATION\n${draft.education}`,
+      draft.summary && `PROFESSIONAL SUMMARY\n${draft.summary.trim()}`,
+      experienceText && `WORK EXPERIENCE\n${experienceText}`,
+      draft.education && `EDUCATION\n${draft.education.trim()}`,
       draft.skillsList.length > 0 && `SKILLS\n${draft.skillsList.join(', ')}`,
       projectsText && `PROJECTS\n${projectsText}`,
-      draft.certifications && `CERTIFICATIONS\n${draft.certifications}`,
-      draft.achievements && `ACHIEVEMENTS\n${draft.achievements}`,
+      draft.certifications && `CERTIFICATIONS\n${draft.certifications.trim()}`,
+      draft.achievements && `ACHIEVEMENTS\n${draft.achievements.trim()}`,
       customText && `ADDITIONAL\n${customText}`,
     ]
       .filter(Boolean)
@@ -210,7 +211,21 @@ function applyToEntryDetails(
   original: string,
   suggested: string,
 ): Array<ExperienceEntry | ProjectEntry> {
-  if (entries.length === 0) return entries;
+  const bullet = suggested.startsWith('-') ? suggested : `- ${suggested}`;
+
+  // HIGH IMPACT apply must never no-op when the section is still empty.
+  if (entries.length === 0) {
+    return [
+      {
+        id: newId(),
+        company: '',
+        title: '',
+        startDate: '',
+        endDate: '',
+        details: bullet,
+      },
+    ];
+  }
 
   const normOriginal = original ? normalizeSuggestionMatchText(original) : '';
 
