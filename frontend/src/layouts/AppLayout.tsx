@@ -14,6 +14,7 @@ import { CopilotSessionProvider } from '@/features/copilot';
 import { resumeService } from '@/features/resume/services/resume.service';
 import type { UploadedResumeVersion } from '@/features/resume/types/resume.types';
 import { useMediaQuery } from '@/lib/material';
+import { toTitleCase } from '@/lib/toTitleCase';
 
 export function AppLayout() {
   const isMobile = useMediaQuery('(max-width: 760px)');
@@ -43,7 +44,7 @@ export function AppLayout() {
 
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);
-  const userName = user?.name ?? user?.email ?? 'User';
+  const userName = user?.name ? toTitleCase(user.name) : (user?.email ?? 'User');
   const userRoleLabel = user?.role === 'admin' || user?.role === 'ADMIN' ? 'Admin' : undefined;
   const latestResume = uploadedResumes[0] ?? null;
 
@@ -85,8 +86,15 @@ export function AppLayout() {
           onDownloadLatestResume={() => {
             if (latestResume) void handleDownload(latestResume);
           }}
+          onLogoutClick={() => {
+            if (!isLoggingOut) {
+              void logout();
+            }
+          }}
           onOpenResumeVersions={() => setIsVersionsOpen(true)}
+          onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
           onVariantChange={setSidebarVariant}
+          userName={userName}
           variant={sidebarVariant}
         />
         <div className="content-shell">

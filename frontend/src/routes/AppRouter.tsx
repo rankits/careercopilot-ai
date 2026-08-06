@@ -1,11 +1,5 @@
 /* eslint-disable react-refresh/only-export-components -- router config and component share this module */
-import {
-  Navigate,
-  createBrowserRouter,
-  useLocation,
-  useRoutes,
-  type RouteObject,
-} from 'react-router-dom';
+import { createBrowserRouter, useRoutes, type RouteObject } from 'react-router-dom';
 
 import { App } from '@/app/App';
 import { ROUTES } from '@/constants/routes';
@@ -29,11 +23,6 @@ import {
   ProtectedRoute,
   RootRedirect,
 } from '@/routes/guards/AuthGuards';
-
-function LegacyForYouRedirect() {
-  const location = useLocation();
-  return <Navigate replace to={`${ROUTES.AI_MATCH}${location.search}${location.hash}`} />;
-}
 
 /** Shared route tree for the data router and for MemoryRouter-based tests. */
 export const appRouteObjects: RouteObject[] = [
@@ -59,7 +48,6 @@ export const appRouteObjects: RouteObject[] = [
           { path: ROUTES.JOB_FEED, element: <JobFeedPage /> },
           { path: ROUTES.JOB_DETAIL, element: <JobDetailPage /> },
           { path: ROUTES.AI_MATCH, element: <AiMatchPage /> },
-          { path: '/for-you', element: <LegacyForYouRedirect /> },
           { path: ROUTES.SAVED_JOBS, element: <SavedJobsPage /> },
           { path: ROUTES.APPLICATIONS, element: <ApplicationsPage /> },
           { path: ROUTES.SAVED_RESUMES, element: <SavedResumesPage /> },

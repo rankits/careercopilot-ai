@@ -1,3 +1,5 @@
+import { Link as RouterLink } from 'react-router-dom';
+
 import { Box, styled } from '@/lib/material';
 import { colorTokens, shadows, spacing } from '@/tokens';
 
@@ -6,50 +8,75 @@ export const HeaderRoot = styled('header')({
   background: colorTokens.backgroundCard,
   borderBottom: `0.0625rem solid ${colorTokens.borderDefault}`,
   boxShadow: shadows.card,
-  display: 'grid',
+  containerType: 'inline-size',
+  display: 'flex',
   gap: spacing[4],
-  gridTemplateColumns: 'minmax(16rem, 30rem) 1fr',
   height: '4.5rem',
+  minWidth: 0,
+  overflow: 'hidden',
   padding: `${spacing[2]} ${spacing[8]}`,
+  width: '100%',
 
   '@media (max-width: 42rem)': {
     gap: spacing[2],
-    gridTemplateColumns: 'auto minmax(0, 1fr) auto',
-    padding: `${spacing[2]} ${spacing[3]}`,
+    padding: `${spacing[2]} ${spacing[4]}`,
+  },
+
+  /* Content area can be narrow while the viewport is still "desktop" (open sidebar). */
+  '@container (max-width: 48rem)': {
+    gap: spacing[2],
+    paddingInline: spacing[3],
+
+    '& .header-user-meta, & .header-user-chevron': {
+      display: 'none',
+    },
   },
 });
 
-export const MobileLogo = styled('img')({
+export const MobileLogoLink = styled(RouterLink)({
   display: 'none',
+  flex: '0 0 auto',
   height: spacing[10],
-  objectFit: 'contain',
+  lineHeight: 0,
+  textDecoration: 'none',
   width: spacing[10],
 
-  '@media (max-width: 42rem)': {
+  '& img': {
+    display: 'block',
+    height: '100%',
+    objectFit: 'contain',
+    width: '100%',
+  },
+
+  '@media (max-width: 47.5rem)': {
     display: 'block',
   },
 });
 
 export const SearchWrap = styled(Box)({
+  flex: '1 1 auto',
+  maxWidth: '32rem',
   minWidth: 0,
 });
 
 export const HeaderActions = styled(Box)({
   alignItems: 'center',
   display: 'flex',
+  flex: '0 0 auto',
   gap: spacing[4],
   justifyContent: 'flex-end',
+  marginLeft: 'auto',
   minWidth: 0,
 
   '@media (max-width: 56rem)': {
     gap: spacing[2],
+
+    '& .header-user-meta, & .header-user-chevron': {
+      display: 'none',
+    },
   },
 
   '@media (max-width: 42rem)': {
     gap: spacing[1],
-
-    '& [aria-label="User menu"] > div:nth-of-type(2)': {
-      display: 'none',
-    },
   },
 });
