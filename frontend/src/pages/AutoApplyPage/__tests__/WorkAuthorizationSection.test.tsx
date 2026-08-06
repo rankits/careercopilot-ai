@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
 import {
   useApplicationAnswers,
   useUpsertApplicationAnswer,
@@ -13,8 +14,8 @@ import {
   useUpsertCandidateProfile,
 } from '@/features/auto-apply/hooks/useCandidateProfile';
 
-import { WorkAuthorizationSection } from '../WorkAuthorizationSection';
 import { SetupDirtyProvider } from '../SetupDirtyContext';
+import { WorkAuthorizationSection } from '../WorkAuthorizationSection';
 
 vi.mock('@/features/auto-apply/hooks/useApplicationAnswers');
 vi.mock('@/features/auto-apply/hooks/useCandidateProfile');

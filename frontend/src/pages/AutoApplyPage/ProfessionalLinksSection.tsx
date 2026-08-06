@@ -2,15 +2,17 @@ import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
+
 import {
   useCandidateProfile,
   useUpsertCandidateProfile,
 } from '@/features/auto-apply/hooks/useCandidateProfile';
+
 import { Box, CircularProgress, Paper, TextField } from '@/lib/material';
 
-import { SetupSectionHeading } from './SetupSectionHeading';
 import { useSetupDirty } from './SetupDirtyContext';
 import { isValidHttpUrl } from './setupFormUtils';
+import { SetupSectionHeading } from './SetupSectionHeading';
 
 type FieldErrors = Partial<Record<'linkedin' | 'github' | 'portfolio', string>>;
 

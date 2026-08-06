@@ -1,6 +1,8 @@
 import { useState, type KeyboardEvent } from 'react';
 
 import { Button } from '@/components/atoms/Button';
+
+import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 import {
   Box,
   Chip,
@@ -10,7 +12,6 @@ import {
   Typography,
 } from '@/lib/material';
 
-import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 
 export interface ChipListEditorProps {
   id: string;

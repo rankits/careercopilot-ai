@@ -1,5 +1,4 @@
 import { ROUTES } from '@/constants/routes';
-
 import type { SetupSectionId } from '@/features/auto-apply/types/autoApply.types';
 
 export type AutoApplyTabId =

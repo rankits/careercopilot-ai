@@ -11,10 +11,11 @@ import {
   useResumeVersions,
   useUpdateResumeVersion,
 } from '@/features/auto-apply/hooks/useResumeVersions';
-import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
+
 
 import { ROUTES } from '@/constants/routes';
 import { hasAuthSession } from '@/features/auth/utils/authSession';
+import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
 import {
   Alert,
   Box,
