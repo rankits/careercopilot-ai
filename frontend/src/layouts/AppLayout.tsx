@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import type { SidebarVariant } from '@/components/organisms/Sidebar/interfaces';
@@ -23,6 +23,8 @@ export function AppLayout() {
   const { showToast } = useToast();
   const [sidebarVariant, setSidebarVariant] = useState<SidebarVariant>('open');
   const [uploadedResumes, setUploadedResumes] = useState<UploadedResumeVersion[]>([]);
+  const [resumesLoaded, setResumesLoaded] = useState(false);
+  const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
   const activeItemId =
@@ -49,17 +51,28 @@ export function AppLayout() {
   const latestResume = uploadedResumes[0] ?? null;
 
   const refreshUploadedResumes = useCallback(async () => {
+    setIsLoadingResumes(true);
     try {
       const resumes = await resumeService.listResumes();
       setUploadedResumes(resumes);
+      setResumesLoaded(true);
+      return resumes;
     } catch {
       setUploadedResumes([]);
+      setResumesLoaded(true);
+      return [];
+    } finally {
+      setIsLoadingResumes(false);
     }
   }, []);
 
-  useEffect(() => {
-    void refreshUploadedResumes();
-  }, [refreshUploadedResumes, pathname]);
+  const ensureUploadedResumesLoaded = useCallback(async () => {
+    if (resumesLoaded) {
+      return uploadedResumes;
+    }
+
+    return refreshUploadedResumes();
+  }, [refreshUploadedResumes, resumesLoaded, uploadedResumes]);
 
   const handleDownload = async (resume: UploadedResumeVersion) => {
     setDownloadingId(resume.id);
@@ -75,25 +88,46 @@ export function AppLayout() {
     }
   };
 
+  const handleDownloadLatestResume = () => {
+    void (async () => {
+      const resumes = await ensureUploadedResumesLoaded();
+      const latest = resumes[0];
+
+      if (!latest) {
+        showToast({
+          message: 'No resume uploaded yet. Add one from Edit Profile.',
+          severity: 'info',
+        });
+        return;
+      }
+
+      await handleDownload(latest);
+    })();
+  };
+
+  const handleOpenResumeVersions = () => {
+    setIsVersionsOpen(true);
+    void ensureUploadedResumesLoaded();
+  };
+
   return (
     <CopilotSessionProvider>
       <div className="app-shell">
         <Sidebar
           activeItemId={activeItemId}
           isDownloadingLatestResume={Boolean(latestResume && downloadingId === latestResume.id)}
-          latestResumeName={latestResume?.originalName ?? null}
+          latestResumeName={resumesLoaded ? (latestResume?.originalName ?? null) : null}
           mobileMode={isMobile ? 'bottomNav' : undefined}
-          onDownloadLatestResume={() => {
-            if (latestResume) void handleDownload(latestResume);
-          }}
+          onDownloadLatestResume={handleDownloadLatestResume}
           onLogoutClick={() => {
             if (!isLoggingOut) {
               void logout();
             }
           }}
-          onOpenResumeVersions={() => setIsVersionsOpen(true)}
+          onOpenResumeVersions={handleOpenResumeVersions}
           onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
           onVariantChange={setSidebarVariant}
+          resumeListLoaded={resumesLoaded}
           userName={userName}
           variant={sidebarVariant}
         />
@@ -118,6 +152,7 @@ export function AppLayout() {
 
       <ResumeVersionsDialog
         downloadingId={downloadingId}
+        isLoading={isLoadingResumes}
         onClose={() => setIsVersionsOpen(false)}
         onDownload={(resume) => void handleDownload(resume)}
         open={isVersionsOpen}

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { useLocation, useParams } from 'react-router-dom';
 
+import { jobDetailQueryKey } from '@/features/jobs/hooks/useJobDetail';
 import { useAppSelector } from '@/hooks/redux';
 
 import { applicationsService } from '@/features/applications/services/applications.service';
@@ -28,7 +29,7 @@ export function useCopilotPageContext() {
   const jobQuery = useQuery({
     enabled: Boolean(jobId),
     queryFn: ({ signal }) => jobsService.getJob(jobId!, { signal }),
-    queryKey: ['copilot', 'job', jobId],
+    queryKey: jobDetailQueryKey(jobId ?? ''),
     staleTime: 60_000,
   });
 

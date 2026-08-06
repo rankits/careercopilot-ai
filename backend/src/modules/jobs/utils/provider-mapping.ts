@@ -69,6 +69,40 @@ export const isRemoteLocation = (location: string | undefined): boolean => {
   return /\b(remote|anywhere|worldwide|work from home|wfh)\b/i.test(location);
 };
 
+export const isHybridLocation = (location: string | undefined): boolean => {
+  if (!location) return false;
+  return /\bhybrid\b/i.test(location);
+};
+
+/** Resolve stored remoteType from location text + remote flag. */
+export const resolveRemoteType = (location: {
+  raw?: string;
+  isRemote?: boolean;
+}): 'REMOTE' | 'HYBRID' | 'ONSITE' => {
+  const raw = location.raw ?? '';
+  if (isHybridLocation(raw) || /\bhybrid\b/i.test(raw)) {
+    return 'HYBRID';
+  }
+  if (location.isRemote || isRemoteLocation(raw)) {
+    return 'REMOTE';
+  }
+  return 'ONSITE';
+};
+
+/** Normalize provider tags into employment_type values used by job search filters. */
+export const resolveEmploymentType = (
+  tags: ReadonlyArray<string> | null | undefined,
+): string | null => {
+  const haystack = (tags ?? []).join(' ').toLowerCase().replace(/[_-]+/g, ' ');
+
+  if (/\bintern(ship)?\b/.test(haystack)) return 'INTERNSHIP';
+  if (/\bpart\s*time\b/.test(haystack)) return 'PART_TIME';
+  if (/\bcontract\b/.test(haystack)) return 'CONTRACT';
+  if (/\bfull\s*time\b/.test(haystack)) return 'FULL_TIME';
+
+  return null;
+};
+
 export const uniqueTags = (...groups: Array<string[] | null | undefined>): string[] => {
   const values = groups
     .flatMap((group) => group ?? [])

@@ -27,6 +27,7 @@ describe('mapJobListDtoToCard', () => {
     expect(card.verified).toBe(true);
     expect(card.skills).toEqual(['Go', 'Postgres']);
     expect(card.tags).toContain('remote');
+    expect(card.salary).toBe('$100,000 - $140,000');
     expect(card.match).toBeUndefined();
     expect(card.isRecommended).toBeUndefined();
   });
