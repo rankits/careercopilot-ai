@@ -8,14 +8,14 @@ export const ExportLayout = styled(Box)({
   alignItems: 'start',
   minWidth: 0,
   overflowX: 'hidden',
-  padding: `${spacing[4]} ${spacing[6]} ${spacing[6]}`,
+  padding: 0,
   width: '100%',
   '@media (max-width: 1100px)': {
     gridTemplateColumns: '1fr',
   },
   '@media (max-width: 48rem)': {
     gap: spacing[3],
-    padding: `${spacing[3]} ${spacing[3]} ${spacing[5]}`,
+    padding: 0,
   },
 });
 

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import { forwardRef, type ReactNode } from 'react';
 
 import { InputAdornment, TextField, type TextFieldProps } from '@/lib/material';
 
@@ -17,28 +17,36 @@ export interface InputProps extends Omit<
   tone?: InputTone;
 }
 
-export function Input({
-  endAdornment,
-  errorMessage,
-  helperText,
-  inputVariant = 'outline',
-  size = 'medium',
-  startAdornment,
-  tone = 'default',
-  ...props
-}: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
+  {
+    endAdornment,
+    errorMessage,
+    helperText,
+    inputVariant = 'outline',
+    size = 'medium',
+    startAdornment,
+    tone = 'default',
+    ...props
+  },
+  ref,
+) {
   const resolvedTone: InputTone = errorMessage ? 'error' : tone;
   const inputLabelSlotProps = props.slotProps?.inputLabel;
+  const htmlInputSlotProps = props.slotProps?.htmlInput;
 
   return (
     <TextField
       {...props}
       error={Boolean(errorMessage)}
       helperText={errorMessage || helperText}
+      inputRef={ref}
       size={size}
       variant="outlined"
       slotProps={{
         ...props.slotProps,
+        htmlInput: {
+          ...(typeof htmlInputSlotProps === 'function' ? {} : htmlInputSlotProps),
+        },
         input: {
           endAdornment: endAdornment ? (
             <InputAdornment position="end">{endAdornment}</InputAdornment>
@@ -64,4 +72,4 @@ export function Input({
       })}
     />
   );
-}
+});

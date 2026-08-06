@@ -1,6 +1,7 @@
 import express from 'express';
 import {
   confirmProfileController,
+  deleteResumeController,
   downloadResumeController,
   getCandidateProfileController,
   getMyCandidateProfileController,
@@ -15,6 +16,7 @@ import {
   uploadResumeController,
 } from '@/modules/resumes/controllers/resume.controller.js';
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
+import { resumeProcessingRateLimiter } from '@/shared/middlewares/rateLimiter.js';
 import { requirePermission } from '@/shared/middlewares/rbac.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
 import { RESUME_PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
@@ -33,6 +35,7 @@ router.post(
   '/upload',
   authMiddleware,
   requirePermission(RESUME_PERMISSIONS.CREATE_OWN),
+  resumeProcessingRateLimiter,
   resumeUploadMiddleware,
   uploadResumeController,
 );
@@ -41,6 +44,13 @@ router.get(
   authMiddleware,
   requirePermission(RESUME_PERMISSIONS.READ_OWN),
   listResumesController,
+);
+router.delete(
+  '/:resumeId',
+  authMiddleware,
+  requirePermission(RESUME_PERMISSIONS.DELETE_OWN),
+  validateResource(resumeIdParamsSchema),
+  deleteResumeController,
 );
 router.get(
   '/profile/me',
@@ -101,6 +111,7 @@ router.post(
   '/:resumeId/parse',
   authMiddleware,
   requirePermission(RESUME_PERMISSIONS.UPDATE_OWN),
+  resumeProcessingRateLimiter,
   validateResource(resumeParseActionParamsSchema),
   startParseController,
 );
@@ -108,6 +119,7 @@ router.post(
   '/:resumeId/reparse',
   authMiddleware,
   requirePermission(RESUME_PERMISSIONS.UPDATE_OWN),
+  resumeProcessingRateLimiter,
   validateResource(resumeReparseSchema),
   reparseResumeController,
 );

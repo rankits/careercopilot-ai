@@ -1,13 +1,7 @@
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { DefineRoleStep } from './DefineRoleStep';
-
-vi.mock('@/services/resumeBuilder.service', () => ({
-  resumeBuilderService: {
-    getResumeSkillHints: vi.fn().mockResolvedValue(['Java', 'React']),
-  },
-}));
 
 describe('DefineRoleStep', () => {
   const props = {
@@ -22,6 +16,8 @@ describe('DefineRoleStep', () => {
       id: 'r1',
       originalName: 'resume.pdf',
       fileName: 'resume.pdf',
+      storedName: 'resume.pdf',
+      mimeType: 'application/pdf',
       sizeBytes: 1024,
       status: 'READY',
       createdAt: '2026-08-01T10:00:00.000Z',
@@ -42,22 +38,12 @@ describe('DefineRoleStep', () => {
     vi.clearAllMocks();
   });
 
-  it('renders role form and starts analysis', async () => {
+  it('renders role form without bottom Back/Next actions', () => {
     render(<DefineRoleStep {...props} />);
 
     expect(screen.getByDisplayValue('Java Developer')).toBeInTheDocument();
-    await waitFor(() => {
-      expect(screen.getByText(/JD skill preview/i)).toBeInTheDocument();
-    });
-    fireEvent.click(screen.getByRole('button', { name: /^Next$/i }));
-    expect(props.onStartAnalysis).toHaveBeenCalled();
-  });
-
-  it('blocks next and shows validation when JD is missing', () => {
-    render(<DefineRoleStep {...props} jobDescription="" />);
-
-    fireEvent.click(screen.getByRole('button', { name: /^Next$/i }));
-    expect(props.onStartAnalysis).not.toHaveBeenCalled();
-    expect(screen.getByText(/Job description is required/i)).toBeInTheDocument();
+    expect(screen.queryByText(/JD skill preview/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Next$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Back$/i })).not.toBeInTheDocument();
   });
 });

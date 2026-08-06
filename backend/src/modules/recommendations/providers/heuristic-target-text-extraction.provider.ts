@@ -2,6 +2,8 @@ import type { RecommendationExtractionProvider } from '@/modules/recommendations
 import type { ExtractedRecommendationContext } from '@/modules/recommendations/types/recommendations.types.js';
 
 const TITLE_PATTERNS: Array<[RegExp, string]> = [
+  [/\bangular\s+developer\b/i, 'Angular Developer'],
+  [/\breact\s+developer\b/i, 'React Developer'],
   [/\bbackend(?:\s+software)?\s+engineer\b/i, 'Backend Engineer'],
   [/\bfrontend(?:\s+software)?\s+engineer\b/i, 'Frontend Engineer'],
   [/\bfull[-\s]?stack(?:\s+software)?\s+engineer\b/i, 'Full Stack Engineer'],
@@ -11,6 +13,7 @@ const TITLE_PATTERNS: Array<[RegExp, string]> = [
   [/\bdata\s+engineer\b/i, 'Data Engineer'],
   [/\bproduct\s+manager\b/i, 'Product Manager'],
   [/\bengineering\s+manager\b/i, 'Engineering Manager'],
+  [/\b(?:software\s+)?developer\s+role\b/i, 'Software Developer'],
 ];
 
 const SKILL_PATTERNS: Array<[RegExp, string]> = [
@@ -111,28 +114,31 @@ const fallbackTitleFromSkills = (skills: readonly string[]): string[] => {
   return [];
 };
 
+export const extractHeuristicTargetContext = (text: string): ExtractedRecommendationContext => {
+  const sourceText = normalizeText(text);
+  const requiredSkills = uniqueMatches(sourceText, SKILL_PATTERNS);
+  const targetTitles = uniqueMatches(sourceText, TITLE_PATTERNS);
+
+  return {
+    targetTitles: targetTitles.length > 0 ? targetTitles : fallbackTitleFromSkills(requiredSkills),
+    relatedTitles: [],
+    requiredSkills,
+    preferredSkills: [],
+    industries: uniqueMatches(sourceText, INDUSTRY_PATTERNS),
+    locations: [],
+    remotePreference: remotePreferenceFrom(sourceText),
+    employmentTypes: employmentTypesFrom(sourceText),
+    salaryExpectation: salaryFrom(sourceText),
+    education: [],
+    certifications: [],
+    excludedCompanies: [],
+    excludedSkills: [],
+    sourceText,
+  };
+};
+
 export class HeuristicTargetTextExtractionProvider implements RecommendationExtractionProvider {
   async extractContextFromText(text: string): Promise<ExtractedRecommendationContext> {
-    const sourceText = normalizeText(text);
-    const requiredSkills = uniqueMatches(sourceText, SKILL_PATTERNS);
-    const targetTitles = uniqueMatches(sourceText, TITLE_PATTERNS);
-
-    return {
-      targetTitles:
-        targetTitles.length > 0 ? targetTitles : fallbackTitleFromSkills(requiredSkills),
-      relatedTitles: [],
-      requiredSkills,
-      preferredSkills: [],
-      industries: uniqueMatches(sourceText, INDUSTRY_PATTERNS),
-      locations: [],
-      remotePreference: remotePreferenceFrom(sourceText),
-      employmentTypes: employmentTypesFrom(sourceText),
-      salaryExpectation: salaryFrom(sourceText),
-      education: [],
-      certifications: [],
-      excludedCompanies: [],
-      excludedSkills: [],
-      sourceText,
-    };
+    return extractHeuristicTargetContext(text);
   }
 }

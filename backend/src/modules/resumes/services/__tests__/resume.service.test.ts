@@ -8,6 +8,7 @@ const {
   updateCandidateProfileMock,
   upsertCandidateProfileMock,
   listResumesMock,
+  deleteResumeMock,
 } = vi.hoisted(() => ({
   findResumeByIdMock: vi.fn(),
   findLatestExtractionMock: vi.fn(),
@@ -15,6 +16,7 @@ const {
   updateCandidateProfileMock: vi.fn(),
   upsertCandidateProfileMock: vi.fn(),
   listResumesMock: vi.fn(),
+  deleteResumeMock: vi.fn(),
 }));
 
 vi.mock('@/modules/resumes/repositories/resume.repository.js', () => ({
@@ -27,6 +29,7 @@ vi.mock('@/modules/resumes/repositories/resume.repository.js', () => ({
     updateCandidateProfile: updateCandidateProfileMock,
     upsertCandidateProfile: upsertCandidateProfileMock,
     listResumes: listResumesMock,
+    deleteResume: deleteResumeMock,
   },
 }));
 
@@ -58,11 +61,16 @@ vi.mock('@/modules/resumes/services/resume-processing.service.js', () => ({
   resumeProcessingService: { processUploadedResume: vi.fn() },
 }));
 
+const { deleteStorageMock } = vi.hoisted(() => ({
+  deleteStorageMock: vi.fn().mockResolvedValue(undefined),
+}));
+
 vi.mock('@/modules/resumes/storage/resume-storage.factory.js', () => ({
   createResumeStorage: vi.fn(() => ({
     store: vi
       .fn()
       .mockResolvedValue({ url: 'https://example.com/r.pdf', key: 'k', driver: 'LOCAL' }),
+    delete: deleteStorageMock,
   })),
 }));
 
@@ -331,5 +339,48 @@ describe('resumeService.listResumes', () => {
 
     expect(listResumesMock).toHaveBeenCalledWith(ownerId);
     expect(result).toBe(mockResumes);
+  });
+});
+
+describe('resumeService.deleteResume storage cleanup', () => {
+  describe('Given the caller owns the resume', () => {
+    describe('When deleteResume is called', () => {
+      it('Then it deletes the underlying storage object by the resume storageKey', async () => {
+        findResumeByIdMock.mockResolvedValue(baseResume);
+        deleteResumeMock.mockResolvedValue(undefined);
+
+        const result = await resumeService.deleteResume('resume-1', ownerId);
+
+        expect(deleteStorageMock).toHaveBeenCalledWith(baseResume.storageKey);
+        expect(deleteResumeMock).toHaveBeenCalledWith('resume-1');
+        expect(result).toEqual({ id: 'resume-1' });
+      });
+
+      it('Then a storage deletion failure does not stop the DB row from being deleted', async () => {
+        findResumeByIdMock.mockResolvedValue(baseResume);
+        deleteStorageMock.mockRejectedValueOnce(new Error('object already gone'));
+        deleteResumeMock.mockResolvedValue(undefined);
+
+        const result = await resumeService.deleteResume('resume-1', ownerId);
+
+        expect(deleteResumeMock).toHaveBeenCalledWith('resume-1');
+        expect(result).toEqual({ id: 'resume-1' });
+      });
+    });
+  });
+
+  describe('Given the resume belongs to a different principal', () => {
+    describe('When deleteResume is called', () => {
+      it('Then it rejects with 404 and never touches storage or the DB row', async () => {
+        findResumeByIdMock.mockResolvedValue(baseResume);
+
+        await expect(resumeService.deleteResume('resume-1', otherId)).rejects.toMatchObject({
+          statusCode: 404,
+          code: 'RESUME_NOT_FOUND',
+        });
+        expect(deleteStorageMock).not.toHaveBeenCalled();
+        expect(deleteResumeMock).not.toHaveBeenCalled();
+      });
+    });
   });
 });

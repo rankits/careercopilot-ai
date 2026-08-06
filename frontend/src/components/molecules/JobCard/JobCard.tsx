@@ -1,37 +1,45 @@
-import { useState } from 'react';
+import { useState, type MouseEvent } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 
-import { useCachedCompanyLogo } from '@/features/jobs/hooks/useCachedCompanyLogo';
-
+import { APP_ACTIONS, JOB_CARD_ARIA, JOB_CARD_COPY, JOB_UI } from '@/constants/ui';
 import {
   BookmarkBorderOutlinedIcon,
   BookmarkOutlinedIcon,
+  BlockOutlinedIcon,
   BusinessCenterOutlinedIcon,
-  ExpandMoreIcon,
+  DescriptionOutlinedIcon,
+  FlagOutlinedIcon,
   HistoryOutlinedIcon,
   LocationOnOutlinedIcon,
+  MenuItem,
+  MoreVertIcon,
   PersonOutlineIcon,
   SmartToyOutlinedIcon,
+  ThumbDownOutlinedIcon,
+  ThumbUpOutlinedIcon,
   Typography,
   WorkOutlineOutlinedIcon,
 } from '@/lib/material';
 
 import {
   Accent,
+  CardBody,
   CompanyLogo,
+  HeaderEnd,
+  HeaderRow,
   JobActions,
+  JobActionsMenu,
   JobCardRoot,
   JobDetails,
   JobMeta,
   MatchPill,
   MatchRing,
+  MainRow,
+  MoreActionsButton,
   OpenJobButton,
-  RecommendationDetails,
-  RecommendationDetailsGrid,
-  RecommendationDetailSkillGroup,
   RecommendationPill,
-  SaveButton,
+  saveActionButtonSx,
   SkillList,
   SkillPill,
   TitleRow,
@@ -65,8 +73,6 @@ export interface JobCardData {
   experience: string;
   experienceBand: string;
   logo: string;
-  /** Optional company logo image; falls back to `logo` initial. */
-  logoUrl?: string;
   location: string;
   /** Real recommendation score only — omit while mock/unwired. */
   match?: number;
@@ -112,24 +118,39 @@ export function JobCard({
   isMoreLikeThis = false,
 }: JobCardProps) {
   const showMatch = typeof job.match === 'number';
-  const showWiredActions = Boolean(
-    onApply || onSave || onDismiss || onMoreLikeThis || onLessLikeThis || onNotRelevant,
-  );
+  const showPrimaryActions = Boolean(onApply || onSave);
   const canApply = Boolean(job.applyUrl);
-  const { src: logoSrc, failed: logoFailed, onLogoError } = useCachedCompanyLogo(job.logoUrl);
-  const [detailsOpen, setDetailsOpen] = useState(false);
-  const showLogoImage = Boolean(logoSrc) && !logoFailed;
+  const [actionsMenuAnchor, setActionsMenuAnchor] = useState<HTMLElement | null>(null);
   const details = job.recommendationDetails;
-  const detailsId = `${toDomId(job.recommendationId ?? job.id ?? `${job.company}-${job.title}`)}-recommendation-details`;
+  const actionsMenuId = `${toDomId(job.recommendationId ?? job.id ?? `${job.company}-${job.title}`)}-actions`;
   const hasSkillGap = details?.skillGap
     ? Object.values(details.skillGap).some((values) => values.length > 0)
     : false;
   const hasDetails = Boolean(
     details && (details.summary || details.bullets.length > 0 || hasSkillGap),
   );
-  const showActions = showWiredActions || hasDetails;
+  const canOpenDetails = Boolean(onOpen && hasDetails);
+  const showOverflowMenu = Boolean(
+    onDismiss || onNotRelevant || onMoreLikeThis || onLessLikeThis || canOpenDetails,
+  );
+  const showHeaderEnd = showMatch || showOverflowMenu;
   const hasExperience = Boolean(job.experience.trim());
   const hasLocation = Boolean(job.location.trim());
+  const actionsMenuOpen = Boolean(actionsMenuAnchor);
+
+  const openActionsMenu = (event: MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    setActionsMenuAnchor(event.currentTarget);
+  };
+
+  const closeActionsMenu = () => {
+    setActionsMenuAnchor(null);
+  };
+
+  const runAction = (action: () => void) => {
+    closeActionsMenu();
+    action();
+  };
 
   return (
     <JobCardRoot
@@ -137,65 +158,205 @@ export function JobCard({
       sx={onOpen ? { cursor: 'pointer' } : undefined}
     >
       <Accent tone={job.accent} />
-      <CompanyLogo aria-label={`${job.company} logo`}>
-        {showLogoImage ? (
-          <img alt="" loading="lazy" onError={onLogoError} src={logoSrc} />
-        ) : (
-          job.logo || '?'
-        )}
-      </CompanyLogo>
+      <CardBody>
+        {job.isRecommended || showHeaderEnd ? (
+          <HeaderRow>
+            {job.isRecommended ? (
+              <RecommendationPill>
+                <SmartToyOutlinedIcon fontSize="small" />
+                {JOB_CARD_COPY.aiRecommended}
+              </RecommendationPill>
+            ) : (
+              <span />
+            )}
 
-      <JobDetails>
-        {job.isRecommended ? (
-          <RecommendationPill>
-            <SmartToyOutlinedIcon fontSize="small" />
-            AI Recommended
-          </RecommendationPill>
+            {showHeaderEnd ? (
+              <HeaderEnd>
+                {showMatch ? (
+                  <MatchPill aria-label={JOB_CARD_ARIA.match(job.match, job.matchSubtitle)}>
+                    {job.match}
+                    {JOB_UI.MATCH_SUFFIX}
+                    <MatchRing aria-hidden="true" />
+                  </MatchPill>
+                ) : null}
+                {showOverflowMenu ? (
+                  <>
+                    <MoreActionsButton
+                      aria-controls={actionsMenuOpen ? actionsMenuId : undefined}
+                      aria-expanded={actionsMenuOpen}
+                      aria-haspopup="menu"
+                      aria-label={`More actions for ${job.title}`}
+                      data-action="more"
+                      onClick={openActionsMenu}
+                    >
+                      <MoreVertIcon fontSize="small" />
+                    </MoreActionsButton>
+                    <JobActionsMenu
+                      anchorEl={actionsMenuAnchor}
+                      anchorOrigin={{ horizontal: 'right', vertical: 'bottom' }}
+                      id={actionsMenuId}
+                      onClick={(event) => event.stopPropagation()}
+                      onClose={closeActionsMenu}
+                      open={actionsMenuOpen}
+                      transformOrigin={{ horizontal: 'right', vertical: 'top' }}
+                    >
+                      {onMoreLikeThis ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.moreLikeThis(isMoreLikeThis, job.title)}
+                          aria-pressed={isMoreLikeThis}
+                          disabled={isMoreLikeThis}
+                          onClick={() => runAction(() => onMoreLikeThis(job))}
+                        >
+                          <ThumbUpOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.moreLikeThis}
+                        </MenuItem>
+                      ) : null}
+                      {onLessLikeThis ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.lessLikeThis(job.title)}
+                          onClick={() => runAction(() => onLessLikeThis(job))}
+                        >
+                          <ThumbDownOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.lessLikeThis}
+                        </MenuItem>
+                      ) : null}
+                      {onNotRelevant ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.notRelevant(job.title)}
+                          onClick={() => runAction(() => onNotRelevant(job))}
+                        >
+                          <BlockOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.notRelevant}
+                        </MenuItem>
+                      ) : null}
+                      {onDismiss ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.dismiss(job.title)}
+                          onClick={() => runAction(() => onDismiss(job))}
+                        >
+                          <FlagOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.dismiss}
+                        </MenuItem>
+                      ) : null}
+                      {canOpenDetails ? (
+                        <MenuItem
+                          aria-label={JOB_CARD_ARIA.details(job.title)}
+                          data-action="details"
+                          onClick={() => runAction(() => onOpen?.(job))}
+                        >
+                          <DescriptionOutlinedIcon fontSize="small" />
+                          {JOB_CARD_COPY.details}
+                        </MenuItem>
+                      ) : null}
+                    </JobActionsMenu>
+                  </>
+                ) : null}
+              </HeaderEnd>
+            ) : null}
+          </HeaderRow>
         ) : null}
 
-        <TitleRow>
-          <div>
-            <Typography component="h2">
-              {onOpen ? (
-                <OpenJobButton
-                  aria-label={`Open ${job.title} at ${job.company}`}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    onOpen(job);
-                  }}
-                  type="button"
-                >
-                  {job.title}
-                </OpenJobButton>
-              ) : (
-                job.title
-              )}
-            </Typography>
-            <Typography component="p">{job.company}</Typography>
-            {job.matchSubtitle ? <Typography component="p">{job.matchSubtitle}</Typography> : null}
-          </div>
-          {job.verified ? <VerifiedIcon fontSize="small" aria-label="Verified company" /> : null}
-        </TitleRow>
+        <MainRow>
+          <CompanyLogo aria-label={JOB_CARD_ARIA.companyLogo(job.company)}>
+            {job.logo || '?'}
+          </CompanyLogo>
+
+          <JobDetails>
+            <TitleRow>
+              <div>
+                <Typography component="h2">
+                  {onOpen ? (
+                    <OpenJobButton
+                      aria-label={JOB_CARD_ARIA.open(job.title, job.company)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onOpen(job);
+                      }}
+                      type="button"
+                    >
+                      {job.title}
+                    </OpenJobButton>
+                  ) : (
+                    job.title
+                  )}
+                </Typography>
+                <Typography component="p">{job.company}</Typography>
+                {job.matchSubtitle ? (
+                  <Typography component="p">{job.matchSubtitle}</Typography>
+                ) : null}
+              </div>
+              {job.verified ? (
+                <VerifiedIcon fontSize="small" aria-label={JOB_CARD_COPY.verifiedCompany} />
+              ) : null}
+            </TitleRow>
+          </JobDetails>
+        </MainRow>
+
+        {showPrimaryActions ? (
+          <JobActions>
+            {onSave ? (
+              <Button
+                data-action="save"
+                aria-label={JOB_CARD_ARIA.save(isSaved, job.title)}
+                aria-pressed={isSaved}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  onSave(job);
+                }}
+                size="small"
+                startIcon={
+                  isSaved ? (
+                    <BookmarkOutlinedIcon fontSize="small" />
+                  ) : (
+                    <BookmarkBorderOutlinedIcon fontSize="small" />
+                  )
+                }
+                sx={saveActionButtonSx}
+                variant="outline"
+              >
+                <span className="save-action-label">
+                  {isSaved ? APP_ACTIONS.SAVED : APP_ACTIONS.SAVE_FOR_LATER}
+                </span>
+              </Button>
+            ) : null}
+            {onApply ? (
+              <Button
+                data-action="apply"
+                aria-label={JOB_CARD_ARIA.apply(job.title, canApply)}
+                disabled={!canApply}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  if (!canApply) return;
+                  onApply(job);
+                }}
+                size="small"
+                variant="outline"
+              >
+                {APP_ACTIONS.APPLY_NOW}
+              </Button>
+            ) : null}
+          </JobActions>
+        ) : null}
 
         <JobMeta>
           <span>
-            <BusinessCenterOutlinedIcon fontSize="small" /> {job.salary}
+            <BusinessCenterOutlinedIcon fontSize="inherit" /> {job.salary}
           </span>
           {hasExperience ? (
             <span>
-              <PersonOutlineIcon fontSize="small" /> {job.experience}
+              <PersonOutlineIcon fontSize="inherit" /> {job.experience}
             </span>
           ) : null}
           <span>
-            <WorkOutlineOutlinedIcon fontSize="small" /> {job.type}
+            <WorkOutlineOutlinedIcon fontSize="inherit" /> {job.type}
           </span>
           {hasLocation ? (
             <span>
-              <LocationOnOutlinedIcon fontSize="small" /> {job.location}
+              <LocationOnOutlinedIcon fontSize="inherit" /> {job.location}
             </span>
           ) : null}
           <span>
-            <HistoryOutlinedIcon fontSize="small" /> {job.postedAt}
+            <HistoryOutlinedIcon fontSize="inherit" /> {job.postedAt}
           </span>
         </JobMeta>
 
@@ -206,184 +367,7 @@ export function JobCard({
             ))}
           </SkillList>
         ) : null}
-      </JobDetails>
-
-      {showMatch || showActions ? (
-        <JobActions>
-          {showMatch ? (
-            <MatchPill
-              aria-label={`${job.match} percent match${job.matchSubtitle ? `, ${job.matchSubtitle}` : ''}`}
-            >
-              {job.match}% Match
-              <MatchRing aria-hidden="true" />
-            </MatchPill>
-          ) : null}
-          {onDismiss ? (
-            <Button
-              aria-label={`Dismiss ${job.title} recommendation`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onDismiss(job);
-              }}
-              size="small"
-              variant="ghost"
-            >
-              Dismiss
-            </Button>
-          ) : null}
-          {onNotRelevant ? (
-            <Button
-              aria-label={`Mark ${job.title} as not relevant`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onNotRelevant(job);
-              }}
-              size="small"
-              variant="ghost"
-            >
-              Not relevant
-            </Button>
-          ) : null}
-          {onMoreLikeThis ? (
-            <Button
-              aria-label={
-                isMoreLikeThis
-                  ? `More jobs like ${job.title} selected`
-                  : `Show more jobs like ${job.title}`
-              }
-              aria-pressed={isMoreLikeThis}
-              disabled={isMoreLikeThis}
-              onClick={(event) => {
-                event.stopPropagation();
-                onMoreLikeThis(job);
-              }}
-              size="small"
-              variant="ghost"
-            >
-              More like this
-            </Button>
-          ) : null}
-          {onLessLikeThis ? (
-            <Button
-              aria-label={`Show fewer jobs like ${job.title}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                onLessLikeThis(job);
-              }}
-              size="small"
-              variant="ghost"
-            >
-              Less like this
-            </Button>
-          ) : null}
-          {onSave ? (
-            <SaveButton
-              aria-label={isSaved ? `Unsave ${job.title}` : `Save ${job.title}`}
-              aria-pressed={isSaved}
-              onClick={(event) => {
-                event.stopPropagation();
-                onSave(job);
-              }}
-            >
-              {isSaved ? (
-                <BookmarkOutlinedIcon fontSize="small" />
-              ) : (
-                <BookmarkBorderOutlinedIcon fontSize="small" />
-              )}
-            </SaveButton>
-          ) : null}
-          {onApply ? (
-            <Button
-              aria-label={canApply ? `Apply to ${job.title}` : `Apply to ${job.title} unavailable`}
-              disabled={!canApply}
-              onClick={(event) => {
-                event.stopPropagation();
-                if (!canApply) return;
-                onApply(job);
-              }}
-              size="small"
-              variant="outline"
-            >
-              Apply Now
-            </Button>
-          ) : null}
-          {hasDetails ? (
-            <Button
-              aria-controls={detailsId}
-              aria-expanded={detailsOpen}
-              aria-label={`${detailsOpen ? 'Hide' : 'Show'} details for ${job.title}`}
-              onClick={(event) => {
-                event.stopPropagation();
-                setDetailsOpen((open) => !open);
-              }}
-              size="small"
-              startIcon={
-                <ExpandMoreIcon
-                  fontSize="small"
-                  sx={{ transform: detailsOpen ? 'rotate(180deg)' : undefined }}
-                />
-              }
-              variant="ghost"
-            >
-              Details
-            </Button>
-          ) : null}
-        </JobActions>
-      ) : null}
-
-      {hasDetails && detailsOpen ? (
-        <RecommendationDetails
-          aria-label={`${job.title} recommendation details`}
-          id={detailsId}
-          role="region"
-        >
-          {details?.summary ? <Typography component="p">{details.summary}</Typography> : null}
-
-          {details?.bullets.length ? (
-            <RecommendationDetailsGrid>
-              {details.bullets.slice(0, 3).map((bullet) => (
-                <div key={`${bullet.label}-${bullet.message}`}>
-                  <Typography component="h3">
-                    {bullet.label}
-                    {typeof bullet.score === 'number'
-                      ? ` - ${Math.round(bullet.score * 100)}%`
-                      : ''}
-                  </Typography>
-                  <Typography component="p">{bullet.message}</Typography>
-                  {bullet.evidence.length ? (
-                    <Typography component="p">{bullet.evidence.slice(0, 2).join(', ')}</Typography>
-                  ) : null}
-                </div>
-              ))}
-            </RecommendationDetailsGrid>
-          ) : null}
-
-          {hasSkillGap && details?.skillGap ? (
-            <RecommendationDetailsGrid>
-              {(
-                [
-                  ['Matched', details.skillGap.exact],
-                  ['Alias', details.skillGap.alias],
-                  ['Related', details.skillGap.related],
-                  ['Transferable', details.skillGap.transferable],
-                  ['Missing', details.skillGap.missing],
-                ] satisfies Array<[string, string[]]>
-              ).map(([label, values]) =>
-                Array.isArray(values) && values.length > 0 ? (
-                  <RecommendationDetailSkillGroup key={label}>
-                    <Typography component="h3">{label}</Typography>
-                    <div>
-                      {values.map((skill) => (
-                        <span key={`${label}-${skill}`}>{skill}</span>
-                      ))}
-                    </div>
-                  </RecommendationDetailSkillGroup>
-                ) : null,
-              )}
-            </RecommendationDetailsGrid>
-          ) : null}
-        </RecommendationDetails>
-      ) : null}
+      </CardBody>
     </JobCardRoot>
   );
 }

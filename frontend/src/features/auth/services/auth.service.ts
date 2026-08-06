@@ -4,6 +4,7 @@ import type {
   RegisterPayload,
   User,
 } from '@/features/auth/types/auth.types';
+import { AuthRequestError, getAuthErrorMessage } from '@/features/auth/utils/apiError';
 import { httpClient } from '@/services/httpClient';
 
 const normalizeUser = (user: User) => {
@@ -42,37 +43,15 @@ function parseAuthResponse(data: AuthApiResponse): AuthResponse {
   };
 }
 
-function getAuthErrorMessage(error: unknown, fallback: string): string {
-  if (
-    typeof error === 'object' &&
-    error !== null &&
-    'response' in error &&
-    typeof (error as { response?: { data?: { message?: string } } }).response?.data?.message ===
-      'string'
-  ) {
-    const message = (
-      error as { response: { data: { message: string } } }
-    ).response.data.message.trim();
-    if (message) return message;
-  }
-
-  if (
-    error instanceof Error &&
-    /network|timeout|failed to fetch|ECONNREFUSED/i.test(error.message)
-  ) {
-    return 'Unable to reach the server. Please try again.';
-  }
-
-  return fallback;
-}
-
 export const authService = {
   async register(payload: RegisterPayload): Promise<AuthResponse> {
     let data: AuthApiResponse;
     try {
       ({ data } = await httpClient.post<AuthApiResponse>('/auth/register', payload));
     } catch (error) {
-      throw new Error(getAuthErrorMessage(error, 'Unable to create account. Please try again.'));
+      throw new AuthRequestError(
+        getAuthErrorMessage(error, 'Unable to create your account. Please try again.'),
+      );
     }
     return parseAuthResponse(data);
   },
@@ -82,7 +61,7 @@ export const authService = {
     try {
       ({ data } = await httpClient.post<AuthApiResponse>('/auth/login', payload));
     } catch (error) {
-      throw new Error(getAuthErrorMessage(error, 'Unable to log in. Please try again.'));
+      throw new AuthRequestError(getAuthErrorMessage(error, 'Unable to log in. Please try again.'));
     }
     return parseAuthResponse(data);
   },

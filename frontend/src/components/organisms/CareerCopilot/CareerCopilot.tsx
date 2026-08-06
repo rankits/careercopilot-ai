@@ -9,6 +9,7 @@ import { useCopilotChatMutation } from '@/features/copilot/hooks/useCopilotChatM
 import { useCopilotPageContext } from '@/features/copilot/hooks/useCopilotPageContext';
 import { useCopilotSession } from '@/features/copilot/hooks/useCopilotSession';
 
+import { BRAND_NAME, CAREER_COPILOT_COPY } from '@/constants/ui';
 import { COPILOT_SUGGESTED_PROMPTS } from '@/features/copilot/types/copilot.types';
 import { Box, CircularProgress, useMediaQuery } from '@/lib/material';
 
@@ -64,8 +65,7 @@ export function CareerCopilot() {
       });
       addMessage({ role: 'assistant', text: result.reply });
     } catch (error) {
-      const errorText =
-        error instanceof Error ? error.message : 'Career Copilot is temporarily unavailable.';
+      const errorText = error instanceof Error ? error.message : CAREER_COPILOT_COPY.unavailable;
       setLastFailedMessage(message);
       addMessage({
         error: true,
@@ -83,11 +83,15 @@ export function CareerCopilot() {
             <SmartToyOutlinedIcon fontSize="small" />
           </ChatHeaderIcon>
           <Box>
-            <ChatHeaderTitle component="h2">Career Copilot</ChatHeaderTitle>
-            <ChatHeaderSubtitle>Context-aware career coach</ChatHeaderSubtitle>
+            <ChatHeaderTitle component="h2">{BRAND_NAME}</ChatHeaderTitle>
+            <ChatHeaderSubtitle>{CAREER_COPILOT_COPY.subtitle}</ChatHeaderSubtitle>
           </Box>
         </ChatHeaderMain>
-        <IconButton aria-label="Close Career Copilot" onClick={() => setIsOpen(false)} size="small">
+        <IconButton
+          aria-label={CAREER_COPILOT_COPY.closeAria}
+          onClick={() => setIsOpen(false)}
+          size="small"
+        >
           <CloseIcon fontSize="small" />
         </IconButton>
       </ChatHeader>
@@ -104,7 +108,7 @@ export function CareerCopilot() {
         ))}
 
         {!hasUserMessages ? (
-          <PromptChipGrid aria-label="Suggested prompts">
+          <PromptChipGrid aria-label={CAREER_COPILOT_COPY.suggestedPromptsAria}>
             {COPILOT_SUGGESTED_PROMPTS.map((prompt) => (
               <PromptChip
                 disabled={chatMutation.isPending}
@@ -121,7 +125,7 @@ export function CareerCopilot() {
         {chatMutation.isPending ? (
           <TypingRow aria-live="polite">
             <CircularProgress size={16} />
-            Career Copilot is thinking…
+            {CAREER_COPILOT_COPY.thinking}
           </TypingRow>
         ) : null}
 
@@ -135,7 +139,7 @@ export function CareerCopilot() {
               tone="primary"
               variant="outline"
             >
-              Retry last message
+              {CAREER_COPILOT_COPY.retryLastMessage}
             </Button>
           </RetryRow>
         ) : null}
@@ -158,7 +162,7 @@ export function CareerCopilot() {
     <>
       <CopilotFab
         aria-expanded={isOpen}
-        aria-label={isOpen ? 'Close Career Copilot' : 'Open Career Copilot'}
+        aria-label={isOpen ? CAREER_COPILOT_COPY.closeAria : CAREER_COPILOT_COPY.openAria}
         onClick={toggleOpen}
         type="button"
       >

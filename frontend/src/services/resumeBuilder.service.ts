@@ -16,6 +16,7 @@ export interface SkillAnalysis {
   matchedSkills: string[];
   missingSkills: string[];
   transferableSkills: string[];
+  additionalSkills?: string[];
   recommendedSkills: string[];
 }
 
@@ -174,6 +175,11 @@ export const resumeBuilderService = {
   async listResumes(): Promise<UploadedResume[]> {
     const res = await httpClient.get<{ data: UploadedResume[] }>(`${BASE}/resumes`);
     return unwrap(res) ?? [];
+  },
+
+  async deleteResume(resumeId: string): Promise<{ id: string }> {
+    const res = await httpClient.delete<{ data: { id: string } }>(`${BASE}/resumes/${resumeId}`);
+    return unwrap(res);
   },
 
   /**

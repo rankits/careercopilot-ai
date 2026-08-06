@@ -1,18 +1,22 @@
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import react from '@vitejs/plugin-react';
 import { defineConfig } from 'vitest/config';
+
+/** Directory of this config file — ESM-safe replacement for `__dirname`. */
+const configDir = fileURLToPath(new URL('.', import.meta.url));
 
 export default defineConfig({
   plugins: [react()],
   resolve: {
     alias: {
-      '@': path.resolve(__dirname, './src'),
-      '@components': path.resolve(__dirname, './src/components'),
-      '@core': path.resolve(__dirname, './src/core'),
-      '@hooks': path.resolve(__dirname, './src/hooks'),
-      '@lib': path.resolve(__dirname, './src/lib'),
-      '@styles': path.resolve(__dirname, './src/styles'),
+      '@': path.resolve(configDir, './src'),
+      '@components': path.resolve(configDir, './src/components'),
+      '@core': path.resolve(configDir, './src/core'),
+      '@hooks': path.resolve(configDir, './src/hooks'),
+      '@lib': path.resolve(configDir, './src/lib'),
+      '@styles': path.resolve(configDir, './src/styles'),
     },
   },
   test: {
@@ -57,7 +61,11 @@ export default defineConfig({
     },
     // Playwright specs live under e2e/ and must not be collected by Vitest.
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
-    // fileParallelism: false,
+    // Cap fork workers so Windows does not time out spawning jsdom pools
+    // under heavy parallel load ("Timeout waiting for worker to respond").
+    pool: 'forks',
+    maxWorkers: 2,
+    fileParallelism: true,
     globals: true,
     setupFiles: './src/test/setup.ts',
     // Page tests fill large forms under parallel suite load; default 5s is too tight on Windows CI.
