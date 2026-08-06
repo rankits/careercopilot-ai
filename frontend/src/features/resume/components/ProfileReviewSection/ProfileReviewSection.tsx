@@ -12,7 +12,6 @@ import {
   ExpandMoreIcon,
   Typography,
 } from '@/lib/material';
-import { spacing } from '@/tokens';
 
 import { ReviewFields, reviewSectionSx, StyledAccordion } from './styles';
 
@@ -53,28 +52,28 @@ export function ProfileReviewSection({
   return (
     <StyledAccordion disableGutters expanded={expanded} onChange={onToggle}>
       <AccordionSummary expandIcon={<ExpandMoreIcon />} sx={reviewSectionSx.summary}>
-        <Box alignItems="center" display="flex" gap={spacing[3]} minWidth={0} width="100%">
+        <Box sx={reviewSectionSx.summaryContent}>
           <Box sx={reviewSectionSx.icon}>{icon}</Box>
-          <Box minWidth={0}>
-            <Box alignItems="center" display="flex" flexWrap="wrap" gap={spacing[2]}>
-              <Typography fontWeight={700}>{title}</Typography>
+          <Box sx={reviewSectionSx.summaryCopy}>
+            <Box sx={reviewSectionSx.summaryTitleRow}>
+              <Typography component="h3" sx={reviewSectionSx.summaryTitle}>
+                {title}
+              </Typography>
               {badge ? (
                 <Chip color="primary" label={badge} size="small" variant="outlined" />
               ) : null}
+              <Typography
+                color={status.startsWith('0') ? 'error' : 'primary'}
+                component="span"
+                sx={reviewSectionSx.summaryStatus}
+              >
+                {status}
+              </Typography>
             </Box>
-            <Typography color="text.secondary" noWrap variant="caption">
+            <Typography color="text.secondary" sx={reviewSectionSx.summarySubtitle}>
               {subtitle}
             </Typography>
           </Box>
-          <Typography
-            color={status.startsWith('0') ? 'error' : 'primary'}
-            fontWeight={700}
-            ml="auto"
-            mr={spacing[2]}
-            variant="caption"
-          >
-            {status}
-          </Typography>
         </Box>
       </AccordionSummary>
       <AccordionDetails sx={reviewSectionSx.details}>

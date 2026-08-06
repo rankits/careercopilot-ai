@@ -173,7 +173,7 @@ describe('AppRouter routing flow', () => {
     expect(await screen.findByRole('heading', { name: /^resume builder$/i })).toBeInTheDocument();
   });
 
-  it('redirects authenticated users away from Login to Onboarding when profile is incomplete', async () => {
+  it('allows authenticated users with incomplete profiles to open Login', async () => {
     renderRoute(
       '/login',
       createStore({
@@ -185,12 +185,10 @@ describe('AppRouter routing flow', () => {
       }),
     );
 
-    expect(
-      await screen.findByRole('heading', { name: /let's build your professional profile/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
   });
 
-  it('redirects authenticated users away from Login to Job Feed when profile is complete', async () => {
+  it('allows authenticated users with complete profiles to open Login', async () => {
     renderRoute(
       '/login',
       createStore({
@@ -202,7 +200,7 @@ describe('AppRouter routing flow', () => {
       }),
     );
 
-    expect(await screen.findByRole('heading', { name: /^job feed$/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
   });
 
   it('allows users with completed profiles to revisit /profile to upload a new resume', async () => {

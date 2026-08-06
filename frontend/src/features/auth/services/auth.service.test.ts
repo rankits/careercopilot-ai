@@ -228,3 +228,107 @@ describe('authService logout', () => {
     await expect(authService.logout()).rejects.toBe(failure);
   });
 });
+
+describe('authService forgotPassword', () => {
+  beforeEach(() => {
+    postMock.mockReset();
+  });
+
+  it('posts the email and returns the API message', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        message: 'If an account with that email exists, a verification code has been sent.',
+        status: 'success',
+      },
+      status: 200,
+    });
+
+    await expect(
+      authService.forgotPassword({ email: '  Jane.Doe@example.com  ' }),
+    ).resolves.toEqual({
+      message: 'If an account with that email exists, a verification code has been sent.',
+      status: 'success',
+    });
+    expect(postMock).toHaveBeenCalledWith('/auth/forgot-password', {
+      email: 'jane.doe@example.com',
+    });
+  });
+
+  it('rejects when the API body status is error', async () => {
+    postMock.mockResolvedValue({
+      data: { message: 'Too many requests', status: 'error' },
+      status: 200,
+    });
+
+    await expect(authService.forgotPassword({ email: 'jane.doe@example.com' })).rejects.toThrow(
+      'Too many requests',
+    );
+  });
+
+  it('propagates forgot-password API failures', async () => {
+    postMock.mockRejectedValue(new Error('Request failed'));
+
+    await expect(authService.forgotPassword({ email: 'jane.doe@example.com' })).rejects.toThrow(
+      'Unable to send reset code. Please try again.',
+    );
+  });
+});
+
+describe('authService resetPassword', () => {
+  beforeEach(() => {
+    postMock.mockReset();
+  });
+
+  it('posts email, code, and new password', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        message: 'Password has been reset. Please sign in with your new password.',
+        status: 'success',
+      },
+      status: 200,
+    });
+
+    await expect(
+      authService.resetPassword({
+        code: '000000',
+        email: 'Jane.Doe@example.com',
+        newPassword: 'Str0ng!Passw0rd',
+      }),
+    ).resolves.toEqual({
+      message: 'Password has been reset. Please sign in with your new password.',
+      status: 'success',
+    });
+    expect(postMock).toHaveBeenCalledWith('/auth/reset-password', {
+      code: '000000',
+      email: 'jane.doe@example.com',
+      newPassword: 'Str0ng!Passw0rd',
+    });
+  });
+
+  it('rejects when the API body status is error', async () => {
+    postMock.mockResolvedValue({
+      data: { message: 'Invalid or expired code', status: 'error' },
+      status: 200,
+    });
+
+    await expect(
+      authService.resetPassword({
+        code: '000000',
+        email: 'jane.doe@example.com',
+        newPassword: 'Str0ng!Passw0rd',
+      }),
+    ).rejects.toThrow('Invalid or expired code');
+  });
+
+  it('propagates reset-password API failures', async () => {
+    postMock.mockRejectedValue(new Error('Request failed'));
+
+    await expect(
+      authService.resetPassword({
+        code: '000000',
+        email: 'jane.doe@example.com',
+        newPassword: 'Str0ng!Passw0rd',
+      }),
+    ).rejects.toThrow('Unable to reset password. Please try again.');
+  });
+});

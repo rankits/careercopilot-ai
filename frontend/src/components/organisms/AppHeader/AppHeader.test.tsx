@@ -1,19 +1,25 @@
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ReactElement } from 'react';
+import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { AppHeader } from './AppHeader';
 
+function renderHeader(ui: ReactElement = <AppHeader />) {
+  return render(<MemoryRouter>{ui}</MemoryRouter>);
+}
+
 describe('AppHeader', () => {
   it('renders search, notifications, and default user account summary', () => {
-    render(<AppHeader />);
+    renderHeader();
 
     expect(screen.getByRole('textbox', { name: /search/i })).toHaveAttribute(
       'placeholder',
       'Search jobs, companies, skills...',
     );
     expect(screen.queryByRole('button', { name: /upgrade to pro/i })).not.toBeInTheDocument();
-    expect(screen.getByAltText(/career copilot/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/career copilot/i)).toHaveAttribute('href', '/app');
     expect(screen.getByLabelText(/notifications/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /user menu/i })).toHaveTextContent('User');
     expect(screen.getByText('U')).toBeInTheDocument();
@@ -21,13 +27,13 @@ describe('AppHeader', () => {
   });
 
   it('shows first and second name initials when avatar image is missing', () => {
-    render(<AppHeader userName="Dimple Malviya" />);
+    renderHeader(<AppHeader userName="Dimple Malviya" />);
 
     expect(screen.getByText('DM')).toBeInTheDocument();
   });
 
   it('renders custom search, role, and avatar image values', () => {
-    render(
+    renderHeader(
       <AppHeader
         searchPlaceholder="Search roles"
         userAvatarUrl="/avatar.png"
@@ -54,7 +60,7 @@ describe('AppHeader', () => {
     const handleSettingsClick = vi.fn();
     const handleUserMenuClick = vi.fn();
 
-    render(
+    renderHeader(
       <AppHeader
         onLogoutClick={handleLogoutClick}
         onNotificationClick={handleNotificationClick}

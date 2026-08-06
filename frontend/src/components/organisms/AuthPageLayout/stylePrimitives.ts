@@ -54,11 +54,11 @@ export const borderedCardSurface = {
 } as const;
 
 export const authLayout = {
-  contentColumns: `minmax(0, 52fr) minmax(${sizing[30]}, 48fr)`,
+  contentColumns: `minmax(0, 52fr) minmax(0, 48fr)`,
   contentMaxWidth: sizing[100],
   formMaxWidth: sizing[38],
   mobileColumn: 'minmax(0, 1fr)',
-  registerColumns: `minmax(${sizing[30]}, 45fr) minmax(0, 55fr)`,
+  registerColumns: `minmax(0, 45fr) minmax(0, 55fr)`,
   viewportHeight: '100dvh',
 } as const;
 
@@ -88,5 +88,5 @@ export const createIconSurface = (
 
 export const createResponsiveColumns = (desktopColumns: string) => ({
   xs: authLayout.mobileColumn,
-  lg: desktopColumns,
+  md: desktopColumns,
 });

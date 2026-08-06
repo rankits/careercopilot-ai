@@ -1,7 +1,10 @@
 import type {
+  AuthMessageResponse,
   AuthResponse,
+  ForgotPasswordPayload,
   LoginPayload,
   RegisterPayload,
+  ResetPasswordPayload,
   User,
 } from '@/features/auth/types/auth.types';
 import { AuthRequestError, getAuthErrorMessage } from '@/features/auth/utils/apiError';
@@ -74,5 +77,69 @@ export const authService = {
           ? data.message
           : 'Logged out successfully',
     };
+  },
+
+  async forgotPassword(payload: ForgotPasswordPayload): Promise<AuthMessageResponse> {
+    try {
+      const { data, status } = await httpClient.post<AuthMessageResponse>('/auth/forgot-password', {
+        email: payload.email.trim().toLowerCase(),
+      });
+
+      if (status < 200 || status >= 300 || data.status === 'error') {
+        throw new AuthRequestError(
+          typeof data.message === 'string' && data.message.length > 0
+            ? data.message
+            : 'Unable to send reset code. Please try again.',
+        );
+      }
+
+      return {
+        message:
+          typeof data.message === 'string' && data.message.length > 0
+            ? data.message
+            : 'If an account with that email exists, a verification code has been sent.',
+        status: 'success',
+      };
+    } catch (error) {
+      if (error instanceof AuthRequestError) {
+        throw error;
+      }
+      throw new AuthRequestError(
+        getAuthErrorMessage(error, 'Unable to send reset code. Please try again.'),
+      );
+    }
+  },
+
+  async resetPassword(payload: ResetPasswordPayload): Promise<AuthMessageResponse> {
+    try {
+      const { data, status } = await httpClient.post<AuthMessageResponse>('/auth/reset-password', {
+        code: payload.code,
+        email: payload.email.trim().toLowerCase(),
+        newPassword: payload.newPassword,
+      });
+
+      if (status < 200 || status >= 300 || data.status === 'error') {
+        throw new AuthRequestError(
+          typeof data.message === 'string' && data.message.length > 0
+            ? data.message
+            : 'Unable to reset password. Please try again.',
+        );
+      }
+
+      return {
+        message:
+          typeof data.message === 'string' && data.message.length > 0
+            ? data.message
+            : 'Password has been reset. Please sign in with your new password.',
+        status: 'success',
+      };
+    } catch (error) {
+      if (error instanceof AuthRequestError) {
+        throw error;
+      }
+      throw new AuthRequestError(
+        getAuthErrorMessage(error, 'Unable to reset password. Please try again.'),
+      );
+    }
   },
 };
