@@ -106,11 +106,19 @@ IMPORTANT PRINCIPLES:
    - Do NOT invent experience. Skills suggestions are recommendations the user may apply.
 
 6f. EXPERIENCE AND PROJECT MATCHING (CRITICAL):
-   - Compare responsibilities, technologies, domain, features, scale, and achievements — not job titles alone.
+   - Compare responsibilities, technologies, domain, features, scale, achievements, AND seniority / years of experience — not job titles alone.
    - Prefer semantic overlap: similar work outcomes, tools, and problem domains.
    - If domains differ entirely (frontend UI work vs data pipelines / ETL / Spark), set experienceRelevance=0 and sectionScores.experience/projects=0.
    - When domains partially overlap, score proportionally; never invent shared responsibilities.
+   - YEARS / SENIORITY FIT: If the JD requires "5+ years" (or similar) and the resume clearly shows far less tenure, lower experienceRelevance honestly (do not invent years). Still produce useful rewrite suggestions that highlight transferable seniority without fabricating tenure.
+   - Use the provided experienceLevel (entry/mid/senior/lead/executive) as a soft signal for tone and scope — align summary/bullets to that seniority without inventing promotions or years.
 
+6h. OPTIMIZED RESUME QUALITY (CRITICAL):
+   - optimizedResumeText must be a COMPLETE, polished plain-text resume — not a stub.
+   - Prefer stronger action verbs, clear ownership, and JD-aligned keywords that are already evidenced on the resume.
+   - Quantify impact ONLY when the original resume supports a metric; otherwise improve clarity without inventing numbers.
+   - Keep every real employer, date, education item, and project; retarget title/summary toward the targetRole.
+   - Write a fuller Professional Summary (3–5 sentences) that maps transferable strengths to the JD without claiming unowned skills.
 6g. AI SUGGESTIONS (CRITICAL):
    - Every suggestion must be specific to THIS resume + THIS JD. Ban generic advice like "add more keywords" or "quantify achievements" without an exact originalText → suggestedText rewrite.
    - Base suggestions on: missing skills, missing responsibilities, missing keywords, ATS formatting issues, and weak experience/project bullets.
@@ -161,7 +169,7 @@ SCORING GUIDELINES:
 - contentQuality: Clarity, specificity, action verbs, relevance, and demonstrated impact.
 - readability: Conciseness, consistency, grammar, and recruiter readability.
 - formattingScore: Text-level ATS formatting compatibility from the supplied resume text only.
-- experienceRelevance: How closely the candidate's experience maps to the JD responsibilities.
+- experienceRelevance: How closely the candidate's experience maps to the JD responsibilities, domain, AND seniority / years-of-experience fit when the JD states a clear tenure requirement.
 - resumeStrength: Overall recruiter appeal, specificity, impact, and credibility.
 - industryAlignment: Fit with the target profession's terminology, tools, compliance needs, workflows, and expectations.
 - recruiterReadability: How quickly a recruiter can understand the candidate's fit.
