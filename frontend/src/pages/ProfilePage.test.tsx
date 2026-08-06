@@ -261,7 +261,7 @@ describe('ProfilePage resume parsing', () => {
     });
   }, 30_000);
 
-  it('confirms a parsed profile and navigates to the job feed', async () => {
+  it('confirms a parsed profile and navigates to the dashboard', async () => {
     const user = setupUser();
     parseMock.mockImplementationOnce((_file: File, callbacks: ResumeParseCallbacks) => {
       callbacks.onUploaded?.('resume-1');
@@ -304,18 +304,16 @@ describe('ProfilePage resume parsing', () => {
     await waitFor(() => expect(store.getState().auth.isProfileComplete).toBe(true), {
       timeout: 10_000,
     });
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/jobs-feed'), {
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/app'), {
       timeout: 10_000,
     });
     expect(store.getState().auth.isProfileComplete).toBe(true);
   }, 30_000);
 
-  it('keeps Save disabled when a parsed resume is missing a mandatory field, until it is filled in', async () => {
+  it('auto-generates a summary when the parser omits one but other profile details exist', async () => {
     const user = setupUser();
     parseMock.mockImplementationOnce((_file: File, callbacks: ResumeParseCallbacks) => {
       callbacks.onUploaded?.('resume-1');
-      // No professionalSummary/professionalProfile - e.g. the RULE_BASED
-      // fallback parser, which never extracts a summary.
       return Promise.resolve({
         ...parsed,
         professionalSummary: undefined,
@@ -328,13 +326,14 @@ describe('ProfilePage resume parsing', () => {
       expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
     });
 
-    expect(screen.getByRole('button', { name: /save profile/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: /^professional profile/i }));
-    fillField(/professional summary/i, 'Filled in manually');
+    expect(screen.getByRole('textbox', { name: /summary/i })).not.toHaveValue('');
+    fillField(/summary/i, 'Filled in manually');
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled();
+      expect(screen.getByRole('textbox', { name: /summary/i })).toHaveValue('Filled in manually');
     });
   }, 30_000);
 
