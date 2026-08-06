@@ -30,6 +30,8 @@ enum JobApplicationStatus {
   SUBMISSION_FAILED
   ACTION_REQUIRED
   WITHDRAWN
+  COULD_NOT_APPLY
+  JOB_CLOSED
 }
 
 enum ApprovalMode {
@@ -260,6 +262,23 @@ model JobApplicationResumeAnalysis {
   @@unique([resumeVersionId, jobId, contentHash])
   @@index([jobApplicationId])
   @@map("job_application_resume_analyses")
+}
+
+/// Application-specific Candidate Profile → Job Match (no resume content).
+model JobApplicationProfileMatch {
+  id               String   @id @default(uuid())
+  userId           String   @map("user_id")
+  jobApplicationId String   @unique @map("job_application_id")
+  jobId            String   @map("job_id")
+  analysisId       String?  @map("analysis_id")
+  contentHash      String   @map("content_hash")
+  result           Json
+  matchedAt        DateTime @default(now()) @map("matched_at")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  @@index([userId, jobId])
+  @@map("job_application_profile_matches")
 }
 
 // ─── Submission attempt log (AJA-DATA-001 / AJA-QUEUE-002) ──────────────────

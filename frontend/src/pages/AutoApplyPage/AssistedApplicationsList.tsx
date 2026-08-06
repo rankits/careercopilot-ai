@@ -1,6 +1,8 @@
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 import { useSubmissions } from '@/features/auto-apply/hooks/useSubmissions';
+
+import { ROUTES, assistedApplyWorkspacePath } from '@/constants/routes';
 import type { JobApplicationDto } from '@/features/auto-apply/types/autoApply.types';
 import {
   labelForViewState,
@@ -8,7 +10,6 @@ import {
   tooltipForViewState,
   type AssistedApplyViewState,
 } from '@/features/auto-apply/utils/assistedApplyView';
-import { ROUTES, assistedApplyWorkspacePath } from '@/constants/routes';
 import {
   Alert,
   Box,

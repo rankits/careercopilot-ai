@@ -13,6 +13,7 @@ export interface ApplicationPageAnalysisSummary {
   jobPageUrl: string;
   analyzedAt: string;
   expiresAt: string;
+  status?: 'COMPLETE' | 'LIMITED' | 'FAILED';
   requirements: ApplicationPageRequirementSummary[];
 }
 
@@ -27,7 +28,9 @@ export interface ApplicationPageRequirementSummary {
   reviewStatus?: string;
 }
 
-function toRequirementSummary(requirement: ExtractedRequirement): ApplicationPageRequirementSummary {
+function toRequirementSummary(
+  requirement: ExtractedRequirement,
+): ApplicationPageRequirementSummary {
   return {
     code: requirement.code,
     importance: requirement.importance,
@@ -53,6 +56,7 @@ export function toApplicationPageAnalysisSummary(
     jobPageUrl: analysis.jobPageUrl,
     analyzedAt: analysis.analyzedAt,
     expiresAt: analysis.expiresAt,
+    status: analysis.status,
     requirements: analysis.requirements.map(toRequirementSummary),
   };
 }

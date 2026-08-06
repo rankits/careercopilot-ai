@@ -5,6 +5,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it, vi } from 'vitest';
 
 import { DEFAULT_SIDEBAR_ITEMS } from '@/constants/ui';
+
 import { Sidebar } from './Sidebar';
 
 function renderSidebar(ui: ReactNode) {

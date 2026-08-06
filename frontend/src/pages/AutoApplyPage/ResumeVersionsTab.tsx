@@ -12,7 +12,6 @@ import {
   useUpdateResumeVersion,
 } from '@/features/auto-apply/hooks/useResumeVersions';
 
-
 import { ROUTES } from '@/constants/routes';
 import { hasAuthSession } from '@/features/auth/utils/authSession';
 import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
@@ -27,7 +26,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  Link,
   Paper,
   Skeleton,
   Typography,
@@ -141,7 +139,8 @@ export function ResumeVersionsTab() {
       showToast({ message: 'Resume approved for Assisted Apply.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't update your resumes. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't update your resumes. Try again.",
         severity: 'error',
       });
     } finally {
@@ -154,7 +153,8 @@ export function ResumeVersionsTab() {
       await updateVersion.mutateAsync({ id, isDefault: true });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't update your resumes. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't update your resumes. Try again.",
         severity: 'error',
       });
     }
@@ -175,7 +175,8 @@ export function ResumeVersionsTab() {
       setDeleteTarget(null);
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't update your resumes. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't update your resumes. Try again.",
         severity: 'error',
       });
     }
@@ -188,7 +189,13 @@ export function ResumeVersionsTab() {
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
     >
       <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
-        <Typography component="h2" data-setup-heading id="setup-resumes-heading" tabIndex={-1} variant="h6">
+        <Typography
+          component="h2"
+          data-setup-heading
+          id="setup-resumes-heading"
+          tabIndex={-1}
+          variant="h6"
+        >
           Resumes
         </Typography>
 
@@ -203,7 +210,12 @@ export function ResumeVersionsTab() {
             <Typography sx={{ mb: 1.5 }} variant="body2">
               No approved resumes yet.
             </Typography>
-            <Button component={RouterLink} sx={setupTouchTargetSx} to={ROUTES.RESUME_BUILDER} variant="outline">
+            <Button
+              component={RouterLink}
+              sx={setupTouchTargetSx}
+              to={ROUTES.RESUME_BUILDER}
+              variant="outline"
+            >
               Open Resume Builder
             </Button>
           </Box>

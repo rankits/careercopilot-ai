@@ -15,7 +15,8 @@
     "test:e2e:ui": "playwright test --ui",
     "format:check": "prettier --check .",
     "lint": "eslint . --max-warnings=0",
-    "lint:fix": "eslint . --fix",
+    "lint:fix": "eslint --fix",
+    "lint:fix:all": "eslint . --fix",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

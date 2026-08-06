@@ -10,7 +10,6 @@ import {
 } from '@/components/molecules';
 
 import { useTrackAndOpenApply } from '@/features/auto-apply/hooks/useTrackAndOpenApply';
-import { useCachedCompanyLogo } from '@/features/jobs/hooks/useCachedCompanyLogo';
 import { useJobDetail } from '@/features/jobs/hooks/useJobDetail';
 import { useSimilarJobs } from '@/features/recommendations/hooks/useRecommendations';
 

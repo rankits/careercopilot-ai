@@ -138,7 +138,9 @@ export type JobApplicationStatus =
   | 'CONFIRMATION_RECEIVED'
   | 'SUBMISSION_FAILED'
   | 'ACTION_REQUIRED'
-  | 'WITHDRAWN';
+  | 'WITHDRAWN'
+  | 'COULD_NOT_APPLY'
+  | 'JOB_CLOSED';
 
 export interface EligibilityCheckResult {
   check: string;
@@ -187,12 +189,7 @@ export interface ApplicationReadinessReasonDto {
   metadata?: Record<string, unknown>;
 }
 
-export type ApplicationReadinessStage =
-  | 'PLAN'
-  | 'APPROVE'
-  | 'QUEUE'
-  | 'SUBMIT'
-  | 'HANDOFF';
+export type ApplicationReadinessStage = 'PLAN' | 'APPROVE' | 'QUEUE' | 'SUBMIT' | 'HANDOFF';
 
 export interface ApplicationReadinessDto {
   decision: string;
@@ -274,26 +271,65 @@ export interface ApplicationPageAnalysisSummary {
   jobPageUrl: string;
   analyzedAt: string;
   expiresAt: string;
+  status?: 'COMPLETE' | 'LIMITED' | 'FAILED';
   requirements: ApplicationPageRequirementSummary[];
+}
+
+export interface ApplicationPageRequirementDto {
+  code: string;
+  operator?: string;
+  value?: unknown;
+  required?: boolean;
+  assertion?: string;
+  importance?: string;
+  sourceText?: string;
+  sourceUrl?: string;
+  evidenceStrength?: string;
+  extractionMethod?: string;
+  confidence?: number;
+  reviewStatus?: string;
+  geographic?: {
+    rawValue?: string;
+    normalizedRegion?: string;
+    explicitCountries?: string[];
+    interpretationStatus?: string;
+  };
+}
+
+export interface ApplicationPageFieldDto {
+  externalKey: string;
+  label: string;
+  type: string;
+  required: boolean;
+  options?: string[];
+  mapping?: string | null;
+}
+
+export interface ApplicationPageSnapshotDto {
+  contentHash: string;
+  sanitizedTextLength?: number;
+  httpStatus?: number;
+  fetchedAt: string;
+  finalUrl?: string;
 }
 
 export interface ApplicationPageAnalysisDto {
   id: string;
   jobId: string;
+  jobApplicationId?: string | null;
   provider: string;
   jobPageUrl: string;
+  applicationUrl?: string | null;
   formStatus: string;
   submissionCapability: string;
   outcomeStatus: string;
-  requirements: Array<{
-    code: string;
-    required?: boolean;
-    assertion?: string;
-    importance?: string;
-    sourceText?: string;
-    evidenceStrength?: string;
-    confidence?: number;
-  }>;
+  jobPageStatus?: string;
+  status?: 'COMPLETE' | 'LIMITED' | 'FAILED';
+  previousAnalysisId?: string;
+  extractorVersion?: string;
+  requirements: ApplicationPageRequirementDto[];
+  fields?: ApplicationPageFieldDto[];
+  snapshot?: ApplicationPageSnapshotDto | null;
   analyzedAt: string;
   expiresAt: string;
 }
@@ -313,11 +349,17 @@ export interface ApplicationPackageStubDto {
   analysisId: string;
   matchStatus: string;
   overallScore: number | null;
+  /** Application-specific profile→job match (authoritative). */
+  profileMatch?: ProfileJobMatchDto | null;
+  /** Cached recommendation score — historical/fallback only. */
+  recommendationScoreFallback?: number | null;
 }
 
 export interface PrepareApplicationResult {
   analysis: ApplicationPageAnalysisDto;
+  /** @deprecated Prefer profileMatch — recommendation cache snapshot. */
   match: ApplicationMatchSnapshotDto;
+  profileMatch?: ProfileJobMatchDto | null;
   readiness: ApplicationReadinessDto;
   package: ApplicationPackageStubDto;
   application: JobApplicationDto | null;
@@ -365,10 +407,14 @@ export interface SetupStatusDto {
 
 export type WorkspaceStepId = 'analysis' | 'fit' | 'resume' | 'open' | 'done';
 
+export type WorkspaceStepStatus =
+  'COMPLETE' | 'WARNING' | 'UNKNOWN' | 'CURRENT' | 'AVAILABLE' | 'LOCKED';
+
 export interface WorkspaceStepStatusDto {
   id: WorkspaceStepId;
   label: string;
   complete: boolean;
+  status?: WorkspaceStepStatus;
 }
 
 export interface AssistedApplyWorkspaceDto {
@@ -377,6 +423,8 @@ export interface AssistedApplyWorkspaceDto {
     jobId: string | null;
     jobTitle: string | null;
     company: string | null;
+    companyName?: string | null;
+    workplaceMode?: string | null;
     status: string;
   };
   viewState: string;
@@ -385,13 +433,82 @@ export interface AssistedApplyWorkspaceDto {
   progressStep: WorkspaceStepId | null;
   wasReopened: boolean;
   analysisSummary: { id: string; outcomeStatus: string; analyzedAt: string } | null;
-  fit: { matchScore: number | null } | null;
+  fit: {
+    matchScore: number | null;
+    profileMatch?: ProfileJobMatchDto | null;
+  } | null;
   resume: { resumeVersionId: string } | null;
   handoff: {
     externalConfirmationUrl: string | null;
     submittedAt: string | null;
     openedAt?: string | null;
   } | null;
+}
+
+export interface ProfileMatchEvidenceDto {
+  code: string;
+  message: string;
+  field?: string;
+  source?: 'PROFILE' | 'ANSWER_VAULT' | 'JOB' | 'ANALYSIS';
+}
+
+export interface ProfileJobMatchDto {
+  overallAlignment: number | null;
+  eligibility: {
+    status: 'ELIGIBLE' | 'NOT_ELIGIBLE' | 'INFORMATION_REQUIRED';
+    blockers: ProfileMatchEvidenceDto[];
+  };
+  roleMatch: {
+    status: 'MATCH' | 'PARTIAL' | 'NO_MATCH' | 'UNKNOWN';
+    evidence: ProfileMatchEvidenceDto[];
+    jobTitle: string | null;
+    desiredRoles: string[];
+  };
+  skillsMatch: {
+    matched: string[];
+    missing: string[];
+    unknown: string[];
+  };
+  experienceMatch: {
+    requiredYears: number | null;
+    candidateYears: number | null;
+    status: 'MATCH' | 'GAP' | 'UNKNOWN';
+    evidence: ProfileMatchEvidenceDto[];
+  };
+  locationMatch: {
+    status: string;
+    evidence: ProfileMatchEvidenceDto[];
+    jobRequirement?: unknown;
+    candidateRegion: string | null;
+  };
+  workAuthorizationMatch: {
+    status: string;
+    evidence: ProfileMatchEvidenceDto[];
+    candidateAnswer: string | null;
+  };
+  sponsorshipMatch: {
+    status: string;
+    evidence: ProfileMatchEvidenceDto[];
+    candidateRequiresSponsorship: boolean | null;
+    jobProvidesSponsorship: boolean | null;
+  };
+  confidence: 'HIGH' | 'MEDIUM' | 'LOW';
+  warnings: ProfileMatchEvidenceDto[];
+  missingInformation: ProfileMatchEvidenceDto[];
+  /** Present on newly computed matches; older cached rows may omit. */
+  topStrengths?: string[];
+  keyGaps?: string[];
+  dataSources?: {
+    verifiedProfile: boolean;
+    answerVault: boolean;
+    storedJobData: boolean;
+    jobPageAnalysis: boolean;
+  };
+  recommendationScoreFallback: number | null;
+  analysisId: string | null;
+  jobId: string;
+  matchedAt: string;
+  schemaVersion: 1;
 }
 
 export interface ResumeAnalysisDto {

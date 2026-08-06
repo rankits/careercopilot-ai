@@ -56,6 +56,7 @@ export function SetupDirtyProvider({
   return <SetupDirtyContext.Provider value={value}>{children}</SetupDirtyContext.Provider>;
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with provider
 export function useSetupDirty(sectionId: string, isDirty: boolean) {
   const context = useContext(SetupDirtyContext);
 
@@ -66,6 +67,7 @@ export function useSetupDirty(sectionId: string, isDirty: boolean) {
   }, [context, isDirty, sectionId]);
 }
 
+// eslint-disable-next-line react-refresh/only-export-components -- context hook colocated with provider
 export function useSetupDirtyNavigation() {
   const context = useContext(SetupDirtyContext);
   if (!context) {

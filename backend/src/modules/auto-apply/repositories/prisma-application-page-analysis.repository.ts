@@ -49,6 +49,16 @@ type AnalysisRow = {
 };
 
 function toDto(row: AnalysisRow): ApplicationPageAnalysisDto {
+  const reqs = (row.requirements as ExtractedRequirement[]) ?? [];
+  const outcome = row.outcomeStatus as AnalysisOutcomeStatus;
+
+  let computedStatus: 'COMPLETE' | 'LIMITED' | 'FAILED' = 'FAILED';
+  if (outcome === 'FETCH_FAILED' || outcome === 'UNSUPPORTED') {
+    computedStatus = 'FAILED';
+  } else {
+    computedStatus = reqs.length > 0 ? 'COMPLETE' : 'LIMITED';
+  }
+
   return {
     id: row.id,
     jobId: row.jobId,
@@ -62,8 +72,9 @@ function toDto(row: AnalysisRow): ApplicationPageAnalysisDto {
     jobPageStatus: row.jobPageStatus as JobPageStatus,
     formStatus: row.formStatus as FormInspectionStatus,
     submissionCapability: row.submissionCapability as SubmissionCapability,
-    outcomeStatus: row.outcomeStatus as AnalysisOutcomeStatus,
-    requirements: (row.requirements as ExtractedRequirement[]) ?? [],
+    outcomeStatus: outcome,
+    status: computedStatus,
+    requirements: reqs,
     fields: (row.fields as ExtractedApplicationField[]) ?? [],
     snapshot: row.snapshot as ApplicationPageSnapshotSummary,
     freshness: row.freshness as AnalysisFreshness,

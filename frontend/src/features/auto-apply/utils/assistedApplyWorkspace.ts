@@ -8,10 +8,12 @@ export function isWorkspaceStepEnabled(
   steps: WorkspaceStepStatusDto[],
   stepId: WorkspaceStepId,
 ): boolean {
-  const firstIncomplete = steps.find((s) => !s.complete);
   const target = steps.find((s) => s.id === stepId);
   if (!target) return false;
+  if (target.status === 'LOCKED') return false;
   if (target.complete) return true;
+
+  const firstIncomplete = steps.find((s) => !s.complete);
   if (!firstIncomplete) return true;
   const targetIdx = steps.findIndex((s) => s.id === stepId);
   const incompleteIdx = steps.findIndex((s) => s.id === firstIncomplete.id);
@@ -32,12 +34,17 @@ export function resolveInitialWorkspaceStep(input: {
     const id = input.progressStep as WorkspaceStepId;
     if (isWorkspaceStepEnabled(input.steps, id)) return id;
   }
-  return (input.steps.find((s) => !s.complete)?.id ??
+  return (
+    input.steps.find((s) => !s.complete)?.id ??
     input.steps[input.steps.length - 1]?.id ??
-    'analysis');
+    'analysis'
+  );
 }
 
-export function assistedApplyWorkspacePath(jobApplicationId: string, step?: WorkspaceStepId): string {
+export function assistedApplyWorkspacePath(
+  jobApplicationId: string,
+  step?: WorkspaceStepId,
+): string {
   const base = `/assisted-apply/${jobApplicationId}`;
   return step ? `${base}?step=${step}` : base;
 }
@@ -60,9 +67,7 @@ export function storeWorkspaceEntrySignals(
   }
 }
 
-export function readWorkspaceEntrySignals(
-  jobApplicationId: string,
-): WorkspaceEntrySignals | null {
+export function readWorkspaceEntrySignals(jobApplicationId: string): WorkspaceEntrySignals | null {
   try {
     const raw = sessionStorage.getItem(`${ENTRY_STORAGE_PREFIX}${jobApplicationId}`);
     if (!raw) return null;

@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
-import { useAbandonApplication } from '@/features/auto-apply/hooks/useResumeHandoff';
-import { ROUTES } from '@/constants/routes';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
-import { trackEvent } from '@/shared/analytics/trackEvent';
+
+import { useAbandonApplication } from '@/features/auto-apply/hooks/useResumeHandoff';
+
+import { ROUTES } from '@/constants/routes';
 import {
   Dialog,
   DialogActions,
@@ -17,13 +18,15 @@ import {
   Stack,
   TextField,
 } from '@/lib/material';
+import { trackEvent } from '@/shared/analytics/trackEvent';
 
 import { assistedApplyTouchTargetSx } from './WorkspaceStickyActions';
 
 const REASONS: Array<{ code: string; label: string }> = [
   { code: 'NOT_INTERESTED', label: 'Not interested' },
   { code: 'TOO_MANY_REQUIREMENTS', label: 'Too many requirements' },
-  { code: 'BROKEN_LINK', label: 'Broken link' },
+  { code: 'BROKEN_LINK', label: 'Application page unavailable' },
+  { code: 'JOB_CLOSED', label: 'Job closed' },
   { code: 'WILL_APPLY_LATER', label: 'Will apply later' },
   { code: 'OTHER', label: 'Other' },
 ];

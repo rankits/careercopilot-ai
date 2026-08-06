@@ -2,18 +2,13 @@ import { useEffect, useMemo } from 'react';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 
 import { useConsents } from '@/features/auto-apply/hooks/useConsents';
-import { useResumeVersions } from '@/features/auto-apply/hooks/useResumeVersions';
+import { useLatestJobAnalysis } from '@/features/auto-apply/hooks/useJobPageAnalysis';
 import { useResumeAnalysis } from '@/features/auto-apply/hooks/useResumeHandoff';
-import { buildImproveResumeHref } from '@/features/auto-apply/utils/returnToNavigation';
+import { useResumeVersions } from '@/features/auto-apply/hooks/useResumeVersions';
+
 import { ROUTES } from '@/constants/routes';
-import {
-  Alert,
-  Box,
-  CircularProgress,
-  MuiButton,
-  Stack,
-  Typography,
-} from '@/lib/material';
+import { buildImproveResumeHref } from '@/features/auto-apply/utils/returnToNavigation';
+import { Alert, Box, CircularProgress, MuiButton, Stack, Typography } from '@/lib/material';
 import { trackEvent } from '@/shared/analytics/trackEvent';
 
 import { assistedApplyTouchTargetSx, WorkspaceStickyActions } from './WorkspaceStickyActions';
@@ -50,6 +45,7 @@ function CategoryCard({
 }
 
 export interface ResumeAnalysisStepProps {
+  jobId: string;
   jobApplicationId: string;
   selectedResumeVersionId: string | null;
   onSelectAnother: () => void;
@@ -59,6 +55,7 @@ export interface ResumeAnalysisStepProps {
 }
 
 export function ResumeAnalysisStep({
+  jobId,
   jobApplicationId,
   selectedResumeVersionId,
   onSelectAnother,
@@ -76,6 +73,10 @@ export function ResumeAnalysisStep({
     enabled: Boolean(selectedResumeVersionId),
     forceRefresh,
   });
+
+  const jobAnalysisQuery = useLatestJobAnalysis(jobId);
+  const analysisLimited = jobAnalysisQuery.data?.status === 'LIMITED';
+  const analysisFailed = jobAnalysisQuery.data?.status === 'FAILED';
 
   useEffect(() => {
     if (!returnedSaved) return;
@@ -97,9 +98,7 @@ export function ResumeAnalysisStep({
   }, [analysisQuery.data, jobApplicationId]);
 
   const hasResumeConsent =
-    consentsQuery.data?.some(
-      (c) => c.consentType === 'RESUME_USAGE' && !c.revokedAt,
-    ) ?? false;
+    consentsQuery.data?.some((c) => c.consentType === 'RESUME_USAGE' && !c.revokedAt) ?? false;
 
   const selectedVersion = useMemo(
     () => versionsQuery.data?.find((v) => v.id === selectedResumeVersionId) ?? null,
@@ -148,32 +147,44 @@ export function ResumeAnalysisStep({
 
   return (
     <Stack spacing={2}>
-      <Alert severity="info">Suggestions — review carefully</Alert>
-
-      {degraded ? (
-        <Alert severity="warning">We couldn&apos;t generate detailed suggestions this time.</Alert>
-      ) : null}
-
-      {analysis && !degraded ? (
+      {analysisLimited || analysisFailed ? (
+        <Alert severity="warning">
+          <strong>Resume selected based on general role alignment.</strong> Because the job posting
+          analysis was {analysisLimited ? 'limited' : 'unsuccessful'}, no job-specific tailoring or
+          detailed fit suggestions could be performed.
+        </Alert>
+      ) : (
         <>
-          <Typography color="text.secondary" variant="body2">
-            Confidence:{' '}
-            {analysis.confidence === 'HIGH'
-              ? 'High confidence'
-              : analysis.confidence === 'LOW'
-                ? 'Low confidence'
-                : 'Medium confidence'}
-          </Typography>
-          <CategoryCard emptyLabel="None noted." items={analysis.strengths} title="Strengths" />
-          <CategoryCard emptyLabel="None noted." items={analysis.concerns} title="Concerns" />
-          <CategoryCard
-            emptyLabel="None noted."
-            items={analysis.missingEvidence}
-            title="Missing evidence"
-          />
-          <CategoryCard emptyLabel="None noted." items={analysis.unknowns} title="Unknowns" />
+          <Alert severity="info">Suggestions — review carefully</Alert>
+
+          {degraded ? (
+            <Alert severity="warning">
+              We couldn&apos;t generate detailed suggestions this time.
+            </Alert>
+          ) : null}
+
+          {analysis && !degraded ? (
+            <>
+              <Typography color="text.secondary" variant="body2">
+                Confidence:{' '}
+                {analysis.confidence === 'HIGH'
+                  ? 'High confidence'
+                  : analysis.confidence === 'LOW'
+                    ? 'Low confidence'
+                    : 'Medium confidence'}
+              </Typography>
+              <CategoryCard emptyLabel="None noted." items={analysis.strengths} title="Strengths" />
+              <CategoryCard emptyLabel="None noted." items={analysis.concerns} title="Concerns" />
+              <CategoryCard
+                emptyLabel="None noted."
+                items={analysis.missingEvidence}
+                title="Missing evidence"
+              />
+              <CategoryCard emptyLabel="None noted." items={analysis.unknowns} title="Unknowns" />
+            </>
+          ) : null}
         </>
-      ) : null}
+      )}
 
       {continueError ? <Alert severity="error">{continueError}</Alert> : null}
 
