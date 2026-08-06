@@ -332,3 +332,47 @@ describe('authService resetPassword', () => {
     ).rejects.toThrow('Unable to reset password. Please try again.');
   });
 });
+
+describe('authService verifyForgotPasswordOtp', () => {
+  beforeEach(() => {
+    postMock.mockReset();
+  });
+
+  it('posts email and code for OTP verification', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        message: 'Verification code confirmed',
+        status: 'success',
+      },
+      status: 200,
+    });
+
+    await expect(
+      authService.verifyForgotPasswordOtp({
+        code: '000000',
+        email: 'Jane.Doe@example.com',
+      }),
+    ).resolves.toEqual({
+      message: 'Verification code confirmed',
+      status: 'success',
+    });
+    expect(postMock).toHaveBeenCalledWith('/auth/forgot-password/verify-otp', {
+      code: '000000',
+      email: 'jane.doe@example.com',
+    });
+  });
+
+  it('rejects invalid or expired OTP responses', async () => {
+    postMock.mockResolvedValue({
+      data: { message: 'Invalid or expired code', status: 'error' },
+      status: 200,
+    });
+
+    await expect(
+      authService.verifyForgotPasswordOtp({
+        code: '111111',
+        email: 'jane.doe@example.com',
+      }),
+    ).rejects.toThrow('Invalid or expired code');
+  });
+});

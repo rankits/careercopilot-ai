@@ -1,7 +1,11 @@
 import { useMutation } from '@tanstack/react-query';
 
 import { authService } from '@/features/auth/services/auth.service';
-import type { ForgotPasswordPayload, ResetPasswordPayload } from '@/features/auth/types/auth.types';
+import type {
+  ForgotPasswordPayload,
+  ResetPasswordPayload,
+  VerifyForgotPasswordOtpPayload,
+} from '@/features/auth/types/auth.types';
 import { getAuthErrorMessage } from '@/features/auth/utils/apiError';
 
 export interface ForgotPasswordActionResult {
@@ -14,6 +18,12 @@ export function useForgotPassword() {
   const requestResetMutation = useMutation({
     mutationFn: (payload: ForgotPasswordPayload) => authService.forgotPassword(payload),
     mutationKey: ['auth', 'forgot-password'],
+  });
+
+  const verifyOtpMutation = useMutation({
+    mutationFn: (payload: VerifyForgotPasswordOtpPayload) =>
+      authService.verifyForgotPasswordOtp(payload),
+    mutationKey: ['auth', 'forgot-password-verify-otp'],
   });
 
   const resetPasswordMutation = useMutation({
@@ -38,6 +48,30 @@ export function useForgotPassword() {
     } catch (error) {
       return {
         errorMessage: getAuthErrorMessage(error, 'Unable to send reset code. Please try again.'),
+        succeeded: false,
+      };
+    }
+  };
+
+  const verifyOtp = async (
+    payload: VerifyForgotPasswordOtpPayload,
+  ): Promise<ForgotPasswordActionResult> => {
+    if (verifyOtpMutation.isPending) {
+      return { errorMessage: 'Verification already in progress', succeeded: false };
+    }
+
+    try {
+      const result = await verifyOtpMutation.mutateAsync(payload);
+      if (result.status === 'error') {
+        return {
+          errorMessage: result.message || 'Invalid or expired verification code.',
+          succeeded: false,
+        };
+      }
+      return { message: result.message, succeeded: true };
+    } catch (error) {
+      return {
+        errorMessage: getAuthErrorMessage(error, 'Invalid or expired verification code.'),
         succeeded: false,
       };
     }
@@ -70,7 +104,9 @@ export function useForgotPassword() {
   return {
     isRequestingReset: requestResetMutation.isPending,
     isResettingPassword: resetPasswordMutation.isPending,
+    isVerifyingOtp: verifyOtpMutation.isPending,
     requestReset,
     resetPassword,
+    verifyOtp,
   };
 }

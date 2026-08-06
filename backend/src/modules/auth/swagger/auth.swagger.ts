@@ -75,8 +75,8 @@ export const authSwagger = {
           schema: errorSchema('Payload is incorrect or missing fields.'),
         },
         409: {
-          description: 'An account with this email is already fully verified',
-          schema: errorSchema('An account with this email already exists', 'CONFLICT'),
+          description: 'This email already exists',
+          schema: errorSchema('This email already exists', 'CONFLICT'),
         },
       },
     },
