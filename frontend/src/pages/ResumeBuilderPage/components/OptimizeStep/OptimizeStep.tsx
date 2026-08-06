@@ -537,14 +537,14 @@ export function OptimizeStep({
       const rest = prev.filter((item) => !appliedIds.has(item.id));
       const marked = ordered
         .filter((item) => appliedIds.has(item.id) || isLocalSuggestionId(item.id))
-        .map((item) => ({ ...item, status: 'APPLIED' as const } as SuggestionItem));
+        .map((item): SuggestionItem => ({ ...item, status: 'APPLIED' }));
       // Also mark any server id we queued even if not in ordered (skill bundle extras).
       const orderedIds = new Set(ordered.map((item) => item.id));
       const extras = [...appliedIds]
         .filter((id) => !orderedIds.has(id))
-        .map((id) => {
+        .map((id): SuggestionItem | null => {
           const fromPending = pendingSuggestions.find((item) => item.id === id);
-          return fromPending ? ({ ...fromPending, status: 'APPLIED' as const } as SuggestionItem) : null;
+          return fromPending ? { ...fromPending, status: 'APPLIED' } : null;
         })
         .filter((item): item is SuggestionItem => item != null);
       return [...rest, ...marked, ...extras];
