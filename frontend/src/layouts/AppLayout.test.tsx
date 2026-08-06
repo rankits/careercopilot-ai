@@ -114,18 +114,15 @@ describe('AppLayout logout', () => {
     expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument();
   });
 
-  it('marks Profile active on the edit profile route', () => {
+  it('keeps edit profile available from the user menu on the edit profile route', async () => {
+    const user = userEvent.setup();
     renderLayout('/profile/edit');
 
     expect(screen.getByRole('heading', { name: /edit profile/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^profile$/i })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-    expect(screen.getByRole('link', { name: /^dashboard$/i })).not.toHaveAttribute(
-      'aria-current',
-      'page',
-    );
+    expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /user menu/i }));
+    expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument();
   });
 
   it('still clears the session and shows an error toast when the logout API fails', async () => {

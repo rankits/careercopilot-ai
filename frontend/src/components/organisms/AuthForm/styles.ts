@@ -1,5 +1,5 @@
 import type { SxProps, Theme } from '@/lib/material';
-import { borderRadius, colorTokens, fontSize, fontWeight, shadows, spacing } from '@/tokens';
+import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const authFormSx = {
   actions: {
@@ -14,19 +14,23 @@ export const authFormSx = {
     bgcolor: colorTokens.backgroundCard,
     border: `0.0625rem solid ${colorTokens.borderDefault}`,
     borderRadius: borderRadius['2xl'],
-    boxShadow: shadows.card,
+    boxShadow: 'none',
     boxSizing: 'border-box',
     display: 'grid',
-    gap: spacing[8],
-    maxWidth: '100%',
-    p: { xs: spacing[5], sm: spacing[8], md: spacing[10], lg: spacing[12] },
+    gap: { xs: spacing[4], md: spacing[4], lg: spacing[5] },
+    margin: '0 auto',
+    maxWidth: '28rem',
+    p: { xs: spacing[4], sm: spacing[5], md: spacing[6] },
+    pb: { xs: spacing[5], sm: spacing[6], md: spacing[6], lg: spacing[7] },
     width: '100%',
-    '@media (max-height: 56.25rem) and (min-width: 75rem)': {
-      gap: spacing[4],
-      p: spacing[5],
+    '@media (max-height: 56.25rem) and (min-width: 56.25rem)': {
+      gap: spacing[3],
+      p: spacing[4],
+      pb: spacing[5],
     },
-    '@media (max-width: 74.9375rem)': {
-      gap: { xs: spacing[5], sm: spacing[6] },
+    '@media (max-width: 56.24rem)': {
+      gap: { xs: spacing[4], sm: spacing[4] },
+      maxWidth: '100%',
     },
   } satisfies SxProps<Theme>,
   divider: {
@@ -45,11 +49,12 @@ export const authFormSx = {
   footer: {
     color: colorTokens.textSecondary,
     fontSize: { xs: fontSize.sm, sm: fontSize.base },
+    mt: spacing[1],
     textAlign: 'center',
   } satisfies SxProps<Theme>,
   header: {
     display: 'grid',
-    gap: spacing[3],
+    gap: spacing[2],
   } satisfies SxProps<Theme>,
   link: {
     color: colorTokens.actionPrimary,
@@ -58,35 +63,47 @@ export const authFormSx = {
   } satisfies SxProps<Theme>,
   registerCard: {
     alignContent: 'start',
-    gap: { xs: spacing[4], sm: spacing[5], lg: spacing[4], xl: spacing[5] },
-    '@media (max-height: 56.25rem) and (min-width: 75rem)': {
+    maxWidth: '33rem',
+    gap: { xs: spacing[4], sm: spacing[5], md: spacing[5], lg: spacing[6] },
+    p: { xs: spacing[5], sm: spacing[6], md: spacing[7] },
+    pb: { xs: spacing[6], sm: spacing[7], md: spacing[8] },
+    '@media (max-height: 56.25rem) and (min-width: 56.25rem)': {
       alignContent: 'stretch',
       gap: spacing[3],
+      p: spacing[5],
+      pb: spacing[6],
       gridTemplateRows: 'auto auto auto minmax(max-content, 1fr) auto',
     },
     '@media (max-width: 37.5rem)': {
       gap: spacing[4],
+      maxWidth: '100%',
+      p: spacing[4],
     },
   } satisfies SxProps<Theme>,
   registerFields: {
-    '@media (max-height: 56.25rem) and (min-width: 75rem)': {
+    columnGap: spacing[3],
+    gap: { xs: spacing[3], sm: spacing[4], md: spacing[4], lg: spacing[5] },
+    rowGap: { xs: spacing[3], sm: spacing[4], md: spacing[4], lg: spacing[5] },
+    '@media (max-height: 56.25rem) and (min-width: 56.25rem)': {
       alignContent: 'space-between',
-      gap: spacing[2],
+      gap: spacing[3],
+      rowGap: spacing[3],
       height: '100%',
     },
     '@media (min-width: 37.5rem)': {
       gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-      '& > *:nth-child(n + 3)': {
+      '& > *:nth-of-type(3), & > *:nth-of-type(4)': {
         gridColumn: '1 / -1',
       },
     },
     '@media (max-width: 37.5rem)': {
       gap: spacing[3],
+      rowGap: spacing[3],
     },
   } satisfies SxProps<Theme>,
   registerHeader: {
     gap: spacing[2],
-    '@media (max-height: 56.25rem) and (min-width: 75rem)': {
+    '@media (max-height: 56.25rem) and (min-width: 56.25rem)': {
       gap: spacing[1],
     },
   } satisfies SxProps<Theme>,
@@ -96,28 +113,28 @@ export const authFormSx = {
       minHeight: { xs: spacing[10], sm: spacing[12] },
       py: 0,
     },
-    '@media (max-height: 56.25rem) and (min-width: 75rem)': {
+    '@media (max-height: 56.25rem) and (min-width: 56.25rem)': {
       gap: spacing[2],
       '& > button': {
-        minHeight: spacing[10],
+        minHeight: spacing[9],
       },
     },
   } satisfies SxProps<Theme>,
   stack: {
     display: 'grid',
-    gap: spacing[5],
-    '@media (max-height: 56.25rem) and (min-width: 75rem)': {
+    gap: spacing[4],
+    '@media (max-height: 56.25rem) and (min-width: 56.25rem)': {
       gap: spacing[3],
     },
     '@media (max-width: 37.5rem)': {
-      gap: spacing[4],
+      gap: spacing[3],
     },
   } satisfies SxProps<Theme>,
   subtitle: {
     color: colorTokens.textSecondary,
     fontSize: { xs: fontSize.base, sm: fontSize.lg },
     m: 0,
-    '@media (max-height: 56.25rem) and (min-width: 75rem)': {
+    '@media (max-height: 56.25rem) and (min-width: 56.25rem)': {
       fontSize: fontSize.base,
     },
   } satisfies SxProps<Theme>,
@@ -126,7 +143,7 @@ export const authFormSx = {
     fontSize: { xs: fontSize['2xl'], sm: fontSize['3xl'] },
     fontWeight: fontWeight.extraBold,
     m: 0,
-    '@media (max-height: 56.25rem) and (min-width: 75rem)': {
+    '@media (max-height: 56.25rem) and (min-width: 56.25rem)': {
       fontSize: fontSize['2xl'],
     },
   } satisfies SxProps<Theme>,
