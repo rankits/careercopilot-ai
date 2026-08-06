@@ -4,6 +4,7 @@ import {
   triggerJobsController,
 } from '@/modules/jobs/controllers/jobs.controller.js';
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
+import { jobsIngestionRateLimiter } from '@/shared/middlewares/rateLimiter.js';
 import { requirePermission, requirePrincipalType } from '@/shared/middlewares/rbac.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
 import { JOBS_PERMISSIONS } from '@/shared/rbac/permission.catalog.js';
@@ -23,6 +24,7 @@ router.post(
   authMiddleware,
   requirePrincipalType('ADMIN'),
   requirePermission(JOBS_PERMISSIONS.CREATE),
+  jobsIngestionRateLimiter,
   validateResource(triggerJobsSchema),
   triggerJobsController,
 );
