@@ -4,10 +4,53 @@ vi.mock('@/shared/logger/logger.js', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn(), debug: vi.fn() },
 }));
 
-const h = vi.hoisted(() => ({
-  googleContent: { current: '{}' },
-  googleConfig: { current: null as unknown },
-}));
+const h = vi.hoisted(() => {
+  // resume-analysis.config.ts caches process.env ONCE at module load, so the env
+  // present when the module is first imported is the env the client runs with.
+  // Baseline = openrouter-only, so the statically-imported `client` exercises the
+  // default provider path. Provider-scoped tests reload the module with a fresh
+  // env via loadClientWithEnv() below.
+  const CLEANUP_KEYS = [
+    'OPENROUTER_API_KEY',
+    'GROQ_API_KEY',
+    'GROQ_API_KEYS',
+    'GROQ_API_KEY_2',
+    'GROQ_API_KEY_FALLBACK',
+    'OPENAI_API_KEY',
+    'GOOGLE_API_KEY',
+    'GEMINI_API_KEY',
+    'OPENROUTER_SITE_URL',
+    'OPENROUTER_APP_NAME',
+    'AI_RESUME_ANALYSIS_PROVIDER',
+    'AI_RESUME_PARSER_PROVIDER',
+    'AI_RESUME_ANALYSIS_FALLBACK_PROVIDERS',
+    'AI_RESUME_ANALYSIS_MODEL',
+    'AI_RESUME_ANALYSIS_FALLBACK_MODELS',
+    'AI_RESUME_ANALYSIS_ALLOW_OPENROUTER_FREE',
+    'AI_RESUME_ANALYSIS_FULL_PROMPT',
+    'AI_RESUME_ANALYSIS_FREE_TIMEOUT_MS',
+    'AI_RESUME_ANALYSIS_TIMEOUT_MS',
+    'AI_RESUME_ANALYSIS_MAX_TOKENS',
+    'AI_RESUME_ANALYSIS_GROQ_MAX_TOKENS',
+    'AI_RESUME_ANALYSIS_GROQ_MODEL',
+    'AI_RESUME_ANALYSIS_GROQ_MAX_RESUME_CHARS',
+    'AI_RESUME_ANALYSIS_GROQ_MAX_JD_CHARS',
+    'AI_RESUME_ANALYSIS_MAX_RESUME_CHARS',
+    'AI_RESUME_ANALYSIS_MAX_JD_CHARS',
+    'AI_RESUME_ANALYSIS_COMPACT_RESUME_CHARS',
+    'AI_RESUME_ANALYSIS_COMPACT_JD_CHARS',
+    'AI_RESUME_PARSER_MODEL',
+    'AI_RESUME_PARSER_TEMPERATURE',
+    'AI_RESUME_PARSER_MAX_RETRIES',
+  ];
+  CLEANUP_KEYS.forEach((key) => delete process.env[key]);
+  process.env.OPENROUTER_API_KEY = 'test-key';
+  return {
+    googleContent: { current: '{}' },
+    googleConfig: { current: null as unknown },
+    CLEANUP_KEYS,
+  };
+});
 
 vi.mock('@langchain/google-genai', () => ({
   ChatGoogleGenerativeAI: vi.fn().mockImplementation(function (this: any, config: unknown) {
@@ -17,12 +60,27 @@ vi.mock('@langchain/google-genai', () => ({
   }),
 }));
 
+// Static import: loaded with the hoisted baseline env (openrouter-only).
 import { resumeAnalysisAiClient as client } from '@/modules/resume-analysis/ai/resume-analysis-ai.client.js';
-import { AppError } from '@/shared/utils/errors/AppError.js';
 
 const fetchMock = vi.fn();
 
 const JD = 'a job description that is comfortably long enough to pass validation';
+
+/**
+ * Reload the whole module graph with a fresh env so resume-analysis.config.ts
+ * caches the provider keys the test wants to exercise.
+ */
+const loadClientWithEnv = async (env: Record<string, string | undefined>) => {
+  h.CLEANUP_KEYS.forEach((key) => delete process.env[key]);
+  Object.entries(env).forEach(([key, value]) => {
+    if (value === undefined) delete process.env[key];
+    else process.env[key] = value;
+  });
+  vi.resetModules();
+  const mod = await import('@/modules/resume-analysis/ai/resume-analysis-ai.client.js');
+  return mod.resumeAnalysisAiClient;
+};
 
 /** Returns an OpenAI-compatible 200 whose message content is JSON of `content`. */
 const stubOpenAiOk = (content: unknown) => {
@@ -58,40 +116,6 @@ const stubReject = (err: Error) => {
 const RESUME = 'A long resume with React experience and Node knowledge across many projects.';
 const JD_LONG = 'a job description spanning well beyond a dozen characters';
 
-const CLEANUP_KEYS = [
-  'OPENROUTER_API_KEY',
-  'GROQ_API_KEY',
-  'GROQ_API_KEYS',
-  'GROQ_API_KEY_2',
-  'GROQ_API_KEY_FALLBACK',
-  'OPENAI_API_KEY',
-  'GOOGLE_API_KEY',
-  'GEMINI_API_KEY',
-  'OPENROUTER_SITE_URL',
-  'OPENROUTER_APP_NAME',
-  'AI_RESUME_ANALYSIS_PROVIDER',
-  'AI_RESUME_PARSER_PROVIDER',
-  'AI_RESUME_ANALYSIS_FALLBACK_PROVIDERS',
-  'AI_RESUME_ANALYSIS_MODEL',
-  'AI_RESUME_ANALYSIS_FALLBACK_MODELS',
-  'AI_RESUME_ANALYSIS_ALLOW_OPENROUTER_FREE',
-  'AI_RESUME_ANALYSIS_FULL_PROMPT',
-  'AI_RESUME_ANALYSIS_FREE_TIMEOUT_MS',
-  'AI_RESUME_ANALYSIS_TIMEOUT_MS',
-  'AI_RESUME_ANALYSIS_MAX_TOKENS',
-  'AI_RESUME_ANALYSIS_GROQ_MAX_TOKENS',
-  'AI_RESUME_ANALYSIS_GROQ_MODEL',
-  'AI_RESUME_ANALYSIS_GROQ_MAX_RESUME_CHARS',
-  'AI_RESUME_ANALYSIS_GROQ_MAX_JD_CHARS',
-  'AI_RESUME_ANALYSIS_MAX_RESUME_CHARS',
-  'AI_RESUME_ANALYSIS_MAX_JD_CHARS',
-  'AI_RESUME_ANALYSIS_COMPACT_RESUME_CHARS',
-  'AI_RESUME_ANALYSIS_COMPACT_JD_CHARS',
-  'AI_RESUME_PARSER_MODEL',
-  'AI_RESUME_PARSER_TEMPERATURE',
-  'AI_RESUME_PARSER_MAX_RETRIES',
-];
-
 const makeOutput = (overrides: Record<string, unknown> = {}): Record<string, unknown> => ({
   atsScore: 72,
   keywordMatch: 70,
@@ -114,10 +138,9 @@ const makeOutput = (overrides: Record<string, unknown> = {}): Record<string, unk
 });
 
 beforeEach(() => {
+  // Restore the baseline env for the statically-imported client.
+  h.CLEANUP_KEYS.forEach((key) => delete process.env[key]);
   process.env.OPENROUTER_API_KEY = 'test-key';
-  CLEANUP_KEYS.forEach((k) => {
-    if (k !== 'OPENROUTER_API_KEY') delete process.env[k];
-  });
   fetchMock.mockReset();
   h.googleContent.current = '{}';
   h.googleConfig.current = null;
@@ -126,7 +149,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.unstubAllGlobals();
-  CLEANUP_KEYS.forEach((k) => delete process.env[k]);
+  h.CLEANUP_KEYS.forEach((key) => delete process.env[key]);
 });
 
 describe('client.validateTargetRoleAndJd', () => {
@@ -147,8 +170,8 @@ describe('client.validateTargetRoleAndJd', () => {
   });
 
   it('rejects when no provider keys are configured', async () => {
-    delete process.env.OPENROUTER_API_KEY;
-    const result = await client.validateTargetRoleAndJd('Engineer', JD);
+    const c = await loadClientWithEnv({});
+    const result = await c.validateTargetRoleAndJd('Engineer', JD);
     expect(result.valid).toBe(false);
   });
 
@@ -166,7 +189,10 @@ describe('client.validateTargetRoleAndJd', () => {
   });
 
   it('falls through non-JSON openrouter models to a working groq key', async () => {
-    process.env.GROQ_API_KEY = 'groq-key';
+    const c = await loadClientWithEnv({
+      OPENROUTER_API_KEY: 'test-key',
+      GROQ_API_KEY: 'groq-key',
+    });
     // openrouter model 1 + 2 return safety/non-JSON, groq succeeds.
     fetchMock
       .mockImplementationOnce(async () => ({
@@ -186,7 +212,7 @@ describe('client.validateTargetRoleAndJd', () => {
           choices: [{ message: { content: JSON.stringify({ valid: true }) } }],
         }),
       }));
-    const result = await client.validateTargetRoleAndJd('Engineer', JD);
+    const result = await c.validateTargetRoleAndJd('Engineer', JD);
     expect(result.valid).toBe(true);
     expect(fetchMock).toHaveBeenCalledTimes(3);
     expect(fetchMock.mock.calls[2][0]).toContain('groq');
@@ -207,8 +233,11 @@ describe('client.validateTargetRoleAndJd', () => {
   });
 
   it('throws AppError 501 for an unsupported AI provider', async () => {
-    process.env.AI_RESUME_ANALYSIS_PROVIDER = 'bogus';
-    await expect(client.validateTargetRoleAndJd('Engineer', JD)).rejects.toMatchObject({
+    const c = await loadClientWithEnv({
+      OPENROUTER_API_KEY: 'test-key',
+      AI_RESUME_ANALYSIS_PROVIDER: 'bogus',
+    });
+    await expect(c.validateTargetRoleAndJd('Engineer', JD)).rejects.toMatchObject({
       statusCode: 501,
     });
   });
@@ -216,8 +245,11 @@ describe('client.validateTargetRoleAndJd', () => {
 
 describe('client.analyze', () => {
   it('throws when no providers are configured', async () => {
-    delete process.env.OPENROUTER_API_KEY;
-    await expect(client.analyze('resume', 'Engineer', 'MID', 'a jd')).rejects.toThrow(AppError);
+    const c = await loadClientWithEnv({});
+    // AppError is re-imported after resetModules, so match on statusCode not class identity.
+    await expect(c.analyze('resume', 'Engineer', 'MID', 'a jd')).rejects.toMatchObject({
+      statusCode: 500,
+    });
   });
 
   it('returns the analyzed output on the happy path', async () => {
@@ -425,10 +457,9 @@ describe('client.analyze', () => {
   });
 
   it('calls OpenAI when only an OpenAI key is set', async () => {
-    delete process.env.OPENROUTER_API_KEY;
-    process.env.OPENAI_API_KEY = 'openai-key';
+    const c = await loadClientWithEnv({ OPENAI_API_KEY: 'openai-key' });
     stubOpenAiOk(makeOutput());
-    await client.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
+    await c.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('api.openai.com'),
       expect.anything(),
@@ -436,11 +467,12 @@ describe('client.analyze', () => {
   });
 
   it('calls Groq with a sanitized model when only a Groq key is set', async () => {
-    delete process.env.OPENROUTER_API_KEY;
-    process.env.GROQ_API_KEY = 'groq-key';
-    process.env.AI_RESUME_ANALYSIS_GROQ_MODEL = 'groq/llama-3.1-8b-instant';
+    const c = await loadClientWithEnv({
+      GROQ_API_KEY: 'groq-key',
+      AI_RESUME_ANALYSIS_GROQ_MODEL: 'groq/llama-3.1-8b-instant',
+    });
     stubOpenAiOk(makeOutput());
-    await client.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
+    await c.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
     expect(fetchMock).toHaveBeenCalledWith(
       expect.stringContaining('api.groq.com'),
       expect.anything(),
@@ -450,8 +482,7 @@ describe('client.analyze', () => {
   });
 
   it('rotates to the second Groq key when the first fails with an auth error', async () => {
-    delete process.env.OPENROUTER_API_KEY;
-    process.env.GROQ_API_KEYS = 'key1,key2';
+    const c = await loadClientWithEnv({ GROQ_API_KEYS: 'key1,key2' });
     fetchMock
       .mockImplementationOnce(async () => ({
         ok: false,
@@ -463,36 +494,40 @@ describe('client.analyze', () => {
         status: 200,
         json: async () => ({ choices: [{ message: { content: JSON.stringify(makeOutput()) } }] }),
       }));
-    const result = await client.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
+    const result = await c.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
     expect(result).toBeDefined();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('uses Google Gemini when only a Google key is set', async () => {
-    delete process.env.OPENROUTER_API_KEY;
-    process.env.GOOGLE_API_KEY = 'google-key';
+    const c = await loadClientWithEnv({ GOOGLE_API_KEY: 'google-key' });
     h.googleContent.current = JSON.stringify(makeOutput());
-    const result = await client.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
+    const result = await c.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
     expect(result).toBeDefined();
     expect(fetchMock).not.toHaveBeenCalled();
     expect((h.googleConfig.current as { model?: string }).model).toBe('gemini-2.0-flash');
   });
 
   it('maps the gemini provider alias and honors a custom model', async () => {
-    process.env.GOOGLE_API_KEY = 'google-key';
-    process.env.AI_RESUME_ANALYSIS_PROVIDER = 'gemini';
-    process.env.AI_RESUME_ANALYSIS_MODEL = 'gemini-1.5-flash';
+    const c = await loadClientWithEnv({
+      GOOGLE_API_KEY: 'google-key',
+      AI_RESUME_ANALYSIS_PROVIDER: 'gemini',
+      AI_RESUME_ANALYSIS_MODEL: 'gemini-1.5-flash',
+    });
     h.googleContent.current = JSON.stringify(makeOutput());
-    const result = await client.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
+    const result = await c.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
     expect(result).toBeDefined();
     expect((h.googleConfig.current as { model?: string }).model).toBe('gemini-1.5-flash');
   });
 
   it('includes openrouter/free when explicitly allowed', async () => {
-    process.env.AI_RESUME_ANALYSIS_MODEL = 'openrouter/free';
-    process.env.AI_RESUME_ANALYSIS_ALLOW_OPENROUTER_FREE = 'true';
+    const c = await loadClientWithEnv({
+      OPENROUTER_API_KEY: 'test-key',
+      AI_RESUME_ANALYSIS_MODEL: 'openrouter/free',
+      AI_RESUME_ANALYSIS_ALLOW_OPENROUTER_FREE: 'true',
+    });
     stubOpenAiOk(makeOutput());
-    await client.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
+    await c.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
     const body = JSON.parse(fetchMock.mock.calls[0][1].body as string);
     expect(body.model).toBe('openrouter/free');
   });
@@ -553,7 +588,10 @@ describe('client.analyze', () => {
   });
 
   it('retries a paid OpenRouter model in compact mode after truncated JSON', async () => {
-    process.env.AI_RESUME_ANALYSIS_FULL_PROMPT = 'true';
+    const c = await loadClientWithEnv({
+      OPENROUTER_API_KEY: 'test-key',
+      AI_RESUME_ANALYSIS_FULL_PROMPT: 'true',
+    });
     fetchMock
       .mockImplementationOnce(async () => ({
         ok: true,
@@ -565,13 +603,16 @@ describe('client.analyze', () => {
         status: 200,
         json: async () => ({ choices: [{ message: { content: JSON.stringify(makeOutput()) } }] }),
       }));
-    const result = await client.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
+    const result = await c.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
     expect(result).toBeDefined();
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('bails to the next provider when a paid model returns invalid JSON', async () => {
-    process.env.GROQ_API_KEY = 'groq-key';
+    const c = await loadClientWithEnv({
+      OPENROUTER_API_KEY: 'test-key',
+      GROQ_API_KEY: 'groq-key',
+    });
     // openrouter model1 -> SyntaxError triggers a compact retry on the same
     // model, which also returns non-JSON -> outer catch breaks to Groq.
     fetchMock
@@ -590,7 +631,7 @@ describe('client.analyze', () => {
         status: 200,
         json: async () => ({ choices: [{ message: { content: JSON.stringify(makeOutput()) } }] }),
       }));
-    const result = await client.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
+    const result = await c.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
     // openrouter paid model broke out; groq fallback produced the result.
     expect(result).toBeDefined();
     expect(fetchMock).toHaveBeenCalledTimes(3);
@@ -608,21 +649,18 @@ describe('client.analyze', () => {
   });
 
   it('continues to the next model on a retryable error then fails all', async () => {
-    fetchMock
-      .mockImplementationOnce(async () => {
-        throw new Error('503 service unavailable');
-      })
-      .mockImplementationOnce(async () => {
-        throw new Error('503 service unavailable');
-      });
+    stubReject(new Error('503 service unavailable'));
     await expect(client.analyze(RESUME, 'Engineer', 'MID', JD_LONG)).rejects.toThrow();
     expect(fetchMock.mock.calls.length).toBeGreaterThan(1);
   });
 
   it('skips remaining free models on empty content', async () => {
-    process.env.AI_RESUME_ANALYSIS_MODEL = 'google/gemini-2.0-flash-exp:free';
+    const c = await loadClientWithEnv({
+      OPENROUTER_API_KEY: 'test-key',
+      AI_RESUME_ANALYSIS_MODEL: 'google/gemini-2.0-flash-exp:free',
+    });
     stubOkWithRawContent('');
-    await expect(client.analyze(RESUME, 'Engineer', 'MID', JD_LONG)).rejects.toThrow(
+    await expect(c.analyze(RESUME, 'Engineer', 'MID', JD_LONG)).rejects.toThrow(
       /empty content/i,
     );
   });
