@@ -56,6 +56,9 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
           ) : undefined,
           ...props.slotProps?.input,
         },
+        htmlInput: {
+          ...props.slotProps?.htmlInput,
+        },
         inputLabel: {
           shrink: true,
           ...(typeof inputLabelSlotProps === 'function' ? {} : inputLabelSlotProps),
