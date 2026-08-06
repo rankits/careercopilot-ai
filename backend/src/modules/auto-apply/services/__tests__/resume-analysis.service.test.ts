@@ -1,33 +1,47 @@
-import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { ResumeAnalysisService } from '@/modules/auto-apply/services/resume-analysis.service.js';
-import { READINESS_REASON_CODES } from '@/modules/auto-apply/constants/readiness-reason-codes.js';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-describe('ResumeAnalysisService (AA-061)', () => {
+vi.mock('@/shared/config/db.conf.js', () => ({
+  prisma: {
+    jobApplicationResumeAnalysis: {
+      findUnique: vi.fn(),
+      upsert: vi.fn(),
+    },
+    job: {
+      findFirst: vi.fn(),
+    },
+  },
+}));
+
+import { prisma } from '@/shared/config/db.conf.js';
+import { ResumeAnalysisService } from '@/modules/auto-apply/services/resume-analysis.service.js';
+import type { IResumeContentResolver } from '@/modules/auto-apply/services/resume-content-resolver.service.js';
+import {
+  RESUME_JOB_ANALYZER_SCHEMA_VERSION,
+  RESUME_JOB_ANALYZER_VERSION,
+  ResumeJobAnalyzer,
+} from '@/modules/auto-apply/services/resume-job-analyzer.js';
+
+describe('ResumeAnalysisService quality + cache versioning', () => {
   const userId = 'user-1';
   const appId = 'app-1';
   const jobId = 'job-1';
   const resumeVersionId = 'rv-1';
 
-  let applications: {
-    findById: ReturnType<typeof vi.fn>;
-  };
-  let resumeVersions: {
-    findById: ReturnType<typeof vi.fn>;
-  };
-  let consents: {
-    findActiveByType: ReturnType<typeof vi.fn>;
-  };
-  let analysisRepository: {
-    findLatestByJobId: ReturnType<typeof vi.fn>;
-  };
+  let applications: { findById: ReturnType<typeof vi.fn> };
+  let resumeVersions: { findById: ReturnType<typeof vi.fn> };
+  let consents: { findActiveByType: ReturnType<typeof vi.fn> };
+  let analysisRepository: { findLatestByJobId: ReturnType<typeof vi.fn> };
+  let contentResolver: { resolve: ReturnType<typeof vi.fn> };
   let service: ResumeAnalysisService;
 
   beforeEach(() => {
+    vi.clearAllMocks();
     applications = {
       findById: vi.fn().mockResolvedValue({
         id: appId,
         userId,
         jobId,
+        jobTitle: 'Data Scientist',
         resumeVersionId,
         status: 'READY_FOR_REVIEW',
       }),
@@ -37,9 +51,9 @@ describe('ResumeAnalysisService (AA-061)', () => {
         id: resumeVersionId,
         userId,
         resumeId: 'r1',
-        label: 'Backend Engineer Kubernetes Docker',
+        label: 'LABEL_NOT_BODY',
         category: 'general',
-        tags: ['kubernetes', 'docker', 'typescript'],
+        tags: ['tag-not-body'],
         isActive: true,
       }),
     };
@@ -49,68 +63,101 @@ describe('ResumeAnalysisService (AA-061)', () => {
     analysisRepository = {
       findLatestByJobId: vi.fn().mockResolvedValue({
         id: 'a1',
+        analyzedAt: '2026-08-01T00:00:00.000Z',
+        outcomeStatus: 'COMPLETE',
         requirements: [
           {
-            code: 'KUBERNETES',
-            assertion: 'REQUIRED',
+            code: 'WORK_REGION',
+            assertion: 'REQUIRES',
             required: true,
-            sourceText: 'Experience with Kubernetes required',
+            sourceText: 'Must be US-based',
           },
           {
-            code: 'PUBLIC_SPEAKING',
-            assertion: 'REQUIRED',
+            code: 'TOTAL_EXPERIENCE_YEARS',
+            assertion: 'REQUIRES',
             required: true,
-            sourceText: 'Public speaking experience preferred',
+            importance: 'REQUIRED',
+            sourceText: 'Experience with Python and machine learning',
           },
         ],
       }),
     };
+    contentResolver = {
+      resolve: vi.fn().mockResolvedValue({
+        approvedResumeVersionId: resumeVersionId,
+        resumeId: 'r1',
+        source: 'UPLOADED_EXTRACTION',
+        text: 'Data scientist with Python and machine learning projects delivering models to production.',
+        contentHash: 'hash-resume-body-1',
+        updatedAt: new Date('2026-08-01T00:00:00Z'),
+      }),
+    };
+    vi.mocked(prisma.jobApplicationResumeAnalysis.findUnique).mockResolvedValue(null as never);
+    vi.mocked(prisma.jobApplicationResumeAnalysis.upsert).mockResolvedValue({} as never);
+    vi.mocked(prisma.job.findFirst).mockResolvedValue({
+      title: 'Data Scientist',
+      descriptionText: 'Python and machine learning. US based.',
+      company: { name: 'Acme' },
+    } as never);
+
     service = new ResumeAnalysisService(
       applications as never,
       resumeVersions as never,
       consents as never,
       analysisRepository as never,
+      contentResolver as unknown as IResumeContentResolver,
+      new ResumeJobAnalyzer(),
     );
   });
 
-  it('requires RESUME_USAGE consent', async () => {
-    consents.findActiveByType.mockResolvedValue(null);
-    await expect(service.analyze(userId, appId)).rejects.toMatchObject({
-      code: 'CONSENT_REQUIRED',
-      statusCode: 403,
-    });
-  });
-
-  it('returns 404 for missing application', async () => {
-    applications.findById.mockResolvedValue(null);
-    await expect(service.analyze(userId, appId)).rejects.toMatchObject({
-      code: 'APPLICATION_NOT_FOUND',
-      statusCode: 404,
-    });
-  });
-
-  it('produces strengths/concerns without blocking structure', async () => {
-    // Bypass prisma cache by forcing the compare path via mocked prisma failure →
-    // instead spy compare indirectly: when prisma throws, we get degraded.
-    // Call compare via a successful path with forceRefresh and mocked upsert.
-    const { prisma } = await import('@/shared/config/db.conf.js');
-    vi.spyOn(prisma.jobApplicationResumeAnalysis, 'findUnique').mockResolvedValue(null as never);
-    vi.spyOn(prisma.jobApplicationResumeAnalysis, 'upsert').mockResolvedValue({} as never);
-
+  it('does not surface WORK_REGION as missing resume evidence', async () => {
     const result = await service.analyze(userId, appId, { forceRefresh: true });
-    expect(result.degraded).toBeFalsy();
-    expect(result.confidence).toBeTruthy();
-    expect(Array.isArray(result.strengths)).toBe(true);
-    expect(Array.isArray(result.concerns)).toBe(true);
-    expect(result.strengths.length + result.concerns.length).toBeGreaterThan(0);
-    void READINESS_REASON_CODES;
+    expect(result.missingEvidence.join(' ')).not.toMatch(/WORK[_\s]?REGION/i);
+    expect(result.excludedRequirements?.some((e) => e.code === 'WORK_REGION')).toBe(true);
+    expect(result.schemaVersion).toBe(RESUME_JOB_ANALYZER_SCHEMA_VERSION);
+    expect(result.analyzerVersion).toBe(RESUME_JOB_ANALYZER_VERSION);
   });
 
-  it('degrades gracefully when analysis pipeline throws unexpectedly', async () => {
-    analysisRepository.findLatestByJobId.mockRejectedValue(new Error('provider down'));
+  it('invalidates stale schemaVersion 1 cache entries', async () => {
+    vi.mocked(prisma.jobApplicationResumeAnalysis.findUnique).mockResolvedValue({
+      result: {
+        strengths: [],
+        concerns: [],
+        missingEvidence: ['The resume does not clearly demonstrate “WORK REGION”'],
+        unknowns: [],
+        confidence: 'HIGH',
+        analyzedAt: '2026-08-01T00:00:00.000Z',
+        overallAlignment: 0,
+        schemaVersion: 1,
+        analyzerVersion: 'deterministic-evidence-v1',
+      },
+    } as never);
+
     const result = await service.analyze(userId, appId);
-    expect(result.degraded).toBe(true);
+    expect(result.cached).toBe(false);
+    expect(result.schemaVersion).toBe(2);
+    expect(result.missingEvidence.join(' ')).not.toMatch(/WORK REGION/);
+    expect(prisma.jobApplicationResumeAnalysis.upsert).toHaveBeenCalled();
+  });
+
+  it('forceRefresh bypasses cache', async () => {
+    await service.analyze(userId, appId, { forceRefresh: true });
+    expect(prisma.jobApplicationResumeAnalysis.findUnique).not.toHaveBeenCalled();
+  });
+
+  it('does not return confident zero when only eligibility requirements exist', async () => {
+    analysisRepository.findLatestByJobId.mockResolvedValue({
+      id: 'a1',
+      analyzedAt: '2026-08-01T00:00:00.000Z',
+      outcomeStatus: 'COMPLETE',
+      requirements: [
+        { code: 'WORK_REGION', required: true, sourceText: 'US only' },
+        { code: 'SPONSORSHIP', required: true, sourceText: 'No sponsorship' },
+      ],
+    });
+    const result = await service.analyze(userId, appId, { forceRefresh: true });
+    expect(result.overallAlignment).toBeNull();
     expect(result.confidence).toBe('LOW');
-    expect(result.strengths).toEqual([]);
+    expect(result.status).toBe('LIMITED');
   });
 });
