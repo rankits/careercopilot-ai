@@ -16,6 +16,7 @@ import {
 import { CURRENT_PRIVACY_POLICY_VERSION } from '@/features/auto-apply/constants/privacyPolicy';
 import type { ConsentType } from '@/features/auto-apply/types/autoApply.types';
 import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
+
 import {
   Box,
   Checkbox,
@@ -30,6 +31,7 @@ import {
   Paper,
   Typography,
 } from '@/lib/material';
+import { SetupSectionHeading } from './SetupSectionHeading';
 
 const CONSENT_TYPES: {
   type: ConsentType;
@@ -136,10 +138,18 @@ export function ConsentsTab() {
       id="setup-section-consents"
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
     >
+      <Paper sx={{ p: { xs: 2, sm: 3 } }} variant="outlined">
+        <SetupSectionHeading
+          helperText="Control how your data is used and what you consent to."
+          required
+          sectionId="consents"
+          title="Consent & privacy"
+        />
       <Typography color="text.secondary" variant="body2">
         Grant only the permissions you understand. You can revoke resume usage at any time — doing
         so blocks Assisted Apply until you grant it again.
       </Typography>
+      </Paper>
 
       <Paper variant="outlined">
         {CONSENT_TYPES.map((item, index) => {

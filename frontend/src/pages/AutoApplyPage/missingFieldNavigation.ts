@@ -195,7 +195,7 @@ const CODE_FIX_MAP: Record<string, SectionFix> = {
     field: 'matchScore',
     label: 'Adjust exclusions',
     toastLabel: 'match score threshold',
-    destination: { kind: 'section', sectionId: 'exclusions' },
+    destination: { kind: 'section', sectionId: 'preferences' },
   },
   CONSENT_REQUIRED: {
     field: 'consent',

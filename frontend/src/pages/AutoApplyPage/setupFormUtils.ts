@@ -89,4 +89,39 @@ export const BASELINE_ANSWER_FIELDS = [
       return undefined;
     },
   },
+  {
+    key: 'professional_summary',
+    label: 'Tell us about yourself',
+    inputType: 'text' as const,
+    placeholder: 'Summarize your experience, strengths, and impact.',
+    validate: () => undefined,
+  },
+  {
+    key: 'role_interest',
+    label: 'Why are you interested in this role?',
+    inputType: 'text' as const,
+    placeholder: 'Describe what attracts you to the role.',
+    validate: () => undefined,
+  },
+  {
+    key: 'company_interest',
+    label: 'Why do you want to work here?',
+    inputType: 'text' as const,
+    placeholder: 'Add a reusable answer that you can review per application.',
+    validate: () => undefined,
+  },
+  {
+    key: 'expected_salary_text',
+    label: 'What are your salary expectations?',
+    inputType: 'text' as const,
+    placeholder: 'e.g. Flexible based on total compensation',
+    validate: () => undefined,
+  },
+  {
+    key: 'notice_period_text',
+    label: 'What is your notice period?',
+    inputType: 'text' as const,
+    placeholder: 'e.g. 30 days',
+    validate: () => undefined,
+  },
 ] as const;

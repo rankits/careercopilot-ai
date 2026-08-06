@@ -167,9 +167,9 @@ export function PersonalContactSection() {
 
   if (isLoading) {
     return (
-      <Paper sx={{ p: 3, maxWidth: 640 }} variant="outlined">
+      <Paper sx={{ borderRadius: 2, p: { xs: 2, sm: 3 }, width: '100%' }} variant="outlined">
         <SetupSectionHeading required sectionId="personal" title="Personal & contact details" />
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
           {Array.from({ length: 5 }).map((_, index) => (
             <Skeleton height={56} key={`personal-skeleton-${index}`} variant="rounded" />
           ))}
@@ -179,8 +179,19 @@ export function PersonalContactSection() {
   }
 
   return (
-    <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 640 }} variant="outlined">
-        <SetupSectionHeading required sectionId="personal" title="Personal & contact details" />
+    <Paper
+      sx={{
+        borderRadius: 2,
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 2,
+        p: { xs: 2, sm: 3 },
+        width: '100%',
+      }}
+      variant="outlined"
+    >
+      <SetupSectionHeading required sectionId="personal" title="Personal & contact details" />
+      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
         <TextField
           error={Boolean(errors.fullName)}
           fullWidth
@@ -242,10 +253,11 @@ export function PersonalContactSection() {
             </MenuItem>
           ))}
         </TextField>
-        <Box>
-          <Button disabled={!isDirty} isLoading={isSaving} onClick={() => void handleSave()}>
-            Save
-          </Button>
+      </Box>
+      <Box>
+        <Button disabled={!isDirty} isLoading={isSaving} onClick={() => void handleSave()}>
+          Save changes
+        </Button>
       </Box>
     </Paper>
   );
