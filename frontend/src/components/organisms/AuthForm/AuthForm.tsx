@@ -26,6 +26,7 @@ import {
   VisibilityOutlinedIcon,
   yupResolver,
 } from '@/lib/material';
+import { PHONE_MAX_LENGTH, sanitizePhoneInput } from '@/utils/phone';
 
 import { SocialConnectButton } from '../SocialConnectButton';
 
@@ -45,7 +46,7 @@ const FIELD_MAX_LENGTHS: Record<string, number> = {
   firstName: 80,
   lastName: 80,
   email: 300,
-  phone: 10,
+  phone: PHONE_MAX_LENGTH,
   password: 128,
   confirmPassword: 128,
 };
@@ -60,7 +61,7 @@ function renderIcon(icon?: AuthFieldIcon) {
 }
 
 function sanitizePhoneNumber(value: string) {
-  return value.replace(/\D/g, '');
+  return sanitizePhoneInput(value);
 }
 
 function limitFieldValue(value: string, maxLength?: number) {

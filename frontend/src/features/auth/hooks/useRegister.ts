@@ -5,6 +5,7 @@ import { ROUTES } from '@/constants/routes';
 import { authService } from '@/features/auth/services/auth.service';
 import type { RegisterPayload } from '@/features/auth/types/auth.types';
 import { getAuthErrorMessage } from '@/features/auth/utils/apiError';
+import { sanitizePhoneInput } from '@/utils/phone';
 
 export interface RegisterFormValues extends Omit<RegisterPayload, 'phone'> {
   confirmPassword: string;
@@ -35,7 +36,7 @@ export function useRegister() {
     }
 
     try {
-      const phone = values.phone.replace(/\D/g, '');
+      const phone = sanitizePhoneInput(values.phone);
       await registerMutation.mutateAsync({
         email: values.email.trim().toLowerCase(),
         firstName: values.firstName.trim(),
