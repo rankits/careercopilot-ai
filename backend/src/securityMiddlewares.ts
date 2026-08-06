@@ -2,6 +2,7 @@ import express from 'express';
 import helmet from 'helmet';
 import cors from 'cors';
 import hpp from 'hpp';
+import { env, isProduction } from '@/shared/config/env.conf.js';
 
 const router = express.Router();
 
@@ -11,30 +12,38 @@ const parseOrigins = (value: string | undefined): string[] =>
     .map((origin) => origin.trim())
     .filter(Boolean);
 
-const defaultOrigins = ['http://localhost:3000', 'http://localhost:4173', 'http://localhost:5001'];
-const allowedOrigins = parseOrigins(process.env.CORS_ORIGIN);
+/** Localhost defaults are for local/dev only — production must set CORS_ORIGIN. */
+const defaultOrigins = isProduction
+  ? []
+  : ['http://localhost:3000', 'http://localhost:4173', `http://localhost:${env.PORT}`];
 
-// 'unsafe-inline' on style/script and data: on img/font are here only for
-// swagger-ui-express's bundled assets at /api-docs (gated behind
-// ENABLE_SWAGGER) - the JSON API responses this app otherwise returns
-// aren't rendered documents, so CSP has no effect on them either way.
+const allowedOrigins = parseOrigins(env.CORS_ORIGIN);
+const corsOrigins = allowedOrigins.length > 0 ? allowedOrigins : defaultOrigins;
+
 router.use(
   helmet({
     contentSecurityPolicy: {
+      useDefaults: true,
       directives: {
         defaultSrc: ["'self'"],
+        scriptSrc: ["'self'"],
         styleSrc: ["'self'", "'unsafe-inline'"],
-        scriptSrc: ["'self'", "'unsafe-inline'"],
-        imgSrc: ["'self'", 'data:'],
+        imgSrc: ["'self'", 'data:', 'blob:', 'https:'],
         fontSrc: ["'self'", 'data:'],
+        connectSrc: ["'self'", ...corsOrigins, 'https:'],
+        objectSrc: ["'none'"],
+        frameAncestors: ["'self'"],
+        baseUri: ["'self'"],
+        formAction: ["'self'"],
       },
     },
+    crossOriginEmbedderPolicy: false,
   }),
 );
 
 router.use(
   cors({
-    origin: allowedOrigins.length > 0 ? allowedOrigins : defaultOrigins,
+    origin: corsOrigins,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     credentials: true,
   }),

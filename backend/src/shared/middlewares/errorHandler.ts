@@ -105,8 +105,14 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
 
   const data = err instanceof AppError ? err.data : undefined;
 
-  return res.status(statusCode).json({
+  // HTTP responses must never include stack traces (logs above still capture them).
+  const body = {
     ...errorResponse(message, errors, { code, requestId: req.id }),
     ...(data !== undefined && { data }),
-  });
+  };
+  if (isProduction && body && typeof body === 'object' && 'stack' in body) {
+    delete (body as { stack?: unknown }).stack;
+  }
+
+  return res.status(statusCode).json(body);
 };
