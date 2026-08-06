@@ -28,6 +28,7 @@ export const resumeConfig = {
     model: process.env.AI_RESUME_PARSER_MODEL || 'gemini-2.0-flash',
     temperature: Number(process.env.AI_RESUME_PARSER_TEMPERATURE ?? '0'),
     maxRetries: toPositiveInt(process.env.AI_RESUME_PARSER_MAX_RETRIES, 2),
+    googleApiKey: process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '',
     openrouter: {
       apiKey: process.env.OPENROUTER_API_KEY || '',
       model: process.env.OPENROUTER_MODEL || 'openai/gpt-4o-mini',
