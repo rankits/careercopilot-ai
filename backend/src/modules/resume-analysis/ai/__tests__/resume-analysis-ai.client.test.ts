@@ -660,8 +660,6 @@ describe('client.analyze', () => {
       AI_RESUME_ANALYSIS_MODEL: 'google/gemini-2.0-flash-exp:free',
     });
     stubOkWithRawContent('');
-    await expect(c.analyze(RESUME, 'Engineer', 'MID', JD_LONG)).rejects.toThrow(
-      /empty content/i,
-    );
+    await expect(c.analyze(RESUME, 'Engineer', 'MID', JD_LONG)).rejects.toThrow(/empty content/i);
   });
 });

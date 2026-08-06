@@ -20,51 +20,51 @@ enum ProviderType {
 }
 
 model Company {
-  id          String   @id @default(uuid())
-  slug        String   @unique
-  name        String
-  logoUrl     String?  @map("logo_url")
-  industry    String?
-  size        String?
-  verified    Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid())
+  slug      String   @unique
+  name      String
+  logoUrl   String?  @map("logo_url")
+  industry  String?
+  size      String?
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  jobs        Job[]
+  jobs Job[]
 
   @@index([slug, verified])
   @@map("companies")
 }
 
 model Job {
-  id               String    @id @default(uuid())
-  canonicalHash    String    @unique @map("canonical_hash")
-  companySlug      String    @map("company_slug")
-  title            String
-  employmentType   String?   @map("employment_type")
-  remoteType       String?   @map("remote_type")
-  descriptionHtml  String    @map("description_html") @db.Text
-  descriptionText  String    @map("description_text") @db.Text
-  salaryMin        Float?    @map("salary_min")
-  salaryMax        Float?    @map("salary_max")
-  currency         String?   @db.VarChar(10)
-  skills           Json      @default("[]")
-  benefits         Json      @default("[]")
-  tags             Json      @default("[]")
-  providerMetadata Json      @default("{}") @map("provider_metadata")
-  status           JobStatus @default(ACTIVE)
-  version          Int       @default(1)
-  firstSeen        DateTime  @default(now()) @map("first_seen")
-  lastSeen         DateTime  @updatedAt @map("last_seen")
-  lastChecked      DateTime  @default(now()) @map("last_checked")
-  postedAt         DateTime? @map("posted_at")
+  id                String    @id @default(uuid())
+  canonicalHash     String    @unique @map("canonical_hash")
+  companySlug       String    @map("company_slug")
+  title             String
+  employmentType    String?   @map("employment_type")
+  remoteType        String?   @map("remote_type")
+  descriptionHtml   String    @map("description_html") @db.Text
+  descriptionText   String    @map("description_text") @db.Text
+  salaryMin         Float?    @map("salary_min")
+  salaryMax         Float?    @map("salary_max")
+  currency          String?   @db.VarChar(10)
+  skills            Json      @default("[]")
+  benefits          Json      @default("[]")
+  tags              Json      @default("[]")
+  providerMetadata  Json      @default("{}") @map("provider_metadata")
+  status            JobStatus @default(ACTIVE)
+  version           Int       @default(1)
+  firstSeen         DateTime  @default(now()) @map("first_seen")
+  lastSeen          DateTime  @updatedAt @map("last_seen")
+  lastChecked       DateTime  @default(now()) @map("last_checked")
+  postedAt          DateTime? @map("posted_at")
   effectivePostedAt DateTime? @map("effective_posted_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
+  createdAt         DateTime  @default(now()) @map("created_at")
 
-  company          Company   @relation(fields: [companySlug], references: [slug], onDelete: Cascade)
-  sources          JobSource[]
-  embeddings       JobEmbedding[]
-  recommendations  JobRecommendation[]
+  company                Company                  @relation(fields: [companySlug], references: [slug], onDelete: Cascade)
+  sources                JobSource[]
+  embeddings             JobEmbedding[]
+  recommendations        JobRecommendation[]
   recommendationFeedback RecommendationFeedback[]
 
   @@index([status, lastSeen])
@@ -90,7 +90,7 @@ model JobSource {
   rawMetadata   Json         @default("{}") @map("raw_metadata")
   createdAt     DateTime     @default(now()) @map("created_at")
 
-  job           Job          @relation(fields: [jobId], references: [id], onDelete: Cascade)
+  job Job @relation(fields: [jobId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerJobId])
   @@index([jobId, priority(sort: Desc)])
@@ -131,14 +131,14 @@ model AggregationRun {
 }
 
 model ProviderHealth {
-  provider             ProviderType @id
-  successRate          Float        @default(100.0) @map("success_rate")
-  failureRate          Float        @default(0.0) @map("failure_rate")
-  avgResponseTimeMs    Int          @default(0) @map("avg_response_time_ms")
-  consecutiveFailures  Int          @default(0) @map("consecutive_failures")
-  rateLimitRemaining   Int          @default(100) @map("rate_limit_remaining")
-  circuitState         String       @default("HEALTHY") @map("circuit_state")
-  lastCheckedAt        DateTime     @default(now()) @map("last_checked_at")
+  provider            ProviderType @id
+  successRate         Float        @default(100.0) @map("success_rate")
+  failureRate         Float        @default(0.0) @map("failure_rate")
+  avgResponseTimeMs   Int          @default(0) @map("avg_response_time_ms")
+  consecutiveFailures Int          @default(0) @map("consecutive_failures")
+  rateLimitRemaining  Int          @default(100) @map("rate_limit_remaining")
+  circuitState        String       @default("HEALTHY") @map("circuit_state")
+  lastCheckedAt       DateTime     @default(now()) @map("last_checked_at")
 
   @@map("provider_health")
 }

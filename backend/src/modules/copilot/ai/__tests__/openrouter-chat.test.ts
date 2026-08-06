@@ -62,13 +62,11 @@ describe('chatWithOpenRouter response handling', () => {
   it('normalizes a trailing slash on the base url', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          status: 200,
-          json: async () => ({ choices: [{ message: { content: 'a' } }] }),
-        }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'a' } }] }),
+      }),
     );
     vi.mocked(extractTextContent).mockReturnValue('a');
 
@@ -79,13 +77,11 @@ describe('chatWithOpenRouter response handling', () => {
   it('falls back to default temperature and max tokens when unspecified', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          status: 200,
-          json: async () => ({ choices: [{ message: { content: 'x' } }] }),
-        }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: 'x' } }] }),
+      }),
     );
     vi.mocked(extractTextContent).mockReturnValue('x');
 
@@ -152,13 +148,11 @@ describe('chatWithOpenRouter response handling', () => {
   it('rejects an empty response body', async () => {
     vi.stubGlobal(
       'fetch',
-      vi
-        .fn()
-        .mockResolvedValue({
-          ok: true,
-          status: 200,
-          json: async () => ({ choices: [{ message: { content: '' } }] }),
-        }),
+      vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        json: async () => ({ choices: [{ message: { content: '' } }] }),
+      }),
     );
     vi.mocked(extractTextContent).mockReturnValue('   ');
 
