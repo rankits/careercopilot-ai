@@ -1,11 +1,12 @@
 import { render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const { mockResumeBuilderService } = vi.hoisted(() => ({
   mockResumeBuilderService: {
     listResumes: vi.fn(),
     uploadResume: vi.fn(),
+    deleteResume: vi.fn(),
     startAnalysis: vi.fn(),
     getAnalysis: vi.fn(),
     getKeywords: vi.fn(),
@@ -30,17 +31,21 @@ vi.mock('./exportResume', () => ({
   downloadResumeTxt: vi.fn(),
 }));
 
+vi.mock('@/components/organisms/Toast/ToastContext', () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
 import { ResumeBuilderPage } from './ResumeBuilderPage';
 
 function renderPage(initialPath = '/resume-builder') {
-  return render(
-    <MemoryRouter initialEntries={[initialPath]}>
-      <Routes>
-        <Route path="/resume-builder" element={<ResumeBuilderPage />} />
-        <Route path="/resume-builder/:resumeId" element={<ResumeBuilderPage />} />
-      </Routes>
-    </MemoryRouter>,
+  const router = createMemoryRouter(
+    [
+      { path: '/resume-builder', element: <ResumeBuilderPage /> },
+      { path: '/resume-builder/:resumeId', element: <ResumeBuilderPage /> },
+    ],
+    { initialEntries: [initialPath] },
   );
+  return render(<RouterProvider router={router} />);
 }
 
 describe('ResumeBuilderPage', () => {

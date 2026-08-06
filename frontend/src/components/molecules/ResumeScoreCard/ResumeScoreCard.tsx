@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 
+import { RESUME_SCORE_ANIMATION, RESUME_SCORE_COPY } from '@/constants/ui';
 import { ArrowForwardIcon, AutoAwesomeOutlinedIcon } from '@/lib/material';
 
 import {
@@ -24,7 +25,7 @@ export function ResumeScoreCard({ score }: ResumeScoreCardProps) {
 
   useEffect(() => {
     let current = 0;
-    const step = Math.max(1, Math.ceil(score / 24));
+    const step = Math.max(1, Math.ceil(score / RESUME_SCORE_ANIMATION.frames));
     const frame = window.setInterval(() => {
       current = Math.min(score, current + step);
       setDisplayScore(current);
@@ -32,7 +33,7 @@ export function ResumeScoreCard({ score }: ResumeScoreCardProps) {
       if (current === score) {
         window.clearInterval(frame);
       }
-    }, 28);
+    }, RESUME_SCORE_ANIMATION.intervalMs);
 
     return () => window.clearInterval(frame);
   }, [score]);
@@ -40,24 +41,24 @@ export function ResumeScoreCard({ score }: ResumeScoreCardProps) {
   return (
     <ResumeScoreRoot>
       <ResumeScoreHeader>
-        <ResumeScoreTitle component="h2">Resume Score</ResumeScoreTitle>
+        <ResumeScoreTitle component="h2">{RESUME_SCORE_COPY.title}</ResumeScoreTitle>
         <AiBadge>
-          <AutoAwesomeOutlinedIcon fontSize="small" /> AI Analysis
+          <AutoAwesomeOutlinedIcon fontSize="small" /> {RESUME_SCORE_COPY.aiAnalysis}
         </AiBadge>
       </ResumeScoreHeader>
       <ResumeScoreContent>
         <ScoreRing
-          aria-label={`Resume score ${score} percent`}
+          aria-label={RESUME_SCORE_COPY.ariaLabel(score)}
           style={{ '--score': `${score}%` } as CSSProperties}
         >
           <span>{displayScore}%</span>
-          <small>Excellent</small>
+          <small>{RESUME_SCORE_COPY.excellent}</small>
         </ScoreRing>
         <ResumeScoreCopy>
-          <ResumeScoreMessage>Great job! Your resume is performing really well.</ResumeScoreMessage>
-          <ResumeScoreGrowth>up 4% from last scan</ResumeScoreGrowth>
+          <ResumeScoreMessage>{RESUME_SCORE_COPY.message}</ResumeScoreMessage>
+          <ResumeScoreGrowth>{RESUME_SCORE_COPY.growth}</ResumeScoreGrowth>
           <ResumeScoreAction endIcon={<ArrowForwardIcon />} size="small" variant="ghost">
-            Improve Resume
+            {RESUME_SCORE_COPY.improveResume}
           </ResumeScoreAction>
         </ResumeScoreCopy>
       </ResumeScoreContent>

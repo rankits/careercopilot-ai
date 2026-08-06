@@ -4,6 +4,13 @@ import { CircularProgress, MuiButton, type MuiButtonProps } from '@/lib/material
 
 import { getButtonSx, type ButtonSize, type ButtonTone, type ButtonVariant } from './styles';
 
+/** Maps the design-system variant to the underlying MUI Button variant. */
+const BUTTON_VARIANT_MAP: Record<ButtonVariant, MuiButtonProps['variant']> = {
+  ghost: 'text',
+  outline: 'outlined',
+  solid: 'contained',
+};
+
 export interface ButtonProps extends Omit<
   MuiButtonProps,
   'color' | 'size' | 'variant' | 'disableElevation'
@@ -34,7 +41,7 @@ export function Button({
       {...props}
       disableElevation
       disabled={disabled || isLoading}
-      variant={variant === 'solid' ? 'contained' : variant === 'outline' ? 'outlined' : 'text'}
+      variant={BUTTON_VARIANT_MAP[variant]}
       startIcon={isLoading ? <CircularProgress color="inherit" size={16} /> : startIcon}
       sx={getButtonSx({ consumerSx: props.sx, size, tone, variant })}
     >

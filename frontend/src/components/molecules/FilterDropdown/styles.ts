@@ -9,8 +9,6 @@ import {
   spacing,
 } from '@/tokens';
 
-const mobileBreakpoint = '@media (max-width: 47.5rem)';
-
 export const FilterFieldRoot = styled('div', {
   shouldForwardProp: (prop) => prop !== 'fullWidth',
 })<{ fullWidth?: boolean }>(({ fullWidth }) => ({
@@ -51,9 +49,7 @@ export const DropdownButton = styled('button', {
   '&:hover': {
     background: colorTokens.actionPrimarySurface,
     borderColor: colorTokens.borderHover,
-    boxShadow: bordered ? shadows.card : 'none',
     color: colorTokens.actionPrimary,
-    transform: bordered ? 'translateY(-0.0625rem)' : undefined,
   },
   '&[aria-expanded="true"]': {
     background: colorTokens.actionPrimarySurface,
@@ -78,7 +74,7 @@ export const DropdownButton = styled('button', {
   paddingInline: bordered ? spacing[4] : 0,
   textAlign: 'left',
   transition:
-    'transform 160ms ease, box-shadow 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease',
+    'box-shadow 160ms ease, background 160ms ease, border-color 160ms ease, color 160ms ease',
   width: fullWidth ? '100%' : 'auto',
 
   '& svg': {
@@ -94,11 +90,5 @@ export const DropdownButton = styled('button', {
 
   '&[aria-expanded="true"] svg': {
     transform: 'rotate(180deg)',
-  },
-
-  [mobileBreakpoint]: {
-    fontSize: fontSize.xs,
-    minHeight: spacing[8],
-    paddingInline: spacing[3],
   },
 }));

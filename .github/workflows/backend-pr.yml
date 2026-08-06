@@ -21,7 +21,7 @@ concurrency:
 jobs:
   format:
     name: 'Backend / Format Check'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -41,7 +41,7 @@ jobs:
 
   lint:
     name: 'Backend / Lint'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -61,7 +61,7 @@ jobs:
 
   typecheck:
     name: 'Backend / Type Check'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -81,7 +81,7 @@ jobs:
 
   unit-tests:
     name: 'Backend / Unit Tests'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -108,7 +108,7 @@ jobs:
 
   integration-tests:
     name: 'Backend / Integration Tests'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -160,7 +160,7 @@ jobs:
 
   build:
     name: 'Backend / Production Build'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -180,7 +180,7 @@ jobs:
 
   prisma:
     name: 'Backend / Prisma Validation'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -203,7 +203,7 @@ jobs:
 
   docker-build:
     name: 'Backend / Docker Build'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -212,7 +212,11 @@ jobs:
       - name: Build production Docker image (no push)
         uses: docker/build-push-action@v6
         with:
-          context: .
+          # Dockerfile.prod's COPY paths (docker/entrypoint.sh, prisma, package*.json)
+          # are relative to backend/, matching docker-compose.dev.yml's convention.
+          # A repo-root context makes those COPY sources resolve to the wrong files.
+          # Note: `file` is resolved relative to the repo root, not `context`.
+          context: ./backend
           file: ./backend/docker/Dockerfile.prod
           platforms: linux/amd64
           push: false
@@ -222,14 +226,20 @@ jobs:
 
   deploy-config-validation:
     name: 'Backend / Deploy Config Validation'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
       - name: Validate deployment shell scripts syntax
         run: bash -n deploy/backend/*.sh
       - name: Validate Docker Compose config
+        # compose.yaml's services default `env_file` to the production host path
+        # /opt/career-copilot/backend/shared/.env (populated once on the EC2 box
+        # by deploy.sh). That path doesn't exist on CI runners, so point
+        # SHARED_ENV_FILE at the checked-out example file for this validation
+        # only — it's resolved relative to compose.yaml's directory.
         run: |
+          export SHARED_ENV_FILE=.env.example
           docker compose \
             --env-file deploy/backend/.env.example \
             -f deploy/backend/compose.yaml \
@@ -237,7 +247,7 @@ jobs:
 
   security:
     name: 'Backend / Security Scan'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: backend
@@ -268,7 +278,7 @@ jobs:
       - docker-build
       - deploy-config-validation
       - security
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: always()
     steps:
       - name: Evaluate Quality Gate

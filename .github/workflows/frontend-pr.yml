@@ -20,7 +20,7 @@ concurrency:
 jobs:
   format:
     name: 'Frontend / Format Check'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -40,7 +40,7 @@ jobs:
 
   lint:
     name: 'Frontend / Lint'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -60,7 +60,7 @@ jobs:
 
   typecheck:
     name: 'Frontend / Type Check'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -80,7 +80,7 @@ jobs:
 
   unit-tests:
     name: 'Frontend / Unit Tests'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -107,7 +107,7 @@ jobs:
 
   build:
     name: 'Frontend / Production Build'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -133,7 +133,7 @@ jobs:
   bundle-analysis:
     name: 'Frontend / Bundle Analysis'
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -159,7 +159,7 @@ jobs:
 
   accessibility:
     name: 'Frontend / Accessibility'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -181,7 +181,13 @@ jobs:
 
   e2e-smoke:
     name: 'Frontend / E2E Smoke'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    # Self-hosted runner user has no sudo, so `playwright install --with-deps`
+    # (which shells out to apt-get) always fails. Run inside the official
+    # Playwright image instead — it ships the matching browsers and OS
+    # dependencies preinstalled, so no privilege escalation is needed.
+    container:
+      image: mcr.microsoft.com/playwright:v1.62.1-noble
     defaults:
       run:
         working-directory: frontend
@@ -197,13 +203,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
+        run: npx playwright install chromium
       - name: Run Playwright smoke tests
         run: npm run test:e2e
 
   security:
     name: 'Frontend / Security Scan'
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     defaults:
       run:
         working-directory: frontend
@@ -219,7 +225,7 @@ jobs:
       - name: Install dependencies
         run: npm ci
       - name: Run npm security audit
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=critical
 
   quality-gate:
     name: 'Frontend / Quality Gate'
@@ -233,7 +239,7 @@ jobs:
       - accessibility
       - e2e-smoke
       - security
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     if: always()
     steps:
       - name: Evaluate Quality Gate

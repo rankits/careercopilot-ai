@@ -6,10 +6,16 @@ import { useAppDispatch } from '@/hooks/redux';
 import { ROUTES } from '@/constants/routes';
 import { login } from '@/features/auth/authSlice';
 import type { LoginPayload } from '@/features/auth/types/auth.types';
+import { getAuthErrorMessage } from '@/features/auth/utils/apiError';
 import { getPostAuthRoute } from '@/features/auth/utils/getPostAuthRoute';
 
 export interface LoginFormValues extends LoginPayload {
   rememberMe: boolean;
+}
+
+export interface LoginSubmitResult {
+  errorMessage?: string;
+  succeeded: boolean;
 }
 
 export function useLogin() {
@@ -37,9 +43,9 @@ export function useLogin() {
     void navigate(ROUTES.REGISTER);
   };
 
-  const submit = async (values: LoginFormValues) => {
+  const submit = async (values: LoginFormValues): Promise<LoginSubmitResult> => {
     if (loginMutation.isPending) {
-      return false;
+      return { errorMessage: 'Login already in progress', succeeded: false };
     }
 
     try {
@@ -49,9 +55,12 @@ export function useLogin() {
         rememberMe: values.rememberMe,
       });
 
-      return true;
-    } catch {
-      return false;
+      return { succeeded: true };
+    } catch (error) {
+      return {
+        errorMessage: getAuthErrorMessage(error, 'Unable to log in. Please try again.'),
+        succeeded: false,
+      };
     }
   };
 

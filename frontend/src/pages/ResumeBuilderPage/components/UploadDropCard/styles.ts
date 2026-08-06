@@ -17,8 +17,9 @@ export { CardTitle, CardSubtitle } from '../../styles/shared';
 
 export const UploadCard = styled(Box)({
   ...panel,
+  alignContent: 'start',
   gap: spacing[4],
-  padding: spacing[6],
+  height: '100%',
 });
 
 export const DropZone = styled(Box, {
@@ -31,6 +32,7 @@ export const DropZone = styled(Box, {
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
   cursor: 'pointer',
   display: 'flex',
+  flex: 1,
   gap: spacing[3],
   minHeight: '7.25rem',
   padding: `${spacing[4]} ${spacing[5]}`,

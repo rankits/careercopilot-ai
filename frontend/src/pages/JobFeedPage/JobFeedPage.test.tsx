@@ -114,7 +114,8 @@ describe('JobFeedPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/jobs service unavailable/i);
+    expect(await screen.findByRole('alert')).toHaveTextContent(/unable to load jobs/i);
+    expect(screen.getByRole('alert')).toHaveTextContent(/temporarily unavailable/i);
 
     listJobsMock.mockResolvedValueOnce(apiJobs);
     await user.click(screen.getByRole('button', { name: /retry/i }));
@@ -162,5 +163,16 @@ describe('JobFeedPage', () => {
 
     expect(screen.getByText(/searching/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/search jobs/i)).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('keeps the filter toolbar zones available for search, chips, and controls', async () => {
+    renderPage('/jobs-feed?workMode=remote');
+    await screen.findByText(/microsoft/i);
+
+    expect(screen.getByLabelText(/search jobs/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/job filters/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /all salary/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^newest$/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /clear all/i })).toBeInTheDocument();
   });
 });

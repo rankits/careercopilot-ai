@@ -53,7 +53,6 @@ export const applicationSummaryMetrics = [
 
 export const applicationStatusTabs = [
   { id: 'all', label: 'All' },
-  { id: 'saved', label: 'Saved' },
   { id: 'preparing', label: 'Preparing' },
   { id: 'applied', label: 'Applied' },
   { id: 'screening', label: 'Screening' },
@@ -66,7 +65,6 @@ export const applicationStatusTabs = [
 
 export const applicationStatusOptions = [
   { label: 'All statuses', value: 'all' },
-  { label: 'Saved', value: 'saved' },
   { label: 'Preparing', value: 'preparing' },
   { label: 'Applied', value: 'applied' },
   { label: 'Screening', value: 'screening' },

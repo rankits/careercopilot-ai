@@ -52,7 +52,7 @@ describe('useJobFeed', () => {
       },
     });
 
-    const { result } = renderHook(() => useJobFeed({ page: 1, sortBy: 'newest' }), { wrapper });
+    const { result } = renderHook(() => useJobFeed({ sortBy: 'newest' }), { wrapper });
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
     expect(listJobsMock).toHaveBeenCalledWith(
@@ -66,6 +66,73 @@ describe('useJobFeed', () => {
       applyUrl: 'https://acme.test/1',
     });
     expect(result.current.data?.cards[0]?.match).toBeUndefined();
+    expect(result.current.hasNextPage).toBe(false);
+  });
+
+  it('loads additional pages through infinite query', async () => {
+    listJobsMock
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'job-1',
+            title: 'Frontend Engineer',
+            company: { slug: 'acme', name: 'Acme', logoUrl: null, verified: true },
+            location: { formatted: 'Remote', remoteType: 'REMOTE' },
+            employmentType: 'FULL_TIME',
+            salary: { minimum: null, maximum: null, currency: null },
+            skills: ['React'],
+            publishedAt: null,
+            applyUrl: null,
+          },
+        ],
+        pagination: {
+          page: 1,
+          limit: 20,
+          totalItems: 2,
+          totalPages: 2,
+          hasNextPage: true,
+          hasPreviousPage: false,
+        },
+      })
+      .mockResolvedValueOnce({
+        items: [
+          {
+            id: 'job-2',
+            title: 'Backend Engineer',
+            company: { slug: 'beta', name: 'Beta', logoUrl: null, verified: false },
+            location: { formatted: 'Remote', remoteType: 'REMOTE' },
+            employmentType: 'FULL_TIME',
+            salary: { minimum: null, maximum: null, currency: null },
+            skills: ['Go'],
+            publishedAt: null,
+            applyUrl: null,
+          },
+        ],
+        pagination: {
+          page: 2,
+          limit: 20,
+          totalItems: 2,
+          totalPages: 2,
+          hasNextPage: false,
+          hasPreviousPage: true,
+        },
+      });
+
+    const { result } = renderHook(() => useJobFeed({ limit: 20 }), { wrapper });
+
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+    expect(result.current.data?.cards).toHaveLength(1);
+    expect(result.current.hasNextPage).toBe(true);
+
+    await result.current.fetchNextPage();
+
+    await waitFor(() => expect(result.current.data?.cards).toHaveLength(2));
+    expect(listJobsMock).toHaveBeenNthCalledWith(
+      2,
+      { page: 2, limit: 20 },
+      expect.objectContaining({ signal: expect.any(AbortSignal) as AbortSignal }),
+    );
+    expect(result.current.hasNextPage).toBe(false);
   });
 
   it('surfaces service errors to the hook consumer', async () => {

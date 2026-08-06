@@ -1,19 +1,24 @@
 import { Snackbar, Alert } from '@mui/material';
 import { useCallback, useMemo, useState } from 'react';
 
+import { DEFAULT_AUTO_HIDE_DURATION } from './constants';
 import { ToastContext, type ToastOptions, type ToastSeverity } from './ToastContext';
 
+interface ToastState {
+  autoHideDuration: number;
+  message: string;
+  severity: ToastSeverity;
+}
+
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const [open, setOpen] = useState(false);
-  const [message, setMessage] = useState('');
-  const [severity, setSeverity] = useState<ToastSeverity>('info');
-  const [autoHideDuration, setAutoHideDuration] = useState(4000);
+  const [toast, setToast] = useState<ToastState | null>(null);
 
   const showToast = useCallback((options: ToastOptions) => {
-    setMessage(options.message);
-    setSeverity(options.severity ?? 'info');
-    setAutoHideDuration(options.autoHideDuration ?? 4000);
-    setOpen(true);
+    setToast({
+      autoHideDuration: options.autoHideDuration ?? DEFAULT_AUTO_HIDE_DURATION,
+      message: options.message,
+      severity: options.severity ?? 'info',
+    });
   }, []);
 
   const value = useMemo(() => ({ showToast }), [showToast]);
@@ -23,18 +28,19 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
       {children}
       <Snackbar
         anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        autoHideDuration={autoHideDuration}
-        open={open}
+        autoHideDuration={toast?.autoHideDuration}
+        open={Boolean(toast)}
         onClose={(_, reason) => {
           if (reason === 'clickaway') {
             return;
           }
 
-          setOpen(false);
+          setToast(null);
         }}
+        sx={{ top: { xs: '4.75rem', sm: '5rem' } }}
       >
-        <Alert onClose={() => setOpen(false)} severity={severity} sx={{ width: '100%' }}>
-          {message}
+        <Alert onClose={() => setToast(null)} severity={toast?.severity} sx={{ width: '100%' }}>
+          {toast?.message}
         </Alert>
       </Snackbar>
     </ToastContext.Provider>

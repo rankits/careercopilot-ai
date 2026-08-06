@@ -18,13 +18,13 @@ export function LoginPage() {
         mode="login"
         onAlternateActionClick={goToRegister}
         onValidSubmit={async (values) => {
-          const succeeded = await submit(values);
+          const result = await submit(values);
 
-          if (succeeded) {
+          if (result.succeeded) {
             showToast({ message: 'Signed in successfully', severity: 'success' });
           } else {
             showToast({
-              message: 'Unable to log in. Please try again.',
+              message: result.errorMessage ?? 'Unable to log in. Please try again.',
               severity: 'error',
             });
           }
