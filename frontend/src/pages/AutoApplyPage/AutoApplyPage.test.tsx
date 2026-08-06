@@ -44,6 +44,27 @@ vi.mock('./RulesTab', () => ({
 vi.mock('./ConsentsTab', () => ({
   ConsentsTab: () => <div>Consents</div>,
 }));
+vi.mock('./PersonalSetupSection', () => ({
+  PersonalSetupSection: () => <h2>Personal & contact details</h2>,
+}));
+vi.mock('./WorkAuthorizationSection', () => ({
+  WorkAuthorizationSection: () => <h2>Work authorization & sponsorship</h2>,
+}));
+vi.mock('./JobPreferencesSetupSection', () => ({
+  JobPreferencesSetupSection: () => <h2>Job preferences</h2>,
+}));
+vi.mock('./ProfessionalLinksSection', () => ({
+  ProfessionalLinksSection: () => <h2>Professional links</h2>,
+}));
+vi.mock('./CommonAnswersSection', () => ({
+  CommonAnswersSection: () => <h2>Common answers</h2>,
+}));
+vi.mock('./EducationSection', () => ({
+  EducationSection: () => <h2>Education</h2>,
+}));
+vi.mock('./SetupSummary', () => ({
+  SetupSummary: () => <aside>Setup overview</aside>,
+}));
 
 const incompleteStatus: SetupStatusDto = {
   complete: false,
@@ -57,7 +78,7 @@ const incompleteStatus: SetupStatusDto = {
     { id: 'links', label: 'Professional links', complete: false, required: false },
     { id: 'answers', label: 'Common answers', complete: false, required: true },
     { id: 'resumes', label: 'Resumes', complete: false, required: true },
-    { id: 'exclusions', label: 'Exclusions', complete: true, required: false },
+    { id: 'education', label: 'Education', complete: true, required: false },
     { id: 'consents', label: 'Consents & privacy', complete: false, required: true },
   ],
 };
@@ -139,26 +160,18 @@ describe('AutoApplyPage', () => {
     vi.clearAllMocks();
   });
 
-  it('renders Application Setup heading and the profile tab by default', () => {
+  it('renders Application Setup and the personal section by default', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: /^Application Setup$/i })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /profile/i })).toHaveAttribute('aria-selected', 'true');
     expect(screen.getByRole('heading', { name: /Personal & contact details/i })).toBeInTheDocument();
-    expect(
-      screen.getByText(
-        /Save your profile, resume, and answers once\. When you're ready to apply, use Assisted Apply from any job/i,
-      ),
-    ).toBeInTheDocument();
-    const subtitle = screen.getByText(/Save your profile, resume, and answers once/i).textContent ?? '';
-    expect(subtitle.toLowerCase()).not.toMatch(/\bautomatically\b/);
-    expect(subtitle.toLowerCase()).not.toMatch(/\bsubmitted\b/);
+    expect(screen.queryByRole('tab')).not.toBeInTheDocument();
   });
 
   it('shows server-driven setup checklist percent and Continue setup (AA-020)', () => {
     renderPage();
 
-    expect(screen.getByText(/Setup 0% complete/i)).toBeInTheDocument();
+    expect(screen.getByText(/0% complete/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Continue setup/i })).toBeInTheDocument();
     expect(
       screen.getByRole('button', { name: /Personal & contact details, incomplete, required/i }),
@@ -166,62 +179,22 @@ describe('AutoApplyPage', () => {
     expect(screen.queryByRole('button', { name: /Browse jobs/i })).not.toBeInTheDocument();
   });
 
-  it('opens the assisted applications tab from ?tab=submissions', () => {
-    renderPage('/auto-apply?tab=submissions');
-
-    expect(screen.getByRole('tab', { name: /assisted applications/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
-    expect(screen.getByText(/Assisted applications list/i)).toBeInTheDocument();
-  });
-
-  it('opens work-auth section deep link onto the answers tab (AA-020)', () => {
+  it('opens work authorization directly from its section deep link', () => {
     renderPage('/auto-apply?section=work-auth');
-
-    expect(screen.getByRole('tab', { name: /verified answers/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
+    expect(screen.getByRole('heading', { name: /Work authorization & sponsorship/i })).toBeInTheDocument();
   });
 
-  it('hides premature UI on the assisted applications tab', () => {
-    renderPage('/auto-apply?tab=submissions');
-
-    expect(screen.queryByRole('button', { name: /^Approve$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Continue to apply$/i })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: /^Retry$/i })).not.toBeInTheDocument();
-    expect(screen.queryByText(/^Processing…$/)).not.toBeInTheDocument();
-  });
-
-  it('switches to the assisted applications tab on click', async () => {
+  it('switches sections from the checklist', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('tab', { name: /assisted applications/i }));
-
-    expect(screen.getByText(/Assisted applications list/i)).toBeInTheDocument();
-  });
-
-  it('switches to the exclusions tab and never exposes autopilot or daily-limit controls', async () => {
-    const user = userEvent.setup();
-    renderPage();
-
-    await user.click(screen.getByRole('tab', { name: /^Exclusions$/i }));
-
-    expect(screen.getByRole('heading', { name: /^Exclusions$/i })).toBeInTheDocument();
-    expect(screen.queryByText(/autopilot/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/daily application limit/i)).not.toBeInTheDocument();
-    expect(screen.queryByLabelText(/enable autopilot/i)).not.toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: /Job preferences, incomplete, required/i }));
+    expect(screen.getByRole('heading', { name: /Job preferences/i })).toBeInTheDocument();
   });
 
   it('focuses deep-linked field target on load (AA-029)', () => {
     renderPage('/auto-apply?section=resumes&field=defaultResume');
 
-    expect(screen.getByRole('tab', { name: /resume versions/i })).toHaveAttribute(
-      'aria-selected',
-      'true',
-    );
     expect(document.getElementById('setup-field-defaultResume')).toBeInTheDocument();
   });
 });

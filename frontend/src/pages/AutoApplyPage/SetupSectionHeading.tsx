@@ -15,23 +15,29 @@ export function SetupSectionHeading({
   helperText,
 }: SetupSectionHeadingProps) {
   return (
-    <Box sx={{ mb: 2 }}>
-      <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 1, mb: 0.5 }}>
+    <Box sx={{ mb: 1 }}>
+      <Box sx={{ alignItems: 'center', display: 'flex', flexWrap: 'wrap', gap: 0.75, mb: 0.5 }}>
         <Typography
           component="h2"
           data-setup-heading
           id={`setup-section-heading-${sectionId}`}
+          sx={{ fontSize: { xs: 17, sm: 19 }, fontWeight: 700, letterSpacing: '-0.02em' }}
           tabIndex={-1}
-          variant="h6"
         >
           {title}
         </Typography>
         {required != null && (
           <Chip
-            color={required ? 'primary' : 'default'}
             label={required ? 'Required' : 'Optional'}
             size="small"
-            variant="outlined"
+            sx={{
+              bgcolor: required ? 'primary.50' : 'grey.100',
+              border: 0,
+              color: required ? 'primary.main' : 'text.secondary',
+              fontSize: 10,
+              fontWeight: 700,
+              height: 20,
+            }}
           />
         )}
       </Box>

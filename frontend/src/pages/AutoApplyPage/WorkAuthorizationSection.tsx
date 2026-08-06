@@ -81,6 +81,16 @@ export function WorkAuthorizationSection() {
         answer: workAuthorization,
         autoSubmitAllowed: false,
       });
+      await upsertAnswer.mutateAsync({
+        questionKey: 'sponsorship_required',
+        answer:
+          sponsorshipChoice === 'yes'
+            ? 'Yes'
+            : sponsorshipChoice === 'no'
+              ? 'No'
+              : 'Prefer not to answer',
+        autoSubmitAllowed: false,
+      });
 
       if (sponsorshipChoice === 'yes') {
         await upsertProfile.mutateAsync({ preferences: { requiresSponsorship: true } });

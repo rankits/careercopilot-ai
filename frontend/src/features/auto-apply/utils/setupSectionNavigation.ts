@@ -10,8 +10,9 @@ export const SETUP_SECTION_TO_TAB: Record<SetupSectionId, AutoApplyTabId> = {
   links: 'profile',
   answers: 'answers',
   resumes: 'resumes',
-  exclusions: 'rules',
+  education: 'profile',
   consents: 'consents',
+  extension: 'profile',
 };
 
 export function tabForSetupSection(sectionId: string | null | undefined): AutoApplyTabId | null {
