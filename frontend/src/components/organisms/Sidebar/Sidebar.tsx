@@ -5,20 +5,25 @@ import { Button } from '@/components/atoms/Button';
 import fullLogoUrl from '@/assets/logo/career-copilot-logo.png';
 import penguinLogoUrl from '@/assets/logo/career-copilot-penguin.png';
 import {
+  BRAND_NAME,
+  DEFAULT_BOTTOM_NAV_IDS,
+  DEFAULT_SIDEBAR_ITEMS,
+  SIDEBAR_COPY,
+} from '@/constants/ui';
+import {
   Box,
   ChevronLeftIcon,
   ChevronRightIcon,
-  LinearProgress,
-  StarIcon,
+  DescriptionOutlinedIcon,
+  FileDownloadOutlinedIcon,
+  Tooltip,
   Typography,
 } from '@/lib/material';
 
-import { DEFAULT_SIDEBAR_ITEMS } from './constants';
 import type { SidebarNavItem, SidebarProps } from './interfaces';
 import {
   BottomNav,
   NavButton,
-  SidebarGoal,
   SidebarHeader,
   SidebarLogoImage,
   SidebarNav,
@@ -46,39 +51,65 @@ function SidebarNavButton({
     ? { component: RouterLink, to: item.href }
     : { type: 'button' as const };
 
-  return (
+  const button = (
     <NavButton
       {...navigationProps}
       aria-current={active ? 'page' : undefined}
+      aria-label={item.label}
       active={active}
       collapsed={collapsed}
-      onClick={() => onSelect?.(item)}
+      onClick={(event) => {
+        // Stay put when the active sidebar item is clicked again (avoids discard modal / remount).
+        if (active) {
+          event.preventDefault();
+          event.stopPropagation();
+          return;
+        }
+        onSelect?.(item);
+      }}
       tone={tone}
     >
       <Icon fontSize="small" />
       {collapsed ? null : <span>{item.label}</span>}
     </NavButton>
   );
+
+  if (!collapsed) {
+    return button;
+  }
+
+  return (
+    <Tooltip disableInteractive placement="right" title={item.label}>
+      <span>{button}</span>
+    </Tooltip>
+  );
 }
 
 export function Sidebar({
   activeItemId = 'dashboard',
   className,
+  isDownloadingLatestResume = false,
   items = DEFAULT_SIDEBAR_ITEMS,
+  latestResumeName = null,
   mobileMode,
+  onDownloadLatestResume,
   onItemSelect,
+  onOpenResumeVersions,
   onVariantChange,
-  onUploadResume,
   tone = 'light',
   variant = 'open',
 }: SidebarProps) {
   const collapsed = variant === 'collapsed';
   const nextVariant = collapsed ? 'open' : 'collapsed';
+  const hasLatestResume = Boolean(latestResumeName);
+  const bottomNavItems = DEFAULT_BOTTOM_NAV_IDS.map((id) =>
+    items.find((item) => item.id === id),
+  ).filter((item): item is SidebarNavItem => Boolean(item));
 
   if (mobileMode === 'bottomNav') {
     return (
-      <BottomNav aria-label="Mobile navigation">
-        {items.slice(0, 5).map((item) => (
+      <BottomNav aria-label={SIDEBAR_COPY.bottomNavAria}>
+        {bottomNavItems.map((item) => (
           <SidebarNavButton
             active={item.id === activeItemId}
             collapsed
@@ -94,13 +125,13 @@ export function Sidebar({
 
   return (
     <SidebarRoot
-      aria-label="Primary navigation"
+      aria-label={SIDEBAR_COPY.primaryNavAria}
       className={className}
       tone={tone}
       variant={variant}
     >
       <SidebarToggle
-        aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+        aria-label={collapsed ? SIDEBAR_COPY.expandAria : SIDEBAR_COPY.collapseAria}
         onClick={() => onVariantChange?.(nextVariant)}
         size="small"
       >
@@ -109,7 +140,7 @@ export function Sidebar({
 
       <SidebarHeader collapsed={collapsed}>
         <SidebarLogoImage
-          alt="Career Copilot"
+          alt={BRAND_NAME}
           collapsed={collapsed}
           src={collapsed ? penguinLogoUrl : fullLogoUrl}
         />
@@ -130,24 +161,31 @@ export function Sidebar({
 
       {collapsed ? null : (
         <SidebarPanel>
-          <Typography sx={sidebarTextSx.title}>Upload Resume</Typography>
-          <Typography sx={sidebarTextSx.muted}>Get AI analysis and better job matches</Typography>
-          <Button fullWidth onClick={onUploadResume} size="small">
-            Upload Now
+          <Box alignItems="center" display="flex" gap={1}>
+            <DescriptionOutlinedIcon color="primary" fontSize="small" />
+            <Typography sx={sidebarTextSx.title}>Latest Resume</Typography>
+          </Box>
+          <Typography sx={sidebarTextSx.muted}>
+            {hasLatestResume
+              ? 'Download your most recent uploaded resume.'
+              : 'No resume uploaded yet. Add one from Edit Profile.'}
+          </Typography>
+          <Button
+            disabled={!hasLatestResume}
+            fullWidth
+            isLoading={isDownloadingLatestResume}
+            onClick={onDownloadLatestResume}
+            size="small"
+            startIcon={<FileDownloadOutlinedIcon />}
+          >
+            Download Latest
           </Button>
+          {onOpenResumeVersions ? (
+            <Button fullWidth onClick={onOpenResumeVersions} size="small" variant="ghost">
+              View all versions
+            </Button>
+          ) : null}
         </SidebarPanel>
-      )}
-
-      {collapsed ? (
-        <Box sx={{ display: 'grid', justifyItems: 'center' }}>
-          <StarIcon color="warning" fontSize="small" />
-        </Box>
-      ) : (
-        <SidebarGoal>
-          <Typography sx={sidebarTextSx.title}>Daily Goal</Typography>
-          <Typography sx={sidebarTextSx.muted}>3 / 5 applications today</Typography>
-          <LinearProgress value={60} variant="determinate" />
-        </SidebarGoal>
       )}
     </SidebarRoot>
   );

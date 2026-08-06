@@ -19,6 +19,7 @@ import { resumeProcessingService } from '@/modules/resumes/services/resume-proce
 import { resumeParsingOrchestrator } from '@/modules/resumes/services/resume-parsing.orchestrator.js';
 import { ResumeParseStatus } from '@/modules/resumes/domain/resume-parser-status.js';
 import { invalidateUserRecommendationState } from '@/modules/recommendations/services/recommendation-lifecycle.service.js';
+import { logger } from '@/shared/logger/logger.js';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -167,8 +168,43 @@ export const resumeService = {
     };
   },
 
-  async listResumes(input?: { userId?: string }): Promise<Resume[]> {
-    return resumeRepository.listResumes(input?.userId);
+  async listResumes(input: { userId: string }): Promise<Resume[]> {
+    return resumeRepository.listResumes(input.userId);
+  },
+
+  async deleteResume(resumeId: string, principalId: string) {
+    const resume = await assertOwnedResume(resumeId, principalId);
+
+    try {
+      await createResumeStorage().delete(resume.storageKey);
+    } catch (err) {
+      // The DB row is the source of truth for "this resume is gone" from the
+      // user's perspective - an orphaned storage object is a cleanup concern,
+      // not a reason to fail the delete.
+      logger.warn(
+        { err, resumeId, storageKey: resume.storageKey },
+        'Failed to delete resume file from storage',
+      );
+    }
+
+    await resumeRepository.deleteResume(resumeId);
+    return { id: resumeId };
+  },
+
+  async downloadResume(resumeId: string, principalId: string) {
+    const resume = await assertOwnedResume(resumeId, principalId);
+    const storage = createResumeStorage();
+
+    try {
+      const buffer = await storage.retrieve(resume.storageKey);
+      return {
+        buffer,
+        mimeType: resume.mimeType,
+        originalName: resume.originalName,
+      };
+    } catch {
+      throw new AppError('Resume file could not be retrieved', 404, 'RESUME_FILE_NOT_FOUND');
+    }
   },
 
   async getParsedData(resumeId: string, principalId: string) {

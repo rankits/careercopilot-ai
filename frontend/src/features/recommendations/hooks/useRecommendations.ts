@@ -155,8 +155,8 @@ export function useGenerateTextRecommendations() {
 export function useGenerateCareerGoalRecommendations() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (goalText: string) => {
-      const target = await recommendationsService.createCareerTarget(goalText);
+    mutationFn: async (input: { goalText: string; structured?: Record<string, unknown> }) => {
+      const target = await recommendationsService.createCareerTarget(input);
       return recommendationsService.generateFromCareerGoal(target.id);
     },
     onSuccess: async () => {
@@ -208,6 +208,7 @@ export function useGenerateSavedSearchRecommendations() {
 export function useRecommendationFeedback() {
   const queryClient = useQueryClient();
   return useMutation({
+    retry: false,
     mutationFn: ({
       recommendationId,
       action,

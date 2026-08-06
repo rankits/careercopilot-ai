@@ -1,4 +1,4 @@
-import { useState, type DragEvent, type RefObject } from 'react';
+import { useEffect, useState, type DragEvent, type RefObject } from 'react';
 
 import { Button } from '@/components/atoms';
 
@@ -12,7 +12,6 @@ import {
   LightbulbOutlinedIcon,
   SearchOutlinedIcon,
   Typography,
-  WorkOutlineOutlinedIcon,
 } from '@/lib/material';
 import type {
   AnalysisResult,
@@ -23,11 +22,12 @@ import type {
   UploadedResume,
 } from '@/services/resumeBuilder.service';
 
-import type { ResumeBuilderStep as Step } from '../../constants';
+import { ANALYSIS_LOADING_MESSAGES, type ResumeBuilderStep as Step } from '../../constants';
 import {
   formatFileSize,
   formatResumeDate,
   getResumeExtension,
+  type LiveSkillAnalysis,
   type ResumeTemplateId,
 } from '../../utils';
 import { DefineRoleStep } from '../DefineRoleStep';
@@ -35,6 +35,8 @@ import { ExportStep } from '../ExportStep';
 import { OptimizeStep } from '../OptimizeStep';
 import { UploadStep } from '../UploadStep';
 
+import { AnalysisGateBanner } from './AnalysisGateBanner';
+import { getAnalyzeGateUi } from './analyzeGateUi';
 import {
   AnalysisLoadingGlow,
   AnalysisMain,
@@ -52,14 +54,13 @@ import {
 
 interface AnalysisDashboardProps {
   analysis: AnalysisResult | null;
-  employmentType: string;
-  experienceLevel: string;
-  industry: string;
+  editedContent?: string;
   isComplete: boolean;
   selectedResume: UploadedResume | null;
   suggestions: SuggestionItem[];
   targetRole: string;
   onContinue: () => void;
+  onEditTarget: () => void;
   onReanalyze: () => void;
   onReplaceResume: () => void;
 }
@@ -73,18 +74,36 @@ function scoreBandLabel(score?: number): string {
 
 function AnalysisDashboard({
   analysis,
-  employmentType,
-  experienceLevel,
-  industry,
+  editedContent: _editedContent = '',
   isComplete,
   selectedResume,
   suggestions,
   targetRole,
   onContinue,
+  onEditTarget,
   onReanalyze,
   onReplaceResume,
 }: AnalysisDashboardProps) {
+  void _editedContent;
   const [selectedKeywordIds, setSelectedKeywordIds] = useState<Set<number>>(new Set());
+  const [loadingMessageIndex, setLoadingMessageIndex] = useState(0);
+
+  useEffect(() => {
+    if (isComplete) return undefined;
+    setLoadingMessageIndex(0);
+    const timer = window.setInterval(() => {
+      setLoadingMessageIndex((current) => (current + 1) % ANALYSIS_LOADING_MESSAGES.length);
+    }, 2800);
+    return () => window.clearInterval(timer);
+  }, [isComplete, analysis?.id]);
+
+  const loadingMessage =
+    ANALYSIS_LOADING_MESSAGES[loadingMessageIndex] ?? ANALYSIS_LOADING_MESSAGES[0];
+  const gate = getAnalyzeGateUi({ analysis, isComplete, targetRole, loadingMessage });
+  const blockedFromOptimize = gate.kind != null;
+
+  // Step 3: trust AI semantic skillAnalysis from the server (no chip re-parse).
+  const skillAnalysis = analysis?.skillAnalysis;
   const missingKeywords = isComplete
     ? (analysis?.keywords.filter((keyword) => keyword.status === 'MISSING') ?? [])
     : [];
@@ -99,11 +118,22 @@ function AnalysisDashboard({
   const weaknesses = isComplete ? (analysis?.weaknesses ?? []) : [];
   const strengths = isComplete ? (analysis?.strengths ?? []) : [];
   const atsIssues = isComplete ? (analysis?.atsIssues ?? []) : [];
-  const skillAnalysis = analysis?.skillAnalysis;
-  const sectionScores = analysis?.sectionScores;
   const score = isComplete ? analysis?.atsScore : undefined;
   const resumeExtension = getResumeExtension(selectedResume?.originalName ?? '');
   const resumeSize = formatFileSize(selectedResume?.sizeBytes);
+
+  const SECTION_ORDER = [
+    'summary',
+    'experience',
+    'skills',
+    'education',
+    'projects',
+    'achievements',
+  ] as const;
+  const sectionEntries = SECTION_ORDER.map((name) => [
+    name,
+    isComplete ? Math.round(Number(analysis?.sectionScores?.[name] ?? 0)) : 0,
+  ]);
 
   const metrics = [
     { label: 'Keyword Match', value: analysis?.keywordMatch },
@@ -113,17 +143,6 @@ function AnalysisDashboard({
     { label: 'Formatting', value: analysis?.formattingScore },
   ];
 
-  const sectionEntries = sectionScores
-    ? Object.entries(sectionScores)
-    : [
-        ['summary', 0],
-        ['experience', 0],
-        ['skills', 0],
-        ['education', 0],
-        ['projects', 0],
-        ['achievements', 0],
-      ];
-
   const toggleKeyword = (keywordId: number) => {
     setSelectedKeywordIds((current) => {
       const next = new Set(current);
@@ -131,6 +150,12 @@ function AnalysisDashboard({
       else next.add(keywordId);
       return next;
     });
+  };
+
+  const runGateCta = () => {
+    if (gate.ctaAction === 'edit_target') onEditTarget();
+    else if (gate.ctaAction === 'replace_resume') onReplaceResume();
+    else onContinue();
   };
 
   return (
@@ -142,19 +167,55 @@ function AnalysisDashboard({
             <Typography className="step-title" component="h2">
               Step 3: <Box component="span">ATS Analysis & Skill Gaps</Box>
             </Typography>
-            <CardSubtitle>
-              Factual ATS scoring against your target role — keywords, skills, section quality, and
-              formatting issues.
-            </CardSubtitle>
+            <CardSubtitle>{gate.subtitle}</CardSubtitle>
           </Box>
-          <Button
-            size="small"
-            startIcon={<LightbulbOutlinedIcon fontSize="small" />}
-            variant="ghost"
-          >
-            How does analysis work?
-          </Button>
         </Box>
+
+        {gate.kind === 'invalid_target' ? (
+          <AnalysisGateBanner
+            title={gate.bannerTitle}
+            body={gate.bannerBody}
+            primary={{ label: 'Edit Target Role & JD', onClick: onEditTarget }}
+            secondary={{ label: 'Re-check ATS', onClick: onReanalyze, variant: 'outline' }}
+          />
+        ) : null}
+
+        {gate.kind === 'low_match' ? (
+          <AnalysisGateBanner
+            title={gate.bannerTitle}
+            body={gate.bannerBody}
+            primary={{ label: 'Upload another resume', onClick: onReplaceResume }}
+            secondary={{ label: 'Change Role & JD', onClick: onEditTarget, variant: 'outline' }}
+          />
+        ) : null}
+
+        {!isComplete ? (
+          <Box
+            sx={{
+              alignItems: 'center',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: 1.5,
+              py: 2,
+              textAlign: 'center',
+            }}
+          >
+            <Typography
+              sx={{
+                color: 'primary.main',
+                fontSize: '1rem',
+                fontWeight: 700,
+                minHeight: '1.5rem',
+              }}
+            >
+              {loadingMessage}
+            </Typography>
+            <Typography sx={{ color: 'text.secondary', fontSize: '0.85rem', maxWidth: '36rem' }}>
+              Hang tight — we are parsing your resume, matching it to the job description, and
+              preparing AI improvement suggestions.
+            </Typography>
+          </Box>
+        ) : null}
 
         <Box className="score-card">
           <Box className="score-block">
@@ -188,23 +249,32 @@ function AnalysisDashboard({
             <Box className="score-topline">
               <Box>
                 <Typography className="summary-title">
-                  {score != null
-                    ? score >= 75
-                      ? 'Strong ATS foundation — refine weak sections next.'
-                      : score >= 50
-                        ? 'Solid base — close skill and keyword gaps to climb.'
-                        : 'Significant gaps vs the target role.'
-                    : 'Analysis is running'}
+                  {gate.kind === 'invalid_target'
+                    ? 'Fix Target Role and JD to get a real ATS score.'
+                    : gate.kind === 'low_match'
+                      ? 'Match is too low to continue — change resume or field.'
+                      : score != null
+                        ? score >= 75
+                          ? 'Strong ATS foundation — refine weak sections next.'
+                          : score >= 50
+                            ? 'Solid base — close skill and keyword gaps to climb.'
+                            : 'Significant gaps vs the target role.'
+                        : 'Analysis is running'}
                 </Typography>
                 <CardSubtitle>
-                  {score != null
-                    ? `Optimized for ${targetRole || 'your target role'}. Suggestions never invent skills you do not have.`
-                    : 'Checking keywords, skill gaps, section scores, readability, and ATS issues.'}
+                  {gate.kind === 'invalid_target'
+                    ? 'Update the role and job description on the previous step, then re-analyze.'
+                    : gate.kind === 'low_match'
+                      ? 'Upload a related-field resume or adjust Target Role / JD, then re-analyze.'
+                      : score != null
+                        ? `Optimized for ${targetRole || 'your target role'}. Suggestions never invent skills you do not have.`
+                        : 'Checking keywords, skill gaps, section scores, readability, and ATS issues.'}
                 </CardSubtitle>
               </Box>
               <Button
                 size="small"
                 startIcon={<SearchOutlinedIcon fontSize="small" />}
+                sx={{ flexShrink: 0, whiteSpace: 'nowrap' }}
                 variant="outline"
                 onClick={onReanalyze}
               >
@@ -286,13 +356,13 @@ function AnalysisDashboard({
           <Box className="insight-card">
             <Typography className="card-title">Skill Gap Analysis</Typography>
             <CardSubtitle>
-              Matched skills stay on your resume. Missing skills are recommendations only.
+              AI semantic match vs JD (synonyms count). Missing skills are recommendations only.
             </CardSubtitle>
             <Box className="skill-columns">
               <Box className="skill-group">
                 <Typography className="skill-group-title">Matched</Typography>
                 <Box className="keyword-wrap">
-                  {(skillAnalysis?.matchedSkills ?? []).slice(0, 8).map((skill) => (
+                  {(skillAnalysis?.matchedSkills ?? []).map((skill) => (
                     <KeywordChip key={skill} selected component="span">
                       {skill}
                     </KeywordChip>
@@ -306,15 +376,26 @@ function AnalysisDashboard({
                 <Typography className="skill-group-title">Missing / Recommended</Typography>
                 <Box className="keyword-wrap">
                   {[
-                    ...(skillAnalysis?.missingSkills ?? []),
-                    ...(skillAnalysis?.recommendedSkills ?? []),
-                  ]
-                    .slice(0, 8)
-                    .map((skill) => (
-                      <KeywordChip key={skill} component="span">
-                        {skill}
-                      </KeywordChip>
-                    ))}
+                    ...(skillAnalysis?.missingSkills ?? []).map((skill) => ({
+                      skill,
+                      kind: 'missing' as const,
+                    })),
+                    ...(skillAnalysis?.recommendedSkills ?? [])
+                      .filter(
+                        (skill) =>
+                          !(skillAnalysis?.missingSkills ?? []).some(
+                            (missing) => missing.toLowerCase() === skill.toLowerCase(),
+                          ),
+                      )
+                      .map((skill) => ({
+                        skill,
+                        kind: 'recommended' as const,
+                      })),
+                  ].map(({ skill, kind }) => (
+                    <KeywordChip key={`${kind}-${skill}`} component="span">
+                      {skill}
+                    </KeywordChip>
+                  ))}
                   {isComplete &&
                     (skillAnalysis?.missingSkills?.length ?? 0) +
                       (skillAnalysis?.recommendedSkills?.length ?? 0) ===
@@ -322,6 +403,28 @@ function AnalysisDashboard({
                 </Box>
               </Box>
             </Box>
+            {((skillAnalysis?.additionalSkills?.length ?? 0) > 0 ||
+              (skillAnalysis?.transferableSkills?.length ?? 0) > 0) && (
+              <Box className="skill-group" sx={{ mt: 1.5 }}>
+                <Typography className="skill-group-title">Additional on resume</Typography>
+                <Box className="keyword-wrap">
+                  {[
+                    ...(skillAnalysis?.additionalSkills ?? []),
+                    ...(skillAnalysis?.transferableSkills ?? []),
+                  ]
+                    .filter(
+                      (skill, index, all) =>
+                        all.findIndex((item) => item.toLowerCase() === skill.toLowerCase()) ===
+                        index,
+                    )
+                    .map((skill) => (
+                      <KeywordChip key={`extra-${skill}`} component="span">
+                        {skill}
+                      </KeywordChip>
+                    ))}
+                </Box>
+              </Box>
+            )}
           </Box>
         </Box>
 
@@ -338,7 +441,7 @@ function AnalysisDashboard({
               {matchedKeywords.length} matched · add missing terms only where factual.
             </CardSubtitle>
             <Box className="keyword-wrap">
-              {missingKeywords.slice(0, 8).map((keyword) => (
+              {missingKeywords.map((keyword) => (
                 <KeywordChip
                   key={keyword.id}
                   component="button"
@@ -369,7 +472,7 @@ function AnalysisDashboard({
               </ToneCountBadge>
             </Box>
             <Box className="issue-list">
-              {atsIssues.slice(0, 4).map((issue) => (
+              {atsIssues.map((issue) => (
                 <Box key={`${issue.section}-${issue.issue}`} className="issue-item">
                   <Box className="issue-top">
                     <Typography className="issue-title">{issue.issue}</Typography>
@@ -386,7 +489,7 @@ function AnalysisDashboard({
                 </Box>
               ))}
               {atsIssues.length === 0 &&
-                weaknesses.slice(0, 4).map((issue) => (
+                weaknesses.map((issue) => (
                   <Typography key={issue} className="bullet">
                     <Box className="error" component="span">
                       x
@@ -408,16 +511,18 @@ function AnalysisDashboard({
                 <LightbulbOutlinedIcon fontSize="small" />
               </ToneIconBox>
               <Typography className="card-title">Strengths & Fixes</Typography>
-              <ToneCountBadge tone="success">{activeSuggestions.length}</ToneCountBadge>
+              <ToneCountBadge tone="success">
+                {strengths.length + activeSuggestions.length}
+              </ToneCountBadge>
             </Box>
             <Box className="bullet-list">
-              {strengths.slice(0, 3).map((item) => (
+              {strengths.map((item) => (
                 <Typography key={item} className="bullet">
                   <CheckIcon fontSize="small" />
                   {item}
                 </Typography>
               ))}
-              {activeSuggestions.slice(0, 4).map((suggestion) => (
+              {activeSuggestions.slice(0, 6).map((suggestion) => (
                 <Typography key={suggestion.id} className="bullet">
                   <AutoAwesomeOutlinedIcon fontSize="small" />
                   {suggestion.title}
@@ -435,23 +540,17 @@ function AnalysisDashboard({
         <Box className="progress-notice">
           <AutoAwesomeOutlinedIcon />
           <Box>
-            <Typography className="tip-title">
-              {isComplete
-                ? 'Next: apply fact-preserving AI fixes section by section.'
-                : 'Our AI is scoring ATS fit, skill gaps, and rewrite-ready suggestions.'}
-            </Typography>
-            <Typography className="tip-text">
-              Original resume content is preserved. Missing skills are never added as if you have
-              them.
-            </Typography>
+            <Typography className="tip-title">{gate.tipTitle}</Typography>
+            <Typography className="tip-text">{gate.tipText}</Typography>
           </Box>
           <Button
-            isLoading={!isComplete}
+            disabled={blockedFromOptimize ? false : !isComplete}
+            isLoading={!isComplete && !blockedFromOptimize}
             size="small"
-            onClick={onContinue}
+            onClick={runGateCta}
             variant={isComplete ? 'solid' : 'outline'}
           >
-            {isComplete ? 'Optimize resume' : 'Analysis in progress...'}
+            {gate.ctaLabel}
           </Button>
         </Box>
       </AnalysisMain>
@@ -483,28 +582,6 @@ function AnalysisDashboard({
             Replace Resume
           </Button>
         </Box>
-
-        <Box className="aside-card">
-          <Box className="aside-title-row">
-            <Typography className="aside-title">Target Role</Typography>
-            <Button size="extraSmall" variant="ghost">
-              Edit
-            </Button>
-          </Box>
-          <Box className="next-item">
-            <Box className="next-icon">
-              <WorkOutlineOutlinedIcon fontSize="small" />
-            </Box>
-            <Box>
-              <Typography className="next-text">{targetRole || 'Target role'}</Typography>
-              <Typography className="resume-subtext">
-                {[employmentType, experienceLevel && `${experienceLevel} exp`, industry]
-                  .filter(Boolean)
-                  .join(' - ') || 'Role details pending'}
-              </Typography>
-            </Box>
-          </Box>
-        </Box>
       </Box>
     </AnalysisShell>
   );
@@ -517,6 +594,7 @@ interface ResumeBuilderStepPanelsProps {
   isDragging: boolean;
   uploadError: string;
   uploading: boolean;
+  deletingResumeId?: string | null;
   fileInputRef: RefObject<HTMLInputElement | null>;
   targetRole: string;
   industry: string;
@@ -526,6 +604,8 @@ interface ResumeBuilderStepPanelsProps {
   jobDescription: string;
   startingAnalysis: boolean;
   analysis: AnalysisResult | null;
+  /** Frozen ATS result for Analyze / Define Role display (not updated by Review edits). */
+  originalAnalysis?: AnalysisResult | null;
   keywords: KeywordsResponse | null;
   suggestions: SuggestionItem[];
   applyingId: number | null;
@@ -533,7 +613,7 @@ interface ResumeBuilderStepPanelsProps {
   saving: boolean;
   recheckResult: RecheckResult | null;
   rechecking: boolean;
-  exporting: boolean;
+  exportingFormat: 'pdf' | 'docx' | null;
   versions: ResumeVersion[];
   savingVersion: boolean;
   selectedTemplate: ResumeTemplateId;
@@ -541,6 +621,8 @@ interface ResumeBuilderStepPanelsProps {
   onDrop: (event: DragEvent) => void;
   onFileSelect: (file: File) => void;
   onUseResume: (resume: UploadedResume) => void;
+  onDeleteResume: (resume: UploadedResume) => void | Promise<void>;
+  onShowMoreResumes: () => void;
   onTargetRoleChange: (value: string) => void;
   onIndustryChange: (value: string) => void;
   onExperienceLevelChange: (value: 'entry' | 'mid' | 'senior' | 'lead' | 'executive') => void;
@@ -551,13 +633,14 @@ interface ResumeBuilderStepPanelsProps {
   onBackFromDefineRole: () => void;
   onReplaceResume: () => void;
   onGoTo: (step: Step) => void;
-  onApplySuggestion: (id: number) => void;
+  onApplySuggestion: (id: number, content?: string) => void;
+  onApplyAllSuggestions: (ids: number[], content: string) => void;
   onIgnoreSuggestion: (id: number) => void;
   onEditedContentChange: (value: string) => void;
+  onLiveAtsChange?: (score: number, skillAnalysis?: LiveSkillAnalysis) => void;
   onSaveContent: () => void;
   onPreviewResume: () => void;
-  onExport: (format: 'pdf' | 'docx' | 'txt') => void;
-  onSaveVersion: () => void;
+  onExport: (format: 'pdf' | 'docx', previewRoot?: HTMLElement | null) => void;
   onDone: () => void;
   onTemplateChange: (template: ResumeTemplateId) => void;
 }
@@ -569,6 +652,7 @@ export function ResumeBuilderStepPanels({
   isDragging,
   uploadError,
   uploading,
+  deletingResumeId = null,
   fileInputRef,
   targetRole,
   industry,
@@ -578,6 +662,7 @@ export function ResumeBuilderStepPanels({
   jobDescription,
   startingAnalysis,
   analysis,
+  originalAnalysis = null,
   keywords: _keywords,
   suggestions,
   applyingId,
@@ -585,7 +670,7 @@ export function ResumeBuilderStepPanels({
   saving,
   recheckResult,
   rechecking,
-  exporting,
+  exportingFormat,
   versions,
   savingVersion,
   selectedTemplate,
@@ -593,6 +678,8 @@ export function ResumeBuilderStepPanels({
   onDrop,
   onFileSelect,
   onUseResume,
+  onDeleteResume,
+  onShowMoreResumes,
   onTargetRoleChange,
   onIndustryChange,
   onExperienceLevelChange,
@@ -604,15 +691,17 @@ export function ResumeBuilderStepPanels({
   onReplaceResume,
   onGoTo,
   onApplySuggestion,
+  onApplyAllSuggestions,
   onIgnoreSuggestion,
   onEditedContentChange,
+  onLiveAtsChange,
   onSaveContent,
   onPreviewResume: _onPreviewResume,
   onExport,
-  onSaveVersion,
   onDone,
   onTemplateChange,
 }: ResumeBuilderStepPanelsProps) {
+  const atsAnalysis = originalAnalysis ?? analysis;
   void _keywords;
   void _onPreviewResume;
 
@@ -621,6 +710,7 @@ export function ResumeBuilderStepPanels({
       {step === 1 && (
         <UploadStep
           existingResumes={existingResumes}
+          deletingResumeId={deletingResumeId}
           fileInputRef={fileInputRef}
           isDragging={isDragging}
           uploadError={uploadError}
@@ -629,6 +719,8 @@ export function ResumeBuilderStepPanels({
           onDrop={onDrop}
           onFileSelect={onFileSelect}
           onUseResume={onUseResume}
+          onDeleteResume={onDeleteResume}
+          onShowMoreResumes={onShowMoreResumes}
         />
       )}
       {step === 2 && (
@@ -641,7 +733,7 @@ export function ResumeBuilderStepPanels({
           jobDescription={jobDescription}
           startingAnalysis={startingAnalysis}
           selectedResume={selectedResume}
-          analysis={analysis}
+          analysis={atsAnalysis}
           versions={versions}
           onBack={onBackFromDefineRole}
           onTargetRoleChange={onTargetRoleChange}
@@ -655,37 +747,34 @@ export function ResumeBuilderStepPanels({
       )}
       {step === 3 && (
         <AnalysisDashboard
-          analysis={analysis}
-          employmentType={employmentType}
-          experienceLevel={experienceLevel}
-          industry={industry}
-          isComplete={false}
+          analysis={atsAnalysis}
+          editedContent={editedContent}
+          isComplete={String(atsAnalysis?.status || '').toUpperCase() === 'COMPLETED'}
           selectedResume={selectedResume}
           suggestions={suggestions}
           targetRole={targetRole}
-          onContinue={() => undefined}
-          onReanalyze={onStartAnalysis}
-          onReplaceResume={onReplaceResume}
-        />
-      )}
-      {step === 4 && analysis && (
-        <AnalysisDashboard
-          analysis={analysis}
-          employmentType={employmentType}
-          experienceLevel={experienceLevel}
-          industry={industry}
-          isComplete
-          selectedResume={selectedResume}
-          suggestions={suggestions}
-          targetRole={analysis.targetRole || targetRole}
           onContinue={() => onGoTo(5)}
+          onEditTarget={() => onGoTo(2)}
           onReanalyze={onStartAnalysis}
           onReplaceResume={onReplaceResume}
         />
       )}
-      {step === 5 && (
+      {(step === 4 || step === 5) && (
         <OptimizeStep
-          analysis={analysis}
+          key={selectedResume?.id || analysis?.resumeId || analysis?.id || 'optimize'}
+          analysis={
+            analysis && atsAnalysis
+              ? {
+                  ...analysis,
+                  baselineAtsScore: atsAnalysis.atsScore,
+                  // Seed Review "current" score from the frozen Analyze result.
+                  atsScore: atsAnalysis.atsScore,
+                  skillAnalysis: atsAnalysis.skillAnalysis ?? analysis.skillAnalysis,
+                  editedContent:
+                    analysis.editedContent || editedContent || atsAnalysis.editedContent,
+                }
+              : (analysis ?? atsAnalysis)
+          }
           applyingId={applyingId}
           editedContent={editedContent}
           jobDescription={jobDescription}
@@ -695,8 +784,10 @@ export function ResumeBuilderStepPanels({
           targetRole={targetRole}
           template={selectedTemplate}
           onApplySuggestion={onApplySuggestion}
+          onApplyAllSuggestions={onApplyAllSuggestions}
           onIgnoreSuggestion={onIgnoreSuggestion}
           onEditedContentChange={onEditedContentChange}
+          onLiveAtsChange={onLiveAtsChange}
           onExportStep={() => onGoTo(10)}
           onSaveContent={onSaveContent}
           onTemplateChange={onTemplateChange}
@@ -705,9 +796,19 @@ export function ResumeBuilderStepPanels({
 
       {step === 10 && (
         <ExportStep
-          analysis={analysis}
+          analysis={
+            atsAnalysis
+              ? {
+                  ...(analysis ?? atsAnalysis),
+                  baselineAtsScore: atsAnalysis.atsScore,
+                  atsScore: atsAnalysis.atsScore,
+                  editedContent:
+                    editedContent || analysis?.editedContent || atsAnalysis.editedContent,
+                }
+              : analysis
+          }
           editedContent={editedContent}
-          exporting={exporting}
+          exportingFormat={exportingFormat}
           jobDescription={jobDescription}
           preferredSkills={skills}
           recheckResult={recheckResult}
@@ -715,11 +816,9 @@ export function ResumeBuilderStepPanels({
           savingVersion={savingVersion}
           targetRole={targetRole}
           template={selectedTemplate}
-          versions={versions}
           onBack={() => onGoTo(5)}
           onDone={onDone}
           onExport={onExport}
-          onSaveVersion={onSaveVersion}
           onTemplateChange={onTemplateChange}
         />
       )}

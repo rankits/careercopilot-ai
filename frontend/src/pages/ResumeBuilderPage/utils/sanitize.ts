@@ -5,8 +5,14 @@ export function isNoiseLine(line: string) {
 }
 
 export function matchTopSection(line: string): ResumeSectionId | 'languages' | 'interests' | null {
-  const normalized = line.replace(/[:\-–—]+$/, '').trim();
-  if (normalized.length > 48) return null;
+  const normalized = line
+    .replace(/^[#*_>\s]+/, '')
+    .replace(/[:\-–—|•●]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized || normalized.length > 64) return null;
+  // Reject lines that look like sentences (too many words / lowercase verbs).
+  if (normalized.split(/\s+/).length > 8) return null;
   for (const [id, pattern] of Object.entries(SECTION_ALIASES) as Array<[ResumeSectionId, RegExp]>) {
     if (pattern.test(normalized)) return id;
   }

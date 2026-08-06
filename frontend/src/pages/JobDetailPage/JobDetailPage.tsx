@@ -14,11 +14,22 @@ import { useSimilarJobs } from '@/features/recommendations/hooks/useRecommendati
 
 import { jobDetailPath, ROUTES } from '@/constants/routes';
 import { JobNotFoundError } from '@/features/jobs/services/jobs.service';
+import type { JobDetailDto } from '@/features/jobs/types/job.types';
 import { extractJobDetailSections } from '@/features/jobs/utils/extractJobDetailSections';
+import { formatPostedAt } from '@/features/jobs/utils/formatPostedAt';
 import { openExternalApply, toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
-import { sanitizeJobHtml } from '@/features/jobs/utils/sanitizeJobHtml';
-import { Box, Typography } from '@/lib/material';
+import { resolveJobDescriptionDisplay } from '@/features/jobs/utils/resolveJobDescriptionDisplay';
+import {
+  Box,
+  BusinessCenterOutlinedIcon,
+  HistoryOutlinedIcon,
+  LocationOnOutlinedIcon,
+  Typography,
+  WorkOutlineOutlinedIcon,
+} from '@/lib/material';
 
+import { JobAboutRoleSection } from './JobAboutRoleSection';
+import { JobDetailSectionHeader } from './JobDetailSectionHeader';
 import { jobDetailPageSx } from './styles';
 
 function DetailSection({ items, title }: { items: string[]; title: string }) {
@@ -26,10 +37,8 @@ function DetailSection({ items, title }: { items: string[]; title: string }) {
 
   return (
     <Box component="section" sx={jobDetailPageSx.panel}>
-      <Typography component="h2" sx={jobDetailPageSx.sectionTitle}>
-        {title}
-      </Typography>
-      <Box component="ul" sx={{ margin: 0, paddingInlineStart: '1.25rem' }}>
+      <JobDetailSectionHeader title={title} />
+      <Box component="ul" sx={jobDetailPageSx.sectionList}>
         {items.map((item) => (
           <Typography component="li" key={`${title}-${item}`} sx={jobDetailPageSx.listItem}>
             {item}
@@ -38,6 +47,38 @@ function DetailSection({ items, title }: { items: string[]; title: string }) {
       </Box>
     </Box>
   );
+}
+
+function formatEnumLabel(value: string | null | undefined): string | null {
+  if (!value?.trim()) return null;
+  return value
+    .toLowerCase()
+    .split(/[_\s-]+/)
+    .filter(Boolean)
+    .map((part) => {
+      if (part === 'onsite') return 'On-site';
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join(' ');
+}
+
+function formatSalary(salary: JobDetailDto['salary']): string {
+  const { minimum, maximum, currency } = salary;
+  if (minimum == null && maximum == null) return 'Not disclosed';
+  const code = currency?.toUpperCase() ?? '';
+  const unit = code === 'INR' ? 'LPA' : code;
+  if (minimum != null && maximum != null) {
+    return unit
+      ? `${unit} ${minimum.toLocaleString()} - ${maximum.toLocaleString()}`
+      : `${minimum.toLocaleString()} - ${maximum.toLocaleString()}`;
+  }
+  const value = (minimum ?? maximum) as number;
+  return unit ? `${unit} ${value.toLocaleString()}` : value.toLocaleString();
+}
+
+function companyInitial(name: string): string {
+  const trimmed = name.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
 }
 
 export function JobDetailPage() {
@@ -53,6 +94,7 @@ export function JobDetailPage() {
     enabled: showSimilarJobs && Boolean(jobId),
     limit: 6,
   });
+
   const notFound = error instanceof JobNotFoundError;
   const applyUrl = toSafeApplyUrl(job?.applyUrl);
   const similarCards = similarJobs.data?.cards ?? [];
@@ -60,12 +102,41 @@ export function JobDetailPage() {
     () => extractJobDetailSections(job?.descriptionText, job?.benefits),
     [job?.benefits, job?.descriptionText],
   );
+  const descriptionDisplay = useMemo(
+    () =>
+      resolveJobDescriptionDisplay({
+        descriptionHtml: job?.descriptionHtml,
+        descriptionText: job?.descriptionText,
+        remainingDescription: sections.remainingDescription,
+      }),
+    [job?.descriptionHtml, job?.descriptionText, sections.remainingDescription],
+  );
+
+  const metaChips = useMemo(() => {
+    if (!job) return [];
+    return [
+      formatEnumLabel(job.employmentType),
+      formatEnumLabel(job.location.remoteType),
+      job.company.verified ? 'Verified' : null,
+    ].filter((value): value is string => Boolean(value));
+  }, [job]);
+
+  const hasStructuredSections =
+    sections.responsibilities.length > 0 ||
+    sections.requirements.length > 0 ||
+    sections.benefits.length > 0;
+
+  const showDescriptionPanel = Boolean(
+    job && (descriptionDisplay.content !== 'No description provided.' || !hasStructuredSections),
+  );
 
   return (
     <Box component="section" sx={jobDetailPageSx.root}>
-      <Button onClick={() => void navigate(feedReturnTo)} size="small" variant="outline">
-        Back to job feed
-      </Button>
+      <Box sx={jobDetailPageSx.backButton}>
+        <Button onClick={() => void navigate(feedReturnTo)} size="small" variant="outline">
+          Back to job feed
+        </Button>
+      </Box>
 
       {isPending ? <JobFeedLoadingState label="Loading job details…" /> : null}
 
@@ -90,44 +161,81 @@ export function JobDetailPage() {
 
       {job ? (
         <Box sx={jobDetailPageSx.content}>
-          <Typography component="h1" sx={jobDetailPageSx.title}>
-            {job.title}
-          </Typography>
-          <Typography sx={jobDetailPageSx.subtitle}>
-            {job.company.name} · {job.location.formatted}
-          </Typography>
-          <Typography sx={jobDetailPageSx.meta}>
-            {[job.employmentType, job.location.remoteType, job.company.verified ? 'Verified' : null]
-              .filter(Boolean)
-              .join(' · ')}
-          </Typography>
+          <Box sx={jobDetailPageSx.hero}>
+            <Box sx={jobDetailPageSx.heroTop}>
+              <Box aria-label={`${job.company.name} logo`} sx={jobDetailPageSx.companyLogo}>
+                {companyInitial(job.company.name)}
+              </Box>
 
-          <Box sx={jobDetailPageSx.actions}>
-            <Button disabled={!applyUrl} onClick={() => openExternalApply(applyUrl)} size="small">
-              Apply Now
-            </Button>
-            <Button
-              disabled={!jobId}
-              onClick={() => setShowSimilarJobs(true)}
-              size="small"
-              variant="outline"
-            >
-              Find similar
-            </Button>
+              <Box sx={jobDetailPageSx.heroCopy}>
+                <Typography component="h1" sx={jobDetailPageSx.title}>
+                  {job.title}
+                </Typography>
+                <Typography sx={jobDetailPageSx.subtitle}>
+                  {job.company.name}
+                  {job.location.formatted ? ` · ${job.location.formatted}` : ''}
+                </Typography>
+
+                {metaChips.length > 0 ? (
+                  <Box aria-label="Job attributes" sx={jobDetailPageSx.metaRow}>
+                    {metaChips.map((chip) => (
+                      <Box component="span" key={chip} sx={jobDetailPageSx.metaChip}>
+                        {chip}
+                      </Box>
+                    ))}
+                  </Box>
+                ) : null}
+              </Box>
+            </Box>
+
+            <Box sx={jobDetailPageSx.facts}>
+              <span>
+                <BusinessCenterOutlinedIcon fontSize="small" />
+                {formatSalary(job.salary)}
+              </span>
+              <span>
+                <WorkOutlineOutlinedIcon fontSize="small" />
+                {formatEnumLabel(job.location.remoteType) ??
+                  formatEnumLabel(job.employmentType) ??
+                  'Work mode not listed'}
+              </span>
+              <span>
+                <LocationOnOutlinedIcon fontSize="small" />
+                {job.location.formatted || 'Location not listed'}
+              </span>
+              <span>
+                <HistoryOutlinedIcon fontSize="small" />
+                {formatPostedAt(job.publishedAt)}
+              </span>
+            </Box>
+
+            <Box sx={jobDetailPageSx.actions}>
+              <Button disabled={!applyUrl} onClick={() => openExternalApply(applyUrl)} size="small">
+                Apply Now
+              </Button>
+              <Button
+                disabled={!jobId}
+                onClick={() => setShowSimilarJobs(true)}
+                size="small"
+                variant="outline"
+              >
+                Find similar
+              </Button>
+            </Box>
+
+            {job.skills.length > 0 ? (
+              <Box aria-label="Skills" sx={jobDetailPageSx.skills}>
+                {job.skills.map((skill) => (
+                  <Box component="span" key={skill} sx={jobDetailPageSx.skill}>
+                    {skill}
+                  </Box>
+                ))}
+              </Box>
+            ) : null}
           </Box>
 
-          {job.skills.length ? (
-            <Box sx={jobDetailPageSx.skills}>
-              {job.skills.map((skill) => (
-                <Box component="span" key={skill} sx={jobDetailPageSx.skill}>
-                  {skill}
-                </Box>
-              ))}
-            </Box>
-          ) : null}
-
           {showSimilarJobs ? (
-            <Box component="section" sx={{ display: 'grid', gap: 2, py: 2 }}>
+            <Box component="section" sx={jobDetailPageSx.similarSection}>
               <Typography component="h2" sx={jobDetailPageSx.sectionTitle}>
                 Similar jobs
               </Typography>
@@ -138,11 +246,7 @@ export function JobDetailPage() {
 
               {similarJobs.isError ? (
                 <JobFeedStatus
-                  message={
-                    similarJobs.error instanceof Error
-                      ? similarJobs.error.message
-                      : 'Unable to load similar jobs.'
-                  }
+                  message="We couldn’t load similar jobs for this listing. Please try again."
                   onRetry={similarJobs.isFetching ? undefined : () => void similarJobs.refetch()}
                   title="Unable to load similar jobs"
                   tone="error"
@@ -185,16 +289,7 @@ export function JobDetailPage() {
           <DetailSection items={sections.requirements} title="Requirements" />
           <DetailSection items={sections.benefits} title="Benefits" />
 
-          {job.descriptionHtml ? (
-            <Box
-              dangerouslySetInnerHTML={{ __html: sanitizeJobHtml(job.descriptionHtml) }}
-              sx={jobDetailPageSx.description}
-            />
-          ) : (
-            <Typography sx={jobDetailPageSx.description} whiteSpace="pre-wrap">
-              {sections.remainingDescription || 'No description provided.'}
-            </Typography>
-          )}
+          {showDescriptionPanel ? <JobAboutRoleSection description={descriptionDisplay} /> : null}
         </Box>
       ) : null}
     </Box>

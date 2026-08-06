@@ -4,6 +4,7 @@ import type {
   RegisterPayload,
   User,
 } from '@/features/auth/types/auth.types';
+import { AuthRequestError, getAuthErrorMessage } from '@/features/auth/utils/apiError';
 import { httpClient } from '@/services/httpClient';
 
 const normalizeUser = (user: User) => {
@@ -44,14 +45,24 @@ function parseAuthResponse(data: AuthApiResponse): AuthResponse {
 
 export const authService = {
   async register(payload: RegisterPayload): Promise<AuthResponse> {
-    const { data } = await httpClient.post<AuthApiResponse>('/auth/register', payload);
-
+    let data: AuthApiResponse;
+    try {
+      ({ data } = await httpClient.post<AuthApiResponse>('/auth/register', payload));
+    } catch (error) {
+      throw new AuthRequestError(
+        getAuthErrorMessage(error, 'Unable to create your account. Please try again.'),
+      );
+    }
     return parseAuthResponse(data);
   },
 
   async login(payload: LoginPayload): Promise<AuthResponse> {
-    const { data } = await httpClient.post<AuthApiResponse>('/auth/login', payload);
-
+    let data: AuthApiResponse;
+    try {
+      ({ data } = await httpClient.post<AuthApiResponse>('/auth/login', payload));
+    } catch (error) {
+      throw new AuthRequestError(getAuthErrorMessage(error, 'Unable to log in. Please try again.'));
+    }
     return parseAuthResponse(data);
   },
 

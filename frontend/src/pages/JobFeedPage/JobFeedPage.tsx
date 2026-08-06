@@ -30,11 +30,12 @@ import {
 import { jobDetailPath } from '@/constants/routes';
 import { applicationsService } from '@/features/applications/services/applications.service';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
-import { Box, Chip, Typography } from '@/lib/material';
+import { Box, Chip, Typography, useMediaQuery } from '@/lib/material';
 
 import { jobFeedPageSx } from './styles';
 
 const SEARCH_DEBOUNCE_MS = 300;
+const COMPACT_FILTERS_QUERY = '(max-width: 47.5rem)';
 
 function salaryStateFromUrl(min?: number, max?: number): string {
   if (max === 50_000 && min === undefined) return 'under-50k';
@@ -50,6 +51,7 @@ function labelFor(options: { label: string; value: string }[], value: string): s
 export function JobFeedPage() {
   const navigate = useNavigate();
   const location = useLocation();
+  const isCompactFilters = useMediaQuery(COMPACT_FILTERS_QUERY);
   const { state, listParams, patch, clearAll } = useJobFeedSearchParams();
   const [searchDraft, setSearchDraft] = useState(state.query);
   const debouncedSearch = useDebouncedValue(searchDraft, SEARCH_DEBOUNCE_MS);
@@ -67,7 +69,17 @@ export function JobFeedPage() {
     patch({ query: nextQuery }, { resetPage: true });
   }, [debouncedSearch, patch, searchDraft, state.query]);
 
-  const { data, isPending, isError, error, refetch, isFetching } = useJobFeed(listParams);
+  const {
+    data,
+    isPending,
+    isError,
+    error,
+    refetch,
+    isFetching,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useJobFeed(listParams);
   const { saveJob, unsaveJob } = useSaveJob();
   const savedQuery = useQuery({
     queryKey: savedJobsQueryKey,
@@ -91,7 +103,8 @@ export function JobFeedPage() {
     active: filter.id === state.workMode,
   }));
   const salaryValue = salaryStateFromUrl(state.minSalary, state.maxSalary);
-  const totalItems = data?.pagination.totalItems ?? 0;
+  const totalItems = data?.totalItems ?? 0;
+  const loadedCount = data?.cards.length ?? 0;
   const hasActiveFilters = Boolean(
     state.query ||
     state.workMode !== 'all' ||
@@ -156,57 +169,69 @@ export function JobFeedPage() {
       </Box>
 
       <Box sx={jobFeedPageSx.filters}>
-        <Input
-          aria-busy={isSearchPending || undefined}
-          aria-label="Search jobs"
-          onChange={(event) => setSearchDraft(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') {
-              patch({ query: searchDraft.trim() }, { resetPage: true });
-            }
-          }}
-          placeholder="Search title, company..."
-          size="small"
-          value={searchDraft}
-        />
-        <JobFilterBar
-          filters={activeFilters}
-          onFilterClick={(filter) =>
-            patch({ workMode: filter.id as JobFeedWorkMode }, { resetPage: true })
-          }
-        />
-        <FilterDropdown
-          label="Salary"
-          onChange={(value) => {
-            const range = salaryBandToApiRange(value);
-            patch({ minSalary: range.minSalary, maxSalary: range.maxSalary }, { resetPage: true });
-          }}
-          options={salaryOptions}
-          value={salaryValue}
-        />
-        <FilterDropdown
-          label="Sort"
-          onChange={(value) =>
-            patch(
-              { sortBy: value as 'newest' | 'salaryHighToLow' | 'salaryLowToHigh' },
-              { resetPage: true },
-            )
-          }
-          options={sortOptions}
-          value={state.sortBy}
-        />
-        {hasActiveFilters ? (
-          <Button
-            onClick={() => {
-              setSearchDraft('');
-              clearAll();
+        <Box sx={jobFeedPageSx.search}>
+          <Input
+            aria-busy={isSearchPending || undefined}
+            aria-label="Search jobs"
+            fullWidth
+            onChange={(event) => setSearchDraft(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') {
+                patch({ query: searchDraft.trim() }, { resetPage: true });
+              }
             }}
+            placeholder="Search title, company..."
             size="small"
-            variant="outline"
-          >
-            Clear all
-          </Button>
-        ) : null}
+            value={searchDraft}
+          />
+        </Box>
+        <Box sx={jobFeedPageSx.chips}>
+          <JobFilterBar
+            filters={activeFilters}
+            onFilterClick={(filter) =>
+              patch({ workMode: filter.id as JobFeedWorkMode }, { resetPage: true })
+            }
+          />
+        </Box>
+        <Box sx={jobFeedPageSx.controls}>
+          <FilterDropdown
+            fullWidth={isCompactFilters}
+            label="Salary"
+            onChange={(value) => {
+              const range = salaryBandToApiRange(value);
+              patch(
+                { minSalary: range.minSalary, maxSalary: range.maxSalary },
+                { resetPage: true },
+              );
+            }}
+            options={salaryOptions}
+            value={salaryValue}
+          />
+          <FilterDropdown
+            fullWidth={isCompactFilters}
+            label="Sort"
+            onChange={(value) =>
+              patch(
+                { sortBy: value as 'newest' | 'salaryHighToLow' | 'salaryLowToHigh' },
+                { resetPage: true },
+              )
+            }
+            options={sortOptions}
+            value={state.sortBy}
+          />
+          {hasActiveFilters ? (
+            <Button
+              onClick={() => {
+                setSearchDraft('');
+                clearAll();
+              }}
+              size="small"
+              variant="outline"
+            >
+              Clear all
+            </Button>
+          ) : null}
+        </Box>
       </Box>
 
       {activeFilterChips.length > 0 ? (
@@ -224,10 +249,19 @@ export function JobFeedPage() {
       ) : null}
 
       {!isPending && !isError ? (
-        <Typography aria-live="polite" sx={{ px: 0.5 }}>
-          {totalItems} job{totalItems === 1 ? '' : 's'} found
-          {isSearchPending ? ' · Searching…' : isFetching ? ' · Updating…' : ''}
-        </Typography>
+        <Box sx={jobFeedPageSx.listHeader}>
+          <Typography aria-live="polite" sx={jobFeedPageSx.resultCount}>
+            {totalItems} job{totalItems === 1 ? '' : 's'} found
+            {loadedCount > 0 && loadedCount < totalItems ? ` · Showing ${loadedCount}` : ''}
+            {isSearchPending
+              ? ' · Searching…'
+              : isFetchingNextPage
+                ? ' · Loading more…'
+                : isFetching
+                  ? ' · Updating…'
+                  : ''}
+          </Typography>
+        </Box>
       ) : null}
 
       <Box sx={jobFeedPageSx.list}>
@@ -243,59 +277,41 @@ export function JobFeedPage() {
         ) : null}
 
         {!isPending && !isError ? (
-          (data?.cards.length ?? 0) > 0 ? (
-            <>
-              <VirtualizedJobList
-                ariaLabel="Job feed results"
-                getKey={(job) => job.id ?? `${job.company}-${job.title}`}
-                items={data?.cards ?? []}
-                renderItem={(job) => (
-                  <JobCard
-                    job={job}
-                    isSaved={Boolean(job.id && savedIdSet.has(job.id))}
-                    onApply={(selected) => {
-                      openExternalApply(selected.applyUrl);
-                    }}
-                    onOpen={(selected) => {
-                      if (!selected.id) return;
-                      void navigate(jobDetailPath(selected.id), {
-                        state: { fromFeed: `${location.pathname}${location.search}` },
-                      });
-                    }}
-                    onSave={(selected) => {
-                      if (!selected.id) return;
-                      const jobId = selected.id;
-                      const wasSaved = savedIdSet.has(jobId);
-                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
-                      void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
-                        setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
-                      });
-                    }}
-                  />
-                )}
-              />
-              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', py: 2 }}>
-                <Button
-                  disabled={!data?.pagination.hasPreviousPage || isFetching}
-                  onClick={() => patch({ page: state.page - 1 }, { resetPage: false })}
-                  size="small"
-                  variant="outline"
-                >
-                  Previous
-                </Button>
-                <Typography>
-                  Page {data?.pagination.page ?? state.page} of {data?.pagination.totalPages ?? 1}
-                </Typography>
-                <Button
-                  disabled={!data?.pagination.hasNextPage || isFetching}
-                  onClick={() => patch({ page: state.page + 1 }, { resetPage: false })}
-                  size="small"
-                  variant="outline"
-                >
-                  Next
-                </Button>
-              </Box>
-            </>
+          loadedCount > 0 ? (
+            <VirtualizedJobList
+              ariaLabel="Job feed results"
+              getKey={(job) => job.id ?? `${job.company}-${job.title}`}
+              items={data?.cards ?? []}
+              onEndReached={() => {
+                if (!hasNextPage || isFetchingNextPage) return;
+                void fetchNextPage();
+              }}
+              renderItem={(job) => (
+                <JobCard
+                  job={job}
+                  isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                  premiumHover
+                  onApply={(selected) => {
+                    openExternalApply(selected.applyUrl);
+                  }}
+                  onOpen={(selected) => {
+                    if (!selected.id) return;
+                    void navigate(jobDetailPath(selected.id), {
+                      state: { fromFeed: `${location.pathname}${location.search}` },
+                    });
+                  }}
+                  onSave={(selected) => {
+                    if (!selected.id) return;
+                    const jobId = selected.id;
+                    const wasSaved = savedIdSet.has(jobId);
+                    setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+                    void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
+                      setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
+                    });
+                  }}
+                />
+              )}
+            />
           ) : (
             <JobFeedStatus
               message={
