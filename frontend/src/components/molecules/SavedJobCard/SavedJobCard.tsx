@@ -1,7 +1,5 @@
 import { Button } from '@/components/atoms/Button';
 
-import { useCachedCompanyLogo } from '@/features/jobs/hooks/useCachedCompanyLogo';
-
 import { APP_ACTIONS, JOB_CARD_ARIA, JOB_CARD_COPY, JOB_UI } from '@/constants/ui';
 import type { SavedJobCardModel } from '@/features/applications/utils/mapApplicationDtoToSavedJobCard';
 import {
@@ -42,8 +40,6 @@ export interface SavedJobCardProps {
 }
 
 export function SavedJobCard({ job, onOpen, onUnsave }: SavedJobCardProps) {
-  const { src: logoSrc, failed: logoFailed, onLogoError } = useCachedCompanyLogo(job.logoUrl);
-  const showLogoImage = Boolean(logoSrc) && !logoFailed;
   const visibleSkills = job.skills.slice(0, 4);
   const canOpen = Boolean(job.id && onOpen);
   const showMatch = typeof job.match === 'number';
@@ -67,13 +63,7 @@ export function SavedJobCard({ job, onOpen, onUnsave }: SavedJobCardProps) {
       <AccentBar tone={job.accent} />
       <LeftColumn>
         <CompanyRow>
-          <Logo aria-label={JOB_CARD_ARIA.companyLogo(job.company)}>
-            {showLogoImage ? (
-              <img alt="" loading="lazy" onError={onLogoError} src={logoSrc} />
-            ) : (
-              job.logo || '?'
-            )}
-          </Logo>
+          <Logo aria-label={JOB_CARD_ARIA.companyLogo(job.company)}>{job.logo || '?'}</Logo>
           <TitleBlock>
             <Typography component="p">
               {job.company}

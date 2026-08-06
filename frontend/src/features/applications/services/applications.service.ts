@@ -174,4 +174,13 @@ export const applicationsService = {
     const result = await applicationsService.list({ status: 'SAVED', limit: 100 });
     return result.items;
   },
+
+  async listSimilarSourceCandidates(): Promise<ApplicationDto[]> {
+    const [savedJobs, appliedApplications] = await Promise.all([
+      applicationsService.listSavedJobs(),
+      applicationsService.list({ archived: 'false', limit: 100, sortBy: 'updatedAt:desc' }),
+    ]);
+
+    return [...savedJobs, ...appliedApplications.items];
+  },
 };

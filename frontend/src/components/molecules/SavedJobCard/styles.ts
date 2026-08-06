@@ -71,16 +71,7 @@ export const Logo = styled('div')({
   fontWeight: fontWeight.extraBold,
   height: spacing[12],
   justifyItems: 'center',
-  overflow: 'hidden',
   width: spacing[12],
-
-  '& img': {
-    display: 'block',
-    height: '100%',
-    objectFit: 'contain',
-    padding: spacing[1],
-    width: '100%',
-  },
 });
 
 export const TitleBlock = styled('div')({

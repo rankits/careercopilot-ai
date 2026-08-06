@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
+import type * as UseSaveJobNS from '@/features/applications/hooks/useSaveJob';
+
 import type { ApplicationDto } from '@/features/applications/types/application.types';
 
 import { SavedJobsPage } from './SavedJobsPage';
@@ -24,9 +26,11 @@ vi.mock('@/features/applications/services/applications.service', () => ({
 }));
 
 vi.mock('@/features/applications/hooks/useSaveJob', async () => {
-  const actual = await vi.importActual('@/features/applications/hooks/useSaveJob');
+  const actual = await vi.importActual<typeof UseSaveJobNS>(
+    '@/features/applications/hooks/useSaveJob',
+  );
   return {
-    ...(actual as Record<string, unknown>),
+    ...actual,
     useSaveJob: () => ({
       isSaving: false,
       saveJob: vi.fn(),
@@ -35,8 +39,8 @@ vi.mock('@/features/applications/hooks/useSaveJob', async () => {
   };
 });
 
-vi.mock('@tanstack/react-query', async () => {
-  const actual = await vi.importActual<typeof ReactQueryNS>('@tanstack/react-query');
+vi.mock('@tanstack/react-query', async (importOriginal) => {
+  const actual = await importOriginal<typeof ReactQueryNS>();
   return {
     ...actual,
     useQuery: (options: unknown) => {

@@ -1,8 +1,6 @@
 import { Button } from '@/components/atoms/Button';
 import type { JobCardData } from '@/components/molecules';
 
-import { useCachedCompanyLogo } from '@/features/jobs/hooks/useCachedCompanyLogo';
-
 import { DASHBOARD_COPY } from '@/constants/pages/dashboard';
 import { ROUTES } from '@/constants/routes';
 import { JOB_UI } from '@/constants/ui';
@@ -40,14 +38,9 @@ function RecommendedJobItem({
   job: JobCardData;
   onOpenJob: (job: JobCardData) => void;
 }) {
-  const { src, failed, onLogoError } = useCachedCompanyLogo(job.logoUrl);
-  const showLogo = Boolean(src) && !failed;
-
   return (
     <RecommendedJobCard>
-      <RecommendedLogo aria-hidden="true">
-        {showLogo ? <img alt="" loading="lazy" onError={onLogoError} src={src} /> : job.logo || '?'}
-      </RecommendedLogo>
+      <RecommendedLogo aria-hidden="true">{job.logo || '?'}</RecommendedLogo>
       <RecommendedTitle>
         <p>{job.company}</p>
         <h3>{job.title}</h3>

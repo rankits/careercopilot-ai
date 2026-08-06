@@ -3,7 +3,7 @@ import type { JobCardData } from '@/components/molecules';
 import type { ApplicationDto } from '@/features/applications/types/application.types';
 import { formatSavedAt } from '@/features/applications/utils/formatSavedAt';
 import { toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
-import { resolveCompanyLogoUrl } from '@/features/jobs/utils/resolveCompanyLogoUrl';
+import { decodeDisplayText } from '@/lib/decodeHtmlEntities';
 
 const companyInitial = (name: string): string => {
   const trimmed = name.trim();
@@ -83,10 +83,7 @@ const resolveWorkMode = (remoteType: string | null): SavedJobCardModel['workMode
 };
 
 /** Maps a saved ApplicationDto into the shared JobCard view model. */
-export function mapApplicationDtoToSavedJobCard(
-  app: ApplicationDto,
-  index = 0,
-): SavedJobCardModel {
+export function mapApplicationDtoToSavedJobCard(app: ApplicationDto, index = 0): SavedJobCardModel {
   const type = employmentLabel(app.employmentType, app.remoteType);
   const tags = [
     ...remoteTag(app.remoteType),
@@ -98,14 +95,10 @@ export function mapApplicationDtoToSavedJobCard(
     id: app.jobId ?? undefined,
     accent: index % 2 === 0 ? 'primary' : 'danger',
     applyUrl: toSafeApplyUrl(app.originalJobUrl),
-    company: app.companyName || 'Company not listed',
+    company: decodeDisplayText(app.companyName) || 'Company not listed',
     experience: '',
     experienceBand: 'all',
-    logo: companyInitial(app.companyName || '?'),
-    logoUrl: resolveCompanyLogoUrl({
-      logoUrl: app.companyLogoUrl,
-      companyName: app.companyName,
-    }),
+    logo: companyInitial(decodeDisplayText(app.companyName) || '?'),
     location: formatLocation(app.location),
     postedAt: formatSavedAt(app.createdAt),
     salary: formatSalary(app),
@@ -113,7 +106,7 @@ export function mapApplicationDtoToSavedJobCard(
     savedAt: app.createdAt,
     skills: [],
     tags,
-    title: app.jobTitle || 'Untitled role',
+    title: decodeDisplayText(app.jobTitle) || 'Untitled role',
     type,
     verified: false,
     wasApplied: Boolean(app.appliedAt) || app.currentStatus === 'APPLIED',
