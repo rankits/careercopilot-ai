@@ -857,7 +857,29 @@ const deriveProfessionalProfile = (input: {
 
   return {
     headline: input.headline ?? currentTitle ?? primaryRole,
-    summary: input.professionalSummary,
+    summary:
+      input.professionalSummary ??
+      (() => {
+        const skills = [
+          ...input.skills.technical,
+          ...input.skills.tools,
+          ...input.skills.frameworks,
+        ].slice(0, 6);
+        if (!currentTitle && !skills.length && !input.experience.length) {
+          return null;
+        }
+        const role = currentTitle ?? primaryRole ?? 'Professional';
+        const company =
+          input.currentPosition.company ??
+          input.experience.find((item) => item.isCurrent)?.company ??
+          input.experience[0]?.company;
+        return [
+          `${role}${company ? ` at ${company}` : ''} with demonstrated experience across relevant roles.`,
+          skills.length ? `Core skills include ${skills.join(', ')}.` : null,
+        ]
+          .filter(Boolean)
+          .join(' ');
+      })(),
     currentTitle,
     primaryRole,
     seniorityLevel: deriveSeniorityLevel(totalExperienceMonths),

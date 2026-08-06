@@ -27,6 +27,8 @@ interface ProfileReviewSectionProps {
   expanded: boolean;
   errors: FieldErrors<ResumeProfileFormValues>;
   fields: ReviewField[];
+  /** Optional action rendered above a specific field (e.g. summary AI button). */
+  fieldActions?: Partial<Record<keyof ResumeProfileFormValues, ReactNode>>;
   icon: ReactNode;
   onFieldChange?: () => void;
   onToggle: () => void;
@@ -41,6 +43,7 @@ export function ProfileReviewSection({
   expanded,
   errors,
   fields,
+  fieldActions,
   icon,
   onFieldChange,
   onToggle,
@@ -91,23 +94,29 @@ export function ProfileReviewSection({
                     : undefined,
               required: required ? `${label} is required.` : false,
             });
+            const fieldAction = fieldActions?.[name];
 
             return (
-              <Input
+              <Box
                 key={name}
-                {...registration}
-                errorMessage={errors[name]?.message}
-                fullWidth
-                label={label}
-                minRows={multiline ? 3 : undefined}
-                multiline={multiline}
-                onChange={(event) => {
-                  void registration.onChange(event);
-                  onFieldChange?.();
-                }}
-                required={required}
                 sx={multiline ? reviewSectionSx.multilineInput : reviewSectionSx.input}
-              />
+              >
+                {fieldAction ? <Box sx={reviewSectionSx.fieldActionRow}>{fieldAction}</Box> : null}
+                <Input
+                  {...registration}
+                  errorMessage={errors[name]?.message}
+                  fullWidth
+                  label={label}
+                  minRows={multiline ? 3 : undefined}
+                  multiline={multiline}
+                  onChange={(event) => {
+                    void registration.onChange(event);
+                    onFieldChange?.();
+                  }}
+                  required={required}
+                  sx={{ width: '100%' }}
+                />
+              </Box>
             );
           })}
         </ReviewFields>
