@@ -27,6 +27,9 @@ export interface CandidateApplicationLinks {
   linkedin?: string;
   github?: string;
   portfolio?: string;
+  behance?: string;
+  stackoverflow?: string;
+  medium?: string;
 }
 
 export interface CandidateApplicationProfileDto {
@@ -380,7 +383,7 @@ export type SetupSectionId =
   | 'links'
   | 'answers'
   | 'resumes'
-  | 'exclusions'
+  | 'education'
   | 'consents'
   | 'extension';
 
@@ -520,6 +523,49 @@ export interface ResumeAnalysisDto {
   analyzedAt: string;
   degraded?: boolean;
   cached?: boolean;
+  status?: 'COMPLETE' | 'LIMITED' | 'FAILED';
+  overallAlignment?: number | null;
+  summary?: {
+    criteriaAnalyzed: number;
+    requiredCriteriaAnalyzed: number;
+    criteriaWithEvidence: number;
+    criteriaMissingEvidence: number;
+    criteriaUnknown: number;
+  };
+  keywords?: {
+    matched: string[];
+    missing: string[];
+    optional: string[];
+  };
+  warnings?: Array<{ code: string; message: string }>;
+  excludedRequirements?: Array<{ code: string; domain: string; reason: string }>;
+  schemaVersion?: number;
+  analyzerVersion?: string;
+}
+
+export interface ResumeBuilderContextDto {
+  jobApplicationId: string;
+  selectedResume: {
+    approvedResumeVersionId: string | null;
+    resumeId: string | null;
+    builderVersionId: number | null;
+  };
+  targetRole: string;
+  industry: string | null;
+  experienceLevel: 'entry' | 'mid' | 'senior' | 'lead' | 'executive';
+  employmentType: string | null;
+  skills: string[];
+  jobDescription: string;
+  requirements: Array<{
+    code: string;
+    title: string;
+    description: string;
+    required: boolean;
+    importance: string;
+    sourceText: string;
+    domain: string;
+  }>;
+  returnTo: string;
 }
 
 export interface HandoffResultDto {

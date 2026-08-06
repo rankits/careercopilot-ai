@@ -10,6 +10,12 @@ vi.mock('@/features/auto-apply/hooks/useApplicationReadiness', () => ({
 vi.mock('@/features/auto-apply/hooks/useJobPageAnalysis', () => ({
   useLatestJobAnalysis: vi.fn(),
 }));
+vi.mock('@/features/auto-apply/hooks/usePrepareApplication', () => ({
+  usePrepareApplication: vi.fn(() => ({
+    isPending: false,
+    mutate: vi.fn(),
+  })),
+}));
 vi.mock('@/shared/analytics/trackEvent', () => ({
   trackEvent: vi.fn(),
 }));
@@ -68,15 +74,58 @@ function goodMatch(): ProfileJobMatchDto {
   };
 }
 
-function renderFit(props: Partial<ComponentProps<typeof FitStep>> = {}) {
+function renderFit(
+  props: Partial<ComponentProps<typeof FitStep>> = {},
+  options?: {
+    readiness?: {
+      ready: boolean;
+      decision?: string;
+      blockingReasons?: Array<{ code: string; message: string; severity?: string }>;
+      warnings?: Array<{ code: string; message: string; severity?: string }>;
+    };
+  },
+) {
+  const readiness = options?.readiness ?? {
+    decision: 'READY',
+    ready: true,
+    blockingReasons: [],
+    warnings: [],
+  };
   mockedReadiness.mockReturnValue({
     isLoading: false,
     isError: false,
-    data: { decision: 'READY', ready: true, blockingReasons: [], warnings: [] },
+    data: {
+      decision: readiness.decision ?? (readiness.ready ? 'READY' : 'BLOCKED'),
+      ready: readiness.ready,
+      blockingReasons: (readiness.blockingReasons ?? []).map((r) => ({
+        severity: 'BLOCKING',
+        ...r,
+      })),
+      warnings: (readiness.warnings ?? []).map((r) => ({
+        severity: 'WARNING',
+        ...r,
+      })),
+    },
     refetch: vi.fn(),
   } as never);
   mockedAnalysis.mockReturnValue({
-    data: { status: 'COMPLETE', formStatus: 'NOT_INSPECTED' },
+    data: {
+      status: 'COMPLETE',
+      formStatus: 'NOT_INSPECTED',
+      requirements: [
+        {
+          code: 'WORK_REGION',
+          assertion: 'REQUIRES',
+          importance: 'REQUIRED',
+          required: true,
+          value: 'North America',
+          confidence: 0.9,
+          sourceText: 'Must be based in North America',
+        },
+      ],
+    },
+    isLoading: false,
+    isError: false,
   } as never);
 
   const onContinue = props.onContinue ?? vi.fn();
@@ -106,25 +155,109 @@ function renderFit(props: Partial<ComponentProps<typeof FitStep>> = {}) {
 describe('FitStep', () => {
   it('renders profile match as the primary score and recommendation as context', () => {
     renderFit();
-    expect(screen.getByText('Your profile is a good match for this role')).toBeInTheDocument();
+    expect(
+      screen.getByText(/meets the confirmed eligibility requirements/i),
+    ).toBeInTheDocument();
     expect(screen.getAllByText('78%').length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText(/Previous recommendation score \(context only\):/i),
     ).toBeInTheDocument();
     expect(screen.getByText('55%')).toBeInTheDocument();
-    expect(screen.getByText(/Overall Profile Match/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Profile Alignment/i).length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText(/Top Strengths/i)).toBeInTheDocument();
-    expect(screen.getByText(/Key Gaps/i)).toBeInTheDocument();
     expect(screen.queryByText('Worth reviewing')).not.toBeInTheDocument();
   });
 
-  it('shows missing profileMatch fallback', () => {
-    renderFit({ profileMatch: null });
-    expect(screen.getByText(/still preparing your fit analysis/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+  it('keeps alignment and eligibility separate for not-eligible matches', () => {
+    const match = goodMatch();
+    match.overallAlignment = 0.65;
+    match.eligibility = {
+      status: 'NOT_ELIGIBLE',
+      blockers: [
+        {
+          code: 'JOB_LOCATION_REQUIREMENT_NOT_MET',
+          message: 'Job requires North America; candidate is outside this region.',
+        },
+      ],
+    };
+
+    renderFit(
+      { profileMatch: match },
+      {
+        readiness: {
+          ready: false,
+          blockingReasons: [{ code: 'LOCATION', message: 'Location incompatible' }],
+        },
+      },
+    );
+    expect(screen.getByText(/Not eligible due to a hard blocker/i)).toBeInTheDocument();
+    expect(screen.getAllByText('65%').length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Employer handoff is currently blocked/i)).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'Next: Resume' })[0]).not.toBeDisabled();
   });
 
-  it('navigates back and forward', async () => {
+  it('does not show fake dimension percentages for unknown skills', async () => {
+    const user = userEvent.setup();
+    renderFit();
+    expect(screen.getAllByText('Not confirmed').length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText('40%')).not.toBeInTheDocument();
+    expect(screen.queryByText('100%')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('tab', { name: 'Skills' }));
+    expect(screen.getAllByText(/Unconfirmed skills/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText('Go')).toBeInTheDocument();
+    expect(screen.getAllByText(/Checked in Resume step/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByText(/Missing skill: Go/i)).not.toBeInTheDocument();
+  });
+
+  it('shows hard blockers and information required distinctly', () => {
+    const match = goodMatch();
+    match.eligibility = {
+      status: 'NOT_ELIGIBLE',
+      blockers: [
+        {
+          code: 'JOB_LOCATION_REQUIREMENT_NOT_MET',
+          message: 'Location incompatibility.',
+        },
+      ],
+    };
+    match.missingInformation = [
+      {
+        code: 'WORK_AUTHORIZATION_MISSING',
+        message: 'Work authorization not verified.',
+        field: 'workAuthorization',
+      },
+    ];
+    renderFit({ profileMatch: match });
+    expect(screen.getAllByText(/Hard blocker/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Information required/i).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('keeps What’s Missing non-empty', async () => {
+    const user = userEvent.setup();
+    renderFit();
+    await user.click(screen.getByRole('tab', { name: /What’s Missing|What's Missing/i }));
+    expect(
+      screen.getAllByText(/No unresolved issues|Hard blockers|Information required|Advisory gaps/i)
+        .length,
+    ).toBeGreaterThanOrEqual(1);
+  });
+
+  it('renders extracted requirements on the Requirements tab', async () => {
+    const user = userEvent.setup();
+    renderFit();
+    await user.click(screen.getByRole('tab', { name: 'Requirements' }));
+    expect(screen.getAllByText(/North America/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getByText(/Must be based in North America/i)).toBeInTheDocument();
+  });
+
+  it('shows missing profileMatch retry state', () => {
+    renderFit({ profileMatch: null });
+    expect(screen.getByText(/Fit analysis is not ready/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Retry preparation' })).toBeInTheDocument();
+  });
+
+  it('navigates back and forward while resume stays enabled', async () => {
     const user = userEvent.setup();
     const { onBack, onContinue } = renderFit();
     await user.click(screen.getAllByRole('button', { name: 'Back to Analysis' })[0]!);
@@ -133,16 +266,12 @@ describe('FitStep', () => {
     expect(onContinue).toHaveBeenCalled();
   });
 
-  it('renders not-eligible banner treatment', () => {
-    const match = goodMatch();
-    match.eligibility = {
-      status: 'NOT_ELIGIBLE',
-      blockers: [{ code: 'AUTH', message: 'Not authorized for this region.' }],
-    };
-    match.overallAlignment = 0.2;
-    renderFit({ profileMatch: match });
-    expect(
-      screen.getByText(/does not currently meet one or more required conditions/i),
-    ).toBeInTheDocument();
+  it('removes active next actions for completed applications', () => {
+    renderFit({ applicationStatus: 'SUBMITTED', viewState: 'APPLIED' });
+    expect(screen.getByText(/Application submitted manually/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Next: Resume' })).not.toBeInTheDocument();
+    expect(screen.getAllByRole('link', { name: /View application details/i }).length).toBeGreaterThan(
+      0,
+    );
   });
 });

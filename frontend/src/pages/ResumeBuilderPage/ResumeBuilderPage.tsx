@@ -5,8 +5,19 @@ import { Button } from '@/components/atoms';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { ROUTES } from '@/constants/routes';
-import { isSafeAssistedApplyReturnTo } from '@/features/auto-apply/utils/returnToNavigation';
-import { Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@/lib/material';
+import { autoApplyService } from '@/features/auto-apply/services/autoApply.service';
+import {
+  extractJobApplicationIdFromReturnTo,
+  isSafeAssistedApplyReturnTo,
+} from '@/features/auto-apply/utils/returnToNavigation';
+import {
+  Alert,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  Typography,
+} from '@/lib/material';
 import type {
   UploadedResume,
   AnalysisResult,
@@ -106,6 +117,9 @@ export function ResumeBuilderPage() {
   const [employmentType, setEmploymentType] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [jobDescription, setJobDescription] = useState('');
+  const [assistedApplyContextNotice, setAssistedApplyContextNotice] = useState(false);
+  /** Job application id whose context was successfully applied (not merely requested). */
+  const assistedApplyHydratedForRef = useRef<string | null>(null);
   const [startingAnalysis, setStartingAnalysis] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<ResumeTemplateId>('original');
 
@@ -183,6 +197,79 @@ export function ResumeBuilderPage() {
     window.addEventListener('beforeunload', onBeforeUnload);
     return () => window.removeEventListener('beforeunload', onBeforeUnload);
   }, [isDirty]);
+
+  const assistedApplySource = searchParams.get('source');
+  const assistedApplyJobApplicationId =
+    searchParams.get('jobApplicationId') ||
+    extractJobApplicationIdFromReturnTo(searchParams.get('returnTo'));
+
+  // Assisted Apply → Builder: prefill job context once after a successful fetch.
+  // Important: do not mark hydrated until apply succeeds — React Strict Mode cancels
+  // the first effect run and would otherwise skip the remount fetch forever.
+  useEffect(() => {
+    const fromAssistedApply =
+      assistedApplySource === 'assisted-apply' || Boolean(assistedApplyJobApplicationId);
+    if (!fromAssistedApply || !assistedApplyJobApplicationId) return;
+    if (assistedApplyHydratedForRef.current === assistedApplyJobApplicationId) return;
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const ctx = await autoApplyService.getResumeBuilderContext(assistedApplyJobApplicationId);
+        if (cancelled) return;
+
+        const decodeHtml = (value: string) => {
+          if (typeof document === 'undefined') {
+            return value
+              .replace(/&rsquo;/g, "'")
+              .replace(/&lsquo;/g, "'")
+              .replace(/&rdquo;/g, '"')
+              .replace(/&ldquo;/g, '"')
+              .replace(/&amp;/g, '&')
+              .replace(/&nbsp;/g, ' ');
+          }
+          const el = document.createElement('textarea');
+          el.innerHTML = value;
+          return el.value;
+        };
+
+        const nextRole = (ctx.targetRole || '').trim();
+        const nextJd = decodeHtml(ctx.jobDescription || '').trim();
+        const nextSkills = ctx.skills ?? [];
+        const nextIndustry = ctx.industry ?? '';
+        const nextEmployment = ctx.employmentType ?? '';
+        const nextLevel = ctx.experienceLevel || 'mid';
+
+        setTargetRole(nextRole);
+        setIndustry(nextIndustry);
+        setEmploymentType(nextEmployment);
+        setExperienceLevel(nextLevel);
+        setSkills(nextSkills);
+        setJobDescription(nextJd);
+        setAssistedApplyContextNotice(true);
+        setStep(2);
+        setCleanSnapshot({
+          content: editedContentRef.current,
+          targetRole: nextRole,
+          jobDescription: nextJd,
+          skillsKey: skillsKeyOf(nextSkills),
+          skills: [...nextSkills],
+        });
+        assistedApplyHydratedForRef.current = assistedApplyJobApplicationId;
+      } catch (error) {
+        if (cancelled) return;
+        showToast({
+          message: `Could not load Assisted Apply job details: ${getApiErrorMessage(error)}`,
+          severity: 'warning',
+        });
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [assistedApplySource, assistedApplyJobApplicationId, showToast]);
 
   const markSnapshotClean = useCallback(
     (overrides?: Partial<CleanSnapshot>) => {
@@ -302,21 +389,25 @@ export function ResumeBuilderPage() {
           }
         }
         if (options?.force) {
-          // Re-selecting / re-uploading must not keep unsaved Define Role edits.
-          setTargetRole(result.targetRole?.trim() || '');
-          setJobDescription(result.jobDescription?.trim() || '');
-          setIndustry('');
-          setEmploymentType('');
-          setExperienceLevel('mid');
-          setSkills([]);
-          setCleanSnapshot((prev) => ({
-            ...prev,
-            targetRole: result.targetRole?.trim() || '',
-            jobDescription: result.jobDescription?.trim() || '',
-            skillsKey: '',
-            skills: [],
-          }));
+          // Re-selecting / re-uploading must not keep unsaved Define Role edits,
+          // unless Assisted Apply already prefilled this session.
+          if (!assistedApplyHydratedForRef.current) {
+            setTargetRole(result.targetRole?.trim() || '');
+            setJobDescription(result.jobDescription?.trim() || '');
+            setIndustry('');
+            setEmploymentType('');
+            setExperienceLevel('mid');
+            setSkills([]);
+            setCleanSnapshot((prev) => ({
+              ...prev,
+              targetRole: result.targetRole?.trim() || '',
+              jobDescription: result.jobDescription?.trim() || '',
+              skillsKey: '',
+              skills: [],
+            }));
+          }
         } else {
+          // Never overwrite Assisted Apply / user-entered values with empty analysis fields.
           if (result.targetRole?.trim()) {
             setTargetRole((prev) => (prev.trim() ? prev : result.targetRole));
           }
@@ -1072,13 +1163,27 @@ export function ResumeBuilderPage() {
         await resumeBuilderService.updateContent(resumeId, editedContent);
       }
       const label = `${targetRole || analysis?.targetRole || 'Resume'} — ${new Date().toLocaleDateString()}`;
-      await resumeBuilderService.saveVersion(resumeId, label, editedContent);
+      const savedVersion = await resumeBuilderService.saveVersion(resumeId, label, editedContent);
       setVersions(await resumeBuilderService.getVersions(resumeId));
       markSnapshotClean({ content: editedContent });
+
+      const returnJobApplicationId = extractJobApplicationIdFromReturnTo(
+        searchParams.get('returnTo'),
+      );
+      if (returnJobApplicationId && savedVersion?.id != null) {
+        await autoApplyService.syncBuilderResume(returnJobApplicationId, {
+          resumeId,
+          builderVersionId: Number(savedVersion.id),
+          label,
+        });
+      }
+
       if (options?.navigateAfter) {
         allowLeaveRef.current = true;
         showToast({
-          message: 'Resume saved successfully',
+          message: returnJobApplicationId
+            ? 'Resume saved and selected for Assisted Apply'
+            : 'Resume saved successfully',
           severity: 'success',
         });
         if (!navigateAfterExit(true)) {
@@ -1121,6 +1226,11 @@ export function ResumeBuilderPage() {
           onNext={handleHeaderNext}
         />
         <WorkflowStepper current={step} />
+        {assistedApplyContextNotice ? (
+          <Alert severity="info" sx={{ mx: 2, mb: 1 }} onClose={() => setAssistedApplyContextNotice(false)}>
+            Job details were loaded from your Assisted Apply workspace. Review them before continuing.
+          </Alert>
+        ) : null}
       </StickyChrome>
       <ResumeBuilderStepPanels
         step={step}
