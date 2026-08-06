@@ -30,6 +30,8 @@ describe('permission catalog constants', () => {
     expect(RESUME_PERMISSIONS.UPDATE_OWN).toBe('resume.update.own');
     expect(RESUME_PERMISSIONS.DELETE_OWN).toBe('resume.delete.own');
     expect(RESUME_PERMISSIONS.READ_ANALYSIS_OWN).toBe('resume-analysis.read.own');
+    expect(RESUME_PERMISSIONS.UPDATE_ANALYSIS_OWN).toBe('resume-analysis.update.own');
+    expect(RESUME_PERMISSIONS.DELETE_ANALYSIS_OWN).toBe('resume-analysis.delete.own');
     expect(JOBS_PERMISSIONS.READ).toBe('jobs.read');
     expect(JOBS_PERMISSIONS.CREATE).toBe('jobs.create');
     expect(JOBS_PERMISSIONS.UPDATE).toBe('jobs.update');
@@ -72,6 +74,6 @@ describe('permission catalog constants', () => {
   it('seeds one permission catalog entry per module group and one record per permission definition', () => {
     const moduleCount = new Set(PERMISSIONS.map((permission) => permission.resource)).size;
     expect(moduleCount).toBe(11);
-    expect(PERMISSIONS).toHaveLength(41);
+    expect(PERMISSIONS).toHaveLength(43);
   });
 });
