@@ -1,10 +1,18 @@
+import { useState } from 'react';
+
 import { Button } from '@/components/atoms';
 
 import {
   Box,
+  DeleteOutlineIcon,
   DescriptionOutlinedIcon,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogContentText,
+  DialogTitle,
+  IconButton,
   InsightsOutlinedIcon,
-  MoreVertIcon,
   SecurityOutlinedIcon,
   Typography,
 } from '@/lib/material';
@@ -29,10 +37,35 @@ import {
 
 interface UploadedResumeListProps {
   resumes: UploadedResume[];
+  deletingId?: string | null;
   onUseResume: (resume: UploadedResume) => void;
+  onDeleteResume: (resume: UploadedResume) => void | Promise<void>;
+  onShowMore: () => void;
 }
 
-export function UploadedResumeList({ resumes, onUseResume }: UploadedResumeListProps) {
+export function UploadedResumeList({
+  resumes,
+  deletingId = null,
+  onUseResume,
+  onDeleteResume,
+  onShowMore,
+}: UploadedResumeListProps) {
+  const [deleteTarget, setDeleteTarget] = useState<UploadedResume | null>(null);
+  const latestResumes = resumes.slice(0, 3);
+  const hasMore = resumes.length > 3;
+  const isDeleting = Boolean(deleteTarget && deletingId === deleteTarget.id);
+
+  const closeDeleteDialog = () => {
+    if (isDeleting) return;
+    setDeleteTarget(null);
+  };
+
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    await onDeleteResume(deleteTarget);
+    setDeleteTarget(null);
+  };
+
   return (
     <ResumeListCard>
       <Box className="list-header">
@@ -49,7 +82,7 @@ export function UploadedResumeList({ resumes, onUseResume }: UploadedResumeListP
         </Button>
       </Box>
 
-      {resumes.slice(0, 3).map((resume, index) => {
+      {latestResumes.map((resume, index) => {
         const extension = getResumeExtension(resume.originalName);
         const fileSize = formatFileSize(resume.sizeBytes);
 
@@ -75,7 +108,15 @@ export function UploadedResumeList({ resumes, onUseResume }: UploadedResumeListP
                 Use This Resume
               </Button>
             </Box>
-            <MoreVertIcon className="resume-menu more-icon" />
+            <IconButton
+              aria-label={`Delete ${resume.originalName}`}
+              className="resume-menu"
+              disabled={deletingId === resume.id}
+              onClick={() => setDeleteTarget(resume)}
+              size="small"
+            >
+              <DeleteOutlineIcon className="more-icon" fontSize="small" />
+            </IconButton>
           </ResumeRow>
         );
       })}
@@ -84,12 +125,38 @@ export function UploadedResumeList({ resumes, onUseResume }: UploadedResumeListP
         <EmptyText>Upload a resume to start building your optimized version.</EmptyText>
       )}
 
+      {hasMore ? (
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+          <Button size="medium" variant="outline" onClick={onShowMore}>
+            Show more
+          </Button>
+        </Box>
+      ) : null}
+
       <Box className="footer-notice">
         <SecurityOutlinedIcon className="security-icon" />
         <Typography className="footer-text">
           Your data is secure and encrypted. We never share your information.
         </Typography>
       </Box>
+
+      <Dialog open={Boolean(deleteTarget)} onClose={closeDeleteDialog} fullWidth maxWidth="xs">
+        <DialogTitle>Delete resume?</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to delete{' '}
+            <strong>{deleteTarget?.originalName ?? 'this resume'}</strong>? This cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions sx={{ gap: 1, p: 2 }}>
+          <Button disabled={isDeleting} onClick={closeDeleteDialog} variant="outline">
+            Cancel
+          </Button>
+          <Button disabled={isDeleting} isLoading={isDeleting} onClick={() => void confirmDelete()}>
+            Delete
+          </Button>
+        </DialogActions>
+      </Dialog>
     </ResumeListCard>
   );
 }

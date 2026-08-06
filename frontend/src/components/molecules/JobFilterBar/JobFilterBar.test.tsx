@@ -2,14 +2,14 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import type { JobFilter } from './JobFilterBar';
 import { JOB_FILTER_BAR_COPY } from '@/constants/ui';
 import * as material from '@/lib/material';
 
+import type { JobFilter } from './JobFilterBar';
 import { JobFilterBar } from './JobFilterBar';
 
 vi.mock('@/lib/material', async () => {
-  const actual = await vi.importActual<typeof import('@/lib/material')>('@/lib/material');
+  const actual = await vi.importActual<typeof material>('@/lib/material');
   return {
     ...actual,
     useMediaQuery: vi.fn(),
@@ -71,12 +71,8 @@ describe('JobFilterBar', () => {
 
     render(<JobFilterBar filters={mockFilters} />);
 
-    expect(
-      screen.queryByLabelText(JOB_FILTER_BAR_COPY.scrollLeftAria),
-    ).not.toBeInTheDocument();
-    expect(
-      screen.queryByLabelText(JOB_FILTER_BAR_COPY.scrollRightAria),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(JOB_FILTER_BAR_COPY.scrollLeftAria)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(JOB_FILTER_BAR_COPY.scrollRightAria)).not.toBeInTheDocument();
   });
 
   it('renders scroll buttons in compact mode', () => {

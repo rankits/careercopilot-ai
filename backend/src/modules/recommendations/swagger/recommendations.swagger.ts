@@ -45,7 +45,7 @@ const filtersSchema = {
       enum: [...RECOMMENDATION_FILTER_MODE_VALUES],
       default: 'STRICT',
       description:
-        'STRICT enforces salary, location, remote, and employment filters. FLEXIBLE keeps negotiable near-misses and labels them as stretch opportunities.',
+        'STRICT enforces salary, location, remote, and employment filters. FLEXIBLE still honors location and remote preferences but keeps other negotiable near-misses as stretch opportunities.',
     },
     includeStretchOpportunities: { type: 'boolean', example: true },
   },

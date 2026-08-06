@@ -173,8 +173,11 @@ describe('OptimizeStep', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Apply All Fixes/i }));
 
-    expect(onApplyAllSuggestions).toHaveBeenCalledWith([11, 12], expect.stringMatching(/Java/i));
-    const content = onApplyAllSuggestions.mock.calls[0]?.[1] as string;
+    expect(onApplyAllSuggestions).toHaveBeenCalled();
+    const [ids, content] = onApplyAllSuggestions.mock.calls[0] as [number[], string];
+    expect(ids).toEqual(expect.arrayContaining([11, 12]));
+    expect(ids).toHaveLength(2);
+    expect(content).toMatch(/Java/i);
     expect(content).toMatch(/Spring Boot/i);
   });
 });

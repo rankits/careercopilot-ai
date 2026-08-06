@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { FieldErrors, UseFormRegister } from 'react-hook-form';
+import type { FieldErrors, UseFormRegister, UseFormRegisterReturn } from 'react-hook-form';
 
 import { Input } from '@/components/atoms';
 
@@ -29,6 +29,7 @@ interface ProfileReviewSectionProps {
   errors: FieldErrors<ResumeProfileFormValues>;
   fields: ReviewField[];
   icon: ReactNode;
+  onFieldChange?: () => void;
   onToggle: () => void;
   register: UseFormRegister<ResumeProfileFormValues>;
   status: string;
@@ -42,6 +43,7 @@ export function ProfileReviewSection({
   errors,
   fields,
   icon,
+  onFieldChange,
   onToggle,
   register,
   status,
@@ -77,30 +79,38 @@ export function ProfileReviewSection({
       </AccordionSummary>
       <AccordionDetails sx={reviewSectionSx.details}>
         <ReviewFields>
-          {fields.map(({ label, multiline, name, required }) => (
-            <Input
-              key={name}
-              {...register(name, {
-                pattern:
-                  name === 'email'
-                    ? { message: 'Enter a valid email address.', value: /^\S+@\S+\.\S+$/ }
-                    : name === 'totalExperience'
-                      ? {
-                          message: 'Enter a valid number of years.',
-                          value: /^\d+(?:\.\d{1,2})?$/,
-                        }
-                      : undefined,
-                required: required ? `${label} is required.` : false,
-              })}
-              errorMessage={errors[name]?.message}
-              fullWidth
-              label={label}
-              minRows={multiline ? 3 : undefined}
-              multiline={multiline}
-              required={required}
-              sx={multiline ? reviewSectionSx.multilineInput : reviewSectionSx.input}
-            />
-          ))}
+          {fields.map(({ label, multiline, name, required }) => {
+            const registration: UseFormRegisterReturn = register(name, {
+              pattern:
+                name === 'email'
+                  ? { message: 'Enter a valid email address.', value: /^\S+@\S+\.\S+$/ }
+                  : name === 'totalExperience'
+                    ? {
+                        message: 'Enter a valid number of years.',
+                        value: /^\d+(?:\.\d{1,2})?$/,
+                      }
+                    : undefined,
+              required: required ? `${label} is required.` : false,
+            });
+
+            return (
+              <Input
+                key={name}
+                {...registration}
+                errorMessage={errors[name]?.message}
+                fullWidth
+                label={label}
+                minRows={multiline ? 3 : undefined}
+                multiline={multiline}
+                onChange={(event) => {
+                  void registration.onChange(event);
+                  onFieldChange?.();
+                }}
+                required={required}
+                sx={multiline ? reviewSectionSx.multilineInput : reviewSectionSx.input}
+              />
+            );
+          })}
         </ReviewFields>
       </AccordionDetails>
     </StyledAccordion>

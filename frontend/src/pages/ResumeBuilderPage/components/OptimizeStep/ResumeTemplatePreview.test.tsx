@@ -102,11 +102,11 @@ describe('computePageOffsets', () => {
 
     expect(offsets[0]).toBe(0);
     for (let i = 1; i < offsets.length; i += 1) {
-      expect(offsets[i]).toBeGreaterThan(offsets[i - 1]);
+      expect(offsets[i]).toBeGreaterThan(offsets[i - 1]!);
     }
     expect(offsets[1]).toBe(400);
     for (let i = 0; i < offsets.length - 1; i += 1) {
-      expect(offsets[i + 1] - offsets[i]).toBeLessThanOrEqual(pageInner);
+      expect(offsets[i + 1]! - offsets[i]!).toBeLessThanOrEqual(pageInner);
     }
   });
 
@@ -139,9 +139,9 @@ describe('ResumeTemplatePreview', () => {
     expect(screen.getAllByText('Ada Lovelace').length).toBeGreaterThanOrEqual(1);
   });
 
-  it('renders default/uploaded badge for original template', () => {
+  it('renders default badge for original template', () => {
     render(<ResumeTemplatePreview draft={draft} template="original" targetRole="Engineer" />);
-    expect(screen.getAllByText(/Uploaded resume design/i).length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText(/Default · your resume/i).length).toBeGreaterThanOrEqual(1);
   });
 
   it('keeps Projects as one logical section (measure + page copies only)', () => {

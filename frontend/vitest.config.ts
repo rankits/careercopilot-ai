@@ -21,7 +21,7 @@ export default defineConfig({
   },
   test: {
     coverage: {
-      all: false,
+      // `all` was removed from CoverageOptions; `include` alone now scopes reporting.
       include: ['src/**/*.{ts,tsx}'],
       exclude: [
         // Boilerplate / non-testable code (standard practice to exclude):
@@ -50,6 +50,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
+      thresholds: {
+        lines: 35,
+        functions: 35,
+        branches: 25,
+        statements: 35,
+      },
     },
     environment: 'jsdom',
     // Provide Vite env vars for unit tests (production builds must set these explicitly).

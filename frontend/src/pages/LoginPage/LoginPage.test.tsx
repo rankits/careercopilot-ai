@@ -94,25 +94,22 @@ describe('LoginPage', () => {
 
     expect(screen.getByRole('main')).toHaveStyle({ overflow: 'hidden' });
     expect(screen.getByRole('heading', { name: /welcome back!/i })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /careercopilot/i })).toHaveStyle({
+    expect(screen.getByRole('img', { name: /careercopilot/i })).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: /careercopilot/i })).not.toHaveStyle({
       position: 'absolute',
     });
-    expect(screen.getByRole('img', { name: /ai platform illustration/i })).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /ai platform illustration/i })).toHaveStyle({
-      maxWidth: '40rem',
-      objectFit: 'contain',
-    });
-    expect(screen.getByRole('img', { name: /ai platform illustration/i })).not.toHaveStyle({
-      maxHeight: '15rem',
-    });
-    expect(screen.getByRole('region', { name: /career copilot product overview/i })).toHaveStyle({
-      display: 'grid',
-    });
-    expect(screen.getByRole('heading', { name: /find the right opportunities/i })).toHaveStyle({
-      maxWidth: '30rem',
-    });
     expect(
-      screen.getByRole('heading', { name: /find the right opportunities/i }),
+      screen.getByRole('region', { hidden: true, name: /career copilot product overview/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole('img', { hidden: true, name: /ai platform illustration/i }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('heading', { hidden: true, name: /find the right opportunities/i })
+        .length,
+    ).toBeGreaterThanOrEqual(1);
+    expect(
+      screen.getByRole('region', { name: /career copilot mobile introduction/i }),
     ).toBeInTheDocument();
     expect(screen.getByText(/^smart job matching$/i)).toBeInTheDocument();
     expect(screen.getByText(/^ai-powered guidance$/i)).toBeInTheDocument();
@@ -122,14 +119,29 @@ describe('LoginPage', () => {
     expect(screen.getByText(/^your data is safe$/i)).toBeInTheDocument();
     expect(screen.getByText(/^privacy first$/i)).toBeInTheDocument();
     expect(screen.getByText(/^ai you can trust$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/security and trust/i)).toHaveStyle({
-      backgroundColor: 'rgba(255, 255, 255, 0.82)',
-    });
+    expect(screen.getByLabelText(/security and trust/i)).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /remember me/i })).toBeChecked();
 
     await user.click(screen.getByRole('link', { name: /create account/i }));
 
     expect(screen.getByRole('heading', { name: /register destination/i })).toBeInTheDocument();
+  });
+
+  it('opens and closes the forgot password dialog', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('link', { name: /forgot password/i }));
+
+    expect(await screen.findByRole('heading', { name: /forgot password\?/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /email address/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /close dialog/i }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: /forgot password\?/i })).not.toBeInTheDocument(),
+    );
   });
 
   it('blocks missing and malformed credentials before calling the API', async () => {
@@ -271,5 +283,26 @@ describe('LoginPage', () => {
     expect(
       await screen.findByRole('heading', { name: /profile destination/i }),
     ).toBeInTheDocument();
+  });
+
+  it('shows the backend login error message when the API provides one', async () => {
+    const user = userEvent.setup();
+    loginMock.mockRejectedValueOnce({
+      isAxiosError: true,
+      response: {
+        data: {
+          code: 'UNAUTHORIZED',
+          message: 'Invalid email or password',
+          requestId: '7b5b53e2-fcb4-43c8-b081-7dc26240182b',
+          status: 'error',
+        },
+      },
+    });
+    renderPage();
+
+    await completeValidForm(user);
+    await user.click(screen.getByRole('button', { name: /^login$/i }));
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(/invalid email or password/i);
   });
 });

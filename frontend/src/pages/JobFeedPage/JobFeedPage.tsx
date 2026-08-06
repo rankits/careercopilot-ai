@@ -290,6 +290,7 @@ export function JobFeedPage() {
                 <JobCard
                   job={job}
                   isSaved={Boolean(job.id && savedIdSet.has(job.id))}
+                  premiumHover
                   onApply={(selected) => {
                     openExternalApply(selected.applyUrl);
                   }}

@@ -8,7 +8,6 @@ import { DEFAULT_SIDEBAR_ITEMS } from '@/constants/ui';
 
 import { Sidebar } from './Sidebar';
 
-
 function renderSidebar(ui: ReactNode) {
   return render(<MemoryRouter>{ui}</MemoryRouter>);
 }
@@ -28,21 +27,38 @@ describe('Sidebar', () => {
       'href',
       '/saved-jobs',
     );
-    expect(screen.getByRole('link', { name: /for you/i })).toHaveAttribute('href', '/for-you');
+    expect(screen.getByRole('link', { name: /ai match/i })).toHaveAttribute('href', '/ai-match');
+    expect(screen.queryByRole('button', { name: /^ai match$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: /applications/i })).toHaveAttribute(
       'href',
       '/applications',
     );
+    expect(screen.getByRole('link', { name: /^profile$/i })).toHaveAttribute(
+      'href',
+      '/profile/edit',
+    );
   });
 
-  it('collapses labels for icon-only mode', () => {
+  it('collapses labels for icon-only mode and exposes names via aria-label', () => {
     renderSidebar(<Sidebar variant="collapsed" />);
 
     expect(screen.getByRole('img', { name: /career copilot/i })).toHaveAttribute(
       'src',
       expect.stringContaining('penguin'),
     );
+    expect(screen.getByRole('link', { name: /^dashboard$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^jobs feed$/i })).toBeInTheDocument();
     expect(screen.queryByText(/upload resume/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^applications$/i })).toBeInTheDocument();
+  });
+
+  it('does not render the duplicate non-linking Applications item', () => {
+    renderSidebar(<Sidebar />);
+
+    const applicationLinks = screen.getAllByRole('link', { name: /^applications$/i });
+    expect(applicationLinks).toHaveLength(1);
+    expect(applicationLinks[0]).toHaveAttribute('href', '/applications');
+    expect(screen.queryByRole('button', { name: /^applications$/i })).not.toBeInTheDocument();
   });
 
   it('notifies when a navigation item is selected', async () => {
@@ -79,5 +95,9 @@ describe('Sidebar', () => {
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
     expect(screen.getAllByRole('link')).toHaveLength(5);
+    expect(screen.getByRole('link', { name: /^profile$/i })).toHaveAttribute(
+      'href',
+      '/profile/edit',
+    );
   });
 });

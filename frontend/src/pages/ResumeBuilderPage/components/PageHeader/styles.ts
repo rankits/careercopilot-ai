@@ -20,10 +20,11 @@ export const HeroHeader = styled(Box)({
   boxSizing: 'border-box',
   display: 'grid',
   gap: spacing[4],
-  gridTemplateColumns: 'minmax(0, 1.15fr) minmax(11rem, 16rem) auto',
+  gridTemplateColumns: 'minmax(0, 1.15fr) minmax(0, 16rem) auto',
   maxWidth: '100%',
   minWidth: 0,
-  padding: `${spacing[5]} ${spacing[8]}`,
+  overflow: 'hidden',
+  padding: `${spacing[4]} ${spacing[5]}`,
   width: '100%',
 
   // Tablet: title + actions on one row, progress full width below — no overlap.
@@ -35,7 +36,7 @@ export const HeroHeader = styled(Box)({
       "progress progress"
     `,
     gridTemplateColumns: 'minmax(0, 1fr) auto',
-    padding: `${spacing[4]} ${spacing[5]}`,
+    padding: `${spacing[4]} ${spacing[4]}`,
     '& .title-cluster': { gridArea: 'title', minWidth: 0 },
     '& .progress-summary': { gridArea: 'progress', maxWidth: '100%', width: '100%' },
     '& .header-actions': { gridArea: 'actions', justifyContent: 'flex-end' },

@@ -32,6 +32,42 @@ describe('estimateImprovedAtsScore', () => {
     expect(score).toBeGreaterThan(62);
     expect(score).toBeLessThanOrEqual(94);
   });
+
+  it('varies with live JD skill coverage instead of sticking at baseline', () => {
+    const low = estimateImprovedAtsScore({
+      baseline: 45,
+      content: 'React CSS HTML designer',
+      matchedSkills: [],
+      missingSkills: ['Java', 'Spring Boot', 'Hibernate', 'Kafka'],
+      appliedCount: 0,
+    });
+    const high = estimateImprovedAtsScore({
+      baseline: 45,
+      content: 'Java Spring Boot Hibernate Kafka React',
+      matchedSkills: ['Java', 'Spring Boot'],
+      missingSkills: ['Hibernate', 'Kafka'],
+      appliedCount: 0,
+    });
+
+    expect(high).toBeGreaterThan(low);
+    expect(high).toBeGreaterThan(45);
+  });
+
+  it('floors near Export when optimize succeeds from applied fixes + skill recovery', () => {
+    const score = estimateImprovedAtsScore({
+      baseline: 35,
+      content:
+        'PROFESSIONAL SUMMARY\nJava Spring Boot engineer.\nSKILLS\nJava, Spring Boot, Hibernate, Kafka, React\nWORK EXPERIENCE\n- Built Java APIs with Spring Boot and Kafka',
+      missingSkills: ['Java', 'Spring Boot', 'Hibernate', 'Kafka'],
+      matchedSkills: ['React'],
+      missingKeywords: ['Java', 'Spring Boot', 'Hibernate'],
+      appliedCount: 3,
+      highAppliedCount: 2,
+    });
+
+    expect(score).toBeGreaterThanOrEqual(74);
+    expect(score).toBeLessThanOrEqual(94);
+  });
 });
 
 describe('refreshSkillAnalysisFromContent', () => {
@@ -48,6 +84,31 @@ describe('refreshSkillAnalysisFromContent', () => {
     );
     expect(refreshed.missingSkills).toEqual(['Kafka']);
     expect(refreshed.recommendedSkills).toEqual(['Kafka']);
+  });
+
+  it('treats ReactJS / NodeJS as present for React / Node.js', () => {
+    const refreshed = refreshSkillAnalysisFromContent('Skills: ReactJS, NodeJS, TypeScript', {
+      matchedSkills: [],
+      missingSkills: ['React', 'Node.js', 'Kafka'],
+      transferableSkills: [],
+      recommendedSkills: ['React', 'Node.js', 'Kafka'],
+    });
+
+    expect(refreshed.matchedSkills).toEqual(expect.arrayContaining(['React', 'Node.js']));
+    expect(refreshed.missingSkills).toEqual(['Kafka']);
+  });
+
+  it('does not wipe matched skills when content is empty', () => {
+    const refreshed = refreshSkillAnalysisFromContent('', {
+      matchedSkills: ['React', 'TypeScript'],
+      missingSkills: ['Kafka'],
+      transferableSkills: [],
+      recommendedSkills: ['Kafka'],
+    });
+
+    expect(refreshed.matchedSkills).toEqual(expect.arrayContaining(['React', 'TypeScript']));
+    expect(refreshed.missingSkills).toContain('Kafka');
+    expect(refreshed.missingSkills).not.toContain('React');
   });
 });
 

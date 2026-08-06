@@ -2,12 +2,7 @@ import type { ElementType } from 'react';
 
 import { CircularProgress, MuiButton, type MuiButtonProps } from '@/lib/material';
 
-import {
-  getButtonSx,
-  type ButtonSize,
-  type ButtonTone,
-  type ButtonVariant,
-} from './styles';
+import { getButtonSx, type ButtonSize, type ButtonTone, type ButtonVariant } from './styles';
 
 /** Maps the design-system variant to the underlying MUI Button variant. */
 const BUTTON_VARIANT_MAP: Record<ButtonVariant, MuiButtonProps['variant']> = {

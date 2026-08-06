@@ -11,11 +11,7 @@ export interface HeaderNotificationProps {
 
 export function HeaderNotification({ count = 0, onClick }: HeaderNotificationProps) {
   return (
-    <IconButton
-      aria-label={NOTIFICATIONS_ARIA_LABEL}
-      onClick={onClick}
-      sx={notificationButtonSx}
-    >
+    <IconButton aria-label={NOTIFICATIONS_ARIA_LABEL} onClick={onClick} sx={notificationButtonSx}>
       <Badge badgeContent={count} color="error">
         <NotificationsOutlinedIcon />
       </Badge>

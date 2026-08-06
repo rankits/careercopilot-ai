@@ -1,4 +1,3 @@
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { logger } from '@/shared/logger/logger.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import type { AiAnalysisOutput } from '@/modules/resume-analysis/types/resume-analysis.types.js';
@@ -8,653 +7,42 @@ import {
   INVALID_TARGET_MESSAGE,
   buildTargetRoleJdValidationPrompt,
 } from '@/modules/resume-analysis/ai/prompts/validate-target.prompt.js';
-import { computeSectionScoresFromContent } from '@/modules/resume-analysis/utils/ats-score.js';
-import { termAppearsIn, textAppearsFuzzy } from '@/modules/resume-analysis/utils/text-match.js';
+import { textAppearsFuzzy } from '@/modules/resume-analysis/utils/text-match.js';
 import { buildJdCoverageExtras } from '@/modules/resume-analysis/utils/suggestion-coverage.js';
 import {
-  extractProfessionalSkillsFromText,
-  normalizeProfessionalSkill,
-  normalizeProfessionalSkills,
-} from '@/modules/resumes/utils/skill-normalizer.js';
-
-type ResumeAnalysisAiProvider = 'google' | 'groq' | 'openrouter' | 'openai';
-
-const getErrorMessage = (err: unknown): string =>
-  err instanceof Error ? err.message : String(err);
-
-const getAiProvider = (): ResumeAnalysisAiProvider => {
-  const configuredProvider = (
-    process.env.AI_RESUME_ANALYSIS_PROVIDER ||
-    process.env.AI_RESUME_PARSER_PROVIDER ||
-    'openrouter'
-  ).toLowerCase();
-
-  if (configuredProvider === 'google' || configuredProvider === 'gemini') return 'google';
-  if (configuredProvider === 'groq') return 'groq';
-  if (configuredProvider === 'openrouter') return 'openrouter';
-  if (configuredProvider === 'openai') return 'openai';
-
-  throw new AppError(`Unsupported resume analysis AI provider: ${configuredProvider}`, 501);
-};
-
-const getGoogleApiKey = (): string | null => {
-  const apiKey = process.env.GOOGLE_API_KEY || process.env.GEMINI_API_KEY || '';
-  return apiKey.trim() || null;
-};
-
-/** Primary + optional rotated Groq keys (comma list or GROQ_API_KEY_2 / _FALLBACK). */
-const getGroqApiKeys = (): string[] => {
-  const fromList = (process.env.GROQ_API_KEYS || '')
-    .split(',')
-    .map((key) => key.trim())
-    .filter(Boolean);
-  const singles = [
-    process.env.GROQ_API_KEY,
-    process.env.GROQ_API_KEY_2,
-    process.env.GROQ_API_KEY_FALLBACK,
-  ]
-    .map((key) => key?.trim() || '')
-    .filter(Boolean);
-
-  return Array.from(new Set([...singles, ...fromList]));
-};
-
-const getOpenRouterApiKey = (): string | null => {
-  const apiKey = process.env.OPENROUTER_API_KEY || '';
-  return apiKey.trim() || null;
-};
-
-const getOpenAiApiKey = (): string | null => {
-  const apiKey = process.env.OPENAI_API_KEY || '';
-  return apiKey.trim() || null;
-};
-
-const providerHasCredentials = (provider: ResumeAnalysisAiProvider): boolean => {
-  if (provider === 'google') return Boolean(getGoogleApiKey());
-  if (provider === 'groq') return getGroqApiKeys().length > 0;
-  if (provider === 'openrouter') return Boolean(getOpenRouterApiKey());
-  if (provider === 'openai') return Boolean(getOpenAiApiKey());
-  return false;
-};
-
-/**
- * OpenRouter first (default), then configured fallbacks (Groq / OpenAI / Google).
- * Only providers with API keys are returned.
- */
-const getProviderFallbackChain = (): ResumeAnalysisAiProvider[] => {
-  const primary = getAiProvider();
-  const configuredFallbacks = (
-    process.env.AI_RESUME_ANALYSIS_FALLBACK_PROVIDERS ||
-    (primary === 'openrouter' ? 'groq,openai,google' : primary === 'groq' ? 'openrouter' : 'groq')
-  )
-    .split(',')
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean)
-    .map((item): ResumeAnalysisAiProvider | null => {
-      if (item === 'google' || item === 'gemini') return 'google';
-      if (item === 'groq') return 'groq';
-      if (item === 'openrouter') return 'openrouter';
-      if (item === 'openai') return 'openai';
-      return null;
-    })
-    .filter((item): item is ResumeAnalysisAiProvider => item != null);
-
-  // Prefer OpenRouter at the front whenever its key exists.
-  const preferred: ResumeAnalysisAiProvider[] = providerHasCredentials('openrouter')
-    ? ['openrouter', primary, ...configuredFallbacks]
-    : [primary, ...configuredFallbacks];
-
-  const chain = Array.from(new Set(preferred));
-  return chain.filter(providerHasCredentials);
-};
-
-const OPENROUTER_DEFAULT_MODELS = [
-  'google/gemini-2.5-flash',
-  // Prefer concrete free Gemini / Gemma — skip flaky openrouter/free auto-router.
-  'google/gemini-2.0-flash-exp:free',
-  'google/gemma-3-27b-it:free',
-  'google/gemma-4-26b-a4b-it:free',
-];
-
-const isOpenRouterFreeAutoRouter = (model: string): boolean =>
-  /^openrouter\/free$/i.test(model.trim());
-
-const isFreeOpenRouterModel = (model: string): boolean =>
-  /:free$/i.test(model) || isOpenRouterFreeAutoRouter(model);
-
-const getRequestTimeoutMs = (model?: string): number => {
-  // Free router often queues/hangs — fail fast and try the next free model.
-  if (model && isFreeOpenRouterModel(model)) {
-    const freeTimeout = Number(process.env.AI_RESUME_ANALYSIS_FREE_TIMEOUT_MS || '35000');
-    if (Number.isFinite(freeTimeout) && freeTimeout >= 10000) {
-      return Math.min(freeTimeout, 60000);
-    }
-    return 35000;
-  }
-  const configured = Number(process.env.AI_RESUME_ANALYSIS_TIMEOUT_MS || '90000');
-  if (!Number.isFinite(configured) || configured < 15000) return 90000;
-  return Math.min(configured, 180000);
-};
-
-/** Cap resume/JD size so free-tier prompts fit input token budgets. */
-const truncateForAi = (text: string, maxChars: number): string => {
-  const trimmed = text.trim();
-  if (trimmed.length <= maxChars) return trimmed;
-  return `${trimmed.slice(0, maxChars)}\n\n[...truncated for AI token budget...]`;
-};
-
-const OPENAI_DEFAULT_MODELS = ['gpt-4o-mini', 'gpt-4o'];
-
-const getModelCandidates = (provider: ResumeAnalysisAiProvider): string[] => {
-  if (provider === 'openrouter') {
-    const primary = process.env.AI_RESUME_ANALYSIS_MODEL || OPENROUTER_DEFAULT_MODELS[0];
-    const fallbacks = (
-      process.env.AI_RESUME_ANALYSIS_FALLBACK_MODELS || OPENROUTER_DEFAULT_MODELS.slice(1).join(',')
-    )
-      .split(',')
-      .map((model) => model.trim())
-      .filter(Boolean)
-      .map((model) => (model === 'qwen/qwen3' ? 'qwen/qwen3-32b' : model));
-
-    // openrouter/free often returns empty / safety text — skip unless explicitly allowed.
-    const allowAutoFree =
-      String(process.env.AI_RESUME_ANALYSIS_ALLOW_OPENROUTER_FREE || '').toLowerCase() === 'true';
-
-    const models = Array.from(new Set([primary, ...fallbacks])).filter(
-      (model) => allowAutoFree || !isOpenRouterFreeAutoRouter(model),
-    );
-
-    return models.length > 0 ? models : [OPENROUTER_DEFAULT_MODELS[0]!];
-  }
-
-  if (provider === 'openai') {
-    const primary = process.env.AI_RESUME_ANALYSIS_MODEL || OPENAI_DEFAULT_MODELS[0];
-    const fallbacks = (process.env.AI_RESUME_ANALYSIS_FALLBACK_MODELS || OPENAI_DEFAULT_MODELS[1])
-      .split(',')
-      .map((model) => model.trim())
-      .filter(Boolean);
-    return Array.from(new Set([primary, ...fallbacks]));
-  }
-
-  if (provider === 'groq') {
-    // Prefer smaller/faster models first when daily token budget is tight.
-    const primary = process.env.AI_RESUME_ANALYSIS_GROQ_MODEL || 'llama-3.1-8b-instant';
-    const groqSafe = primary.includes('/') ? 'llama-3.1-8b-instant' : primary;
-    return Array.from(new Set([groqSafe, 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile']));
-  }
-
-  const configuredModel =
-    process.env.AI_RESUME_ANALYSIS_MODEL ||
-    process.env.AI_RESUME_PARSER_MODEL ||
-    'gemini-2.0-flash';
-  const googleSafe = configuredModel.includes('/') ? 'gemini-2.0-flash' : configuredModel;
-  return Array.from(new Set([googleSafe, 'gemini-2.0-flash', 'gemini-1.5-flash']));
-};
-
-const isMaxTokensAffordabilityError = (err: unknown): boolean => {
-  const message = getErrorMessage(err).toLowerCase();
-  return (
-    message.includes('fewer max_tokens') ||
-    message.includes('can only afford') ||
-    (message.includes('402') && message.includes('max_tokens'))
-  );
-};
-
-const parseAffordableMaxTokens = (err: unknown): number | null => {
-  const message = getErrorMessage(err);
-  const match = message.match(/can only afford\s+(\d+)/i);
-  if (!match) return null;
-  const value = Number(match[1]);
-  return Number.isFinite(value) && value > 256 ? value : null;
-};
-
-const isProviderExhaustedError = (err: unknown): boolean => {
-  const message = getErrorMessage(err).toLowerCase();
-  // Org-wide daily quotas — more models on same provider will also fail.
-  if (
-    (message.includes('429') || message.includes('rate limit')) &&
-    (message.includes('tokens per day') ||
-      message.includes('tpd') ||
-      message.includes('per day') ||
-      message.includes('daily'))
-  ) {
-    return true;
-  }
-  return isAuthOrCreditError(err);
-};
-
-const isAuthOrCreditError = (err: unknown): boolean => {
-  // Recoverable: lower max_tokens and retry / try next free model.
-  if (isMaxTokensAffordabilityError(err)) return false;
-
-  const message = getErrorMessage(err).toLowerCase();
-  // Groq/OpenRouter error copy often includes a billing upgrade URL — that is NOT a credit failure.
-  if (message.includes('request too large') || message.includes('413')) return false;
-
-  return (
-    message.includes('401') ||
-    message.includes('403') ||
-    message.includes('402') ||
-    message.includes('unauthorized') ||
-    message.includes('forbidden') ||
-    message.includes('invalid api key') ||
-    message.includes('incorrect api key') ||
-    message.includes('authentication') ||
-    message.includes('expired') ||
-    message.includes('revoked') ||
-    message.includes('insufficient credits') ||
-    message.includes('no credits') ||
-    message.includes('payment required') ||
-    message.includes('user not found') ||
-    message.includes('key limit') ||
-    (message.includes('invalid api key') && message.includes('api key')) ||
-    (message.includes('quota') && !message.includes('tokens per minute'))
-  );
-};
-
-const isRequestTooLargeError = (err: unknown): boolean => {
-  const message = getErrorMessage(err).toLowerCase();
-  return (
-    message.includes('413') ||
-    message.includes('request too large') ||
-    message.includes('reduce your message size') ||
-    message.includes('context length') ||
-    message.includes('maximum context')
-  );
-};
-
-const isRetryableModelError = (err: unknown): boolean => {
-  const message = getErrorMessage(err).toLowerCase();
-  return (
-    isAuthOrCreditError(err) ||
-    isMaxTokensAffordabilityError(err) ||
-    isRequestTooLargeError(err) ||
-    message.includes('503') ||
-    message.includes('429') ||
-    message.includes('rate limit') ||
-    message.includes('service unavailable') ||
-    message.includes('high demand') ||
-    message.includes('not found') ||
-    message.includes('unavailable for free') ||
-    message.includes('not supported') ||
-    message.includes('temporarily') ||
-    message.includes('timeout') ||
-    message.includes('timed out') ||
-    message.includes('aborted') ||
-    message.includes('empty content') ||
-    message.includes('over capacity') ||
-    message.includes('model_decommissioned') ||
-    message.includes('unterminated string') ||
-    message.includes('unexpected end of json')
-  );
-};
-
-const extractJson = (raw: unknown): string => {
-  if (typeof raw === 'string') return raw;
-  if (Array.isArray(raw)) return raw.map((p) => (typeof p === 'string' ? p : '')).join('');
-  return '';
-};
-
-const createGoogleClient = (model: string): ChatGoogleGenerativeAI => {
-  const apiKey = getGoogleApiKey();
-  if (!apiKey) {
-    throw new AppError('AI provider not configured. Set GOOGLE_API_KEY or GEMINI_API_KEY.', 500);
-  }
-  return new ChatGoogleGenerativeAI({
-    apiKey,
-    model,
-    temperature: Number(process.env.AI_RESUME_PARSER_TEMPERATURE || '0.2'),
-    maxRetries: Number(process.env.AI_RESUME_PARSER_MAX_RETRIES || '2'),
-  });
-};
-
-const invokeGoogleModel = async (
-  model: string,
-  systemPrompt: string,
-  userMessage: string,
-): Promise<string> => {
-  const response = await createGoogleClient(model).invoke([
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: userMessage },
-  ]);
-
-  return extractJson((response as { content?: unknown }).content ?? response);
-};
-
-const getMaxOutputTokens = (providerLabel: string, model?: string, override?: number): number => {
-  if (typeof override === 'number' && override > 0) {
-    return Math.min(override, 8000);
-  }
-
-  const isGroq = /^Groq/i.test(providerLabel);
-  const isFreeModel = Boolean(model) && isFreeOpenRouterModel(model!);
-  // Keep paid OpenRouter under typical credit affordability (~2.5–3k) so responses
-  // are not truncated after a 6000→2679 affordability cut mid-JSON.
-  const fallback = isGroq ? 1000 : isFreeModel ? 2500 : 2800;
-  const configured = Number(
-    isGroq
-      ? process.env.AI_RESUME_ANALYSIS_GROQ_MAX_TOKENS ||
-          process.env.AI_RESUME_ANALYSIS_MAX_TOKENS ||
-          fallback
-      : process.env.AI_RESUME_ANALYSIS_MAX_TOKENS || fallback,
-  );
-  if (!Number.isFinite(configured) || configured <= 0) return fallback;
-  return Math.min(configured, isGroq ? 1500 : isFreeModel ? 3000 : 3500);
-};
-
-/** Extract the first JSON object from model output (ignore preambles / safety text). */
-const extractJsonObject = (raw: string): string => {
-  const text = raw.trim();
-  if (!text) return text;
-  if (text.startsWith('{') && text.endsWith('}')) return text;
-
-  const start = text.indexOf('{');
-  if (start < 0) return text;
-
-  let depth = 0;
-  let inString = false;
-  let escaped = false;
-  for (let i = start; i < text.length; i += 1) {
-    const ch = text[i]!;
-    if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (ch === '\\') {
-        escaped = true;
-      } else if (ch === '"') {
-        inString = false;
-      }
-      continue;
-    }
-    if (ch === '"') {
-      inString = true;
-      continue;
-    }
-    if (ch === '{') depth += 1;
-    if (ch === '}') {
-      depth -= 1;
-      if (depth === 0) return text.slice(start, i + 1);
-    }
-  }
-
-  // Truncated object — return from first brace so repair can close it.
-  return text.slice(start);
-};
-
-/** Best-effort repair when the model truncates JSON mid-string. */
-const tryRepairJson = (raw: string): string => {
-  let text = extractJsonObject(
-    raw
-      .replace(/^```json\s*/i, '')
-      .replace(/```$/i, '')
-      .trim(),
-  );
-  if (!text) return text;
-  try {
-    JSON.parse(text);
-    return text;
-  } catch {
-    let repaired = text;
-    const quoteCount = (repaired.match(/"/g) || []).length;
-    if (quoteCount % 2 === 1) repaired += '"';
-    // Close dangling escapes / incomplete unicode sequences.
-    repaired = repaired.replace(/\\$/, '');
-    repaired = repaired.replace(/,\s*$/g, '');
-    for (let i = 0; i < 32; i += 1) {
-      try {
-        JSON.parse(repaired);
-        return repaired;
-      } catch {
-        const lastOpenObj = repaired.lastIndexOf('{');
-        const lastOpenArr = repaired.lastIndexOf('[');
-        const lastCloseObj = repaired.lastIndexOf('}');
-        const lastCloseArr = repaired.lastIndexOf(']');
-        if (lastOpenArr > lastCloseArr && lastOpenArr >= lastOpenObj) {
-          repaired += ']';
-        } else if (lastOpenObj > lastCloseObj) {
-          repaired += '}';
-        } else {
-          repaired = repaired.replace(/,\s*([}\]])/g, '$1');
-          try {
-            JSON.parse(repaired);
-            return repaired;
-          } catch {
-            // Truncated mid-value: drop the last incomplete property.
-            const cut = Math.max(
-              repaired.lastIndexOf(','),
-              repaired.lastIndexOf('{'),
-              repaired.lastIndexOf('['),
-            );
-            if (cut > 0 && cut < repaired.length - 1) {
-              repaired = repaired.slice(0, cut);
-              const q = (repaired.match(/"/g) || []).length;
-              if (q % 2 === 1) repaired += '"';
-              continue;
-            }
-            break;
-          }
-        }
-      }
-    }
-    return text;
-  }
-};
-
-const isNonJsonModelOutput = (raw: string): boolean => {
-  const text = raw.trim();
-  if (!text) return true;
-  if (/^user safety:/i.test(text)) return true;
-  if (!text.includes('{')) return true;
-  return false;
-};
-
-const invokeOpenAiCompatibleChat = async (input: {
-  url: string;
-  apiKey: string;
-  model: string;
-  systemPrompt: string;
-  userMessage: string;
-  providerLabel: string;
-  extraHeaders?: Record<string, string>;
-  maxTokensOverride?: number;
-}): Promise<string> => {
-  const timeoutMs = getRequestTimeoutMs(input.model);
-  let maxTokens = getMaxOutputTokens(input.providerLabel, input.model, input.maxTokensOverride);
-  let lastError: unknown;
-
-  for (let attempt = 0; attempt < 2; attempt += 1) {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch(input.url, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${input.apiKey}`,
-          'Content-Type': 'application/json',
-          ...input.extraHeaders,
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: input.model,
-          temperature: Number(process.env.AI_RESUME_PARSER_TEMPERATURE || '0.2'),
-          max_tokens: maxTokens,
-          messages: [
-            { role: 'system', content: input.systemPrompt },
-            { role: 'user', content: input.userMessage },
-          ],
-          ...(/:free$/i.test(input.model) || /openrouter\/free/i.test(input.model)
-            ? {}
-            : { response_format: { type: 'json_object' } }),
-        }),
-      });
-
-      const body = (await response.json().catch(() => ({}))) as {
-        choices?: Array<{ message?: { content?: string } }>;
-        error?: { message?: string };
-      };
-
-      if (!response.ok) {
-        const detail =
-          body.error?.message ??
-          `${input.providerLabel} resume analysis request failed with ${response.status}`;
-        const err = new AppError(`${detail} [${input.providerLabel} HTTP ${response.status}]`, 500);
-
-        if (attempt === 0 && isMaxTokensAffordabilityError(err)) {
-          const affordable = parseAffordableMaxTokens(err);
-          const nextTokens = Math.max(
-            512,
-            Math.min(affordable ?? Math.floor(maxTokens * 0.7), maxTokens - 1),
-          );
-          if (nextTokens < maxTokens) {
-            logger.warn(
-              {
-                provider: input.providerLabel,
-                model: input.model,
-                from: maxTokens,
-                to: nextTokens,
-              },
-              'Retrying AI call with lower max_tokens after credit affordability error',
-            );
-            maxTokens = nextTokens;
-            lastError = err;
-            continue;
-          }
-        }
-
-        throw err;
-      }
-
-      const content = body.choices?.[0]?.message?.content ?? '';
-      if (!content.trim()) {
-        throw new AppError(
-          `${input.providerLabel} returned empty content for model ${input.model}`,
-          500,
-        );
-      }
-      return content;
-    } catch (err) {
-      if (err instanceof Error && err.name === 'AbortError') {
-        throw new AppError(
-          `${input.providerLabel} timed out after ${timeoutMs}ms for model ${input.model}`,
-          504,
-        );
-      }
-      lastError = err;
-      throw err;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
-  throw lastError instanceof Error
-    ? lastError
-    : new AppError(`${input.providerLabel} request failed`, 500);
-};
-
-const invokeGroqModel = async (
-  model: string,
-  systemPrompt: string,
-  userMessage: string,
-): Promise<string> => {
-  const keys = getGroqApiKeys();
-  if (keys.length === 0) {
-    throw new AppError('AI provider not configured. Set GROQ_API_KEY (or GROQ_API_KEYS).', 500);
-  }
-
-  let lastError: unknown;
-  for (let index = 0; index < keys.length; index += 1) {
-    const apiKey = keys[index]!;
-    try {
-      return await invokeOpenAiCompatibleChat({
-        url: 'https://api.groq.com/openai/v1/chat/completions',
-        apiKey,
-        model,
-        systemPrompt,
-        userMessage,
-        providerLabel: keys.length > 1 ? `Groq(key#${index + 1})` : 'Groq',
-      });
-    } catch (err) {
-      lastError = err;
-      if (isAuthOrCreditError(err) && index < keys.length - 1) {
-        logger.warn(
-          { err, model, keyIndex: index + 1 },
-          'Groq API key failed (auth/credit); trying next Groq key',
-        );
-        continue;
-      }
-      throw err;
-    }
-  }
-
-  throw lastError instanceof Error
-    ? lastError
-    : new AppError('All Groq API keys failed for resume analysis', 500);
-};
-
-const invokeOpenRouterModel = async (
-  model: string,
-  systemPrompt: string,
-  userMessage: string,
-): Promise<string> => {
-  const apiKey = getOpenRouterApiKey();
-  if (!apiKey) {
-    throw new AppError('AI provider not configured. Set OPENROUTER_API_KEY.', 500);
-  }
-  // Always use the selected candidate model (never hardcode openrouter/free).
-  return invokeOpenAiCompatibleChat({
-    url: 'https://openrouter.ai/api/v1/chat/completions',
-    apiKey,
-    model,
-    systemPrompt,
-    userMessage,
-    providerLabel: 'OpenRouter',
-    extraHeaders: {
-      'HTTP-Referer': process.env.OPENROUTER_SITE_URL || 'https://careercopilot.local',
-      'X-Title': process.env.OPENROUTER_APP_NAME || 'CareerCopilot Resume Analysis',
-    },
-  });
-};
-
-const invokeOpenAiModel = async (
-  model: string,
-  systemPrompt: string,
-  userMessage: string,
-): Promise<string> => {
-  const apiKey = getOpenAiApiKey();
-  if (!apiKey) {
-    throw new AppError('AI provider not configured. Set OPENAI_API_KEY.', 500);
-  }
-  return invokeOpenAiCompatibleChat({
-    url: 'https://api.openai.com/v1/chat/completions',
-    apiKey,
-    model,
-    systemPrompt,
-    userMessage,
-    providerLabel: 'OpenAI',
-  });
-};
-
-const invokeProviderModel = async (
-  provider: ResumeAnalysisAiProvider,
-  model: string,
-  systemPrompt: string,
-  userMessage: string,
-): Promise<string> => {
-  if (provider === 'openrouter') {
-    return invokeOpenRouterModel(model, systemPrompt, userMessage);
-  }
-  if (provider === 'openai') {
-    return invokeOpenAiModel(model, systemPrompt, userMessage);
-  }
-  if (provider === 'groq') {
-    return invokeGroqModel(model, systemPrompt, userMessage);
-  }
-  return invokeGoogleModel(model, systemPrompt, userMessage);
-};
+  cleanSemanticSkill,
+  dedupeSemanticKeywords,
+  dedupeSemanticSkills,
+} from '@/modules/resume-analysis/utils/semantic-skills.js';
+import { groundSkillGapAgainstResume } from '@/modules/resume-analysis/utils/skill-grounding.js';
+import { skillMatchKey } from '@/modules/resumes/utils/skill-normalizer.js';
+import {
+  extractJsonObject,
+  isNonJsonModelOutput,
+  tryRepairJson,
+} from '@/modules/resume-analysis/ai/json-repair.js';
+import {
+  getErrorMessage,
+  isProviderExhaustedError,
+  isRequestTooLargeError,
+  isRetryableModelError,
+} from '@/modules/resume-analysis/ai/retry.js';
+import {
+  getModelCandidates,
+  getProviderFallbackChain,
+  invokeProviderModel,
+  isFreeOpenRouterModel,
+  isOpenRouterFreeAutoRouter,
+  truncateForAi,
+} from '@/modules/resume-analysis/ai/providers.js';
+import {
+  resolveJdCharLimit,
+  resolveResumeCharLimit,
+  resumeAnalysisConfig,
+} from '@/modules/resume-analysis/config/resume-analysis.config.js';
 
 const normalizeSkillText = (value: string): string =>
-  normalizeProfessionalSkills(value.split(/[,|;/]+/)).join(', ');
+  dedupeSemanticSkills(value.split(/[,|;/]+/)).join(', ');
 
 const isGroundedSuggestion = (
   suggestion: AiAnalysisOutput['suggestions'][number],
@@ -668,88 +56,126 @@ const isGroundedSuggestion = (
   return textAppearsFuzzy(resumeText, original);
 };
 
-const sanitizeSkillKeywords = <T extends { term: string }>(items: T[]): T[] =>
-  items.flatMap((item) => {
-    const term = normalizeProfessionalSkill(item.term);
-    return term ? [{ ...item, term }] : [];
-  });
+const clampPct = (value: unknown, fallback = 0): number => {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n)) return fallback;
+  return Math.max(0, Math.min(100, Math.round(n)));
+};
 
-const skillMatchScore = (matchedSkills: string[], jdSkills: string[]): number =>
-  jdSkills.length > 0 ? Math.round((matchedSkills.length / jdSkills.length) * 100) : 0;
-
-const sanitizeAiSkillOutput = (aiResult: AiAnalysisOutput): AiAnalysisOutput => ({
-  ...aiResult,
-  missingSkills: normalizeProfessionalSkills(aiResult.missingSkills ?? []),
-  improvedSkills: normalizeProfessionalSkills(aiResult.improvedSkills ?? []),
-  recommendedSkillOrder: normalizeProfessionalSkills(aiResult.recommendedSkillOrder ?? []),
-  missingKeywords: sanitizeSkillKeywords(aiResult.missingKeywords ?? []),
-  matchedKeywords: sanitizeSkillKeywords(aiResult.matchedKeywords ?? []),
-  skillAnalysis: {
-    matchedSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.matchedSkills ?? []),
-    missingSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.missingSkills ?? []),
-    transferableSkills: normalizeProfessionalSkills(
-      aiResult.skillAnalysis?.transferableSkills ?? [],
-    ),
-    recommendedSkills: normalizeProfessionalSkills(aiResult.skillAnalysis?.recommendedSkills ?? []),
-  },
-  suggestions: (aiResult.suggestions ?? [])
-    .map((suggestion) =>
-      suggestion.category === 'skills'
-        ? { ...suggestion, suggestedText: normalizeSkillText(suggestion.suggestedText) }
-        : suggestion,
-    )
-    .filter(
-      (suggestion) => suggestion.category !== 'skills' || suggestion.suggestedText.length > 0,
-    ),
-  optimizedSections: {
-    ...aiResult.optimizedSections,
-    skills: normalizeProfessionalSkills(aiResult.optimizedSections?.skills ?? []),
-  },
-});
-
-const enrichAnalysisWithJdSkills = (
+/**
+ * AI semantic ATS + resume-text safety net.
+ * AI owns synonyms/scores; grounding prevents "0 matched" when the resume
+ * clearly evidences JD skills (React/Node resume vs React JD, etc.).
+ */
+const finalizeAiSemanticAnalysis = (
   aiResult: AiAnalysisOutput,
   resumeText: string,
   jobDescription?: string,
   targetRole?: string,
 ): AiAnalysisOutput => {
-  const jdText = [jobDescription ?? '', targetRole ?? ''].join('\n');
-  if (!jdText.trim()) return aiResult;
+  const grounded = groundSkillGapAgainstResume({
+    resumeText,
+    jobDescription,
+    targetRole,
+    aiMatched: aiResult.skillAnalysis?.matchedSkills,
+    aiMissing: [
+      ...(aiResult.skillAnalysis?.missingSkills ?? []),
+      ...(aiResult.missingSkills ?? []),
+    ],
+    aiRecommended: aiResult.skillAnalysis?.recommendedSkills,
+    aiAdditional: [
+      ...(aiResult.skillAnalysis?.additionalSkills ?? []),
+      ...(aiResult.additionalSkillsFound ?? []),
+      ...(aiResult.skillAnalysis?.transferableSkills ?? []),
+    ],
+    aiKeywordTerms: [
+      ...(aiResult.missingKeywords ?? []).map((item) => item.term),
+      ...(aiResult.matchedKeywords ?? []).map((item) => item.term),
+    ],
+  });
 
-  const fromExtract = extractProfessionalSkillsFromText(jobDescription ?? '');
-  const fromAi = normalizeProfessionalSkills([
-    ...(aiResult.skillAnalysis?.missingSkills ?? []),
-    ...(aiResult.skillAnalysis?.recommendedSkills ?? []),
-    ...(aiResult.missingSkills ?? []),
-    ...(aiResult.skillAnalysis?.matchedSkills ?? []),
-  ]).filter((skill) => termAppearsIn(jdText, skill));
-
-  const jdSkills = normalizeProfessionalSkills([...fromExtract, ...fromAi]);
-  if (jdSkills.length === 0) return aiResult;
-
-  const matchedFromJd = jdSkills.filter((skill) => termAppearsIn(resumeText, skill));
-  const missingFromJd = jdSkills.filter((skill) => !termAppearsIn(resumeText, skill));
-
-  // Honest cross-domain scoring: zero skill/experience/project match when no JD skills appear.
-  const crossDomain = matchedFromJd.length === 0 && jdSkills.length >= 2;
-
-  const skillAnalysis = {
-    matchedSkills: normalizeProfessionalSkills(matchedFromJd),
-    missingSkills: normalizeProfessionalSkills(missingFromJd),
-    transferableSkills: normalizeProfessionalSkills(
-      aiResult.skillAnalysis?.transferableSkills ?? [],
-    ),
-    recommendedSkills: normalizeProfessionalSkills(missingFromJd),
-  };
-
-  const missingKeywords = [...(aiResult.missingKeywords ?? [])];
-  const existingTerms = new Set(missingKeywords.map((item) => item.term.toLowerCase()));
-  for (const skill of missingFromJd.slice(0, 10)) {
-    if (existingTerms.has(skill.toLowerCase())) continue;
-    missingKeywords.push({
-      term: skill,
+  const { matchedSkills, missingSkills, additionalSkills, recommendedSkills, crossDomain } =
+    grounded;
+  const matchedKeySet = new Set(matchedSkills.map((skill) => skillMatchKey(skill)));
+  const matchedKeywords = dedupeSemanticKeywords([
+    ...(aiResult.matchedKeywords ?? []),
+    ...matchedSkills.map((term) => ({ term, importance: 'high' as const })),
+  ]);
+  const missingKeywords = dedupeSemanticKeywords([
+    ...(aiResult.missingKeywords ?? []),
+    ...missingSkills.map((term) => ({
+      term,
       importance: 'high' as const,
-      reason: `${skill} appears in the job description and should be reflected for ATS keyword match.`,
+      reason: `${term} is required or strongly preferred by the JD and is not evidenced on the resume.`,
+    })),
+  ]).filter((item) => !matchedKeySet.has(skillMatchKey(item.term)));
+
+  const aiSkillMatch = clampPct(aiResult.skillMatch);
+  const skillMatch = crossDomain
+    ? Math.min(Math.max(grounded.skillMatch, aiSkillMatch), 20)
+    : Math.max(grounded.skillMatch, aiSkillMatch);
+
+  const keywordMatch = crossDomain
+    ? Math.min(clampPct(aiResult.keywordMatch), 20)
+    : Math.max(clampPct(aiResult.keywordMatch), skillMatch);
+
+  let atsScore = clampPct(aiResult.atsScore, skillMatch);
+  if (!crossDomain && matchedSkills.length > 0 && atsScore < 45 && skillMatch >= 35) {
+    atsScore = Math.max(atsScore, Math.min(92, Math.round(skillMatch * 0.7 + 20)));
+  }
+  if (crossDomain) atsScore = Math.min(atsScore, 35);
+
+  const experienceRelevance = crossDomain
+    ? 0
+    : clampPct(aiResult.experienceRelevance ?? aiResult.sectionScores?.experience, skillMatch);
+  const sectionScores = {
+    summary: clampPct(aiResult.sectionScores?.summary, skillMatch),
+    experience: clampPct(aiResult.sectionScores?.experience ?? experienceRelevance, skillMatch),
+    skills: clampPct(aiResult.sectionScores?.skills, skillMatch),
+    education: clampPct(aiResult.sectionScores?.education),
+    projects: clampPct(aiResult.sectionScores?.projects, Math.round(skillMatch * 0.85)),
+    achievements: clampPct(aiResult.sectionScores?.achievements),
+  };
+  if (!crossDomain && matchedSkills.length > 0) {
+    sectionScores.skills = Math.max(sectionScores.skills, skillMatch);
+    if (sectionScores.experience < 30 && skillMatch >= 40) {
+      sectionScores.experience = Math.max(sectionScores.experience, Math.round(skillMatch * 0.65));
+    }
+  }
+
+  const strengths = [...(aiResult.strengths ?? [])].filter((item) => item.trim().length > 0);
+  if (strengths.length === 0 && matchedSkills.length > 0) {
+    strengths.push(`Matched JD skills: ${matchedSkills.slice(0, 6).join(', ')}`);
+  }
+  if (strengths.length === 0) {
+    strengths.push('Resume text is structured enough for ATS parsing.');
+  }
+
+  const weaknesses = [...(aiResult.weaknesses ?? [])].filter((item) => item.trim().length > 0);
+  if (missingSkills.length > 0 && !weaknesses.some((item) => /missing|skill/i.test(item))) {
+    weaknesses.push(`Missing JD skills: ${missingSkills.slice(0, 10).join(', ')}`);
+  }
+
+  const atsIssues = [...(aiResult.atsIssues ?? [])].filter(
+    (item) => item.issue?.trim() && item.fix?.trim(),
+  );
+  if (
+    missingSkills.length > 0 &&
+    !atsIssues.some((item) => /skill/i.test(item.section) || /skill gap/i.test(item.issue))
+  ) {
+    atsIssues.push({
+      issue: 'Skill gap versus job description',
+      section: 'skills',
+      severity: 'HIGH',
+      fix: `Add factual skills or transferable wording for: ${missingSkills.slice(0, 8).join(', ')}`,
+    });
+  }
+  if (crossDomain && !atsIssues.some((item) => /experience/i.test(item.section))) {
+    atsIssues.push({
+      issue: 'Experience domain does not align with the target role',
+      section: 'experience',
+      severity: 'HIGH',
+      fix: 'Reframe experience toward JD responsibilities with transferable language — do not invent employers or tools.',
     });
   }
 
@@ -760,40 +186,21 @@ const enrichAnalysisWithJdSkills = (
   const improvedSummary =
     (aiResult.optimizedSections?.professionalSummary ?? '').trim() ||
     (aiResult.improvedSummary ?? '').trim();
-  const expBullet = aiResult.optimizedSections?.experienceBullets?.find(
-    (item) =>
-      item?.originalText?.trim() &&
-      item?.optimizedText?.trim() &&
-      textAppearsFuzzy(resumeText, item.originalText),
-  );
 
   const coverage = buildJdCoverageExtras({
-    missingSkills: missingFromJd,
+    missingSkills,
     currentSkillsLine:
-      (aiResult.optimizedSections?.skills ?? []).join(', ') ||
-      skillAnalysis.matchedSkills.slice(0, 8).join(', ') ||
+      dedupeSemanticSkills(aiResult.optimizedSections?.skills ?? []).join(', ') ||
+      matchedSkills.slice(0, 8).join(', ') ||
       '',
     improvedSummary,
     targetRole,
-    experience:
-      crossDomain && expBullet
-        ? { originalText: expBullet.originalText, optimizedText: expBullet.optimizedText }
-        : null,
+    experience: null,
     existing: suggestions,
   });
   for (const item of coverage) {
     suggestions.unshift({ ...item, impact: item.impact });
   }
-
-  const honestSkillMatch = skillMatchScore(matchedFromJd, jdSkills);
-  const keywordMatch = crossDomain
-    ? Math.min(aiResult.keywordMatch ?? 0, 20)
-    : (aiResult.keywordMatch ?? 0);
-  const sectionScores = computeSectionScoresFromContent({
-    resumeText,
-    skillMatch: honestSkillMatch,
-    keywordMatch,
-  });
 
   const optimizedSummary =
     improvedSummary ||
@@ -801,37 +208,66 @@ const enrichAnalysisWithJdSkills = (
       ? `Professional targeting ${targetRole}, bringing transferable strengths from prior experience. Eager to apply proven collaboration and execution skills to ${targetRole} responsibilities.`
       : '');
 
-  // Never invent a stub as optimizedResumeText — incomplete AI text blanks the resume.
-  // Summary/skills suggestions stay in optimizedSections / suggestions only.
   return {
     ...aiResult,
-    skillAnalysis,
+    skillAnalysis: {
+      matchedSkills,
+      missingSkills,
+      transferableSkills: additionalSkills,
+      additionalSkills,
+      recommendedSkills,
+    },
+    additionalSkillsFound: additionalSkills,
     missingKeywords,
-    suggestions,
+    matchedKeywords,
+    strengths: strengths.slice(0, 5),
+    weaknesses: weaknesses.slice(0, 7),
+    atsIssues: atsIssues.slice(0, 8),
+    suggestions: suggestions.map((suggestion) =>
+      suggestion.category === 'skills'
+        ? { ...suggestion, suggestedText: normalizeSkillText(suggestion.suggestedText) }
+        : suggestion,
+    ),
     optimizedResumeText: aiResult.optimizedResumeText ?? '',
     optimizedSections: {
       ...aiResult.optimizedSections,
       professionalSummary:
         aiResult.optimizedSections?.professionalSummary?.trim() || optimizedSummary,
-      skills: normalizeProfessionalSkills([
+      skills: dedupeSemanticSkills([
         ...(aiResult.optimizedSections?.skills ?? []),
-        ...matchedFromJd,
-      ]).filter((skill) => termAppearsIn(resumeText, skill)),
+        ...matchedSkills,
+      ]),
     },
     improvedSummary: aiResult.improvedSummary?.trim() || optimizedSummary,
-    missingSkills: missingFromJd,
-    improvedSkills: normalizeProfessionalSkills(aiResult.improvedSkills ?? []).filter((skill) =>
-      termAppearsIn(resumeText, skill),
-    ),
-    recommendedSkillOrder: normalizeProfessionalSkills([...matchedFromJd, ...missingFromJd]),
-    skillMatch: honestSkillMatch,
+    missingSkills,
+    improvedSkills: dedupeSemanticSkills(aiResult.improvedSkills ?? []),
+    recommendedSkillOrder: dedupeSemanticSkills([
+      ...(aiResult.recommendedSkillOrder ?? []),
+      ...matchedSkills,
+      ...recommendedSkills,
+    ]),
+    skillMatch,
     keywordMatch,
-    experienceRelevance: crossDomain ? 0 : (aiResult.experienceRelevance ?? 0),
+    experienceRelevance,
     sectionScores,
-    atsScore: crossDomain
-      ? Math.min(aiResult.atsScore ?? 0, 35)
-      : (aiResult.atsScore ?? honestSkillMatch),
+    atsScore,
+    contentQuality: clampPct(aiResult.contentQuality),
+    readability: clampPct(aiResult.readability),
+    formattingScore: clampPct(aiResult.formattingScore),
   };
+};
+
+/** Finalize AI output with JD↔resume grounding (not chip-only ATS). */
+const enrichAnalysisWithJdSkills = (
+  aiResult: AiAnalysisOutput,
+  resumeText: string,
+  jobDescription?: string,
+  targetRole?: string,
+): AiAnalysisOutput => finalizeAiSemanticAnalysis(aiResult, resumeText, jobDescription, targetRole);
+
+const sanitizeAiSkillOutput = (aiResult: AiAnalysisOutput): AiAnalysisOutput => {
+  void cleanSemanticSkill;
+  return aiResult;
 };
 
 export const resumeAnalysisAiClient = {
@@ -934,22 +370,13 @@ export const resumeAnalysisAiClient = {
       const models = getModelCandidates(provider);
       for (const model of models) {
         // Compact by default — full prompt routinely truncates under credit max_tokens caps.
-        const preferFullPrompt =
-          String(process.env.AI_RESUME_ANALYSIS_FULL_PROMPT || '').toLowerCase() === 'true';
+        const preferFullPrompt = resumeAnalysisConfig.fullPrompt;
         let compact =
           provider === 'groq' ||
           isFreeOpenRouterModel(model) ||
           (provider === 'openrouter' && !preferFullPrompt);
-        const resumeLimit =
-          provider === 'groq'
-            ? Number(process.env.AI_RESUME_ANALYSIS_GROQ_MAX_RESUME_CHARS || 4500)
-            : compact
-              ? Number(process.env.AI_RESUME_ANALYSIS_MAX_RESUME_CHARS || 10000)
-              : Number(process.env.AI_RESUME_ANALYSIS_MAX_RESUME_CHARS || 14000);
-        const jdLimit =
-          provider === 'groq'
-            ? Number(process.env.AI_RESUME_ANALYSIS_GROQ_MAX_JD_CHARS || 2000)
-            : Number(process.env.AI_RESUME_ANALYSIS_MAX_JD_CHARS || 5000);
+        const resumeLimit = resolveResumeCharLimit({ provider, compact });
+        const jdLimit = resolveJdCharLimit(provider);
 
         let safeResume = truncateForAi(resumeText, resumeLimit);
         let safeJd = jobDescription ? truncateForAi(jobDescription, jdLimit) : jobDescription;
@@ -1033,18 +460,12 @@ export const resumeAnalysisAiClient = {
               compact = true;
               safeResume = truncateForAi(
                 safeResume,
-                Math.min(
-                  safeResume.length,
-                  Number(process.env.AI_RESUME_ANALYSIS_COMPACT_RESUME_CHARS || 6000),
-                ),
+                Math.min(safeResume.length, resumeAnalysisConfig.compactResumeChars),
               );
               safeJd = safeJd
                 ? truncateForAi(
                     safeJd,
-                    Math.min(
-                      safeJd.length,
-                      Number(process.env.AI_RESUME_ANALYSIS_COMPACT_JD_CHARS || 1800),
-                    ),
+                    Math.min(safeJd.length, resumeAnalysisConfig.compactJdChars),
                   )
                 : safeJd;
               parsed = await runOnce(safeResume, safeJd, true);

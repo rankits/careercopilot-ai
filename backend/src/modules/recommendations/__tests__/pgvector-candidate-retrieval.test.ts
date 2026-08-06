@@ -221,7 +221,10 @@ describe('PgVectorCandidateRetrievalProvider', () => {
     const findByIds = vi.fn().mockResolvedValue([
       job({
         id: 'job-stretch',
-        location: { formatted: 'Paris, France', remoteType: 'ONSITE' },
+        // Location/remote type intentionally left matching the candidate's preference here:
+        // LOCATION and REMOTE_PREFERENCE are hard blockers even in FLEXIBLE mode (see
+        // candidate-job-filters.test.ts "separates geographic regions from work-mode
+        // preferences"). Only the negotiable salary constraint should make this a "stretch".
         salary: { minimum: 70000, maximum: 90000, currency: 'USD' },
       }),
       job({

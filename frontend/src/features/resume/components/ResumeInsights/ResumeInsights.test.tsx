@@ -2,6 +2,7 @@ import { render, screen } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 
 import type { ResumePresentation } from '@/features/resume/utils/resumePresentation';
+
 import { ResumeInsights } from './ResumeInsights';
 
 const mockPresentation: ResumePresentation = {
@@ -41,11 +42,7 @@ const emptyPresentation: ResumePresentation = {
 describe('ResumeInsights', () => {
   it('renders loading state when isLoading is true', () => {
     render(
-      <ResumeInsights
-        hasParsedResume={false}
-        isLoading={true}
-        presentation={emptyPresentation}
-      />,
+      <ResumeInsights hasParsedResume={false} isLoading={true} presentation={emptyPresentation} />,
     );
 
     expect(screen.getByRole('heading', { name: /ai insights/i })).toBeInTheDocument();
@@ -67,11 +64,7 @@ describe('ResumeInsights', () => {
 
   it('renders prompt message when no resume has been parsed yet', () => {
     render(
-      <ResumeInsights
-        hasParsedResume={false}
-        isLoading={false}
-        presentation={emptyPresentation}
-      />,
+      <ResumeInsights hasParsedResume={false} isLoading={false} presentation={emptyPresentation} />,
     );
 
     expect(
@@ -81,11 +74,7 @@ describe('ResumeInsights', () => {
 
   it('renders confidence score, strengths, improvements, missing info chips, and AI suggestions', () => {
     render(
-      <ResumeInsights
-        hasParsedResume={true}
-        isLoading={false}
-        presentation={mockPresentation}
-      />,
+      <ResumeInsights hasParsedResume={true} isLoading={false} presentation={mockPresentation} />,
     );
 
     // Score 0.85 -> 85 / 100
@@ -100,9 +89,7 @@ describe('ResumeInsights', () => {
     expect(screen.getByText(/ai suggestions/i)).toBeInTheDocument();
 
     // Content Items
-    expect(
-      screen.getByText(/add quantified achievements to work experience/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/add quantified achievements to work experience/i)).toBeInTheDocument();
     expect(screen.getByText(/solid foundation in react and typescript/i)).toBeInTheDocument();
     expect(screen.getByText(/clear project history/i)).toBeInTheDocument();
     expect(screen.getByText(/consider highlighting leadership roles/i)).toBeInTheDocument();
@@ -119,11 +106,7 @@ describe('ResumeInsights', () => {
     };
 
     render(
-      <ResumeInsights
-        hasParsedResume={true}
-        isLoading={false}
-        presentation={highPresentation}
-      />,
+      <ResumeInsights hasParsedResume={true} isLoading={false} presentation={highPresentation} />,
     );
 
     expect(screen.getByText('92')).toBeInTheDocument();
@@ -132,11 +115,7 @@ describe('ResumeInsights', () => {
 
   it('renders fallback score when confidenceScore is null', () => {
     render(
-      <ResumeInsights
-        hasParsedResume={true}
-        isLoading={false}
-        presentation={emptyPresentation}
-      />,
+      <ResumeInsights hasParsedResume={true} isLoading={false} presentation={emptyPresentation} />,
     );
 
     expect(screen.getByText('—')).toBeInTheDocument();
@@ -145,14 +124,12 @@ describe('ResumeInsights', () => {
 
   it('renders empty section fallback messages when insights arrays are empty', () => {
     render(
-      <ResumeInsights
-        hasParsedResume={true}
-        isLoading={false}
-        presentation={emptyPresentation}
-      />,
+      <ResumeInsights hasParsedResume={true} isLoading={false} presentation={emptyPresentation} />,
     );
 
-    expect(screen.getByText(/no improvement areas were returned by the api\./i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no improvement areas were returned by the api\./i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/no strengths were returned by the api\./i)).toBeInTheDocument();
     expect(
       screen.getByText(/no missing information was returned by the api\./i),

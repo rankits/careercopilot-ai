@@ -6,11 +6,13 @@ const { mockResumeBuilderService } = vi.hoisted(() => ({
   mockResumeBuilderService: {
     listResumes: vi.fn(),
     uploadResume: vi.fn(),
+    deleteResume: vi.fn(),
     startAnalysis: vi.fn(),
     getAnalysis: vi.fn(),
     getKeywords: vi.fn(),
     getSuggestions: vi.fn(),
     getVersions: vi.fn(),
+    listSavedVersions: vi.fn(),
     applySuggestion: vi.fn(),
     ignoreSuggestion: vi.fn(),
     updateContent: vi.fn(),
@@ -51,6 +53,7 @@ describe('ResumeBuilderPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockResumeBuilderService.listResumes.mockResolvedValue([]);
+    mockResumeBuilderService.listSavedVersions.mockResolvedValue([]);
     mockResumeBuilderService.getAnalysis.mockResolvedValue(null);
     mockResumeBuilderService.getVersions.mockResolvedValue([]);
     mockResumeBuilderService.getKeywords.mockResolvedValue({

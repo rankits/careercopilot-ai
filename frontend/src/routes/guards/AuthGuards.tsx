@@ -1,4 +1,4 @@
-import { Navigate, Outlet, useLocation } from 'react-router-dom';
+import { Navigate, Outlet } from 'react-router-dom';
 
 import { RouteLoading } from '@/routes/components/RouteLoading';
 
@@ -9,7 +9,6 @@ import { ROUTES } from '@/constants/routes';
 import { getPostAuthRoute } from '@/features/auth/utils/getPostAuthRoute';
 
 export function ProtectedRoute() {
-  const location = useLocation();
   const { isSessionResolved } = useAuthBootstrap();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
@@ -19,7 +18,7 @@ export function ProtectedRoute() {
   }
 
   if (!isAuthenticated) {
-    return <Navigate replace state={{ from: location.pathname }} to={ROUTES.LOGIN} />;
+    return <Navigate replace to={ROUTES.LOGIN} />;
   }
 
   if (!isProfileComplete) {

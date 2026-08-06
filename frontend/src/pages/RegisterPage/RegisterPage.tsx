@@ -18,13 +18,13 @@ export function RegisterPage() {
         mode="register"
         onAlternateActionClick={goToLogin}
         onValidSubmit={async (values) => {
-          const succeeded = await submit(values);
+          const result = await submit(values);
 
-          if (succeeded) {
+          if (result.succeeded) {
             showToast({ message: 'Account created successfully', severity: 'success' });
           } else {
             showToast({
-              message: 'Unable to create your account. Please try again.',
+              message: result.errorMessage ?? 'Unable to create your account. Please try again.',
               severity: 'error',
             });
           }

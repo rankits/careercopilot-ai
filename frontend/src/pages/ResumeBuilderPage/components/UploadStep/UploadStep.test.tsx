@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { UploadStep } from './UploadStep';
 
 describe('UploadStep', () => {
-  it('composes drop zone, supported types, and resume list', () => {
+  it('composes drop zone, supported types, and uploaded resume list', () => {
     render(
       <UploadStep
         existingResumes={[]}
@@ -17,6 +17,8 @@ describe('UploadStep', () => {
         onDrop={vi.fn()}
         onFileSelect={vi.fn()}
         onUseResume={vi.fn()}
+        onDeleteResume={vi.fn()}
+        onShowMoreResumes={vi.fn()}
       />,
     );
 

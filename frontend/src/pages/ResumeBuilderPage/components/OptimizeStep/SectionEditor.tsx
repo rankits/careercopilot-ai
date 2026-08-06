@@ -1,17 +1,8 @@
-import { useMemo, useState, type KeyboardEvent } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import {
-  AddIcon,
-  Box,
-  Chip,
-  CloseIcon,
-  DeleteOutlineIcon,
-  IconButton,
-  TextField,
-  Typography,
-} from '@/lib/material';
+import { AddIcon, Box, DeleteOutlineIcon, IconButton, TextField, Typography } from '@/lib/material';
 
 import type {
   CustomField,
@@ -29,11 +20,13 @@ import {
 } from '../../utils';
 
 import {
-  ChipInputRow,
   EntryCard,
   EntryGrid,
   FieldLabel,
+  ScrollableEntries,
   SectionEditorShell,
+  SkillSuggestionRow,
+  scrollableMultilineSx,
 } from './editor.styles';
 
 interface SectionEditorProps {
@@ -49,12 +42,13 @@ export function SectionEditor({
   recommendedSkills = [],
   onChange,
 }: SectionEditorProps) {
+  // Scope editors to the active section so Experience only shows experience, etc.
   return (
     <SectionEditorShell>
-      <ContactEditor draft={draft} onChange={onChange} />
+      {section === 'summary' ? <ContactEditor draft={draft} onChange={onChange} /> : null}
 
       {section === 'skills' ? (
-        <SkillsChipEditor draft={draft} recommendedSkills={recommendedSkills} onChange={onChange} />
+        <SkillsTextEditor draft={draft} recommendedSkills={recommendedSkills} onChange={onChange} />
       ) : section === 'experience' ? (
         <ExperienceEditor draft={draft} onChange={onChange} />
       ) : section === 'projects' ? (
@@ -63,14 +57,15 @@ export function SectionEditor({
         <TextField
           fullWidth
           multiline
-          minRows={section === 'summary' ? 5 : 4}
+          rows={section === 'summary' ? 6 : 5}
           label={`Edit ${section}`}
           value={draft[section]}
           onChange={(event) => onChange({ ...draft, [section]: event.target.value })}
+          sx={scrollableMultilineSx}
         />
       )}
 
-      <CustomFieldsEditor draft={draft} onChange={onChange} />
+      {section === 'achievements' ? <CustomFieldsEditor draft={draft} onChange={onChange} /> : null}
     </SectionEditorShell>
   );
 }
@@ -127,7 +122,7 @@ function ContactEditor({
   );
 }
 
-function SkillsChipEditor({
+function SkillsTextEditor({
   draft,
   recommendedSkills = [],
   onChange,
@@ -136,27 +131,22 @@ function SkillsChipEditor({
   recommendedSkills?: string[];
   onChange: (next: ResumeDraft) => void;
 }) {
-  const [input, setInput] = useState('');
+  const [text, setText] = useState(() => draft.skillsList.join(', '));
 
-  const addSkill = (raw?: string) => {
-    const value = (raw ?? input).trim().replace(/,$/, '');
-    if (!value) return;
-    if (draft.skillsList.some((skill) => skill.toLowerCase() === value.toLowerCase())) {
-      setInput('');
-      return;
-    }
-    onChange({
-      ...draft,
-      skillsList: mergeSkillLists(draft.skillsList, [value]),
-    });
-    setInput('');
+  useEffect(() => {
+    setText(draft.skillsList.join(', '));
+  }, [draft.skillsList]);
+
+  const commitText = (raw: string) => {
+    const nextSkills = mergeSkillLists(splitSkillTokens(raw));
+    setText(nextSkills.join(', '));
+    onChange({ ...draft, skillsList: nextSkills });
   };
 
-  const onKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key === 'Enter' || event.key === ',') {
-      event.preventDefault();
-      addSkill();
-    }
+  const addSkill = (skill: string) => {
+    const nextSkills = mergeSkillLists(draft.skillsList, [skill]);
+    setText(nextSkills.join(', '));
+    onChange({ ...draft, skillsList: nextSkills });
   };
 
   const suggestions = mergeSkillLists(splitSkillTokens(recommendedSkills.join(', '))).filter(
@@ -165,60 +155,31 @@ function SkillsChipEditor({
 
   return (
     <Box sx={{ display: 'grid', gap: 1.5 }}>
-      <FieldLabel>Skills (add one chip at a time)</FieldLabel>
-      <ChipInputRow>
-        {draft.skillsList.length === 0 && (
-          <Typography sx={{ color: 'text.secondary', fontSize: '0.8rem' }}>
-            No skills yet — type below and press Enter.
-          </Typography>
-        )}
-        {draft.skillsList.map((skill) => (
-          <Chip
-            key={skill}
-            label={skill}
-            onDelete={() =>
-              onChange({
-                ...draft,
-                skillsList: draft.skillsList.filter((item) => item !== skill),
-              })
-            }
-            deleteIcon={<CloseIcon fontSize="small" />}
-            color="primary"
-            variant="outlined"
-          />
-        ))}
-      </ChipInputRow>
+      <FieldLabel>Skills</FieldLabel>
+      <TextField
+        fullWidth
+        multiline
+        rows={4}
+        label="Skills list"
+        helperText="Separate with commas — e.g. React, Node.js, TypeScript"
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        onBlur={() => commitText(text)}
+        sx={scrollableMultilineSx}
+      />
 
       {suggestions.length > 0 ? (
         <Box sx={{ display: 'grid', gap: 1 }}>
-          <FieldLabel>AI suggested for your JD (click to add)</FieldLabel>
-          <ChipInputRow>
+          <FieldLabel>Suggested from your JD (click to add)</FieldLabel>
+          <SkillSuggestionRow>
             {suggestions.slice(0, 12).map((skill) => (
-              <Chip
-                key={skill}
-                label={`+ ${skill}`}
-                color="success"
-                variant="outlined"
-                onClick={() => addSkill(skill)}
-              />
+              <button key={skill} type="button" onClick={() => addSkill(skill)}>
+                + {skill}
+              </button>
             ))}
-          </ChipInputRow>
+          </SkillSuggestionRow>
         </Box>
       ) : null}
-
-      <Box sx={{ display: 'flex', gap: 1 }}>
-        <TextField
-          fullWidth
-          size="small"
-          placeholder="e.g. Java"
-          value={input}
-          onChange={(event) => setInput(event.target.value)}
-          onKeyDown={onKeyDown}
-        />
-        <Button size="small" startIcon={<AddIcon fontSize="small" />} onClick={() => addSkill()}>
-          Add
-        </Button>
-      </Box>
     </Box>
   );
 }
@@ -243,60 +204,63 @@ function ExperienceEditor({
   return (
     <Box sx={{ display: 'grid', gap: 1.5 }}>
       <FieldLabel>Companies / roles</FieldLabel>
-      {entries.map((entry, index) => (
-        <EntryCard key={entry.id}>
-          <Box className="entry-head">
-            <Typography className="entry-title">Company #{index + 1}</Typography>
-            <IconButton
-              size="small"
-              aria-label="Remove company"
-              onClick={() => {
-                const next = entries.filter((item) => item.id !== entry.id);
-                commit(next.length > 0 ? next : [createEmptyExperience()]);
-              }}
-            >
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-          </Box>
-          <EntryGrid>
+      <ScrollableEntries>
+        {entries.map((entry, index) => (
+          <EntryCard key={entry.id}>
+            <Box className="entry-head">
+              <Typography className="entry-title">Company #{index + 1}</Typography>
+              <IconButton
+                size="small"
+                aria-label="Remove company"
+                onClick={() => {
+                  const next = entries.filter((item) => item.id !== entry.id);
+                  commit(next.length > 0 ? next : [createEmptyExperience()]);
+                }}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <EntryGrid>
+              <TextField
+                size="small"
+                label="Company"
+                value={entry.company}
+                onChange={(event) => updateEntry(entry.id, { company: event.target.value })}
+              />
+              <TextField
+                size="small"
+                label="Job title"
+                value={entry.title}
+                onChange={(event) => updateEntry(entry.id, { title: event.target.value })}
+              />
+              <TextField
+                size="small"
+                label="Start date"
+                placeholder="Jan 2022"
+                value={entry.startDate}
+                onChange={(event) => updateEntry(entry.id, { startDate: event.target.value })}
+              />
+              <TextField
+                size="small"
+                label="End date"
+                placeholder="Present"
+                value={entry.endDate}
+                onChange={(event) => updateEntry(entry.id, { endDate: event.target.value })}
+              />
+            </EntryGrid>
             <TextField
-              size="small"
-              label="Company"
-              value={entry.company}
-              onChange={(event) => updateEntry(entry.id, { company: event.target.value })}
+              fullWidth
+              multiline
+              rows={4}
+              label="Role details / bullets"
+              placeholder="One achievement per line"
+              value={entry.details}
+              onChange={(event) => updateEntry(entry.id, { details: event.target.value })}
+              sx={scrollableMultilineSx}
             />
-            <TextField
-              size="small"
-              label="Job title"
-              value={entry.title}
-              onChange={(event) => updateEntry(entry.id, { title: event.target.value })}
-            />
-            <TextField
-              size="small"
-              label="Start date"
-              placeholder="Jan 2022"
-              value={entry.startDate}
-              onChange={(event) => updateEntry(entry.id, { startDate: event.target.value })}
-            />
-            <TextField
-              size="small"
-              label="End date"
-              placeholder="Present"
-              value={entry.endDate}
-              onChange={(event) => updateEntry(entry.id, { endDate: event.target.value })}
-            />
-          </EntryGrid>
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
-            label="Role details / bullets"
-            placeholder="One achievement per line"
-            value={entry.details}
-            onChange={(event) => updateEntry(entry.id, { details: event.target.value })}
-          />
-        </EntryCard>
-      ))}
+          </EntryCard>
+        ))}
+      </ScrollableEntries>
       <Button
         size="small"
         variant="outline"
@@ -334,60 +298,63 @@ function ProjectsEditor({
   return (
     <Box sx={{ display: 'grid', gap: 1.5 }}>
       <FieldLabel>Projects</FieldLabel>
-      {entries.map((entry, index) => (
-        <EntryCard key={entry.id}>
-          <Box className="entry-head">
-            <Typography className="entry-title">Project #{index + 1}</Typography>
-            <IconButton
-              size="small"
-              aria-label="Remove project"
-              onClick={() => {
-                const next = entries.filter((item) => item.id !== entry.id);
-                commit(next.length > 0 ? next : [createEmptyProject()]);
-              }}
-            >
-              <DeleteOutlineIcon fontSize="small" />
-            </IconButton>
-          </Box>
-          <EntryGrid>
+      <ScrollableEntries>
+        {entries.map((entry, index) => (
+          <EntryCard key={entry.id}>
+            <Box className="entry-head">
+              <Typography className="entry-title">Project #{index + 1}</Typography>
+              <IconButton
+                size="small"
+                aria-label="Remove project"
+                onClick={() => {
+                  const next = entries.filter((item) => item.id !== entry.id);
+                  commit(next.length > 0 ? next : [createEmptyProject()]);
+                }}
+              >
+                <DeleteOutlineIcon fontSize="small" />
+              </IconButton>
+            </Box>
+            <EntryGrid>
+              <TextField
+                size="small"
+                label="Project title"
+                value={entry.title}
+                onChange={(event) => updateEntry(entry.id, { title: event.target.value })}
+              />
+              <TextField
+                size="small"
+                label="Company / client"
+                value={entry.company}
+                onChange={(event) => updateEntry(entry.id, { company: event.target.value })}
+              />
+              <TextField
+                size="small"
+                label="Start date"
+                placeholder="Mar 2023"
+                value={entry.startDate}
+                onChange={(event) => updateEntry(entry.id, { startDate: event.target.value })}
+              />
+              <TextField
+                size="small"
+                label="End date"
+                placeholder="Aug 2023"
+                value={entry.endDate}
+                onChange={(event) => updateEntry(entry.id, { endDate: event.target.value })}
+              />
+            </EntryGrid>
             <TextField
-              size="small"
-              label="Project title"
-              value={entry.title}
-              onChange={(event) => updateEntry(entry.id, { title: event.target.value })}
+              fullWidth
+              multiline
+              rows={4}
+              label="Project details"
+              placeholder="What you built, stack, and impact — one line per point"
+              value={entry.details}
+              onChange={(event) => updateEntry(entry.id, { details: event.target.value })}
+              sx={scrollableMultilineSx}
             />
-            <TextField
-              size="small"
-              label="Company / client"
-              value={entry.company}
-              onChange={(event) => updateEntry(entry.id, { company: event.target.value })}
-            />
-            <TextField
-              size="small"
-              label="Start date"
-              placeholder="Mar 2023"
-              value={entry.startDate}
-              onChange={(event) => updateEntry(entry.id, { startDate: event.target.value })}
-            />
-            <TextField
-              size="small"
-              label="End date"
-              placeholder="Aug 2023"
-              value={entry.endDate}
-              onChange={(event) => updateEntry(entry.id, { endDate: event.target.value })}
-            />
-          </EntryGrid>
-          <TextField
-            fullWidth
-            multiline
-            minRows={3}
-            label="Project details"
-            placeholder="What you built, stack, and impact — one line per point"
-            value={entry.details}
-            onChange={(event) => updateEntry(entry.id, { details: event.target.value })}
-          />
-        </EntryCard>
-      ))}
+          </EntryCard>
+        ))}
+      </ScrollableEntries>
       <Button
         size="small"
         variant="outline"

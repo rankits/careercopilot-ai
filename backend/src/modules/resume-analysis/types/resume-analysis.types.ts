@@ -1,5 +1,7 @@
 export interface AnalysisInput {
   resumeId: string;
+  /** Owning principal — required for IDOR-safe reads/writes. */
+  userId: string;
   targetRole: string;
   experienceLevel: string;
   jobDescription?: string;
@@ -28,6 +30,8 @@ export interface SkillAnalysis {
   matchedSkills: string[];
   missingSkills: string[];
   transferableSkills: string[];
+  /** Resume skills not required by the JD. */
+  additionalSkills?: string[];
   recommendedSkills: string[];
 }
 
@@ -142,6 +146,7 @@ export interface AiAnalysisOutput {
   recruiterReadability?: number;
   interviewReadiness?: number;
   missingSkills?: string[];
+  additionalSkillsFound?: string[];
   improvedSummary?: string;
   improvedExperience?: string[];
   improvedProjects?: string[];

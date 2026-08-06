@@ -95,7 +95,10 @@ const runParsingPipeline = async (input: {
         fileName: input.fileName,
       },
     });
-    console.log('Parsed data ', parsed);
+    jobsLogger.debug(
+      { parsedKeys: Object.keys((parsed as object) ?? {}) },
+      'Resume parse completed',
+    );
     const normalizedData = resumeNormaliserService.normalize(parsed.data);
 
     await resumeRepository.updateParseRun(parseRun.id, {
