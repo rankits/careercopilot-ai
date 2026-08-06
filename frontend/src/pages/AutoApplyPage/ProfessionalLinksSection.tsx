@@ -14,7 +14,8 @@ import { useSetupDirty } from './SetupDirtyContext';
 import { isValidHttpUrl } from './setupFormUtils';
 import { SetupSectionHeading } from './SetupSectionHeading';
 
-type FieldErrors = Partial<Record<'linkedin' | 'github' | 'portfolio', string>>;
+type LinkField = 'linkedin' | 'github' | 'portfolio' | 'behance' | 'stackoverflow' | 'medium';
+type FieldErrors = Partial<Record<LinkField, string>>;
 
 export function ProfessionalLinksSection() {
   const { data: profile, isLoading } = useCandidateProfile();
@@ -24,6 +25,9 @@ export function ProfessionalLinksSection() {
   const [linkedin, setLinkedin] = useState('');
   const [github, setGithub] = useState('');
   const [portfolio, setPortfolio] = useState('');
+  const [behance, setBehance] = useState('');
+  const [stackoverflow, setStackoverflow] = useState('');
+  const [medium, setMedium] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
 
   const savedSnapshot = useMemo(
@@ -31,21 +35,30 @@ export function ProfessionalLinksSection() {
       linkedin: profile?.links.linkedin ?? '',
       github: profile?.links.github ?? '',
       portfolio: profile?.links.portfolio ?? '',
+      behance: profile?.links.behance ?? '',
+      stackoverflow: profile?.links.stackoverflow ?? '',
+      medium: profile?.links.medium ?? '',
     }),
-    [profile?.links.github, profile?.links.linkedin, profile?.links.portfolio],
+    [profile?.links.behance, profile?.links.github, profile?.links.linkedin, profile?.links.medium, profile?.links.portfolio, profile?.links.stackoverflow],
   );
 
   useEffect(() => {
     setLinkedin(savedSnapshot.linkedin);
     setGithub(savedSnapshot.github);
     setPortfolio(savedSnapshot.portfolio);
+    setBehance(savedSnapshot.behance);
+    setStackoverflow(savedSnapshot.stackoverflow);
+    setMedium(savedSnapshot.medium);
     setErrors({});
   }, [savedSnapshot]);
 
   const isDirty =
     linkedin !== savedSnapshot.linkedin ||
     github !== savedSnapshot.github ||
-    portfolio !== savedSnapshot.portfolio;
+    portfolio !== savedSnapshot.portfolio ||
+    behance !== savedSnapshot.behance ||
+    stackoverflow !== savedSnapshot.stackoverflow ||
+    medium !== savedSnapshot.medium;
 
   useSetupDirty('links', isDirty);
 
@@ -60,6 +73,9 @@ export function ProfessionalLinksSection() {
     if (!isValidHttpUrl(portfolio)) {
       next.portfolio = 'Enter a valid URL starting with http:// or https://.';
     }
+    if (!isValidHttpUrl(behance)) next.behance = 'Enter a valid URL starting with http:// or https://.';
+    if (!isValidHttpUrl(stackoverflow)) next.stackoverflow = 'Enter a valid URL starting with http:// or https://.';
+    if (!isValidHttpUrl(medium)) next.medium = 'Enter a valid URL starting with http:// or https://.';
     return next;
   };
 
@@ -74,6 +90,9 @@ export function ProfessionalLinksSection() {
           linkedin: linkedin.trim() || undefined,
           github: github.trim() || undefined,
           portfolio: portfolio.trim() || undefined,
+          behance: behance.trim() || undefined,
+          stackoverflow: stackoverflow.trim() || undefined,
+          medium: medium.trim() || undefined,
         },
       });
       showToast({ message: 'Links saved.', severity: 'success' });
@@ -128,6 +147,14 @@ export function ProfessionalLinksSection() {
         placeholder="https://..."
         value={portfolio}
       />
+      <TextField error={Boolean(errors.behance)} fullWidth helperText={errors.behance} label="Behance / Dribbble" onChange={(event) => setBehance(event.target.value)} placeholder="https://behance.net/..." value={behance} />
+      <TextField error={Boolean(errors.stackoverflow)} fullWidth helperText={errors.stackoverflow} label="Stack Overflow" onChange={(event) => setStackoverflow(event.target.value)} placeholder="https://stackoverflow.com/users/..." value={stackoverflow} />
+      <TextField error={Boolean(errors.medium)} fullWidth helperText={errors.medium} label="Medium / Blog" onChange={(event) => setMedium(event.target.value)} placeholder="https://medium.com/@..." value={medium} />
+      <Box sx={{ bgcolor: 'primary.50', borderRadius: 1.5, display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, p: 2 }}>
+        {['Increase match score', 'Build credibility', 'Stand out from others'].map((tip) => (
+          <Typography key={tip} sx={{ fontSize: 12, fontWeight: 600 }}>{tip}</Typography>
+        ))}
+      </Box>
       <Box>
         <Button disabled={!isDirty} isLoading={upsertProfile.isPending} onClick={() => void handleSave()}>
           Save

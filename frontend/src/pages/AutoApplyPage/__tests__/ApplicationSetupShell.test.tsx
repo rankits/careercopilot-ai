@@ -8,6 +8,7 @@ import { ConsentsTab } from '../ConsentsTab';
 import { ResumeVersionsTab } from '../ResumeVersionsTab';
 import { RulesTab } from '../RulesTab';
 import { SetupChecklist } from '../SetupChecklist';
+import { SetupSummary } from '../SetupSummary';
 
 vi.mock('@/features/auto-apply/hooks/useResumeVersions', () => ({
   useResumeVersions: () => ({ data: [], isLoading: false }),
@@ -88,6 +89,7 @@ describe('Application Setup a11y AA-030', () => {
   it('renders checklist items with descriptive aria labels', () => {
     wrap(
       <SetupChecklist
+        activeSection="personal"
         isError={false}
         isLoading={false}
         onBrowseJobs={vi.fn()}
@@ -110,5 +112,26 @@ describe('Application Setup a11y AA-030', () => {
       screen.getByRole('button', { name: /Personal & contact details, incomplete, required/i }),
     ).toBeInTheDocument();
     expect(screen.getByRole('progressbar')).toHaveAttribute('aria-label', 'Setup 25 percent complete');
+  });
+
+  it('renders the setup overview from the same completion status', () => {
+    wrap(
+      <SetupSummary
+        onBrowseJobs={vi.fn()}
+        status={{
+          complete: false,
+          percent: 25,
+          readyForAssistedApply: false,
+          gaps: [],
+          sections: [
+            { id: 'personal', label: 'Personal & contact details', complete: true, required: true },
+            { id: 'resumes', label: 'Resumes', complete: false, required: true },
+          ],
+        }}
+      />,
+    );
+
+    expect(screen.getByText('1/2')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Browse jobs/i })).toBeInTheDocument();
   });
 });

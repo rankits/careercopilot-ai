@@ -2,9 +2,23 @@ import type { SetupSectionId, SetupStatusDto } from '@/features/auto-apply/types
 import {
   firstIncompleteRequiredSectionId,
 } from '@/features/auto-apply/utils/setupSectionNavigation';
-import { Alert, Box, LinearProgress, List, ListItemButton, ListItemText, MuiButton, Stack, Typography } from '@/lib/material';
+import {
+  Alert,
+  Box,
+  CheckCircleIcon,
+  LinearProgress,
+  List,
+  ListItemButton,
+  ListItemText,
+  MenuItem,
+  MuiButton,
+  Stack,
+  TextField,
+  Typography,
+} from '@/lib/material';
 
 export interface SetupChecklistProps {
+  activeSection: SetupSectionId;
   status: SetupStatusDto | undefined;
   isLoading: boolean;
   isError: boolean;
@@ -14,6 +28,7 @@ export interface SetupChecklistProps {
 }
 
 export function SetupChecklist({
+  activeSection,
   status,
   isLoading,
   isError,
@@ -61,30 +76,39 @@ export function SetupChecklist({
   const primaryLabel = allRequiredComplete ? 'Review setup' : 'Continue setup';
 
   return (
-    <Box sx={{ mb: 3 }}>
+    <Box
+      sx={{
+        '& .MuiListItemButton-root': { minHeight: 54 },
+        bgcolor: 'background.paper',
+        border: 1,
+        borderColor: 'divider',
+        borderRadius: 2,
+        boxShadow: '0 8px 24px rgba(15, 23, 42, 0.035)',
+        mb: { xs: 2, lg: 0 },
+        overflow: 'hidden',
+      }}
+    >
       <Stack
-        alignItems={{ xs: 'stretch', sm: 'center' }}
-        direction={{ xs: 'column', sm: 'row' }}
-        justifyContent="space-between"
-        spacing={2}
-        sx={{ mb: 1.5 }}
+        spacing={1}
+        sx={{ borderBottom: 1, borderColor: 'divider', p: 2 }}
       >
-        <Box sx={{ flex: 1, minWidth: 0 }}>
-          <Typography component="p" sx={{ mb: 0.5 }} variant="subtitle1">
-            Setup {status.percent}% complete
+        <Box>
+          <Typography component="p" sx={{ fontSize: 13, fontWeight: 700, mb: 0.75 }} variant="subtitle1">
+            Your setup
           </Typography>
           <LinearProgress
             aria-label={`Setup ${status.percent} percent complete`}
-            sx={{ height: 8, borderRadius: 1 }}
+            sx={{ borderRadius: 99, height: 6 }}
             value={status.percent}
             variant="determinate"
           />
         </Box>
-        <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+        <Stack direction="row" spacing={1}>
           <MuiButton
             onClick={() => {
               if (nextSectionId) onSelectSection(nextSectionId);
             }}
+            size="small"
             variant="contained"
           >
             {primaryLabel}
@@ -97,21 +121,69 @@ export function SetupChecklist({
         </Stack>
       </Stack>
 
-      <List aria-label="Application Setup checklist" sx={{ bgcolor: 'background.paper' }}>
+      <TextField
+        aria-label="Choose setup section"
+        onChange={(event) => onSelectSection(event.target.value as SetupSectionId)}
+        select
+        size="small"
+        sx={{ display: { xs: 'flex', lg: 'none' }, m: 1.5 }}
+        value={activeSection}
+      >
+        {status.sections.map((section, index) => (
+          <MenuItem key={section.id} value={section.id}>
+            {index + 1}. {section.label} · {section.required ? 'Required' : 'Optional'}
+          </MenuItem>
+        ))}
+      </TextField>
+      <List
+        aria-label="Application Setup checklist"
+        disablePadding
+        sx={{ display: { xs: 'none', lg: 'block' } }}
+      >
         {status.sections.map((section) => {
           const statusText = section.complete ? 'complete' : 'incomplete';
           const requiredText = section.required ? 'required' : 'optional';
+          const sectionNumber = status.sections.indexOf(section) + 1;
           return (
             <ListItemButton
               aria-label={`${section.label}, ${statusText}, ${requiredText}`}
               id={`setup-section-${section.id}`}
               key={section.id}
               onClick={() => onSelectSection(section.id)}
+              selected={activeSection === section.id}
+              sx={{
+                alignItems: 'center',
+                borderLeft: 3,
+                borderLeftColor: activeSection === section.id ? 'primary.main' : 'transparent',
+                gap: 1.25,
+                px: 1.5,
+              }}
             >
-              <ListItemText
-                primary={`${section.complete ? '✓' : '○'} ${section.label}`}
-                secondary={section.required ? 'Required' : 'Optional'}
-              />
+              <Box
+                sx={{
+                  alignItems: 'center',
+                  bgcolor: section.complete ? 'success.light' : 'grey.100',
+                  borderRadius: '50%',
+                  color: section.complete ? 'success.dark' : 'text.secondary',
+                  display: 'flex',
+                  flex: '0 0 auto',
+                  fontSize: 11,
+                  fontWeight: 700,
+                  height: 20,
+                  justifyContent: 'center',
+                  width: 20,
+                }}
+              >
+                {section.complete ? <CheckCircleIcon sx={{ fontSize: 16 }} /> : sectionNumber}
+              </Box>
+              <Box sx={{ minWidth: 0 }}>
+                <Typography noWrap sx={{ fontSize: 12, fontWeight: 600 }}>
+                  {section.label}
+                </Typography>
+                <Typography color="text.secondary" sx={{ fontSize: 10 }}>
+                  {section.required ? 'Required' : 'Optional'}
+                </Typography>
+              </Box>
             </ListItemButton>
           );
         })}

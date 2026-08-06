@@ -15,6 +15,7 @@ import {
 import { ROUTES } from '@/constants/routes';
 import { hasAuthSession } from '@/features/auth/utils/authSession';
 import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
+import { resumeService } from '@/features/resume/services/resume.service';
 import {
   Alert,
   Box,
@@ -112,6 +113,12 @@ export function ResumeVersionsTab() {
     queryKey: ['resume-builder', 'uploaded-resumes'],
     staleTime: 30_000,
   });
+  const profileQuery = useQuery({
+    enabled: hasAuthSession(),
+    queryFn: () => resumeService.getMyProfile(),
+    queryKey: ['resume-profile', 'me'],
+    staleTime: 30_000,
+  });
 
   const selectableResumes = useMemo(
     () => buildSelectableResumes(savedQuery.data, uploadedQuery.data),
@@ -196,8 +203,38 @@ export function ResumeVersionsTab() {
           tabIndex={-1}
           variant="h6"
         >
-          Resumes
+          Primary resume
         </Typography>
+
+        {versions?.find((version) => version.isActive) ? (
+          <Box
+            sx={{
+              bgcolor: 'grey.50',
+              border: 1,
+              borderColor: 'divider',
+              borderRadius: 1.5,
+              display: 'grid',
+              gap: 2,
+              gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) 220px' },
+              p: 2,
+            }}
+          >
+            <Box>
+              <Typography fontWeight={700} variant="body2">
+                {versions.find((version) => version.isActive)?.label}
+              </Typography>
+              <Typography color="success.main" variant="caption">
+                Parsed successfully · Current primary
+              </Typography>
+            </Box>
+            <Box>
+              <Typography fontWeight={700} variant="caption">Parsing insights</Typography>
+              <Typography color="text.secondary" display="block" variant="caption">
+                {profileQuery.data?.skills.length ?? 0} skills · {profileQuery.data?.education.length ?? 0} education entries · {profileQuery.data?.experience.length ?? 0} roles
+              </Typography>
+            </Box>
+          </Box>
+        ) : null}
 
         {approvedLoading ? (
           <Box aria-busy="true" aria-label="Loading approved resumes">
