@@ -80,6 +80,9 @@ export const CandidateApplicationLinksSchema = z.object({
   linkedin: z.string().trim().url().max(2048).optional(),
   github: z.string().trim().url().max(2048).optional(),
   portfolio: z.string().trim().url().max(2048).optional(),
+  behance: z.string().trim().url().max(2048).optional(),
+  stackoverflow: z.string().trim().url().max(2048).optional(),
+  medium: z.string().trim().url().max(2048).optional(),
 });
 
 export const UpsertCandidateApplicationProfileSchema = z.object({

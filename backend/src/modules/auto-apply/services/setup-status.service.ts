@@ -28,9 +28,9 @@ const SECTION_DEFINITIONS: Array<{
   { id: 'preferences', label: 'Job preferences', required: true },
   { id: 'links', label: 'Professional links', required: false },
   { id: 'answers', label: 'Common answers', required: true },
-  { id: 'resumes', label: 'Resumes', required: true },
-  { id: 'exclusions', label: 'Exclusions', required: false },
-  { id: 'consents', label: 'Consents & privacy', required: true },
+  { id: 'resumes', label: 'Resume', required: true },
+  { id: 'education', label: 'Education', required: false },
+  { id: 'consents', label: 'Consent & privacy', required: true },
 ];
 
 const READINESS_GAP_BY_CODE: Partial<
@@ -172,7 +172,7 @@ function isResumesComplete(hasActiveResume: boolean): boolean {
   return hasActiveResume;
 }
 
-function isExclusionsComplete(): boolean {
+function isEducationComplete(): boolean {
   return true;
 }
 
@@ -247,7 +247,7 @@ export class SetupStatusService {
       links: isLinksComplete(profile),
       answers: isAnswersComplete(profile, answerByKey),
       resumes: isResumesComplete(hasActiveResume),
-      exclusions: isExclusionsComplete(),
+      education: isEducationComplete(),
       consents: isConsentsComplete(hasResumeConsent, hasPrivacyAck),
     };
 
@@ -273,7 +273,7 @@ export class SetupStatusService {
     return {
       complete,
       percent,
-      readyForAssistedApply: readiness.ready,
+      readyForAssistedApply: readiness.ready && complete,
       gaps,
       sections,
     };
