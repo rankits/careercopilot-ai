@@ -30,7 +30,9 @@ const TRANSITIONS: Record<JobApplicationStatus, JobApplicationStatus[]> = {
   // Only a FAILED_SAFE_TO_RETRY outcome (Wave 4, AJA-QUEUE-002) may ever
   // drive this transition — never a blind/automatic retry.
   SUBMISSION_FAILED: ['QUEUED'],
-  ACTION_REQUIRED: ['SUBMITTED', 'WITHDRAWN'],
+  ACTION_REQUIRED: ['SUBMITTED', 'WITHDRAWN', 'COULD_NOT_APPLY', 'JOB_CLOSED'],
+  COULD_NOT_APPLY: [],
+  JOB_CLOSED: [],
   // Candidates can reopen an abandoned application via reopenFromWithdrawn — see AA-042.
   WITHDRAWN: ['DISCOVERED'],
 };

@@ -10,6 +10,7 @@ import { tabForSetupSection } from '@/features/auto-apply/utils/setupSectionNavi
 import { Box, Tab, Tabs, Typography } from '@/lib/material';
 
 import { AnswersTab } from './AnswersTab';
+import { AssistedApplicationsList } from './AssistedApplicationsList';
 import { ConsentsTab } from './ConsentsTab';
 import { DiscardChangesDialog } from './DiscardChangesDialog';
 import { answerKeyForMissingField, type AutoApplyTabId } from './missingFieldNavigation';
@@ -18,7 +19,6 @@ import { ResumeVersionsTab } from './ResumeVersionsTab';
 import { RulesTab } from './RulesTab';
 import { SetupChecklist } from './SetupChecklist';
 import { SetupDirtyProvider, useSetupDirtyNavigation } from './SetupDirtyContext';
-import { AssistedApplicationsList } from './AssistedApplicationsList';
 
 const TABS: { id: AutoApplyTabId; label: string }[] = [
   { id: 'profile', label: 'Profile' },

@@ -496,7 +496,11 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
   async abandonApplication(
     userId: string,
     id: string,
-    data: { abandonReason: string; abandonNote: string | null },
+    data: {
+      abandonReason: string;
+      abandonNote: string | null;
+      targetStatus?: JobApplicationStatusValue;
+    },
     expectedStatus: JobApplicationStatusValue,
   ): Promise<JobApplicationDto | null> {
     try {
@@ -507,7 +511,7 @@ export class PrismaJobApplicationRepository implements IJobApplicationRepository
           status: expectedStatus as JobApplicationStatus,
         },
         data: {
-          status: 'WITHDRAWN',
+          status: (data.targetStatus as JobApplicationStatus) ?? 'WITHDRAWN',
           abandonReason: data.abandonReason,
           abandonNote: data.abandonNote,
         },

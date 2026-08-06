@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 
-import { formatListRelativeTime } from '../assistedApplicationsListUtils';
+import type { JobApplicationDto } from '@/features/auto-apply/types/autoApply.types';
 import {
   labelForViewState,
   toAssistedApplyView,
 } from '@/features/auto-apply/utils/assistedApplyView';
-import type { JobApplicationDto } from '@/features/auto-apply/types/autoApply.types';
+
+import { formatListRelativeTime } from '../assistedApplicationsListUtils';
 
 /** Pure helpers for AA-080 list labels — React suite deferred (see skipped-tests ledger). */
 describe('AssistedApplicationsList helpers (AA-080)', () => {

@@ -34,6 +34,12 @@ type JobApplicationRecord = {
   failureMessage: string | null;
   planInputsHash: string | null;
   planVersion: number;
+  progressStep: string | null;
+  reopenedAt: Date | null;
+  handoffOpenedAt: Date | null;
+  appliedNotes: string | null;
+  abandonReason: string | null;
+  abandonNote: string | null;
   createdAt: Date;
   updatedAt: Date;
 };

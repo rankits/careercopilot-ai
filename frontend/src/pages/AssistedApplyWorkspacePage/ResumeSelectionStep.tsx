@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { useConsents } from '@/features/auto-apply/hooks/useConsents';
-import { useResumeVersions } from '@/features/auto-apply/hooks/useResumeVersions';
 import { useUpdateResumeSelection } from '@/features/auto-apply/hooks/useResumeHandoff';
+import { useResumeVersions } from '@/features/auto-apply/hooks/useResumeVersions';
+
 import { ROUTES } from '@/constants/routes';
 import {
   Alert,
@@ -34,9 +35,7 @@ export function ResumeSelectionStep({
   const [savedFlash, setSavedFlash] = useState(false);
 
   const hasResumeConsent =
-    consentsQuery.data?.some(
-      (c) => c.consentType === 'RESUME_USAGE' && !c.revokedAt,
-    ) ?? false;
+    consentsQuery.data?.some((c) => c.consentType === 'RESUME_USAGE' && !c.revokedAt) ?? false;
 
   useEffect(() => {
     setLocalSelected(selectedResumeVersionId);
@@ -48,8 +47,7 @@ export function ResumeSelectionStep({
     if (selectedResumeVersionId) return;
     if (!versionsQuery.data?.length) return;
     if (selectionMutation.isPending || selectionMutation.isSuccess) return;
-    const defaultVersion =
-      versionsQuery.data.find((v) => v.isActive) ?? versionsQuery.data[0];
+    const defaultVersion = versionsQuery.data.find((v) => v.isActive) ?? versionsQuery.data[0];
     if (!defaultVersion) return;
     selectionMutation.mutate(defaultVersion.id, {
       onSuccess: () => setLocalSelected(defaultVersion.id),
@@ -126,10 +124,7 @@ export function ResumeSelectionStep({
           Saved
         </Typography>
       ) : null}
-      <RadioGroup
-        onChange={(_e, value) => handleChange(value)}
-        value={localSelected ?? ''}
-      >
+      <RadioGroup onChange={(_e, value) => handleChange(value)} value={localSelected ?? ''}>
         {versionsQuery.data.map((version) => (
           <Box
             key={version.id}

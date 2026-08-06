@@ -5,14 +5,8 @@ import { Button } from '@/components/atoms';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { ROUTES } from '@/constants/routes';
-import { resolveSafeReturnTo, isSafeAssistedApplyReturnTo } from '@/features/auto-apply/utils/returnToNavigation';
-import {
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Typography,
-} from '@/lib/material';
+import { isSafeAssistedApplyReturnTo } from '@/features/auto-apply/utils/returnToNavigation';
+import { Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@/lib/material';
 import type {
   UploadedResume,
   AnalysisResult,

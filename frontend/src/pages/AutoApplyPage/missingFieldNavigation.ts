@@ -155,7 +155,7 @@ const FIELD_FIX_MAP: Record<string, SectionFix> = {
   matchScore: {
     label: 'Open For You',
     toastLabel: 'match score',
-    destination: { kind: 'route', href: ROUTES.FOR_YOU },
+    destination: { kind: 'route', href: ROUTES.AI_MATCH },
   },
   consent: {
     label: 'Review consents',
@@ -189,7 +189,7 @@ const CODE_FIX_MAP: Record<string, SectionFix> = {
     field: 'matchScore',
     label: 'Open For You',
     toastLabel: 'match score',
-    destination: { kind: 'route', href: ROUTES.FOR_YOU },
+    destination: { kind: 'route', href: ROUTES.AI_MATCH },
   },
   MATCH_SCORE_BELOW_THRESHOLD: {
     field: 'matchScore',
