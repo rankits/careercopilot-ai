@@ -193,6 +193,7 @@ export function ResumeBuilderPage() {
         }}
         onExport={(format, previewRoot) => void actions.handleExport(format, previewRoot)}
         onDone={() => void actions.handleSaveVersion({ navigateAfter: true })}
+        onCreateNewResume={actions.handleReplaceResume}
         onTemplateChange={setSelectedTemplate}
       />
 
@@ -215,6 +216,27 @@ export function ResumeBuilderPage() {
             Keep Editing
           </Button>
           <Button onClick={draft.confirmLeave}>Discard Changes</Button>
+        </DialogActions>
+      </Dialog>
+
+      <Dialog
+        open={navigation.atsLeaveOpen}
+        onClose={navigation.closeAtsLeaveDialog}
+        fullWidth
+        maxWidth="xs"
+      >
+        <DialogTitle>Leave ATS analysis?</DialogTitle>
+        <DialogContent>
+          <Typography>
+            ATS analysis is still in progress. If you go back now, your current ATS score and
+            analysis progress will be lost. Are you sure you want to continue?
+          </Typography>
+        </DialogContent>
+        <DialogActions sx={{ gap: 1, p: 2 }}>
+          <Button variant="outline" onClick={navigation.closeAtsLeaveDialog}>
+            Stay
+          </Button>
+          <Button onClick={navigation.confirmAtsLeave}>Go Back</Button>
         </DialogActions>
       </Dialog>
     </Root>
