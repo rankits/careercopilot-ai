@@ -21,6 +21,7 @@ import {
   SearchOutlinedIcon,
   SecurityOutlinedIcon,
   TuneOutlinedIcon,
+  AutoAwesomeOutlinedIcon,
 } from '@/lib/material';
 
 /* ----------------------------------------------------------------------------
@@ -502,6 +503,7 @@ export const CAREER_COPILOT_COPY = {
  * -------------------------------------------------------------------------- */
 
 export const SIDEBAR_NAV_LABELS = {
+  autoApply: 'Auto Apply',
   applications: 'Applications',
   aiMatch: 'AI Match',
   dashboard: 'Dashboard',
@@ -542,6 +544,12 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     icon: BusinessCenterOutlinedIcon,
     id: 'applications',
     label: SIDEBAR_NAV_LABELS.applications,
+  },
+  {
+    href: ROUTES.AUTO_APPLY,
+    icon: AutoAwesomeOutlinedIcon,
+    id: 'auto-apply',
+    label: SIDEBAR_NAV_LABELS.autoApply,
   },
   {
     href: ROUTES.RESUME_BUILDER,
