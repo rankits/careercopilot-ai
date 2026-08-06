@@ -1,12 +1,18 @@
 /* eslint-disable react-refresh/only-export-components -- router config and component share this module */
-import { createBrowserRouter, useRoutes, type RouteObject } from 'react-router-dom';
+import {
+  Navigate,
+  createBrowserRouter,
+  useLocation,
+  useRoutes,
+  type RouteObject,
+} from 'react-router-dom';
 
 import { App } from '@/app/App';
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
+import { AiMatchPage } from '@/pages/AiMatchPage';
 import { ApplicationsPage } from '@/pages/ApplicationsPage';
 import { EditProfilePage } from '@/pages/EditProfilePage';
-import { ForYouPage } from '@/pages/ForYouPage';
 import { HomePage } from '@/pages/HomePage';
 import { JobDetailPage } from '@/pages/JobDetailPage';
 import { JobFeedPage } from '@/pages/JobFeedPage';
@@ -23,6 +29,11 @@ import {
   ProtectedRoute,
   RootRedirect,
 } from '@/routes/guards/AuthGuards';
+
+function LegacyForYouRedirect() {
+  const location = useLocation();
+  return <Navigate replace to={`${ROUTES.AI_MATCH}${location.search}${location.hash}`} />;
+}
 
 /** Shared route tree for the data router and for MemoryRouter-based tests. */
 export const appRouteObjects: RouteObject[] = [
@@ -47,7 +58,8 @@ export const appRouteObjects: RouteObject[] = [
           { path: ROUTES.DASHBOARD, element: <HomePage /> },
           { path: ROUTES.JOB_FEED, element: <JobFeedPage /> },
           { path: ROUTES.JOB_DETAIL, element: <JobDetailPage /> },
-          { path: ROUTES.FOR_YOU, element: <ForYouPage /> },
+          { path: ROUTES.AI_MATCH, element: <AiMatchPage /> },
+          { path: '/for-you', element: <LegacyForYouRedirect /> },
           { path: ROUTES.SAVED_JOBS, element: <SavedJobsPage /> },
           { path: ROUTES.APPLICATIONS, element: <ApplicationsPage /> },
           { path: ROUTES.SAVED_RESUMES, element: <SavedResumesPage /> },

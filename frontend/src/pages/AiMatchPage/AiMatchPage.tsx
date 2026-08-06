@@ -98,7 +98,7 @@ import {
 } from '@/lib/material';
 import { jobFeedPageSx } from '@/pages/JobFeedPage/styles';
 
-import { forYouPageSx } from './styles';
+import { aiMatchPageSx } from './styles';
 
 type RecommendationMode = 'profile' | 'resume' | 'similar' | 'text-career' | 'career' | 'saved';
 type RecommendationLifecycleState = NonNullable<RecommendationReadinessStatus['lifecycleState']>;
@@ -174,8 +174,8 @@ const getModeFromSearchParams = (searchParams: URLSearchParams): RecommendationM
     : 'profile';
 };
 
-const getTabId = (mode: RecommendationMode) => `for-you-${mode}-tab`;
-const getPanelId = (mode: RecommendationMode) => `for-you-${mode}-panel`;
+const getTabId = (mode: RecommendationMode) => `ai-match-${mode}-tab`;
+const getPanelId = (mode: RecommendationMode) => `ai-match-${mode}-panel`;
 
 const failedLifecycleStates = new Set<RecommendationLifecycleState>([
   'FAILED',
@@ -221,7 +221,7 @@ const formatUploadedDate = (iso: string | null | undefined): string => {
   return parsed.toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' });
 };
 
-function ForYouInfoBanner({
+function AiMatchInfoBanner({
   action,
   icon,
   message,
@@ -233,28 +233,28 @@ function ForYouInfoBanner({
   title?: string;
 }) {
   return (
-    <Box role="status" sx={forYouPageSx.banner}>
-      <Box aria-hidden="true" sx={forYouPageSx.bannerIcon}>
+    <Box role="status" sx={aiMatchPageSx.banner}>
+      <Box aria-hidden="true" sx={aiMatchPageSx.bannerIcon}>
         {icon}
       </Box>
-      <Box sx={forYouPageSx.bannerCopy}>
-        {title ? <Typography sx={forYouPageSx.bannerTitle}>{title}</Typography> : null}
-        <Typography sx={forYouPageSx.bannerMessage}>{message}</Typography>
+      <Box sx={aiMatchPageSx.bannerCopy}>
+        {title ? <Typography sx={aiMatchPageSx.bannerTitle}>{title}</Typography> : null}
+        <Typography sx={aiMatchPageSx.bannerMessage}>{message}</Typography>
       </Box>
-      {action ? <Box sx={forYouPageSx.bannerAction}>{action}</Box> : null}
+      {action ? <Box sx={aiMatchPageSx.bannerAction}>{action}</Box> : null}
     </Box>
   );
 }
 
 function SourceJobLogo({ initial }: { initial: string }) {
   return (
-    <Box aria-hidden="true" component="span" sx={forYouPageSx.sourceJobLogo}>
+    <Box aria-hidden="true" component="span" sx={aiMatchPageSx.sourceJobLogo}>
       {initial}
     </Box>
   );
 }
 
-export function ForYouPage() {
+export function AiMatchPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { showToast } = useToast();
@@ -913,16 +913,16 @@ export function ForYouPage() {
   const sourceJobCard = sourceJobQuery.data ? mapJobListDtoToCard(sourceJobQuery.data) : undefined;
 
   return (
-    <Box component="section" sx={forYouPageSx.root}>
-      <Box sx={forYouPageSx.header}>
-        <Box aria-hidden="true" sx={forYouPageSx.headerIcon}>
+    <Box component="section" sx={aiMatchPageSx.root}>
+      <Box sx={aiMatchPageSx.header}>
+        <Box aria-hidden="true" sx={aiMatchPageSx.headerIcon}>
           <AutoAwesomeOutlinedIcon fontSize="medium" />
         </Box>
-        <Box sx={forYouPageSx.headerCopy}>
-          <Typography component="h1" sx={forYouPageSx.title}>
+        <Box sx={aiMatchPageSx.headerCopy}>
+          <Typography component="h1" sx={aiMatchPageSx.title}>
             {FOR_YOU_COPY.title}
           </Typography>
-          <Typography sx={forYouPageSx.subtitle}>{FOR_YOU_COPY.subtitle}</Typography>
+          <Typography sx={aiMatchPageSx.subtitle}>{FOR_YOU_COPY.subtitle}</Typography>
         </Box>
       </Box>
 
@@ -998,7 +998,7 @@ export function ForYouPage() {
           aria-labelledby={getTabId('resume')}
           id={getPanelId('resume')}
           role="tabpanel"
-          sx={forYouPageSx.panel}
+          sx={aiMatchPageSx.panel}
         >
           {resumeProfile.isPending ? (
             <JobFeedLoadingState label={FOR_YOU_COPY.loadingResume} />
@@ -1018,17 +1018,17 @@ export function ForYouPage() {
           ) : null}
 
           {!resumeProfile.isPending && !resumeProfile.isError && !selectedResumeId ? (
-            <Box role="status" sx={forYouPageSx.empty}>
-              <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                 <DescriptionOutlinedIcon fontSize="medium" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {FOR_YOU_COPY.resumeEmptyTitle}
               </Typography>
-              <Typography sx={forYouPageSx.emptyDescription}>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
                 {FOR_YOU_COPY.resumeEmptyDescription}
               </Typography>
-              <Box sx={forYouPageSx.emptyActions}>
+              <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
                   {FOR_YOU_COPY.addResume}
                 </Button>
@@ -1038,7 +1038,7 @@ export function ForYouPage() {
 
           {!resumeProfile.isPending && !resumeProfile.isError && selectedResumeId ? (
             <>
-              <ForYouInfoBanner
+              <AiMatchInfoBanner
                 action={
                   <Button
                     disabled={generateResume.isPending}
@@ -1060,15 +1060,15 @@ export function ForYouPage() {
                 </Typography>
               ) : null}
 
-              <Typography component="h2" sx={forYouPageSx.sectionTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.sectionTitle}>
                 {FOR_YOU_COPY.resumeSectionTitle}
               </Typography>
-              <Box sx={forYouPageSx.resumeFileCard}>
-                <Box aria-hidden="true" sx={forYouPageSx.resumeFileIcon}>
+              <Box sx={aiMatchPageSx.resumeFileCard}>
+                <Box aria-hidden="true" sx={aiMatchPageSx.resumeFileIcon}>
                   <PictureAsPdfOutlinedIcon fontSize="medium" />
                 </Box>
-                <Box sx={forYouPageSx.resumeFileCopy}>
-                  <Typography sx={forYouPageSx.resumeFileName}>
+                <Box sx={aiMatchPageSx.resumeFileCopy}>
+                  <Typography sx={aiMatchPageSx.resumeFileName}>
                     {selectedResumeFile?.originalName ?? FOR_YOU_COPY.confirmedResume}{' '}
                     <VerifiedUserOutlinedIcon
                       aria-label={FOR_YOU_COPY.confirmedResume}
@@ -1076,7 +1076,7 @@ export function ForYouPage() {
                     />
                   </Typography>
                   {selectedResumeFile ? (
-                    <Typography sx={forYouPageSx.resumeFileMeta}>
+                    <Typography sx={aiMatchPageSx.resumeFileMeta}>
                       {FOR_YOU_COPY.resumeMeta(
                         formatUploadedDate(selectedResumeFile.uploadedAt),
                         formatFileSize(selectedResumeFile.sizeBytes),
@@ -1084,7 +1084,7 @@ export function ForYouPage() {
                     </Typography>
                   ) : null}
                 </Box>
-                <Box sx={forYouPageSx.resumeFileActions}>
+                <Box sx={aiMatchPageSx.resumeFileActions}>
                   <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
                     {FOR_YOU_COPY.replaceResume}
                   </Button>
@@ -1092,11 +1092,11 @@ export function ForYouPage() {
               </Box>
 
               {!resumeGeneratedOnce ? (
-                <Box role="status" sx={forYouPageSx.dashedEmpty}>
-                  <Box aria-hidden="true" sx={forYouPageSx.dashedEmptyArt}>
+                <Box role="status" sx={aiMatchPageSx.dashedEmpty}>
+                  <Box aria-hidden="true" sx={aiMatchPageSx.dashedEmptyArt}>
                     <DescriptionOutlinedIcon fontSize="inherit" />
                   </Box>
-                  <Typography component="h2" sx={forYouPageSx.dashedEmptyTitle}>
+                  <Typography component="h2" sx={aiMatchPageSx.dashedEmptyTitle}>
                     {FOR_YOU_COPY.resumeEmptyPending}
                   </Typography>
                   <Button
@@ -1115,17 +1115,17 @@ export function ForYouPage() {
               !generateResume.isPending &&
               !generateResume.isError &&
               visibleResumeRecommendations.length === 0 ? (
-                <Box role="status" sx={forYouPageSx.empty}>
-                  <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+                <Box role="status" sx={aiMatchPageSx.empty}>
+                  <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                     <DescriptionOutlinedIcon fontSize="medium" />
                   </Box>
-                  <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+                  <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                     {FOR_YOU_COPY.emptyAfterGenerateTitle}
                   </Typography>
-                  <Typography sx={forYouPageSx.emptyDescription}>
+                  <Typography sx={aiMatchPageSx.emptyDescription}>
                     {FOR_YOU_COPY.resumeEmptyAfterGenerate}
                   </Typography>
-                  <Box sx={forYouPageSx.emptyActions}>
+                  <Box sx={aiMatchPageSx.emptyActions}>
                     <Button
                       component={RouterLink}
                       size="small"
@@ -1140,8 +1140,8 @@ export function ForYouPage() {
 
               {visibleResumeRecommendations.length > 0 ? (
                 <>
-                  <Box sx={forYouPageSx.listHeader}>
-                    <Typography aria-live="polite" sx={forYouPageSx.resultCount}>
+                  <Box sx={aiMatchPageSx.listHeader}>
+                    <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                       {FOR_YOU_COPY.resumeResultCount(visibleResumeRecommendations.length)}
                     </Typography>
                   </Box>
@@ -1167,9 +1167,9 @@ export function ForYouPage() {
           aria-labelledby={getTabId('similar')}
           id={getPanelId('similar')}
           role="tabpanel"
-          sx={forYouPageSx.panel}
+          sx={aiMatchPageSx.panel}
         >
-          <ForYouInfoBanner
+          <AiMatchInfoBanner
             action={
               <Button
                 disabled={!similarSourceJobId || similarJobs.isFetching}
@@ -1186,14 +1186,14 @@ export function ForYouPage() {
           />
 
           {similarSourceJobId && sourceJobCard ? (
-            <Box sx={forYouPageSx.sourceJobCard}>
+            <Box sx={aiMatchPageSx.sourceJobCard}>
               <SourceJobLogo initial={sourceJobCard.logo} />
-              <Box sx={forYouPageSx.sourceJobCopy}>
-                <Typography sx={forYouPageSx.sourceJobLabel}>
+              <Box sx={aiMatchPageSx.sourceJobCopy}>
+                <Typography sx={aiMatchPageSx.sourceJobLabel}>
                   {FOR_YOU_COPY.similarSourceLabel}
                 </Typography>
-                <Typography sx={forYouPageSx.sourceJobTitle}>{sourceJobCard.title}</Typography>
-                <Typography sx={forYouPageSx.sourceJobMeta}>
+                <Typography sx={aiMatchPageSx.sourceJobTitle}>{sourceJobCard.title}</Typography>
+                <Typography sx={aiMatchPageSx.sourceJobMeta}>
                   {sourceJobCard.company}
                   {sourceJobCard.location ? ` • ${sourceJobCard.location}` : ''}
                 </Typography>
@@ -1209,17 +1209,17 @@ export function ForYouPage() {
           ) : null}
 
           {showSimilarPickSourceEmpty ? (
-            <Box role="status" sx={forYouPageSx.empty}>
-              <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                 <SwapHorizOutlinedIcon fontSize="medium" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {FOR_YOU_COPY.similarEmptyTitle}
               </Typography>
-              <Typography sx={forYouPageSx.emptyDescription}>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
                 {FOR_YOU_COPY.similarEmptyDescription}
               </Typography>
-              <Box sx={forYouPageSx.emptyActions}>
+              <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
                   {FOR_YOU_COPY.similarBrowse}
                 </Button>
@@ -1248,17 +1248,17 @@ export function ForYouPage() {
           !similarJobs.isPending &&
           !similarJobs.isError &&
           similarCards.length === 0 ? (
-            <Box role="status" sx={forYouPageSx.empty}>
-              <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                 <SwapHorizOutlinedIcon fontSize="medium" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {FOR_YOU_COPY.emptyAfterGenerateTitle}
               </Typography>
-              <Typography sx={forYouPageSx.emptyDescription}>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
                 {FOR_YOU_COPY.similarEmpty}
               </Typography>
-              <Box sx={forYouPageSx.emptyActions}>
+              <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
                   {FOR_YOU_COPY.browseJobs}
                 </Button>
@@ -1268,8 +1268,8 @@ export function ForYouPage() {
 
           {similarSourceJobId && similarCards.length > 0 ? (
             <>
-              <Box sx={forYouPageSx.listHeader}>
-                <Typography aria-live="polite" sx={forYouPageSx.resultCount}>
+              <Box sx={aiMatchPageSx.listHeader}>
+                <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                   {FOR_YOU_COPY.similarResultCount(similarCards.length)}
                 </Typography>
               </Box>
@@ -1305,15 +1305,15 @@ export function ForYouPage() {
           aria-labelledby={getTabId('career')}
           id={getPanelId('career')}
           role="tabpanel"
-          sx={forYouPageSx.panel}
+          sx={aiMatchPageSx.panel}
         >
-          <ForYouInfoBanner
+          <AiMatchInfoBanner
             icon={<TrackChangesOutlinedIcon fontSize="small" />}
             message={FOR_YOU_COPY.careerBanner}
           />
 
-          <Box sx={forYouPageSx.careerComposerCard}>
-            <Box sx={forYouPageSx.careerFormGrid}>
+          <Box sx={aiMatchPageSx.careerComposerCard}>
+            <Box sx={aiMatchPageSx.careerFormGrid}>
               <TextField
                 fullWidth
                 label={FOR_YOU_COPY.careerTargetLabel}
@@ -1330,7 +1330,7 @@ export function ForYouPage() {
                 size="small"
                 value={careerPath}
               />
-              <Box sx={forYouPageSx.careerFormPreferences}>
+              <Box sx={aiMatchPageSx.careerFormPreferences}>
                 <TextField
                   fullWidth
                   label={FOR_YOU_COPY.careerExperienceLabel}
@@ -1376,14 +1376,14 @@ export function ForYouPage() {
               </Box>
             </Box>
 
-            <Box sx={forYouPageSx.careerPathsSection}>
-              <Typography component="h3" sx={forYouPageSx.composerHint}>
+            <Box sx={aiMatchPageSx.careerPathsSection}>
+              <Typography component="h3" sx={aiMatchPageSx.composerHint}>
                 {FOR_YOU_COPY.careerPopularTitle}
               </Typography>
               <Box
                 aria-label={FOR_YOU_COPY.careerPopularTitle}
                 role="group"
-                sx={forYouPageSx.careerPathChips}
+                sx={aiMatchPageSx.careerPathChips}
               >
                 {FOR_YOU_CAREER_PATHS.map((path) => {
                   const isActive = careerPath === path;
@@ -1395,8 +1395,8 @@ export function ForYouPage() {
                       key={path}
                       onClick={() => setCareerPath(path)}
                       sx={{
-                        ...forYouPageSx.careerPathChip,
-                        ...(isActive ? forYouPageSx.careerPathChipActive : {}),
+                        ...aiMatchPageSx.careerPathChip,
+                        ...(isActive ? aiMatchPageSx.careerPathChipActive : {}),
                       }}
                       type="button"
                     >
@@ -1413,7 +1413,7 @@ export function ForYouPage() {
               </Typography>
             ) : null}
 
-            <Box sx={forYouPageSx.careerComposerFooter}>
+            <Box sx={aiMatchPageSx.careerComposerFooter}>
               <Button
                 onClick={handleSuggestCareerForMe}
                 size="small"
@@ -1434,17 +1434,17 @@ export function ForYouPage() {
             </Box>
           </Box>
 
-          <Box sx={forYouPageSx.careerPrivacy}>
+          <Box sx={aiMatchPageSx.careerPrivacy}>
             <LockOutlinedIcon fontSize="inherit" />
             {FOR_YOU_COPY.careerPrivacyNote}
           </Box>
 
           {!careerGeneratedOnce ? (
-            <Box role="status" sx={forYouPageSx.dashedEmpty}>
-              <Box aria-hidden="true" sx={forYouPageSx.dashedEmptyArt}>
+            <Box role="status" sx={aiMatchPageSx.dashedEmpty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.dashedEmptyArt}>
                 <TrackChangesOutlinedIcon fontSize="inherit" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.dashedEmptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.dashedEmptyTitle}>
                 {FOR_YOU_COPY.careerEmptyPending}
               </Typography>
             </Box>
@@ -1454,18 +1454,18 @@ export function ForYouPage() {
           !generateCareerGoal.isPending &&
           !generateCareerGoal.isError &&
           visibleCareerRecommendations.length === 0 ? (
-            <Box role="status" sx={forYouPageSx.empty}>
-              <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                 <TrackChangesOutlinedIcon fontSize="medium" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {FOR_YOU_COPY.emptyAfterGenerateTitle}
               </Typography>
-              <Typography sx={forYouPageSx.emptyDescription}>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
                 No matching jobs were found for this career search. Try adjusting your target role
                 or path.
               </Typography>
-              <Box sx={forYouPageSx.emptyActions}>
+              <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
                   {FOR_YOU_COPY.browseJobs}
                 </Button>
@@ -1474,20 +1474,20 @@ export function ForYouPage() {
           ) : null}
 
           {visibleCareerRecommendations.length > 0 ? (
-            <Box sx={forYouPageSx.listHeader}>
-              <Typography aria-live="polite" sx={forYouPageSx.resultCount}>
+            <Box sx={aiMatchPageSx.listHeader}>
+              <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                 {FOR_YOU_COPY.careerResultCount(visibleCareerRecommendations.length)}
               </Typography>
             </Box>
           ) : null}
 
           {careerGroups.map(([category, items]) => (
-            <Box component="section" key={category} sx={forYouPageSx.groupSection}>
-              <Box sx={forYouPageSx.groupHeader}>
-                <Typography component="h2" sx={forYouPageSx.groupTitle}>
+            <Box component="section" key={category} sx={aiMatchPageSx.groupSection}>
+              <Box sx={aiMatchPageSx.groupHeader}>
+                <Typography component="h2" sx={aiMatchPageSx.groupTitle}>
                   {careerCategoryCopy[category] ?? formatRecommendationCategoryLabel(category)}
                 </Typography>
-                <Typography sx={forYouPageSx.groupMeta}>
+                <Typography sx={aiMatchPageSx.groupMeta}>
                   {FOR_YOU_COPY.jobCount(items.length)}
                 </Typography>
               </Box>
@@ -1509,14 +1509,14 @@ export function ForYouPage() {
           aria-labelledby={getTabId('text-career')}
           id={getPanelId('text-career')}
           role="tabpanel"
-          sx={forYouPageSx.panel}
+          sx={aiMatchPageSx.panel}
         >
-          <ForYouInfoBanner
+          <AiMatchInfoBanner
             icon={<StickyNote2OutlinedIcon fontSize="small" />}
             message={FOR_YOU_COPY.textBanner}
           />
 
-          <Box sx={forYouPageSx.textComposerCard}>
+          <Box sx={aiMatchPageSx.textComposerCard}>
             <TextField
               error={targetTextTooLong}
               fullWidth
@@ -1537,12 +1537,12 @@ export function ForYouPage() {
               </Typography>
             ) : null}
 
-            <Box sx={forYouPageSx.textComposerFooter}>
-              <Typography sx={forYouPageSx.charCount}>
+            <Box sx={aiMatchPageSx.textComposerFooter}>
+              <Typography sx={aiMatchPageSx.charCount}>
                 {trimmedTargetText.length.toLocaleString()} /{' '}
                 {TARGET_TEXT_MAX_LENGTH.toLocaleString()}
               </Typography>
-              <Box sx={forYouPageSx.textComposerActions}>
+              <Box sx={aiMatchPageSx.textComposerActions}>
                 <Button
                   disabled={!targetText}
                   onClick={() => setTargetText('')}
@@ -1565,11 +1565,11 @@ export function ForYouPage() {
           </Box>
 
           {!textGeneratedOnce ? (
-            <Box role="status" sx={forYouPageSx.dashedEmpty}>
-              <Box aria-hidden="true" sx={forYouPageSx.dashedEmptyArt}>
+            <Box role="status" sx={aiMatchPageSx.dashedEmpty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.dashedEmptyArt}>
                 <TravelExploreOutlinedIcon fontSize="inherit" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.dashedEmptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.dashedEmptyTitle}>
                 {FOR_YOU_COPY.textEmptyPending}
               </Typography>
             </Box>
@@ -1579,17 +1579,17 @@ export function ForYouPage() {
           !generateText.isPending &&
           !generateText.isError &&
           visibleTextRecommendations.length === 0 ? (
-            <Box role="status" sx={forYouPageSx.empty}>
-              <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                 <StickyNote2OutlinedIcon fontSize="medium" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {FOR_YOU_COPY.emptyAfterGenerateTitle}
               </Typography>
-              <Typography sx={forYouPageSx.emptyDescription}>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
                 {FOR_YOU_COPY.textEmptyAfterGenerate}
               </Typography>
-              <Box sx={forYouPageSx.emptyActions}>
+              <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
                   {FOR_YOU_COPY.browseJobs}
                 </Button>
@@ -1599,8 +1599,8 @@ export function ForYouPage() {
 
           {visibleTextRecommendations.length > 0 ? (
             <>
-              <Box sx={forYouPageSx.listHeader}>
-                <Typography aria-live="polite" sx={forYouPageSx.resultCount}>
+              <Box sx={aiMatchPageSx.listHeader}>
+                <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                   {FOR_YOU_COPY.textResultCount(visibleTextRecommendations.length)}
                 </Typography>
               </Box>
@@ -1622,9 +1622,9 @@ export function ForYouPage() {
           aria-labelledby={getTabId('saved')}
           id={getPanelId('saved')}
           role="tabpanel"
-          sx={forYouPageSx.savedTabPanel}
+          sx={aiMatchPageSx.savedTabPanel}
         >
-          <ForYouInfoBanner
+          <AiMatchInfoBanner
             action={
               <Button
                 onClick={() => {
@@ -1663,8 +1663,8 @@ export function ForYouPage() {
             />
           ) : null}
 
-          <Box sx={forYouPageSx.savedChipsShell}>
-            <Typography component="h2" sx={forYouPageSx.sectionTitle}>
+          <Box sx={aiMatchPageSx.savedChipsShell}>
+            <Typography component="h2" sx={aiMatchPageSx.sectionTitle}>
               {FOR_YOU_COPY.savedSearchesTitle}
             </Typography>
             <FilterShell>
@@ -1691,24 +1691,24 @@ export function ForYouPage() {
                     setShowNewSavedSearchForm(false);
                   }}
                   sx={{
-                    ...forYouPageSx.savedChip,
-                    ...(selectedSavedView === 'all' ? forYouPageSx.savedChipActive : {}),
+                    ...aiMatchPageSx.savedChip,
+                    ...(selectedSavedView === 'all' ? aiMatchPageSx.savedChipActive : {}),
                   }}
                   type="button"
                 >
                   <Box
                     aria-hidden="true"
                     sx={{
-                      ...forYouPageSx.savedChipIcon,
-                      ...(selectedSavedView === 'all' ? forYouPageSx.savedChipIconActive : {}),
+                      ...aiMatchPageSx.savedChipIcon,
+                      ...(selectedSavedView === 'all' ? aiMatchPageSx.savedChipIconActive : {}),
                     }}
                   >
                     <BookmarkOutlinedIcon fontSize="small" />
                   </Box>
-                  <Typography sx={forYouPageSx.savedChipTitle}>
+                  <Typography sx={aiMatchPageSx.savedChipTitle}>
                     {FOR_YOU_COPY.allSavedJobs}
                   </Typography>
-                  <Typography sx={forYouPageSx.savedChipMeta}>
+                  <Typography sx={aiMatchPageSx.savedChipMeta}>
                     {FOR_YOU_COPY.jobCount(savedBookmarkCards.length)}
                   </Typography>
                 </Box>
@@ -1725,24 +1725,24 @@ export function ForYouPage() {
                       );
                     }}
                     sx={{
-                      ...forYouPageSx.savedChip,
-                      ...(selectedSavedView === search.id ? forYouPageSx.savedChipActive : {}),
+                      ...aiMatchPageSx.savedChip,
+                      ...(selectedSavedView === search.id ? aiMatchPageSx.savedChipActive : {}),
                     }}
                     type="button"
                   >
                     <Box
                       aria-hidden="true"
                       sx={{
-                        ...forYouPageSx.savedChipIcon,
+                        ...aiMatchPageSx.savedChipIcon,
                         ...(selectedSavedView === search.id
-                          ? forYouPageSx.savedChipIconActive
+                          ? aiMatchPageSx.savedChipIconActive
                           : {}),
                       }}
                     >
                       <BookmarkOutlinedIcon fontSize="small" />
                     </Box>
-                    <Typography sx={forYouPageSx.savedChipTitle}>{search.name}</Typography>
-                    <Typography sx={forYouPageSx.savedChipMeta}>
+                    <Typography sx={aiMatchPageSx.savedChipTitle}>{search.name}</Typography>
+                    <Typography sx={aiMatchPageSx.savedChipMeta}>
                       {savedSearchResultCounts[search.id] !== undefined
                         ? FOR_YOU_COPY.jobCount(savedSearchResultCounts[search.id]!)
                         : search.query?.trim() || FOR_YOU_COPY.savedNoQuery}
@@ -1756,11 +1756,11 @@ export function ForYouPage() {
                     setShowNewSavedSearchForm(true);
                     setSelectedSavedView('all');
                   }}
-                  sx={{ ...forYouPageSx.savedChip, ...forYouPageSx.savedChipNew }}
+                  sx={{ ...aiMatchPageSx.savedChip, ...aiMatchPageSx.savedChipNew }}
                   type="button"
                 >
                   <AddIcon fontSize="small" />
-                  <Typography sx={forYouPageSx.savedChipTitle}>
+                  <Typography sx={aiMatchPageSx.savedChipTitle}>
                     {FOR_YOU_COPY.newSavedSearch}
                   </Typography>
                 </Box>
@@ -1779,21 +1779,23 @@ export function ForYouPage() {
             </FilterShell>
 
             {savedSearchesList.length === 0 ? (
-              <Typography sx={forYouPageSx.composerHint}>
+              <Typography sx={aiMatchPageSx.composerHint}>
                 {FOR_YOU_COPY.savedEmptyDescription}
               </Typography>
             ) : null}
           </Box>
 
           {selectedSavedView !== 'all' && selectedSavedSearch ? (
-            <Box sx={forYouPageSx.savedSearchActions}>
-              <Box sx={forYouPageSx.savedSearchActionsCopy}>
-                <Typography sx={forYouPageSx.savedChipTitle}>{selectedSavedSearch.name}</Typography>
-                <Typography sx={forYouPageSx.savedQueryChip}>
+            <Box sx={aiMatchPageSx.savedSearchActions}>
+              <Box sx={aiMatchPageSx.savedSearchActionsCopy}>
+                <Typography sx={aiMatchPageSx.savedChipTitle}>
+                  {selectedSavedSearch.name}
+                </Typography>
+                <Typography sx={aiMatchPageSx.savedQueryChip}>
                   {selectedSavedSearch.query || FOR_YOU_COPY.savedNoQuery}
                 </Typography>
               </Box>
-              <Box sx={forYouPageSx.savedSearchActionsButtons}>
+              <Box sx={aiMatchPageSx.savedSearchActionsButtons}>
                 <Button
                   aria-label={FOR_YOU_COPY.rerunSavedSearchAria}
                   disabled={generateSavedSearch.isPending}
@@ -1834,17 +1836,17 @@ export function ForYouPage() {
           ) : null}
 
           {showNewSavedSearchForm || savedSearchesList.length === 0 ? (
-            <Box sx={forYouPageSx.composer}>
-              <Box sx={forYouPageSx.composerHeader}>
-                <Typography component="h2" sx={forYouPageSx.composerTitle}>
+            <Box sx={aiMatchPageSx.composer}>
+              <Box sx={aiMatchPageSx.composerHeader}>
+                <Typography component="h2" sx={aiMatchPageSx.composerTitle}>
                   {FOR_YOU_COPY.savedCreateTitle}
                 </Typography>
-                <Typography sx={forYouPageSx.composerDescription}>
+                <Typography sx={aiMatchPageSx.composerDescription}>
                   {FOR_YOU_COPY.savedCreateHint}
                 </Typography>
               </Box>
 
-              <Box sx={forYouPageSx.savedCreateRow}>
+              <Box sx={aiMatchPageSx.savedCreateRow}>
                 <TextField
                   label={FOR_YOU_COPY.savedNameLabel}
                   onChange={(event) => setSavedSearchName(event.target.value)}
@@ -1911,14 +1913,14 @@ export function ForYouPage() {
               ) : null}
 
               {!savedQuery.isPending && !savedQuery.isError && savedBookmarkCards.length === 0 ? (
-                <Box role="status" sx={forYouPageSx.empty}>
-                  <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+                <Box role="status" sx={aiMatchPageSx.empty}>
+                  <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                     <DescriptionOutlinedIcon fontSize="medium" />
                   </Box>
-                  <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+                  <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                     {FOR_YOU_COPY.savedEmptyBookmarks}
                   </Typography>
-                  <Box sx={forYouPageSx.emptyActions}>
+                  <Box sx={aiMatchPageSx.emptyActions}>
                     <Button
                       component={RouterLink}
                       size="small"
@@ -1932,17 +1934,17 @@ export function ForYouPage() {
               ) : null}
 
               {savedBookmarkCards.length > 0 ? (
-                <Box sx={forYouPageSx.savedJobsSection}>
-                  <Box component="hr" sx={forYouPageSx.savedDivider} />
-                  <Box sx={forYouPageSx.listHeader}>
-                    <Typography aria-live="polite" sx={forYouPageSx.resultCount}>
+                <Box sx={aiMatchPageSx.savedJobsSection}>
+                  <Box component="hr" sx={aiMatchPageSx.savedDivider} />
+                  <Box sx={aiMatchPageSx.listHeader}>
+                    <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                       {FOR_YOU_COPY.savedJobsCount(savedBookmarkCards.length)}
                     </Typography>
-                    <Box sx={forYouPageSx.sortControl}>
+                    <Box sx={aiMatchPageSx.sortControl}>
                       <Typography
                         component="label"
                         htmlFor="saved-jobs-sort"
-                        sx={forYouPageSx.sortLabel}
+                        sx={aiMatchPageSx.sortLabel}
                       >
                         {FOR_YOU_COPY.sortByLabel}
                       </Typography>
@@ -1953,7 +1955,7 @@ export function ForYouPage() {
                         }
                         select
                         size="small"
-                        sx={forYouPageSx.sortSelect}
+                        sx={aiMatchPageSx.sortSelect}
                         value={savedSortOrder}
                       >
                         <MenuItem value="newest">{FOR_YOU_COPY.savedSortNewest}</MenuItem>
@@ -1978,17 +1980,17 @@ export function ForYouPage() {
               !generateSavedSearch.isPending &&
               !generateSavedSearch.isError &&
               visibleSavedSearchRecommendations.length === 0 ? (
-                <Box role="status" sx={forYouPageSx.empty}>
-                  <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+                <Box role="status" sx={aiMatchPageSx.empty}>
+                  <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                     <InfoOutlinedIcon fontSize="medium" />
                   </Box>
-                  <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+                  <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                     {FOR_YOU_COPY.emptyAfterGenerateTitle}
                   </Typography>
-                  <Typography sx={forYouPageSx.emptyDescription}>
+                  <Typography sx={aiMatchPageSx.emptyDescription}>
                     {FOR_YOU_COPY.savedEmptyAfterGenerate}
                   </Typography>
-                  <Box sx={forYouPageSx.emptyActions}>
+                  <Box sx={aiMatchPageSx.emptyActions}>
                     <Button
                       component={RouterLink}
                       size="small"
@@ -2003,8 +2005,8 @@ export function ForYouPage() {
 
               {visibleSavedSearchRecommendations.length > 0 ? (
                 <>
-                  <Box sx={forYouPageSx.listHeader}>
-                    <Typography aria-live="polite" sx={forYouPageSx.resultCount}>
+                  <Box sx={aiMatchPageSx.listHeader}>
+                    <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                       {FOR_YOU_COPY.savedResultCount(visibleSavedSearchRecommendations.length)}
                     </Typography>
                   </Box>
@@ -2035,16 +2037,16 @@ export function ForYouPage() {
           aria-labelledby={getTabId(activeMode)}
           id={getPanelId(activeMode)}
           role="tabpanel"
-          sx={forYouPageSx.panel}
+          sx={aiMatchPageSx.panel}
         >
-          <Box role="status" sx={forYouPageSx.empty}>
-            <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+          <Box role="status" sx={aiMatchPageSx.empty}>
+            <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
               <AutoAwesomeOutlinedIcon fontSize="medium" />
             </Box>
-            <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+            <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
               {activeModeMeta.panelLabel}
             </Typography>
-            <Typography sx={forYouPageSx.emptyDescription}>
+            <Typography sx={aiMatchPageSx.emptyDescription}>
               {FOR_YOU_COPY.modeComingSoon}
             </Typography>
             <Button onClick={() => selectMode('profile')} size="small" variant="outline">
@@ -2059,26 +2061,26 @@ export function ForYouPage() {
           aria-labelledby={getTabId('profile')}
           id={getPanelId('profile')}
           role="tabpanel"
-          sx={forYouPageSx.panel}
+          sx={aiMatchPageSx.panel}
         >
           {readiness.isError ? (
-            <Box role="status" sx={forYouPageSx.banner}>
-              <Box aria-hidden="true" sx={forYouPageSx.bannerIcon}>
+            <Box role="status" sx={aiMatchPageSx.banner}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.bannerIcon}>
                 <InfoOutlinedIcon fontSize="small" />
               </Box>
-              <Typography sx={forYouPageSx.bannerMessage}>
+              <Typography sx={aiMatchPageSx.bannerMessage}>
                 {FOR_YOU_COPY.readinessWarning}
               </Typography>
             </Box>
           ) : null}
 
           {isStale ? (
-            <Box role="status" sx={forYouPageSx.banner}>
-              <Box aria-hidden="true" sx={forYouPageSx.bannerIcon}>
+            <Box role="status" sx={aiMatchPageSx.banner}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.bannerIcon}>
                 <InfoOutlinedIcon fontSize="small" />
               </Box>
-              <Box sx={forYouPageSx.bannerCopy}>
-                <Typography sx={forYouPageSx.bannerMessage}>
+              <Box sx={aiMatchPageSx.bannerCopy}>
+                <Typography sx={aiMatchPageSx.bannerMessage}>
                   {FOR_YOU_COPY.staleDescription}
                 </Typography>
               </Box>
@@ -2099,9 +2101,9 @@ export function ForYouPage() {
           ) : null}
 
           {isProcessingLifecycle ? (
-            <Box role="status" sx={forYouPageSx.banner}>
+            <Box role="status" sx={aiMatchPageSx.banner}>
               <CircularProgress aria-label="Recommendations processing" size={22} />
-              <Typography sx={forYouPageSx.bannerMessage}>
+              <Typography sx={aiMatchPageSx.bannerMessage}>
                 {lifecycleState === 'QUEUED'
                   ? FOR_YOU_COPY.processingQueued
                   : FOR_YOU_COPY.processingRunning}
@@ -2119,15 +2121,15 @@ export function ForYouPage() {
           ) : null}
 
           {isFailedLifecycle ? (
-            <Box role="alert" sx={{ ...forYouPageSx.banner, ...forYouPageSx.bannerDanger }}>
+            <Box role="alert" sx={{ ...aiMatchPageSx.banner, ...aiMatchPageSx.bannerDanger }}>
               <Box
                 aria-hidden="true"
-                sx={{ ...forYouPageSx.bannerIcon, ...forYouPageSx.bannerIconDanger }}
+                sx={{ ...aiMatchPageSx.bannerIcon, ...aiMatchPageSx.bannerIconDanger }}
               >
                 <ErrorOutlineIcon fontSize="small" />
               </Box>
-              <Box sx={forYouPageSx.bannerCopy}>
-                <Typography sx={forYouPageSx.bannerMessage}>
+              <Box sx={aiMatchPageSx.bannerCopy}>
+                <Typography sx={aiMatchPageSx.bannerMessage}>
                   {getFailureCopy(lifecycleState)}
                   {lifecycleState ? ` Code: ${lifecycleState}.` : ''}
                 </Typography>
@@ -2148,11 +2150,11 @@ export function ForYouPage() {
           ) : null}
 
           {showEmbeddingWarning ? (
-            <Box role="status" sx={forYouPageSx.banner}>
-              <Box aria-hidden="true" sx={forYouPageSx.bannerIcon}>
+            <Box role="status" sx={aiMatchPageSx.banner}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.bannerIcon}>
                 <InfoOutlinedIcon fontSize="small" />
               </Box>
-              <Typography sx={forYouPageSx.bannerMessage}>
+              <Typography sx={aiMatchPageSx.bannerMessage}>
                 {FOR_YOU_COPY.embeddingWarning}
               </Typography>
             </Box>
@@ -2170,14 +2172,14 @@ export function ForYouPage() {
           ) : null}
 
           {!isPending && !isError && isEmpty && showProfileIncomplete ? (
-            <Box role="status" sx={forYouPageSx.empty}>
-              <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                 <PersonOutlineIcon fontSize="medium" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {FOR_YOU_COPY.completeProfileTitle}
               </Typography>
-              <Typography sx={forYouPageSx.emptyDescription}>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
                 {FOR_YOU_COPY.completeProfileDescription}
               </Typography>
               <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
@@ -2187,14 +2189,14 @@ export function ForYouPage() {
           ) : null}
 
           {!isPending && !isError && isEmpty && showProfileMissing ? (
-            <Box role="status" sx={forYouPageSx.empty}>
-              <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                 <PersonOutlineIcon fontSize="medium" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {FOR_YOU_COPY.missingProfileTitle}
               </Typography>
-              <Typography sx={forYouPageSx.emptyDescription}>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
                 {FOR_YOU_COPY.missingProfileDescription}
               </Typography>
               <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
@@ -2211,16 +2213,16 @@ export function ForYouPage() {
           !showProfileMissing &&
           !isProcessingLifecycle &&
           !isFailedLifecycle ? (
-            <Box role="status" sx={forYouPageSx.empty}>
-              <Box aria-hidden="true" sx={forYouPageSx.emptyIcon}>
+            <Box role="status" sx={aiMatchPageSx.empty}>
+              <Box aria-hidden="true" sx={aiMatchPageSx.emptyIcon}>
                 <AutoAwesomeOutlinedIcon fontSize="medium" />
               </Box>
-              <Typography component="h2" sx={forYouPageSx.emptyTitle}>
+              <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {generatedOnce
                   ? FOR_YOU_COPY.emptyAfterGenerateTitle
                   : FOR_YOU_COPY.emptyGenerateTitle}
               </Typography>
-              <Typography sx={forYouPageSx.emptyDescription}>
+              <Typography sx={aiMatchPageSx.emptyDescription}>
                 {generatedOnce
                   ? FOR_YOU_COPY.emptyAfterGenerateDescription
                   : FOR_YOU_COPY.emptyGenerateDescription}
@@ -2230,7 +2232,7 @@ export function ForYouPage() {
                   {generateError}
                 </Typography>
               ) : null}
-              <Box sx={forYouPageSx.emptyActions}>
+              <Box sx={aiMatchPageSx.emptyActions}>
                 <Button
                   disabled={profileActionPending}
                   isLoading={generate.isPending}
@@ -2252,8 +2254,8 @@ export function ForYouPage() {
 
           {!isPending && !isError && visibleCards.length > 0 ? (
             <>
-              <Box sx={forYouPageSx.listHeader}>
-                <Typography aria-live="polite" sx={forYouPageSx.resultCount}>
+              <Box sx={aiMatchPageSx.listHeader}>
+                <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                   {FOR_YOU_COPY.resultCount(data?.total ?? 0)}
                 </Typography>
                 <Button
@@ -2277,14 +2279,14 @@ export function ForYouPage() {
               ) : null}
               <Box sx={jobFeedPageSx.list}>
                 <VirtualizedJobList
-                  ariaLabel="For you recommendations"
+                  ariaLabel="AI Match recommendations"
                   getKey={(job) => job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}
                   items={visibleCards}
                   renderItem={renderRecommendationJobCard}
                 />
               </Box>
               {data?.hasPreviousPage || data?.hasNextPage || (data?.totalPages ?? 0) > 1 ? (
-                <Box sx={forYouPageSx.pagination}>
+                <Box sx={aiMatchPageSx.pagination}>
                   <Button
                     disabled={!data?.hasPreviousPage || isFetching}
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
@@ -2293,7 +2295,7 @@ export function ForYouPage() {
                   >
                     {FOR_YOU_COPY.paginationPrevious}
                   </Button>
-                  <Typography sx={forYouPageSx.pageLabel}>
+                  <Typography sx={aiMatchPageSx.pageLabel}>
                     Page {data?.page ?? page}
                     {data?.totalPages ? ` of ${data.totalPages}` : ''}
                   </Typography>

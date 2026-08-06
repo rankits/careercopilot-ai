@@ -1,53 +1,103 @@
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 
-import { Button } from '@/components/atoms/Button';
-import { DashboardMetricCard } from '@/components/molecules';
+import type { JobCardData } from '@/components/molecules';
 
-import { useRecommendationReadiness } from '@/features/recommendations/hooks/useRecommendations';
-
-import { dashboardMetrics } from '@/constants/pages/dashboard';
-import { ROUTES } from '@/constants/routes';
-
+import { jobDetailPath } from '@/constants/routes';
+import type { SavedJobCardModel } from '@/features/applications/utils/mapApplicationDtoToSavedJobCard';
 import {
-  DashboardMetricsGrid,
-  DashboardPanel,
-  DashboardRoot,
-  DashboardTitle,
-  RecommendationsEmptyState,
-  RecommendationsEmptyText,
-} from './styles';
+  AutoAwesomeOutlinedIcon,
+  BookmarkOutlinedIcon,
+  BusinessCenterOutlinedIcon,
+  SendOutlinedIcon,
+} from '@/lib/material';
+
+import { ApplicationPipelineCard } from './components/ApplicationPipelineCard';
+import { DashboardStatCard } from './components/DashboardStatCard';
+import { ExploreJobsCta } from './components/ExploreJobsCta';
+import { RecentlySavedSection } from './components/RecentlySavedSection';
+import { RecommendedJobsSection } from './components/RecommendedJobsSection';
+import { ResumeOverviewCard } from './components/ResumeOverviewCard';
+import { WelcomeHeader } from './components/WelcomeHeader';
+import { useDashboardOverview } from './hooks/useDashboardOverview';
+import { BottomGrid, DashboardError, DashboardRoot, MidGrid, StatsGrid } from './styles';
+
+const STAT_ICONS = {
+  'jobs-matched': BusinessCenterOutlinedIcon,
+  'saved-jobs': BookmarkOutlinedIcon,
+  applications: SendOutlinedIcon,
+  'ai-match': AutoAwesomeOutlinedIcon,
+} as const;
 
 export function HomePage() {
   const navigate = useNavigate();
-  const readiness = useRecommendationReadiness();
+  const location = useLocation();
+  const dashboard = useDashboardOverview();
 
-  const openForYou = () => {
-    void navigate(ROUTES.FOR_YOU);
+  const openJob = (job: Pick<JobCardData, 'id'>) => {
+    if (!job.id) return;
+    void navigate(jobDetailPath(job.id), {
+      state: { fromFeed: `${location.pathname}${location.search}` },
+    });
   };
 
-  const readinessHint = readiness.data?.canGenerateFromProfile
-    ? 'Your profile is ready — generate matches on For You.'
-    : readiness.data?.blockers.includes('PROFILE_INCOMPLETE')
-      ? 'Complete your profile to unlock personalized recommendations.'
-      : 'Open For You to check recommendation readiness from the backend.';
+  const openSavedJob = (job: SavedJobCardModel) => {
+    openJob(job);
+  };
 
   return (
     <DashboardRoot aria-label="Dashboard page">
-      <DashboardMetricsGrid>
-        {dashboardMetrics.map(({ icon: Icon, ...metric }) => (
-          <DashboardMetricCard icon={<Icon fontSize="large" />} key={metric.label} {...metric} />
-        ))}
-      </DashboardMetricsGrid>
+      <WelcomeHeader greeting={dashboard.greeting} />
 
-      <DashboardPanel>
-        <DashboardTitle>Recommended Jobs</DashboardTitle>
-        <RecommendationsEmptyState>
-          <RecommendationsEmptyText>{readinessHint}</RecommendationsEmptyText>
-          <Button onClick={openForYou} variant="solid">
-            Go to For You
-          </Button>
-        </RecommendationsEmptyState>
-      </DashboardPanel>
+      {dashboard.errorMessage ? (
+        <DashboardError role="alert">{dashboard.errorMessage}</DashboardError>
+      ) : null}
+
+      <StatsGrid>
+        {dashboard.stats.map((stat) => {
+          const Icon = STAT_ICONS[stat.id as keyof typeof STAT_ICONS] ?? BusinessCenterOutlinedIcon;
+          return (
+            <DashboardStatCard
+              helper={stat.helper}
+              helperTone={stat.helperTone}
+              icon={<Icon fontSize="small" />}
+              key={stat.id}
+              label={stat.label}
+              loading={dashboard.isStatsLoading}
+              sparkline={stat.sparkline}
+              tone={stat.tone}
+              value={stat.value}
+            />
+          );
+        })}
+      </StatsGrid>
+
+      <MidGrid>
+        <ApplicationPipelineCard
+          loading={dashboard.isPipelineLoading}
+          stages={dashboard.pipeline}
+        />
+        <ResumeOverviewCard
+          checks={dashboard.resumeChecks}
+          loading={dashboard.isResumeLoading}
+          score={dashboard.resumeScore}
+          scoreLabel={dashboard.resumeScoreLabel}
+        />
+      </MidGrid>
+
+      <BottomGrid>
+        <RecommendedJobsSection
+          jobs={dashboard.recommendedJobs}
+          loading={dashboard.isRecommendedLoading}
+          onOpenJob={openJob}
+        />
+        <RecentlySavedSection
+          jobs={dashboard.recentlySaved}
+          loading={dashboard.isSavedLoading}
+          onOpenJob={openSavedJob}
+        />
+      </BottomGrid>
+
+      <ExploreJobsCta />
     </DashboardRoot>
   );
 }

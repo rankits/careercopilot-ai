@@ -3,7 +3,7 @@ import { borderRadius, colorTokens, fontSize, fontWeight, shadows, spacing } fro
 
 const compactBreakpoint = '@media (max-width: 47.5rem)';
 
-export const forYouPageSx = {
+export const aiMatchPageSx = {
   root: {
     display: 'grid',
     gap: spacing[5],

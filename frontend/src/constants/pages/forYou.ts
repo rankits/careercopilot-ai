@@ -143,7 +143,7 @@ export const FOR_YOU_COPY = {
     'Example: Senior backend developer roles in fintech companies with strong system design skills',
   textResultCount: (count: number) => `${count} recommendation${count === 1 ? '' : 's'}`,
   textTooLong: (max: number) => `Use ${max.toLocaleString()} characters or fewer.`,
-  title: 'For You',
+  title: 'AI Match',
   viewProfileMatches: 'View profile matches',
   resultCount: (total: number) => `${total} recommendation${total === 1 ? '' : 's'}`,
 } as const;
