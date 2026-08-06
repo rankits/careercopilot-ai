@@ -119,10 +119,14 @@ describe('AppRouter routing flow', () => {
     localStorage.clear();
   });
 
-  it('redirects the default route to Login when unauthenticated', async () => {
+  it('renders the marketing landing page for unauthenticated visitors on /', async () => {
     renderRoute('/');
 
-    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
+      /smarter job search/i,
+    );
+    expect(screen.getAllByRole('link', { name: /get started/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('heading', { name: /welcome back/i })).not.toBeInTheDocument();
   });
 
   it('redirects unauthenticated users from protected routes to Login', async () => {
