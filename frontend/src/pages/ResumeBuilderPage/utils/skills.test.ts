@@ -17,6 +17,25 @@ describe('skills utils', () => {
     );
   });
 
+  it('extracts skills from PDF-style one-per-line and space-joined lists', () => {
+    expect(
+      splitSkillTokens(`• React
+• TypeScript
+• Angular
+• Node.js
+• Docker`),
+    ).toEqual(expect.arrayContaining(['React', 'TypeScript', 'Angular', 'Node.js', 'Docker']));
+
+    expect(splitSkillTokens('React TypeScript Angular Node.js Docker AWS')).toEqual(
+      expect.arrayContaining(['React', 'TypeScript', 'Angular', 'Node.js', 'Docker', 'AWS']),
+    );
+  });
+
+  it('canonicalizes angular aliases', () => {
+    expect(canonicalizeSkill('angular')).toBe('Angular');
+    expect(canonicalizeSkill('AngularJS')).toBe('Angular');
+  });
+
   it('rejects invalid / generic skill tokens', () => {
     expect(canonicalizeSkill('API')).toBeNull();
     expect(canonicalizeSkill('Control')).toBeNull();

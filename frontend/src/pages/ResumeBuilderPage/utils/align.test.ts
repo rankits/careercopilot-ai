@@ -4,7 +4,7 @@ import { alignDraftToJob } from './align';
 import { createEmptyDraft } from './draft';
 
 describe('align utils', () => {
-  it('keeps preferred skills and evidenced JD skills', () => {
+  it('keeps evidenced JD skills but does not invent preferred skills', () => {
     const draft = {
       ...createEmptyDraft('Java Developer'),
       summary: 'Backend engineer with Java and Spring Boot experience.',
@@ -29,7 +29,8 @@ describe('align utils', () => {
       jobDescription: 'Looking for Java Spring Boot engineers',
     });
 
-    expect(aligned.skillsList).toEqual(expect.arrayContaining(['TypeScript', 'Java', 'React']));
+    expect(aligned.skillsList).toEqual(expect.arrayContaining(['Java', 'React']));
+    expect(aligned.skillsList.some((skill) => skill.toLowerCase() === 'typescript')).toBe(false);
     expect(aligned.skillsList.some((skill) => skill.toLowerCase() === 'kotlin')).toBe(false);
   });
 

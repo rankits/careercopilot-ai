@@ -20,6 +20,9 @@ describe('sanitize utils', () => {
     expect(matchTopSection('Work Experience')).toBe('experience');
     expect(matchTopSection('Technical Skills')).toBe('skills');
     expect(matchTopSection('Languages')).toBe('languages');
+    expect(matchTopSection('ADDITIONAL')).toBe('additional');
+    expect(matchTopSection('GitHub')).toBe('github');
+    expect(matchTopSection('Portfolio')).toBe('portfolio');
     expect(
       matchTopSection('This is a very long line that should not match as a section header'),
     ).toBe(null);

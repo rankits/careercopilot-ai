@@ -2,13 +2,7 @@ import { useMemo, useRef } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import {
-  ArticleOutlinedIcon,
-  AutoAwesomeOutlinedIcon,
-  Box,
-  PictureAsPdfOutlinedIcon,
-  Typography,
-} from '@/lib/material';
+import { AutoAwesomeOutlinedIcon, Box, PictureAsPdfOutlinedIcon, Typography } from '@/lib/material';
 import type { AnalysisResult, RecheckResult } from '@/services/resumeBuilder.service';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
@@ -20,9 +14,15 @@ import {
 } from '../../utils';
 import { TemplateOption, TemplatePicker } from '../OptimizeStep/editor.styles';
 import { ResumeTemplatePreview } from '../OptimizeStep/ResumeTemplatePreview';
-import { ActionsRow, CardSubtitle, CardTitle, Panel } from '../ResumeBuilderStepPanels/styles';
+import { CardSubtitle, CardTitle, Panel } from '../ResumeBuilderStepPanels/styles';
 
-import { CongratsBanner, ExportLayout, ExportPreviewCard, ScoreGrid } from './styles';
+import {
+  CongratsBanner,
+  ExportActions,
+  ExportLayout,
+  ExportPreviewCard,
+  ScoreGrid,
+} from './styles';
 
 interface ExportStepProps {
   analysis: AnalysisResult | null;
@@ -39,6 +39,7 @@ interface ExportStepProps {
   template: ResumeTemplateId;
   onBack?: () => void;
   onDone: () => void;
+  onCreateNewResume?: () => void;
   onExport: (format: 'pdf' | 'docx', previewRoot?: HTMLElement | null) => void;
   onTemplateChange: (template: ResumeTemplateId) => void;
 }
@@ -49,19 +50,20 @@ export function ExportStep({
   exportingFormat,
   jobDescription,
   optimizedAtsScore = null,
-  preferredSkills,
+  preferredSkills: _preferredSkills,
   recheckResult,
   rechecking,
   savingVersion,
   targetRole,
   template,
   onDone,
+  onCreateNewResume,
   onExport,
   onTemplateChange,
 }: ExportStepProps) {
+  void _preferredSkills;
   const previewRef = useRef<HTMLDivElement>(null);
   const pdfLoading = exportingFormat === 'pdf';
-  const docxLoading = exportingFormat === 'docx';
   const anyExporting = exportingFormat !== null;
 
   const draft = useMemo(() => {
@@ -69,26 +71,18 @@ export function ExportStep({
       editedContent || analysis?.editedContent || '',
       targetRole || analysis?.targetRole || '',
     );
+    // Do not inject optimizedSummary / preferred skills — Apply owns those changes.
     return alignDraftToJob(parsed, {
-      preferredSkills,
       jobDescription,
       matchedSkills: analysis?.skillAnalysis?.matchedSkills,
-      recommendedSkills: [
-        ...(analysis?.skillAnalysis?.recommendedSkills ?? []),
-        ...(analysis?.skillAnalysis?.missingSkills ?? []),
-      ],
-      optimizedSummary: analysis?.optimizedSummary,
+      targetRole: targetRole || analysis?.targetRole || '',
     });
   }, [
     analysis?.editedContent,
-    analysis?.optimizedSummary,
     analysis?.skillAnalysis?.matchedSkills,
-    analysis?.skillAnalysis?.missingSkills,
-    analysis?.skillAnalysis?.recommendedSkills,
     analysis?.targetRole,
     editedContent,
     jobDescription,
-    preferredSkills,
     targetRole,
   ]);
 
@@ -188,7 +182,7 @@ export function ExportStep({
           ))}
         </TemplatePicker>
 
-        <Box sx={{ display: 'flex', gap: spacing[4], flexWrap: 'wrap', mb: spacing[5] }}>
+        <ExportActions>
           <Button
             disabled={pdfLoading || rechecking}
             isLoading={pdfLoading}
@@ -198,18 +192,15 @@ export function ExportStep({
           >
             {pdfLoading ? 'Generating…' : 'Download PDF'}
           </Button>
-          <Button
-            disabled={docxLoading || rechecking}
-            isLoading={docxLoading}
-            startIcon={<ArticleOutlinedIcon fontSize="small" />}
-            variant="outline"
-            onClick={() => void onExport('docx', previewRef.current)}
-          >
-            {docxLoading ? 'Generating…' : 'Download Word Document'}
-          </Button>
-        </Box>
-
-        <ActionsRow sx={{ justifyContent: 'flex-end' }}>
+          {onCreateNewResume ? (
+            <Button
+              disabled={savingVersion || anyExporting || rechecking}
+              variant="outline"
+              onClick={() => onCreateNewResume()}
+            >
+              Create New Resume
+            </Button>
+          ) : null}
           <Button
             disabled={savingVersion || anyExporting || rechecking}
             isLoading={savingVersion}
@@ -217,7 +208,7 @@ export function ExportStep({
           >
             {savingVersion ? 'Saving…' : 'Save Resume'}
           </Button>
-        </ActionsRow>
+        </ExportActions>
       </Panel>
 
       <ExportPreviewCard>

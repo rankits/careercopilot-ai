@@ -244,7 +244,7 @@ export const AUTH_FIELD_LIMITS = {
   email: 300,
   name: 80,
   password: 128,
-  phone: 10,
+  phone: 16,
 } as const;
 
 export const AUTH_FORM_CONTENT: Record<AuthFormMode, AuthFormContent> = {
@@ -406,10 +406,9 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
     phone: yup
       .string()
       .required('Phone number is required')
-      .length(AUTH_FIELD_LIMITS.phone, 'Phone number must be 10 digits')
-      .matches(/^\d{10}$/, {
+      .matches(/^(\d{10}|\+[1-9]\d{7,14}|[1-9]\d{7,14})$/, {
         excludeEmptyString: true,
-        message: 'Enter a valid phone number',
+        message: 'Enter a valid phone number, e.g. 9876543210 or +919876543210',
       }),
   }),
 } as const;

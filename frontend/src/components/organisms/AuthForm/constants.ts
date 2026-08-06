@@ -127,7 +127,10 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
     phone: yup
       .string()
       .required('Phone number is required')
-      .matches(/^\d{10}$/, 'Phone number must be exactly 10 digits'),
+      .matches(
+        /^(\d{10}|\+[1-9]\d{7,14}|[1-9]\d{7,14})$/,
+        'Enter a valid phone number, e.g. 9876543210 or +919876543210',
+      ),
 
     password: yup
       .string()
