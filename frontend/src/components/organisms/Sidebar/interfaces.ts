@@ -1,5 +1,4 @@
-import type { SvgIconComponent } from '@/lib/material';
-
+import type { SvgIconComponent } from '@mui/icons-material';
 export type SidebarVariant = 'open' | 'collapsed' | 'compact';
 export type SidebarTone = 'light' | 'dark' | 'gradient';
 export type MobileSidebarMode = 'bottomNav';
