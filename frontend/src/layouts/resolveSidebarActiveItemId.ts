@@ -15,6 +15,9 @@ export function resolveSidebarActiveItemId(pathname: string): string {
   if (pathname === ROUTES.AI_MATCH) {
     return 'ai-match';
   }
+  if (pathname === ROUTES.AI_MAIL) {
+    return 'ai-mail';
+  }
   if (pathname === ROUTES.APPLICATIONS || pathname.startsWith(`${ROUTES.APPLICATIONS}/`)) {
     return 'applications';
   }

@@ -94,7 +94,9 @@ export function RulesTab() {
           <TextField
             inputProps={{ max: 100, min: 0 }}
             label="Minimum match score"
-            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMinMatchScore(Number(event.target.value))}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+              setMinMatchScore(Number(event.target.value))
+            }
             type="number"
             value={minMatchScore}
           />

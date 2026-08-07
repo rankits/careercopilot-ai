@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 
 import { useToast } from '@/components/organisms/Toast/ToastContext';
@@ -17,9 +17,11 @@ import {
   RadioGroup,
   Stack,
   TextField,
+  Typography,
 } from '@/lib/material';
 import { trackEvent } from '@/shared/analytics/trackEvent';
 
+import { assistedApplyWorkspaceSx } from './styles';
 import { assistedApplyTouchTargetSx } from './WorkspaceStickyActions';
 
 const REASONS: Array<{ code: string; label: string }> = [
@@ -48,6 +50,13 @@ export function AbandonApplicationModal({
   const [reasonCode, setReasonCode] = useState('');
   const [note, setNote] = useState('');
 
+  useEffect(() => {
+    if (!open) {
+      setReasonCode('');
+      setNote('');
+    }
+  }, [open]);
+
   const handleConfirm = () => {
     if (!reasonCode) return;
     abandonMutation.mutate(
@@ -73,10 +82,14 @@ export function AbandonApplicationModal({
   };
 
   return (
-    <Dialog aria-labelledby="abandon-title" onClose={onClose} open={open}>
+    <Dialog aria-labelledby="abandon-title" fullWidth maxWidth="sm" onClose={onClose} open={open}>
       <DialogTitle id="abandon-title">Stop tracking this application?</DialogTitle>
       <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1, minWidth: { sm: 360 } }}>
+        <Stack spacing={2} sx={{ mt: 1, minWidth: 0, width: '100%' }}>
+          <Typography color="text.secondary" variant="body2">
+            Career Copilot will stop tracking this job. This does not withdraw your application on
+            the employer&apos;s website if you already applied there.
+          </Typography>
           <RadioGroup onChange={(_e, value) => setReasonCode(value)} value={reasonCode}>
             {REASONS.map((reason) => (
               <FormControlLabel
@@ -97,15 +110,20 @@ export function AbandonApplicationModal({
           />
         </Stack>
       </DialogContent>
-      <DialogActions>
-        <MuiButton onClick={onClose} sx={assistedApplyTouchTargetSx}>
+      <DialogActions sx={assistedApplyWorkspaceSx.dialogActions}>
+        <MuiButton
+          fullWidth
+          onClick={onClose}
+          sx={{ ...assistedApplyTouchTargetSx, ...assistedApplyWorkspaceSx.fullWidthMobileButton }}
+        >
           Cancel
         </MuiButton>
         <MuiButton
           color="error"
           disabled={!reasonCode || abandonMutation.isPending}
+          fullWidth
           onClick={handleConfirm}
-          sx={assistedApplyTouchTargetSx}
+          sx={{ ...assistedApplyTouchTargetSx, ...assistedApplyWorkspaceSx.fullWidthMobileButton }}
           variant="contained"
         >
           Abandon

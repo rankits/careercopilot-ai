@@ -9,6 +9,7 @@ import {
   useMarkApplied,
 } from '@/features/auto-apply/hooks/useResumeHandoff';
 
+import { getTodayDateInputValue } from '@/constants/pages/addApplication';
 import { ROUTES } from '@/constants/routes';
 import { isAutoApplyClientError } from '@/features/auto-apply/utils/apiError';
 import { openExternalApply, toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
@@ -29,9 +30,11 @@ import {
 import { trackEvent } from '@/shared/analytics/trackEvent';
 
 import { formatRelativeTime } from './activityLabels';
+import { assistedApplyWorkspaceSx } from './styles';
 import { assistedApplyTouchTargetSx, WorkspaceStickyActions } from './WorkspaceStickyActions';
 
 const HANDOFF_ENABLED = import.meta.env.VITE_ASSISTED_APPLY_DIRECT_HANDOFF !== 'false';
+const maxAppliedDate = getTodayDateInputValue();
 
 export interface OpenApplicationStepProps {
   jobId: string;
@@ -60,7 +63,7 @@ export function OpenApplicationStep({
   const [popupBlockedUrl, setPopupBlockedUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [markOpen, setMarkOpen] = useState(false);
-  const [appliedOn, setAppliedOn] = useState(() => new Date().toISOString().slice(0, 10));
+  const [appliedOn, setAppliedOn] = useState(() => getTodayDateInputValue());
   const [notes, setNotes] = useState('');
 
   if (!HANDOFF_ENABLED) {
@@ -71,9 +74,16 @@ export function OpenApplicationStep({
 
   if (readinessQuery.isLoading) {
     return (
-      <Stack alignItems="center" direction="row" spacing={1.5} sx={{ py: 2 }}>
+      <Stack
+        alignItems={{ sm: 'center' }}
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        sx={{ py: 2, ...assistedApplyWorkspaceSx.stepRoot }}
+      >
         <CircularProgress size={20} />
-        <Typography>Checking whether you can open this application…</Typography>
+        <Typography sx={assistedApplyWorkspaceSx.overflowWrap}>
+          Checking whether you can open this application…
+        </Typography>
       </Stack>
     );
   }
@@ -144,6 +154,11 @@ export function OpenApplicationStep({
   };
 
   const handleMarkConfirm = () => {
+    if (appliedOn > maxAppliedDate) {
+      showToast({ message: 'Applied date cannot be in the future.', severity: 'error' });
+      return;
+    }
+
     markAppliedMutation.mutate(
       { appliedAt: appliedOn, notes: notes.trim() || undefined },
       {
@@ -164,7 +179,7 @@ export function OpenApplicationStep({
   };
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={assistedApplyWorkspaceSx.stepRoot}>
       <Typography variant="h6">Open application</Typography>
       <Typography color="text.secondary" variant="body2">
         We&apos;ll open the employer&apos;s application page in a new tab. Career Copilot does not
@@ -182,23 +197,36 @@ export function OpenApplicationStep({
       {popupBlockedUrl ? (
         <Alert
           action={
-            <Stack direction="row" spacing={1}>
+            <Stack
+              direction={{ xs: 'column', sm: 'row' }}
+              spacing={1}
+              sx={{ width: { xs: '100%', sm: 'auto' } }}
+            >
               <MuiButton
                 component="a"
+                fullWidth
                 href={popupBlockedUrl}
                 rel="noopener noreferrer"
                 size="small"
+                sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
                 target="_blank"
                 variant="outlined"
               >
                 Open manually
               </MuiButton>
-              <MuiButton onClick={() => void handleCopy()} size="small" variant="text">
+              <MuiButton
+                fullWidth
+                onClick={() => void handleCopy()}
+                size="small"
+                sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
+                variant="text"
+              >
                 {copied ? 'Copied!' : 'Copy link'}
               </MuiButton>
             </Stack>
           }
           severity="warning"
+          sx={assistedApplyWorkspaceSx.alertWithAction}
         >
           Your browser blocked the new tab. Use the link below to continue on the employer&apos;s
           site.
@@ -218,8 +246,12 @@ export function OpenApplicationStep({
           ) : !alreadyOpened ? (
             <MuiButton
               disabled={handoffMutation.isPending || isApplied}
+              fullWidth
               onClick={handleOpen}
-              sx={assistedApplyTouchTargetSx}
+              sx={{
+                ...assistedApplyTouchTargetSx,
+                ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+              }}
               variant="contained"
             >
               {handoffMutation.isPending ? 'Opening…' : 'Continue manually'}
@@ -232,33 +264,55 @@ export function OpenApplicationStep({
             <Typography variant="subtitle2" sx={{ mb: 1 }}>
               Action required
             </Typography>
-            <Stack direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" spacing={1}>
-              <MuiButton onClick={handleOpen} sx={assistedApplyTouchTargetSx} variant="outlined">
+            <Stack
+              direction={{ xs: 'column', lg: 'row' }}
+              flexWrap="wrap"
+              spacing={1.25}
+              sx={assistedApplyWorkspaceSx.stackedActionButtons}
+            >
+              <MuiButton
+                fullWidth
+                onClick={handleOpen}
+                sx={{
+                  ...assistedApplyTouchTargetSx,
+                  ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+                }}
+                variant="outlined"
+              >
                 Open employer website again
               </MuiButton>
               <MuiButton
+                fullWidth
                 onClick={() => setMarkOpen(true)}
-                sx={assistedApplyTouchTargetSx}
+                sx={{
+                  ...assistedApplyTouchTargetSx,
+                  ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+                }}
                 variant="contained"
               >
                 I submitted the application
               </MuiButton>
               <MuiButton
+                color="error"
+                fullWidth
                 onClick={() => {
                   trackEvent('could_not_apply_clicked', { job_application_id: jobApplicationId });
                   if (onAbandon) {
                     onAbandon();
                   }
                 }}
-                sx={assistedApplyTouchTargetSx}
+                sx={{
+                  ...assistedApplyTouchTargetSx,
+                  ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+                }}
                 variant="outlined"
-                color="error"
               >
                 I could not apply
               </MuiButton>
             </Stack>
-            <Stack direction="row" spacing={1} sx={{ mt: 1 }}>
+            <Stack direction="row" flexWrap="wrap" spacing={1} sx={{ mt: 1 }}>
               <MuiButton
+                fullWidth
                 onClick={() => {
                   trackEvent('return_later_clicked', { job_application_id: jobApplicationId });
                   showToast({
@@ -267,7 +321,10 @@ export function OpenApplicationStep({
                   });
                   void navigate(`${ROUTES.AUTO_APPLY}?tab=submissions`);
                 }}
-                sx={assistedApplyTouchTargetSx}
+                sx={{
+                  ...assistedApplyTouchTargetSx,
+                  ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+                }}
                 variant="text"
               >
                 Return later
@@ -280,17 +337,24 @@ export function OpenApplicationStep({
       {/* AA-072 mark as applied */}
       <Dialog
         aria-labelledby="mark-applied-title"
+        fullWidth
+        maxWidth="sm"
         onClose={() => setMarkOpen(false)}
         open={markOpen}
       >
         <DialogTitle id="mark-applied-title">Mark this application as applied?</DialogTitle>
         <DialogContent>
-          <Stack spacing={2} sx={{ mt: 1, minWidth: { sm: 360 } }}>
+          <Stack spacing={2} sx={{ mt: 1, minWidth: 0, width: '100%' }}>
             <TextField
               InputLabelProps={{ shrink: true }}
               fullWidth
+              inputProps={{ max: maxAppliedDate }}
               label="Applied on"
-              onChange={(e) => setAppliedOn(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (value && value > maxAppliedDate) return;
+                setAppliedOn(value);
+              }}
               type="date"
               value={appliedOn}
             />
@@ -305,11 +369,19 @@ export function OpenApplicationStep({
             />
           </Stack>
         </DialogContent>
-        <DialogActions>
-          <MuiButton onClick={() => setMarkOpen(false)}>Cancel</MuiButton>
+        <DialogActions sx={assistedApplyWorkspaceSx.dialogActions}>
           <MuiButton
-            disabled={markAppliedMutation.isPending}
+            fullWidth
+            onClick={() => setMarkOpen(false)}
+            sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
+          >
+            Cancel
+          </MuiButton>
+          <MuiButton
+            disabled={markAppliedMutation.isPending || appliedOn > maxAppliedDate}
+            fullWidth
             onClick={handleMarkConfirm}
+            sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
             variant="contained"
           >
             Confirm
