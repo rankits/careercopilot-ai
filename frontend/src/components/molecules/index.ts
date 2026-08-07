@@ -1,6 +1,7 @@
-export * from './HeaderNotification';
+export { HeaderNotification } from './HeaderNotification';
+export { HeaderUserMenu } from './HeaderUserMenu';
+export type { HeaderUserMenuProps } from './HeaderUserMenu';
 export * from './HeaderSearch';
-export * from './HeaderUserMenu';
 export * from './ChatInput';
 export * from './DashboardMetricCard';
 export * from './DashboardJobRow';

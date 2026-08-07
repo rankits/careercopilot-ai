@@ -132,6 +132,37 @@ describe('PersonalContactSection AA-021', () => {
     });
   });
 
+  it('allows saving with an empty phone number', async () => {
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.clear(screen.getByLabelText(/Phone number/i));
+    await user.click(screen.getByRole('button', { name: /^Save changes$/i }));
+
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalled());
+    expect(mockUpdateUser).toHaveBeenCalledWith({
+      firstName: 'Jane',
+      lastName: 'Doe',
+      phone: null,
+    });
+  });
+
+  it('accepts phone numbers without a plus prefix', async () => {
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.clear(screen.getByLabelText(/Phone number/i));
+    await user.type(screen.getByLabelText(/Phone number/i), '9876543210');
+    await user.click(screen.getByRole('button', { name: /^Save changes$/i }));
+
+    await waitFor(() => expect(mockUpdateUser).toHaveBeenCalled());
+    expect(mockUpdateUser).toHaveBeenCalledWith({
+      firstName: 'Jane',
+      lastName: 'Doe',
+      phone: '9876543210',
+    });
+  });
+
   it('shows partial-failure toast when profile save fails after user save', async () => {
     const user = userEvent.setup();
     mockUpsertProfile.mockRejectedValueOnce(new Error('profile failed'));

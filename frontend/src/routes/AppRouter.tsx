@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- router config and component share this module */
 import { Suspense, type ReactNode } from 'react';
-import { createBrowserRouter, useRoutes, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, Navigate, useRoutes, type RouteObject } from 'react-router-dom';
 
 import { RouteErrorBoundary } from '@/routes/components/RouteErrorBoundary';
 import { RouteLoading } from '@/routes/components/RouteLoading';
@@ -165,7 +165,7 @@ export const appRouteObjects: RouteObject[] = [
           },
           {
             path: ROUTES.AI_MAIL,
-            element: <AiMailPage />,
+            element: <Navigate replace to={ROUTES.DASHBOARD} />,
           },
           {
             path: ROUTES.BROWSER_EXTENSION,

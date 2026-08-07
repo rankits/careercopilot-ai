@@ -3,7 +3,6 @@ import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
-import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
@@ -530,7 +529,6 @@ export const CAREER_COPILOT_COPY = {
  * -------------------------------------------------------------------------- */
 
 export const SIDEBAR_NAV_LABELS = {
-  aiMailComposer: 'AI Mail Composer',
   applicationSetup: 'Application Setup',
   browserExtension: 'Browser Extension',
   applications: 'Applications',
@@ -593,12 +591,6 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     label: SIDEBAR_NAV_LABELS.applicationSetup,
   },
   {
-    href: ROUTES.AI_MAIL,
-    icon: EmailOutlinedIcon,
-    id: 'ai-mail',
-    label: SIDEBAR_NAV_LABELS.aiMailComposer,
-  },
-  {
     href: ROUTES.ASSISTED_APPLICATIONS,
     icon: TaskAltOutlinedIcon,
     id: 'assisted-applications',
@@ -632,18 +624,25 @@ export const DEFAULT_SIDEBAR_SECTIONS = [
       'jobs-feed',
       'ai-match',
       'applications',
-      'saved-jobs',
-      'auto-apply',
-      'ai-mail',
       'assisted-applications',
-      'browser-extension',
+      'saved-jobs',
     ],
     label: 'CAREER',
+  },
+  {
+    id: 'tools',
+    itemIds: ['browser-extension'],
+    label: 'TOOLS',
   },
   {
     id: 'resume',
     itemIds: ['resume-builder', 'saved-resumes'],
     label: 'RESUME',
+  },
+  {
+    id: 'settings',
+    itemIds: ['auto-apply'],
+    label: 'SETTINGS',
   },
 ] as const;
 
@@ -658,12 +657,11 @@ export const DEFAULT_BOTTOM_NAV_IDS = [
 /** Sidebar destinations that live in the mobile More drawer instead of the bottom bar. */
 export const DEFAULT_MOBILE_DRAWER_NAV_IDS = [
   'saved-jobs',
-  'auto-apply',
-  'ai-mail',
   'assisted-applications',
   'browser-extension',
   'resume-builder',
   'saved-resumes',
+  'auto-apply',
 ] as const;
 
 /** Static user-facing copy and defaults for the Sidebar. */
@@ -680,6 +678,7 @@ export const SIDEBAR_COPY = {
   drawerAria: 'More navigation',
   drawerPages: 'Pages',
   drawerResume: 'Resume',
+  connectedAccounts: 'Connected Accounts',
   editProfile: 'Edit Profile',
   expandAria: 'Expand sidebar',
   logout: 'Logout',

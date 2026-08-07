@@ -5,6 +5,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
 import LogoutIcon from '@mui/icons-material/Logout';
 import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
 import Divider from '@mui/material/Divider';
@@ -208,6 +209,7 @@ function MobileMoreDrawer({
   hasLatestResume,
   isDownloadingLatestResume,
   onClose,
+  onConnectedAccountsClick,
   onDownloadLatestResume,
   onItemSelect,
   onLogoutClick,
@@ -222,6 +224,7 @@ function MobileMoreDrawer({
   hasLatestResume: boolean;
   isDownloadingLatestResume: boolean;
   onClose: () => void;
+  onConnectedAccountsClick?: () => void;
   onDownloadLatestResume?: () => void;
   onItemSelect?: (item: SidebarNavItem) => void;
   onLogoutClick?: () => void;
@@ -286,7 +289,7 @@ function MobileMoreDrawer({
       <Divider />
 
       <MobileDrawerSection>
-        <MobileDrawerSectionLabel>{SIDEBAR_COPY.drawerResume}</MobileDrawerSectionLabel>
+        <MobileDrawerSectionLabel>{SIDEBAR_COPY.drawerAccount}</MobileDrawerSectionLabel>
         <MobileDrawerList>
           <MobileDrawerItem
             disabled={resumeListLoaded && (!hasLatestResume || isDownloadingLatestResume)}
@@ -311,14 +314,6 @@ function MobileMoreDrawer({
               <span>{SIDEBAR_COPY.viewResumeVersions}</span>
             </MobileDrawerItem>
           ) : null}
-        </MobileDrawerList>
-      </MobileDrawerSection>
-
-      <Divider />
-
-      <MobileDrawerSection>
-        <MobileDrawerSectionLabel>{SIDEBAR_COPY.drawerAccount}</MobileDrawerSectionLabel>
-        <MobileDrawerList>
           <MobileDrawerItem
             active={activeItemId === 'settings'}
             onClick={() => {
@@ -331,6 +326,18 @@ function MobileMoreDrawer({
           >
             <EditOutlinedIcon fontSize="small" />
             <span>{SIDEBAR_COPY.editProfile}</span>
+          </MobileDrawerItem>
+          <MobileDrawerItem
+            onClick={() => {
+              onConnectedAccountsClick?.();
+              onClose();
+            }}
+            onFocus={() => prefetchRoute(ROUTES.CONNECTED_ACCOUNTS)}
+            onMouseEnter={() => prefetchRoute(ROUTES.CONNECTED_ACCOUNTS)}
+            type="button"
+          >
+            <LinkOutlinedIcon fontSize="small" />
+            <span>{SIDEBAR_COPY.connectedAccounts}</span>
           </MobileDrawerItem>
           <MobileDrawerItem
             onClick={() => {
@@ -439,6 +446,7 @@ export function Sidebar({
   latestResumeScore = null,
   latestResumeUploadedAt = null,
   mobileMode,
+  onConnectedAccountsClick,
   onDownloadLatestResume,
   onItemSelect,
   onLogoutClick,
@@ -490,13 +498,13 @@ export function Sidebar({
             <span>{SIDEBAR_COPY.moreLabel}</span>
           </MoreNavButton>
         </BottomNav>
-
         <MobileMoreDrawer
           activeItemId={activeItemId}
           drawerItems={drawerItems}
           hasLatestResume={hasLatestResume}
           isDownloadingLatestResume={isDownloadingLatestResume}
           onClose={() => setMoreOpen(false)}
+          onConnectedAccountsClick={onConnectedAccountsClick}
           onDownloadLatestResume={onDownloadLatestResume}
           onItemSelect={onItemSelect}
           onLogoutClick={onLogoutClick}
