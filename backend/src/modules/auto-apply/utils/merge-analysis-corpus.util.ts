@@ -77,10 +77,7 @@ export function mergeAnalysisCorpus(input: {
   // Near-duplicate via normalized whitespace compare.
   const normalizedListing = listing.replace(/\s+/g, ' ').toLowerCase();
   const normalizedPage = page.replace(/\s+/g, ' ').toLowerCase();
-  if (
-    normalizedPage.includes(normalizedListing) ||
-    normalizedListing.includes(normalizedPage)
-  ) {
+  if (normalizedPage.includes(normalizedListing) || normalizedListing.includes(normalizedPage)) {
     return page.length >= listing.length ? page : listing;
   }
 

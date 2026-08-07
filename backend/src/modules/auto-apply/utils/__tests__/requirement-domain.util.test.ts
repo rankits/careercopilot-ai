@@ -11,9 +11,7 @@ describe('requirement-domain classifier', () => {
   });
 
   it('classifies work authorization and sponsorship as eligibility', () => {
-    expect(classifyRequirementDomain({ code: 'WORK_AUTHORIZATION' })).toBe(
-      'CANDIDATE_ELIGIBILITY',
-    );
+    expect(classifyRequirementDomain({ code: 'WORK_AUTHORIZATION' })).toBe('CANDIDATE_ELIGIBILITY');
     expect(classifyRequirementDomain({ code: 'SPONSORSHIP' })).toBe('CANDIDATE_ELIGIBILITY');
   });
 
@@ -24,9 +22,7 @@ describe('requirement-domain classifier', () => {
   });
 
   it('humanizes codes for user-facing titles', () => {
-    expect(humanizeRequirementCode('TOTAL_EXPERIENCE_YEARS')).toBe(
-      'Total professional experience',
-    );
+    expect(humanizeRequirementCode('TOTAL_EXPERIENCE_YEARS')).toBe('Total professional experience');
     expect(humanizeRequirementCode('WORK_REGION')).toBe('Work region');
   });
 

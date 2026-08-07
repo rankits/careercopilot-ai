@@ -119,17 +119,12 @@ function meaningfulTermsFromRequirement(req: NormalizedJobRequirement, title: st
     jobDescription: '',
   });
   // Keep title keywords only when source text is thin.
-  const fallback =
-    fromSource.length === 0
-      ? extractJobKeywords({ requirementTexts: [title] })
-      : [];
+  const fallback = fromSource.length === 0 ? extractJobKeywords({ requirementTexts: [title] }) : [];
   return [...new Set([...fromSource, ...fallback])].filter((t) => t.length > 1);
 }
 
 function formatStrength(finding: ResumeAnalysisFinding): string {
-  const evidence = finding.resumeEvidence[0]
-    ? ` Evidence: “${finding.resumeEvidence[0]}”.`
-    : '';
+  const evidence = finding.resumeEvidence[0] ? ` Evidence: “${finding.resumeEvidence[0]}”.` : '';
   return `${finding.title}: ${finding.explanation}${evidence}`;
 }
 
@@ -200,7 +195,14 @@ export class ResumeJobAnalyzer {
             jobRequirementCodes: [],
           },
         ],
-        keywords: { matched: [], missing: [], optional: [], matchedDetailed: [], missingDetailed: [], optionalDetailed: [] },
+        keywords: {
+          matched: [],
+          missing: [],
+          optional: [],
+          matchedDetailed: [],
+          missingDetailed: [],
+          optionalDetailed: [],
+        },
         excludedRequirements,
         warnings: [
           {

@@ -28,10 +28,7 @@ export interface TrackerDuplicateSnapshot {
 }
 
 export interface ITrackerDuplicateLookup {
-  findActiveByUserAndJobId(
-    userId: string,
-    jobId: string,
-  ): Promise<TrackerDuplicateSnapshot | null>;
+  findActiveByUserAndJobId(userId: string, jobId: string): Promise<TrackerDuplicateSnapshot | null>;
 }
 
 export interface ApplicationLimitWindow {

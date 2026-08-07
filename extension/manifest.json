@@ -10,17 +10,8 @@
     "service_worker": "src/background.ts",
     "type": "module"
   },
-  "permissions": [
-    "activeTab",
-    "storage",
-    "scripting",
-    "alarms",
-    "tabs"
-  ],
-  "host_permissions": [
-    "http://*/*",
-    "https://*/*"
-  ],
+  "permissions": ["activeTab", "storage", "scripting", "alarms", "tabs"],
+  "host_permissions": ["http://*/*", "https://*/*"],
   "content_scripts": [
     {
       "matches": ["http://*/*", "https://*/*"],

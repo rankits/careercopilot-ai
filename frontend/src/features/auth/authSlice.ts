@@ -85,6 +85,7 @@ const authSlice = createSlice({
       persistAuthSession(action.payload.accessToken, action.payload.user);
       persistProfileComplete(isProfileComplete);
     },
+
   },
   extraReducers: (builder) => {
     builder

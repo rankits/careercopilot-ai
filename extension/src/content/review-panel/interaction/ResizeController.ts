@@ -11,12 +11,16 @@ export class ResizeController {
     this.handlePointerUp = this.handlePointerUp.bind(this);
   }
 
-  startResize(e: React.PointerEvent, panelRef: React.RefObject<HTMLElement | null>, currentHeight: number) {
+  startResize(
+    e: React.PointerEvent,
+    panelRef: React.RefObject<HTMLElement | null>,
+    currentHeight: number,
+  ) {
     this.panelElement = panelRef.current;
     if (!this.panelElement) return;
 
     (e.target as Element).setPointerCapture(e.pointerId);
-    
+
     this.isResizing = true;
     this.initialY = e.clientY;
     this.initialHeight = currentHeight;
@@ -28,16 +32,16 @@ export class ResizeController {
 
   private handlePointerMove(e: PointerEvent) {
     if (!this.isResizing || !this.panelElement) return;
-    
+
     const deltaY = e.clientY - this.initialY;
     let newHeight = this.initialHeight + deltaY;
-    
+
     // Enforce basic boundaries visually during drag
     newHeight = Math.max(360, newHeight);
     if (window.visualViewport) {
-       newHeight = Math.min(newHeight, window.visualViewport.height - 24);
+      newHeight = Math.min(newHeight, window.visualViewport.height - 24);
     }
-    
+
     this.panelElement.style.height = `${newHeight}px`;
   }
 

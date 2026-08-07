@@ -162,6 +162,12 @@ print_failure_diagnostics() {
   echo ">>> Recent job-embedding-worker logs:" >&2
   compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=40 job-embedding-worker >&2 || true
 
+  echo ">>> Recent resume-analysis-worker logs:" >&2
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=40 resume-analysis-worker >&2 || true
+
+  echo ">>> Recent application-submission-worker logs:" >&2
+  compose_in "$RELEASE_DIR" "$IMAGE_TAG" logs --tail=40 application-submission-worker >&2 || true
+
   echo ">>> Local health probe:" >&2
   curl -sS -m 5 "http://127.0.0.1:5001/health" >&2 || echo "(health endpoint unreachable)" >&2
   echo >&2

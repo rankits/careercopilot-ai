@@ -29,7 +29,7 @@ describe('Extension Pairing API', () => {
     it('generates a 6-digit pairing code', async () => {
       vi.mocked(ExtensionPairingService.startPairing).mockResolvedValue({
         code: '123456',
-        expiresAt: new Date(Date.now() + 300000)
+        expiresAt: new Date(Date.now() + 300000),
       });
 
       const response = await request(app)
@@ -44,9 +44,7 @@ describe('Extension Pairing API', () => {
     });
 
     it('requires authentication', async () => {
-      await request(app)
-        .post('/api/v1/extension/pair/start')
-        .expect(401);
+      await request(app).post('/api/v1/extension/pair/start').expect(401);
     });
   });
 
@@ -55,7 +53,7 @@ describe('Extension Pairing API', () => {
       vi.mocked(ExtensionPairingService.redeemPairingCode).mockResolvedValue({
         accessToken: 'mock-access',
         refreshToken: 'mock-refresh',
-        expiresInSeconds: 3600
+        expiresInSeconds: 3600,
       });
 
       const response = await request(app)
@@ -87,8 +85,8 @@ describe('Extension Pairing API', () => {
           lastSeenAt: new Date(),
           createdAt: new Date(),
           updatedAt: new Date(),
-          sessionId: 'mock-session-id'
-        }
+          sessionId: 'mock-session-id',
+        },
       ]);
 
       const response = await request(app)

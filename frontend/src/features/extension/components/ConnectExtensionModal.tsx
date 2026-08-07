@@ -63,7 +63,7 @@ export const ConnectExtensionModal: React.FC<ConnectExtensionModalProps> = ({
         <h2 className="mb-4 text-xl font-bold text-gray-900 dark:text-white">
           Connect Browser Extension
         </h2>
-        
+
         {isLoading ? (
           <div className="flex flex-col items-center justify-center py-8">
             <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary-600"></div>
@@ -79,9 +79,10 @@ export const ConnectExtensionModal: React.FC<ConnectExtensionModalProps> = ({
         ) : session ? (
           <div className="flex flex-col items-center py-4">
             <p className="mb-6 text-center text-sm text-gray-600 dark:text-gray-300">
-              Enter this 6-digit code in the Career Copilot browser extension to securely connect your account.
+              Enter this 6-digit code in the Career Copilot browser extension to securely connect
+              your account.
             </p>
-            
+
             <div className="mb-6 flex space-x-2 text-center font-mono text-4xl font-bold tracking-widest text-primary-600 dark:text-primary-400">
               {session.pairingCode}
             </div>

@@ -18,7 +18,7 @@ export function ExtensionSection() {
     >
       <SetupSectionHeading sectionId="extension" title="Browser Extension" />
 
-      <Typography sx={setupPageSx.bodySecondary}>
+      <Typography variant="body2" color="text.secondary">
         Connect the Career Copilot browser extension to enable assisted application filling directly
         on job boards.
       </Typography>

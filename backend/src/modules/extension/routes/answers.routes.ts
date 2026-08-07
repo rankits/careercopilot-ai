@@ -11,6 +11,7 @@ const requireUser = [authMiddleware, requirePrincipalType('USER')] as const;
 
 router.get('/answers', ...requireUser, ExtensionAnswersController.getAnswers);
 
+
 router.post('/draft-answer', ...requireUser, ExtensionDraftAnswerController.generateDraft);
 
 export const extensionAnswersRouter = router;

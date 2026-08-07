@@ -47,11 +47,8 @@ export class AdminDiagnosticsService implements IAdminDiagnosticsService {
     return this.repository.findStuckSubmissions(merged);
   }
 
-  async reclaimStuckSubmissions(
-    query?: Partial<ReclaimStuckQuery>,
-  ): Promise<ReclaimStuckResult> {
-    const submittingOlderThanMinutes =
-      query?.submittingOlderThanMinutes ?? DEFAULT_RECLAIM_MINUTES;
+  async reclaimStuckSubmissions(query?: Partial<ReclaimStuckQuery>): Promise<ReclaimStuckResult> {
+    const submittingOlderThanMinutes = query?.submittingOlderThanMinutes ?? DEFAULT_RECLAIM_MINUTES;
     const now = Date.now();
     const cutoff = new Date(now - submittingOlderThanMinutes * 60_000);
 

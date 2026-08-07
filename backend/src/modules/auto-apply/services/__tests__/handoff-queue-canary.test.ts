@@ -4,12 +4,9 @@ import { AssistedApplyHandoffService } from '@/modules/auto-apply/services/assis
 describe('handoff zero-RabbitMQ canary (AA-092)', () => {
   it('never invokes queuePublish when constructing / checking flag', () => {
     const publish = vi.fn();
-    const service = new AssistedApplyHandoffService(
-      {} as never,
-      {} as never,
-      {} as never,
-      { publish },
-    );
+    const service = new AssistedApplyHandoffService({} as never, {} as never, {} as never, {
+      publish,
+    });
     void service.isDirectHandoffEnabled('canary-user');
     expect(publish).not.toHaveBeenCalled();
   });

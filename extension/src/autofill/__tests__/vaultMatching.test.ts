@@ -3,7 +3,9 @@ import { matchFieldToVaultKey } from '../vaultMatching';
 
 describe('vaultMatching', () => {
   it('matches years of experience', () => {
-    expect(matchFieldToVaultKey({ label: 'How many years of experience do you have with TypeScript?' })).toBe('years_of_experience');
+    expect(
+      matchFieldToVaultKey({ label: 'How many years of experience do you have with TypeScript?' }),
+    ).toBe('years_of_experience');
     expect(matchFieldToVaultKey({ label: 'Years of Experience' })).toBe('years_of_experience');
   });
 
