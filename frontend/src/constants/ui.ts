@@ -1,3 +1,15 @@
+
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import * as yup from 'yup';
 
 import type {
@@ -9,24 +21,12 @@ import type { AuthPageFeature } from '@/components/organisms/AuthPageLayout/inte
 import type { SidebarNavItem } from '@/components/organisms/Sidebar/interfaces';
 
 import { ROUTES } from '@/constants/routes';
-import {
-  BookmarkBorderOutlinedIcon,
-  BusinessCenterOutlinedIcon,
-  CheckCircleOutlineIcon,
-  DescriptionOutlinedIcon,
-  HomeOutlinedIcon,
-  InsightsOutlinedIcon,
-  LockOutlinedIcon,
-  SearchOutlinedIcon,
-  SecurityOutlinedIcon,
-  TuneOutlinedIcon,
-} from '@/lib/material';
-
 /* ----------------------------------------------------------------------------
  * Brand & actions shared across multiple components.
  * -------------------------------------------------------------------------- */
 
 export const BRAND_NAME = 'Career Copilot';
+export const BRAND_TAGLINE = 'Find. Optimize. Apply. Succeed.';
 
 export const APP_ACTIONS = {
   APPLY_NOW: 'Apply Now',
@@ -414,6 +414,30 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
         message: 'Enter a valid phone number',
       }),
   }),
+  forgotPassword: yup.object({
+    email: yup
+      .string()
+      .trim()
+      .email('Enter a valid email address')
+      .max(AUTH_FIELD_LIMITS.email, 'Email cannot exceed 300 characters')
+      .required('Email is required'),
+    confirmPassword: yup
+      .string()
+      .oneOf([yup.ref('password')], 'Passwords must match')
+      .required('Confirm password is required'),
+    password: yup
+      .string()
+      .required('Password is required')
+      .min(8, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .max(AUTH_FIELD_LIMITS.password, 'Password cannot exceed 128 characters')
+      .matches(/[A-Z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/[a-z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/\d/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(
+        /[^A-Za-z0-9]/,
+        'Use 8+ characters with uppercase, lowercase, number & special character',
+      ),
+  }),
 } as const;
 
 /* ----------------------------------------------------------------------------
@@ -523,7 +547,7 @@ export const SIDEBAR_BOTTOM_NAV_LABELS = {
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
   {
     href: ROUTES.DASHBOARD,
-    icon: HomeOutlinedIcon,
+    icon: GridViewOutlinedIcon,
     id: 'dashboard',
     label: SIDEBAR_NAV_LABELS.dashboard,
     shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.dashboard,
@@ -536,38 +560,51 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.jobsFeed,
   },
   {
-    href: ROUTES.SAVED_JOBS,
-    icon: BookmarkBorderOutlinedIcon,
-    id: 'saved-jobs',
-    label: SIDEBAR_NAV_LABELS.savedJobs,
-  },
-  {
     href: ROUTES.AI_MATCH,
-    icon: TuneOutlinedIcon,
+    icon: AutoAwesomeOutlinedIcon,
     id: 'ai-match',
     label: SIDEBAR_NAV_LABELS.aiMatch,
     shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.aiMatch,
   },
   {
     href: ROUTES.APPLICATIONS,
-    icon: BusinessCenterOutlinedIcon,
+    icon: AssignmentOutlinedIcon,
     id: 'applications',
     label: SIDEBAR_NAV_LABELS.applications,
     shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.applications,
   },
   {
+    href: ROUTES.SAVED_JOBS,
+    icon: BookmarkBorderOutlinedIcon,
+    id: 'saved-jobs',
+    label: SIDEBAR_NAV_LABELS.savedJobs,
+  },
+  {
     href: ROUTES.RESUME_BUILDER,
-    icon: DescriptionOutlinedIcon,
+    icon: EditNoteOutlinedIcon,
     id: 'resume-builder',
     label: SIDEBAR_NAV_LABELS.resumeBuilder,
   },
   {
     href: ROUTES.SAVED_RESUMES,
-    icon: BookmarkBorderOutlinedIcon,
+    icon: FolderOutlinedIcon,
     id: 'saved-resumes',
     label: SIDEBAR_NAV_LABELS.savedResumes,
   },
 ];
+
+export const DEFAULT_SIDEBAR_SECTIONS = [
+  {
+    id: 'career',
+    itemIds: ['dashboard', 'jobs-feed', 'ai-match', 'applications', 'saved-jobs'],
+    label: 'CAREER',
+  },
+  {
+    id: 'resume',
+    itemIds: ['resume-builder', 'saved-resumes'],
+    label: 'RESUME',
+  },
+] as const;
 
 /** Primary destinations shown in the mobile bottom bar (More opens the overflow drawer). */
 export const DEFAULT_BOTTOM_NAV_IDS = [
@@ -591,7 +628,9 @@ export const SIDEBAR_COPY = {
   dailyGoal: 'Daily Goal',
   dailyGoalProgress: 60,
   dailyGoalStatus: '3 / 5 applications today',
-  downloadLatest: 'Download latest resume',
+  aiHelpSubtitle: 'Ask our AI Assistant',
+  aiHelpTitle: 'Need Help?',
+  downloadLatest: 'Download Latest',
   drawerAccount: 'Account',
   drawerAria: 'More navigation',
   drawerPages: 'Pages',
@@ -604,6 +643,9 @@ export const SIDEBAR_COPY = {
   primaryNavAria: 'Primary navigation',
   uploadNow: 'Upload Now',
   uploadPanelDescription: 'Get AI analysis and better job matches',
+  latestResumeTitle: 'Latest Resume',
+  openAiAssistantAria: 'Open AI assistant',
+  viewAllVersions: 'View All Versions',
   viewResumeVersions: 'View resume versions',
 } as const;
 

@@ -1,4 +1,5 @@
-import type { SxProps, Theme } from '@/lib/material';
+import type { SxProps, Theme } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, spacing } from '@/tokens';
 
 export const headerSearchSx: SxProps<Theme> = {

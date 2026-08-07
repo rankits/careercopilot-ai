@@ -1,5 +1,8 @@
-import type { SxProps, Theme } from '@/lib/material';
-import { Avatar, Box, styled } from '@/lib/material';
+import Avatar from '@mui/material/Avatar';
+import Box from '@mui/material/Box';
+import type { SxProps, Theme } from '@mui/material/styles';
+import { styled } from '@mui/material/styles';
+
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const UserMenuButton = styled('button')({

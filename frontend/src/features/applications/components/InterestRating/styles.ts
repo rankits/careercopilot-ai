@@ -1,4 +1,7 @@
-import { StarBorderIcon, StarIcon, styled } from '@/lib/material';
+import StarIcon from '@mui/icons-material/Star';
+import StarBorderIcon from '@mui/icons-material/StarBorder';
+import { styled } from '@mui/material/styles';
+
 import { fontSize, palette } from '@/tokens';
 
 export const InterestStars = styled('div')({

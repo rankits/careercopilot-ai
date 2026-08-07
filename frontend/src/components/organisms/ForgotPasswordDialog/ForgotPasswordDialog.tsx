@@ -1,3 +1,16 @@
+import { yupResolver } from '@hookform/resolvers/yup';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import CheckIcon from '@mui/icons-material/Check';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import CloseOutlinedIcon from '@mui/icons-material/CloseOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import DialogContent from '@mui/material/DialogContent';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
 import { useEffect, useRef, useState } from 'react';
 import { useForm, type Resolver } from 'react-hook-form';
 
@@ -10,23 +23,7 @@ import { useForgotPassword } from '@/features/auth/hooks/useForgotPassword';
 import penguinEmailIllustrationUrl from '@/assets/illustrations/penguin-email.svg';
 import penguinKeyIllustrationUrl from '@/assets/illustrations/penguin-key.svg';
 import penguinOtpIllustrationUrl from '@/assets/illustrations/penguin-otp.svg';
-import {
-  ArrowForwardIcon,
-  Box,
-  CheckIcon,
-  ChevronLeftIcon,
-  CloseOutlinedIcon,
-  Dialog,
-  DialogContent,
-  EmailOutlinedIcon,
-  IconButton,
-  LockOutlinedIcon,
-  Typography,
-  VisibilityOffOutlinedIcon,
-  yupResolver,
-} from '@/lib/material';
-
-import { AUTH_FORM_VALIDATION_SCHEMAS } from '../AuthForm/constants';
+import { AUTH_FORM_VALIDATION_SCHEMAS } from '@/constants/ui';
 
 import { forgotPasswordDialogSx } from './styles';
 

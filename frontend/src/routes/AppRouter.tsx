@@ -1,28 +1,42 @@
 /* eslint-disable react-refresh/only-export-components -- router config and component share this module */
+import { Suspense, type ReactNode } from 'react';
 import { createBrowserRouter, useRoutes, type RouteObject } from 'react-router-dom';
+
+import { RouteErrorBoundary } from '@/routes/components/RouteErrorBoundary';
+import { RouteLoading } from '@/routes/components/RouteLoading';
 
 import { App } from '@/app/App';
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
-import { AiMatchPage } from '@/pages/AiMatchPage';
-import { ApplicationsPage } from '@/pages/ApplicationsPage';
-import { EditProfilePage } from '@/pages/EditProfilePage';
-import { HomePage } from '@/pages/HomePage';
-import { JobDetailPage } from '@/pages/JobDetailPage';
-import { JobFeedPage } from '@/pages/JobFeedPage';
-import { LoginPage } from '@/pages/LoginPage';
-import { NotFoundPage } from '@/pages/NotFoundPage';
-import { ProfilePage } from '@/pages/ProfilePage';
-import { RegisterPage } from '@/pages/RegisterPage';
-import { ResumeBuilderPage } from '@/pages/ResumeBuilderPage';
-import { SavedJobsPage } from '@/pages/SavedJobsPage';
-import { SavedResumesPage } from '@/pages/SavedResumesPage';
 import {
   GuestRoute,
   LandingRoute,
   OnboardingRoute,
   ProtectedRoute,
 } from '@/routes/guards/AuthGuards';
+import {
+  LazyAiMatchPage,
+  LazyApplicationsPage,
+  LazyEditProfilePage,
+  LazyHomePage,
+  LazyJobDetailPage,
+  LazyJobFeedPage,
+  LazyLoginPage,
+  LazyNotFoundPage,
+  LazyProfilePage,
+  LazyRegisterPage,
+  LazyResumeBuilderPage,
+  LazySavedJobsPage,
+  LazySavedResumesPage,
+} from '@/routes/lazyPages';
+
+function LazyRoute({ children }: { children: ReactNode }) {
+  return (
+    <RouteErrorBoundary>
+      <Suspense fallback={<RouteLoading />}>{children}</Suspense>
+    </RouteErrorBoundary>
+  );
+}
 
 /** Shared route tree for the data router and for MemoryRouter-based tests. */
 export const appRouteObjects: RouteObject[] = [
@@ -30,13 +44,36 @@ export const appRouteObjects: RouteObject[] = [
   {
     element: <GuestRoute />,
     children: [
-      { path: ROUTES.LOGIN, element: <LoginPage /> },
-      { path: ROUTES.REGISTER, element: <RegisterPage /> },
+      {
+        path: ROUTES.LOGIN,
+        element: (
+          <LazyRoute>
+            <LazyLoginPage />
+          </LazyRoute>
+        ),
+      },
+      {
+        path: ROUTES.REGISTER,
+        element: (
+          <LazyRoute>
+            <LazyRegisterPage />
+          </LazyRoute>
+        ),
+      },
     ],
   },
   {
     element: <OnboardingRoute />,
-    children: [{ path: ROUTES.PROFILE, element: <ProfilePage /> }],
+    children: [
+      {
+        path: ROUTES.PROFILE,
+        element: (
+          <LazyRoute>
+            <LazyProfilePage />
+          </LazyRoute>
+        ),
+      },
+    ],
   },
   {
     element: <ProtectedRoute />,
@@ -44,21 +81,98 @@ export const appRouteObjects: RouteObject[] = [
       {
         element: <AppLayout />,
         children: [
-          { path: ROUTES.DASHBOARD, element: <HomePage /> },
-          { path: ROUTES.JOB_FEED, element: <JobFeedPage /> },
-          { path: ROUTES.JOB_DETAIL, element: <JobDetailPage /> },
-          { path: ROUTES.AI_MATCH, element: <AiMatchPage /> },
-          { path: ROUTES.SAVED_JOBS, element: <SavedJobsPage /> },
-          { path: ROUTES.APPLICATIONS, element: <ApplicationsPage /> },
-          { path: ROUTES.SAVED_RESUMES, element: <SavedResumesPage /> },
-          { path: ROUTES.RESUME_BUILDER, element: <ResumeBuilderPage /> },
-          { path: `${ROUTES.RESUME_BUILDER}/:resumeId`, element: <ResumeBuilderPage /> },
-          { path: ROUTES.PROFILE_EDIT, element: <EditProfilePage /> },
+          {
+            path: ROUTES.DASHBOARD,
+            element: (
+              <LazyRoute>
+                <LazyHomePage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.JOB_FEED,
+            element: (
+              <LazyRoute>
+                <LazyJobFeedPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.JOB_DETAIL,
+            element: (
+              <LazyRoute>
+                <LazyJobDetailPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.AI_MATCH,
+            element: (
+              <LazyRoute>
+                <LazyAiMatchPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.SAVED_JOBS,
+            element: (
+              <LazyRoute>
+                <LazySavedJobsPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.APPLICATIONS,
+            element: (
+              <LazyRoute>
+                <LazyApplicationsPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.SAVED_RESUMES,
+            element: (
+              <LazyRoute>
+                <LazySavedResumesPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.RESUME_BUILDER,
+            element: (
+              <LazyRoute>
+                <LazyResumeBuilderPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: `${ROUTES.RESUME_BUILDER}/:resumeId`,
+            element: (
+              <LazyRoute>
+                <LazyResumeBuilderPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.PROFILE_EDIT,
+            element: (
+              <LazyRoute>
+                <LazyEditProfilePage />
+              </LazyRoute>
+            ),
+          },
         ],
       },
     ],
   },
-  { path: '*', element: <NotFoundPage /> },
+  {
+    path: '*',
+    element: (
+      <LazyRoute>
+        <LazyNotFoundPage />
+      </LazyRoute>
+    ),
+  },
 ];
 
 export const appRouter = createBrowserRouter([

@@ -1,3 +1,9 @@
+import CloseIcon from '@mui/icons-material/Close';
+import MenuIcon from '@mui/icons-material/Menu';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
@@ -6,7 +12,6 @@ import { Button } from '@/components/atoms/Button';
 import fullLogoUrl from '@/assets/logo/career-copilot-logo.png';
 import { LANDING_COPY, LANDING_NAV_ITEMS } from '@/constants/pages/landing';
 import { ROUTES } from '@/constants/routes';
-import { CloseIcon, Drawer, IconButton, MenuIcon, styled, useMediaQuery } from '@/lib/material';
 import { borderRadius, borderWidth, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 const Header = styled('header')({

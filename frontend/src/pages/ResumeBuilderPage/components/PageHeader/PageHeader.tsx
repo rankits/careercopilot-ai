@@ -1,12 +1,10 @@
-import { Button } from '@/components/atoms';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import NavigateBeforeIcon from '@mui/icons-material/NavigateBefore';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 
-import {
-  Box,
-  DescriptionOutlinedIcon,
-  NavigateBeforeIcon,
-  NavigateNextIcon,
-  Typography,
-} from '@/lib/material';
+import { Button } from '@/components/atoms';
 
 import { WORKFLOW_STEPS, type ResumeBuilderStep } from '../../constants';
 

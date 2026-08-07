@@ -1,3 +1,4 @@
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
@@ -14,8 +15,8 @@ import { ROUTES } from '@/constants/routes';
 import { STORAGE_KEYS } from '@/constants/storage';
 import { authReducer } from '@/features/auth/authSlice';
 import type { User } from '@/features/auth/types/auth.types';
+import { persistAuthSession } from '@/features/auth/utils/authSession';
 import type { UploadedResumeVersion } from '@/features/resume/types/resume.types';
-import * as material from '@/lib/material';
 
 import { AppLayout } from './AppLayout';
 
@@ -38,13 +39,9 @@ vi.mock('@/features/resume/services/resume.service', () => ({
   },
 }));
 
-vi.mock('@/lib/material', async () => {
-  const actual = await vi.importActual<typeof material>('@/lib/material');
-  return {
-    ...actual,
-    useMediaQuery: vi.fn(),
-  };
-});
+vi.mock('@mui/material/useMediaQuery', () => ({
+  default: vi.fn(),
+}));
 
 interface RenderLayoutOptions {
   initialEntries?: string[];
@@ -138,14 +135,26 @@ Object.defineProperty(window, 'localStorage', {
 describe('AppLayout', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(material.useMediaQuery).mockReturnValue(false);
+    vi.mocked(useMediaQuery).mockReturnValue(false);
     logoutMock.mockResolvedValue({ message: 'Logged out successfully' });
     listResumesMock.mockResolvedValue([]);
     downloadResumeMock.mockResolvedValue(undefined);
     localStorage.clear();
-    localStorage.setItem(STORAGE_KEYS.ACCESS_TOKEN, JSON.stringify('token'));
-    localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify({ email: 'ada@example.com', id: '1' }));
     localStorage.setItem(STORAGE_KEYS.PROFILE_COMPLETE, JSON.stringify(true));
+    persistAuthSession('token', {
+      email: 'ada@example.com',
+      id: '1',
+      name: 'Ada Lovelace',
+      role: 'user',
+    });
+  });
+
+  it('exposes a skip link targeting main content', () => {
+    renderLayout();
+
+    const skipLink = screen.getByRole('link', { name: /skip to main content/i });
+    expect(skipLink).toHaveAttribute('href', '#main-content');
+    expect(document.getElementById('main-content')).not.toBeNull();
   });
 
   describe('logout flow', () => {
@@ -159,6 +168,7 @@ describe('AppLayout', () => {
       await waitFor(() => expect(logoutMock).toHaveBeenCalledTimes(1));
       expect(await screen.findByText(/logged out successfully/i)).toBeInTheDocument();
       expect(store.getState().auth.isAuthenticated).toBe(false);
+      expect(store.getState().auth.accessToken).toBeNull();
       expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
       expect(
         await screen.findByRole('heading', { name: /login destination/i }),
@@ -313,11 +323,11 @@ describe('AppLayout', () => {
       version: 1,
     };
 
-    it('does not fetch uploaded resumes on layout mount', async () => {
+    it('loads uploaded resumes on layout mount for the sidebar card', async () => {
       renderLayout();
 
       expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
-      expect(listResumesMock).not.toHaveBeenCalled();
+      await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
     });
 
     it('loads uploaded resumes when opening resume versions', async () => {
@@ -333,22 +343,21 @@ describe('AppLayout', () => {
     });
 
     it('renders mobile layout when screen is mobile width', () => {
-      vi.mocked(material.useMediaQuery).mockReturnValue(true);
+      vi.mocked(useMediaQuery).mockReturnValue(true);
 
       renderLayout();
 
       expect(screen.getByRole('navigation', { name: /mobile navigation/i })).toBeInTheDocument();
     });
 
-    it('loads resumes on download latest click when none exist', async () => {
-      const user = userEvent.setup();
+    it('shows disabled download when no resumes exist after preload', async () => {
+      listResumesMock.mockResolvedValueOnce([]);
       renderLayout();
 
-      expect(listResumesMock).not.toHaveBeenCalled();
-
-      await user.click(screen.getByRole('button', { name: /download latest/i }));
-
       await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
+
+      const downloadButton = screen.getByRole('button', { name: /download latest/i });
+      expect(downloadButton).toBeDisabled();
       expect(downloadResumeMock).not.toHaveBeenCalled();
     });
 

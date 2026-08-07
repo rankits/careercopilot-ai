@@ -1,8 +1,13 @@
+import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import { AddIcon, Box, DeleteOutlineIcon, IconButton, TextField, Typography } from '@/lib/material';
 import { isValidPhoneNumber, sanitizePhoneInput } from '@/utils/phone';
 
 import type {

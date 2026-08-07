@@ -1,7 +1,7 @@
+import CircularProgress from '@mui/material/CircularProgress';
 import type { KeyboardEvent } from 'react';
 
 import { CHAT_INPUT_COPY } from '@/constants/ui';
-import { CircularProgress } from '@/lib/material';
 
 import { ChatInputRoot, ChatTextField, SendButton, SendIcon } from './styles';
 

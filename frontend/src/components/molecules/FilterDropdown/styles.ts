@@ -1,4 +1,5 @@
-import { styled } from '@/lib/material';
+import { styled } from '@mui/material/styles';
+
 import {
   borderRadius,
   colorTokens,

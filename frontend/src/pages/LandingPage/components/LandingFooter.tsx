@@ -1,3 +1,5 @@
+import LinkedInIcon from '@mui/icons-material/LinkedIn';
+import { styled } from '@mui/material/styles';
 import { Link as RouterLink } from 'react-router-dom';
 
 import fullLogoUrl from '@/assets/logo/career-copilot-logo.png';
@@ -10,7 +12,6 @@ import {
   LANDING_SECTION_IDS,
 } from '@/constants/pages/landing';
 import { ROUTES } from '@/constants/routes';
-import { LinkedInIcon, styled } from '@/lib/material';
 import { borderRadius, borderWidth, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 const Footer = styled('footer')({
