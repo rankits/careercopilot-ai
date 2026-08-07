@@ -5,6 +5,8 @@ import { storage } from '@/utils/storage';
 export const AUTH_SESSION_EXPIRED_EVENT = 'auth:session-expired';
 
 let sessionAllowed = true;
+/** In-memory access token — never written to localStorage (XSS surface). */
+let memoryAccessToken: string | null = null;
 
 export function isAuthSessionAllowed(): boolean {
   return sessionAllowed;
@@ -15,12 +17,12 @@ export function allowAuthSession(): void {
 }
 
 export function getAccessToken(): string | null {
-  return storage.get<string>(STORAGE_KEYS.ACCESS_TOKEN);
+  return memoryAccessToken;
 }
 
 export function setAccessToken(accessToken: string): void {
   if (!sessionAllowed) return;
-  storage.set(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+  memoryAccessToken = accessToken;
 }
 
 export function getStoredUser(): User | null {
@@ -29,12 +31,15 @@ export function getStoredUser(): User | null {
 
 export function persistAuthSession(accessToken: string, user: User): void {
   sessionAllowed = true;
-  storage.set(STORAGE_KEYS.ACCESS_TOKEN, accessToken);
+  memoryAccessToken = accessToken;
+  // Clear any legacy token left from older builds.
+  storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
   storage.set(STORAGE_KEYS.USER, user);
   storage.set(STORAGE_KEYS.USER_ID, user.id);
 }
 
 export function clearAuthSession(): void {
+  memoryAccessToken = null;
   storage.remove(STORAGE_KEYS.ACCESS_TOKEN);
   storage.remove(STORAGE_KEYS.USER);
   storage.remove(STORAGE_KEYS.USER_ID);
