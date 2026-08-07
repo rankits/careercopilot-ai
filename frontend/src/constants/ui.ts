@@ -10,16 +10,17 @@ import type { SidebarNavItem } from '@/components/organisms/Sidebar/interfaces';
 
 import { ROUTES } from '@/constants/routes';
 import {
+  AssignmentOutlinedIcon,
+  AutoAwesomeOutlinedIcon,
   BookmarkBorderOutlinedIcon,
-  BusinessCenterOutlinedIcon,
   CheckCircleOutlineIcon,
-  DescriptionOutlinedIcon,
-  HomeOutlinedIcon,
+  EditNoteOutlinedIcon,
+  FolderOutlinedIcon,
+  GridViewOutlinedIcon,
   InsightsOutlinedIcon,
   LockOutlinedIcon,
   SearchOutlinedIcon,
   SecurityOutlinedIcon,
-  TuneOutlinedIcon,
 } from '@/lib/material';
 
 /* ----------------------------------------------------------------------------
@@ -27,6 +28,7 @@ import {
  * -------------------------------------------------------------------------- */
 
 export const BRAND_NAME = 'Career Copilot';
+export const BRAND_TAGLINE = 'Find. Optimize. Apply. Succeed.';
 
 export const APP_ACTIONS = {
   APPLY_NOW: 'Apply Now',
@@ -523,7 +525,7 @@ export const SIDEBAR_BOTTOM_NAV_LABELS = {
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
   {
     href: ROUTES.DASHBOARD,
-    icon: HomeOutlinedIcon,
+    icon: GridViewOutlinedIcon,
     id: 'dashboard',
     label: SIDEBAR_NAV_LABELS.dashboard,
     shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.dashboard,
@@ -536,38 +538,51 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.jobsFeed,
   },
   {
-    href: ROUTES.SAVED_JOBS,
-    icon: BookmarkBorderOutlinedIcon,
-    id: 'saved-jobs',
-    label: SIDEBAR_NAV_LABELS.savedJobs,
-  },
-  {
     href: ROUTES.AI_MATCH,
-    icon: TuneOutlinedIcon,
+    icon: AutoAwesomeOutlinedIcon,
     id: 'ai-match',
     label: SIDEBAR_NAV_LABELS.aiMatch,
     shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.aiMatch,
   },
   {
     href: ROUTES.APPLICATIONS,
-    icon: BusinessCenterOutlinedIcon,
+    icon: AssignmentOutlinedIcon,
     id: 'applications',
     label: SIDEBAR_NAV_LABELS.applications,
     shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.applications,
   },
   {
+    href: ROUTES.SAVED_JOBS,
+    icon: BookmarkBorderOutlinedIcon,
+    id: 'saved-jobs',
+    label: SIDEBAR_NAV_LABELS.savedJobs,
+  },
+  {
     href: ROUTES.RESUME_BUILDER,
-    icon: DescriptionOutlinedIcon,
+    icon: EditNoteOutlinedIcon,
     id: 'resume-builder',
     label: SIDEBAR_NAV_LABELS.resumeBuilder,
   },
   {
     href: ROUTES.SAVED_RESUMES,
-    icon: BookmarkBorderOutlinedIcon,
+    icon: FolderOutlinedIcon,
     id: 'saved-resumes',
     label: SIDEBAR_NAV_LABELS.savedResumes,
   },
 ];
+
+export const DEFAULT_SIDEBAR_SECTIONS = [
+  {
+    id: 'career',
+    itemIds: ['dashboard', 'jobs-feed', 'ai-match', 'applications', 'saved-jobs'],
+    label: 'CAREER',
+  },
+  {
+    id: 'resume',
+    itemIds: ['resume-builder', 'saved-resumes'],
+    label: 'RESUME',
+  },
+] as const;
 
 /** Primary destinations shown in the mobile bottom bar (More opens the overflow drawer). */
 export const DEFAULT_BOTTOM_NAV_IDS = [
@@ -591,7 +606,9 @@ export const SIDEBAR_COPY = {
   dailyGoal: 'Daily Goal',
   dailyGoalProgress: 60,
   dailyGoalStatus: '3 / 5 applications today',
-  downloadLatest: 'Download latest resume',
+  aiHelpSubtitle: 'Ask our AI Assistant',
+  aiHelpTitle: 'Need Help?',
+  downloadLatest: 'Download Latest',
   drawerAccount: 'Account',
   drawerAria: 'More navigation',
   drawerPages: 'Pages',
@@ -604,6 +621,9 @@ export const SIDEBAR_COPY = {
   primaryNavAria: 'Primary navigation',
   uploadNow: 'Upload Now',
   uploadPanelDescription: 'Get AI analysis and better job matches',
+  latestResumeTitle: 'Latest Resume',
+  openAiAssistantAria: 'Open AI assistant',
+  viewAllVersions: 'View All Versions',
   viewResumeVersions: 'View resume versions',
 } as const;
 

@@ -6,6 +6,7 @@ export { default as ArrowForwardIcon } from '@mui/icons-material/ArrowForward';
 export { default as AutoGraphOutlinedIcon } from '@mui/icons-material/AutoGraphOutlined';
 export { default as AutoAwesomeOutlinedIcon } from '@mui/icons-material/AutoAwesomeOutlined';
 export { default as ArticleOutlinedIcon } from '@mui/icons-material/ArticleOutlined';
+export { default as AssignmentOutlinedIcon } from '@mui/icons-material/AssignmentOutlined';
 export { default as BarChartOutlinedIcon } from '@mui/icons-material/BarChartOutlined';
 export { default as BlockOutlinedIcon } from '@mui/icons-material/BlockOutlined';
 export { default as BookmarkBorderOutlinedIcon } from '@mui/icons-material/BookmarkBorderOutlined';
@@ -24,6 +25,7 @@ export { default as DeleteOutlineIcon } from '@mui/icons-material/DeleteOutline'
 export { default as DescriptionOutlinedIcon } from '@mui/icons-material/DescriptionOutlined';
 export { default as DownloadIcon } from '@mui/icons-material/Download';
 export { default as EditOutlinedIcon } from '@mui/icons-material/EditOutlined';
+export { default as EditNoteOutlinedIcon } from '@mui/icons-material/EditNoteOutlined';
 export { default as EmailOutlinedIcon } from '@mui/icons-material/EmailOutlined';
 export { default as ErrorOutlineIcon } from '@mui/icons-material/ErrorOutline';
 export { default as EventOutlinedIcon } from '@mui/icons-material/EventOutlined';

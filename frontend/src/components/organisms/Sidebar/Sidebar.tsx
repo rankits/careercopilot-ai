@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
@@ -11,11 +11,12 @@ import {
   DEFAULT_BOTTOM_NAV_IDS,
   DEFAULT_MOBILE_DRAWER_NAV_IDS,
   DEFAULT_SIDEBAR_ITEMS,
+  DEFAULT_SIDEBAR_SECTIONS,
   SIDEBAR_COPY,
   USER_INITIALS_FALLBACK,
 } from '@/constants/ui';
 import {
-  Box,
+  ArrowForwardIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
   CloseIcon,
@@ -31,9 +32,18 @@ import {
   Typography,
 } from '@/lib/material';
 
-import type { SidebarNavItem, SidebarProps } from './interfaces';
+import type { SidebarNavItem, SidebarNavSection, SidebarProps } from './interfaces';
 import {
+  AiHelpCard,
+  AiHelpCopy,
+  AiHelpPenguin,
+  AiHelpSubtitle,
+  AiHelpTitle,
   BottomNav,
+  LatestResumeCard,
+  LatestResumeCardHeader,
+  LatestResumeFileName,
+  LatestResumeMeta,
   MobileDrawerAvatar,
   MobileDrawerHandle,
   MobileDrawerHeader,
@@ -45,17 +55,63 @@ import {
   MobileDrawerTitle,
   MobileDrawerTitleGroup,
   MoreNavButton,
-  mobileDrawerPaperSx,
   NavButton,
+  ResumeScoreBadge,
+  SidebarFooter,
   SidebarHeader,
   SidebarLogoImage,
   SidebarLogoLink,
   SidebarNav,
-  SidebarPanel,
+  SidebarNavGroup,
   SidebarRoot,
+  SidebarSectionDivider,
+  SidebarSectionLabel,
   SidebarToggle,
+  ViewAllVersionsButton,
+  mobileDrawerPaperSx,
   sidebarTextSx,
 } from './styles';
+
+const DAY_MS = 1000 * 60 * 60 * 24;
+
+function formatResumeUpdatedAt(value: string | null | undefined): string | null {
+  if (!value) return null;
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+
+  const days = Math.max(0, Math.floor((Date.now() - date.getTime()) / DAY_MS));
+  if (days === 0) return 'Updated today';
+  if (days === 1) return 'Updated 1 day ago';
+  return `Updated ${days} days ago`;
+}
+
+function buildSectionItems(
+  sections: readonly SidebarNavSection[],
+  items: SidebarNavItem[],
+): Array<{ section: SidebarNavSection; items: SidebarNavItem[] }> {
+  const itemById = new Map(items.map((item) => [item.id, item]));
+  const sectionItemIds = new Set(sections.flatMap((section) => section.itemIds));
+
+  const grouped = sections
+    .map((section) => ({
+      section,
+      items: section.itemIds
+        .map((id) => itemById.get(id))
+        .filter((item): item is SidebarNavItem => Boolean(item)),
+    }))
+    .filter((entry) => entry.items.length > 0);
+
+  const orphanItems = items.filter((item) => !sectionItemIds.has(item.id));
+  if (orphanItems.length > 0) {
+    grouped.push({
+      section: { id: 'other', itemIds: orphanItems.map((item) => item.id), label: '' },
+      items: orphanItems,
+    });
+  }
+
+  return grouped;
+}
 
 function SidebarNavButton({
   active,
@@ -83,7 +139,6 @@ function SidebarNavButton({
       active={active}
       collapsed={collapsed}
       onClick={(event) => {
-        // Stay put when the active sidebar item is clicked again (avoids discard modal / remount).
         if (active) {
           event.preventDefault();
           event.stopPropagation();
@@ -286,20 +341,106 @@ function MobileMoreDrawer({
   );
 }
 
+function LatestResumePanel({
+  hasLatestResume,
+  isDownloadingLatestResume,
+  latestResumeName,
+  latestResumeScore,
+  latestResumeUploadedAt,
+  onDownloadLatestResume,
+  onOpenResumeVersions,
+  resumeListLoaded,
+}: {
+  hasLatestResume: boolean;
+  isDownloadingLatestResume: boolean;
+  latestResumeName: string | null;
+  latestResumeScore?: number | null;
+  latestResumeUploadedAt?: string | null;
+  onDownloadLatestResume?: () => void;
+  onOpenResumeVersions?: () => void;
+  resumeListLoaded: boolean;
+}) {
+  const updatedLabel = formatResumeUpdatedAt(latestResumeUploadedAt);
+  const showScore = latestResumeScore != null && Number.isFinite(latestResumeScore);
+
+  return (
+    <LatestResumeCard>
+      <LatestResumeCardHeader>
+        <DescriptionOutlinedIcon color="primary" fontSize="small" />
+        <Typography sx={sidebarTextSx.title}>{SIDEBAR_COPY.latestResumeTitle}</Typography>
+        {showScore ? <ResumeScoreBadge>{Math.round(latestResumeScore)}%</ResumeScoreBadge> : null}
+      </LatestResumeCardHeader>
+
+      {hasLatestResume && latestResumeName ? (
+        <>
+          <LatestResumeFileName title={latestResumeName}>{latestResumeName}</LatestResumeFileName>
+          {updatedLabel ? <LatestResumeMeta>{updatedLabel}</LatestResumeMeta> : null}
+        </>
+      ) : (
+        <LatestResumeMeta>
+          {resumeListLoaded
+            ? 'No resume uploaded yet. Add one from Edit Profile.'
+            : 'Your most recent upload will appear here.'}
+        </LatestResumeMeta>
+      )}
+
+      <Button
+        disabled={resumeListLoaded && !hasLatestResume}
+        fullWidth
+        isLoading={isDownloadingLatestResume}
+        onClick={onDownloadLatestResume}
+        size="small"
+        startIcon={<FileDownloadOutlinedIcon />}
+      >
+        {SIDEBAR_COPY.downloadLatest}
+      </Button>
+
+      {onOpenResumeVersions ? (
+        <ViewAllVersionsButton onClick={onOpenResumeVersions} type="button" variant="text">
+          {SIDEBAR_COPY.viewAllVersions}
+        </ViewAllVersionsButton>
+      ) : null}
+    </LatestResumeCard>
+  );
+}
+
+function AiAssistantPanel({ onOpenAiAssistant }: { onOpenAiAssistant?: () => void }) {
+  if (!onOpenAiAssistant) return null;
+
+  return (
+    <AiHelpCard
+      aria-label={SIDEBAR_COPY.openAiAssistantAria}
+      onClick={onOpenAiAssistant}
+      type="button"
+    >
+      <AiHelpPenguin alt="" src={penguinLogoUrl} />
+      <AiHelpCopy>
+        <AiHelpTitle>{SIDEBAR_COPY.aiHelpTitle}</AiHelpTitle>
+        <AiHelpSubtitle>{SIDEBAR_COPY.aiHelpSubtitle}</AiHelpSubtitle>
+      </AiHelpCopy>
+      <ArrowForwardIcon color="primary" fontSize="small" />
+    </AiHelpCard>
+  );
+}
+
 export function Sidebar({
   activeItemId = 'dashboard',
   className,
   isDownloadingLatestResume = false,
   items = DEFAULT_SIDEBAR_ITEMS,
   latestResumeName = null,
+  latestResumeScore = null,
+  latestResumeUploadedAt = null,
   mobileMode,
   onDownloadLatestResume,
   onItemSelect,
   onLogoutClick,
+  onOpenAiAssistant,
   onOpenResumeVersions,
   onSettingsClick,
   onVariantChange,
   resumeListLoaded = false,
+  sections = DEFAULT_SIDEBAR_SECTIONS,
   tone = 'light',
   userName,
   variant = 'open',
@@ -308,6 +449,7 @@ export function Sidebar({
   const collapsed = variant === 'collapsed';
   const nextVariant = collapsed ? 'open' : 'collapsed';
   const hasLatestResume = Boolean(latestResumeName);
+  const groupedSections = useMemo(() => buildSectionItems(sections, items), [items, sections]);
   const bottomNavItems = DEFAULT_BOTTOM_NAV_IDS.map((id) =>
     items.find((item) => item.id === id),
   ).filter((item): item is SidebarNavItem => Boolean(item));
@@ -387,47 +529,40 @@ export function Sidebar({
       </SidebarHeader>
 
       <SidebarNav>
-        {items.map((item) => (
-          <SidebarNavButton
-            active={item.id === activeItemId}
-            collapsed={collapsed}
-            item={item}
-            key={item.id}
-            onSelect={onItemSelect}
-            tone={tone}
-          />
+        {groupedSections.map(({ section, items: sectionItems }, index) => (
+          <SidebarNavGroup key={section.id}>
+            {collapsed || !section.label ? null : (
+              <SidebarSectionLabel>{section.label}</SidebarSectionLabel>
+            )}
+            {sectionItems.map((item) => (
+              <SidebarNavButton
+                active={item.id === activeItemId}
+                collapsed={collapsed}
+                item={item}
+                key={item.id}
+                onSelect={onItemSelect}
+                tone={tone}
+              />
+            ))}
+            {collapsed || index >= groupedSections.length - 1 ? null : <SidebarSectionDivider />}
+          </SidebarNavGroup>
         ))}
       </SidebarNav>
 
       {collapsed ? null : (
-        <SidebarPanel>
-          <Box alignItems="center" display="flex" gap={1}>
-            <DescriptionOutlinedIcon color="primary" fontSize="small" />
-            <Typography sx={sidebarTextSx.title}>Latest Resume</Typography>
-          </Box>
-          <Typography sx={sidebarTextSx.muted}>
-            {hasLatestResume
-              ? 'Download your most recent uploaded resume.'
-              : resumeListLoaded
-                ? 'No resume uploaded yet. Add one from Edit Profile.'
-                : 'Download your most recent uploaded resume.'}
-          </Typography>
-          <Button
-            disabled={resumeListLoaded && !hasLatestResume}
-            fullWidth
-            isLoading={isDownloadingLatestResume}
-            onClick={onDownloadLatestResume}
-            size="small"
-            startIcon={<FileDownloadOutlinedIcon />}
-          >
-            Download Latest
-          </Button>
-          {onOpenResumeVersions ? (
-            <Button fullWidth onClick={onOpenResumeVersions} size="small" variant="ghost">
-              View all versions
-            </Button>
-          ) : null}
-        </SidebarPanel>
+        <SidebarFooter>
+          <LatestResumePanel
+            hasLatestResume={hasLatestResume}
+            isDownloadingLatestResume={isDownloadingLatestResume}
+            latestResumeName={latestResumeName}
+            latestResumeScore={latestResumeScore}
+            latestResumeUploadedAt={latestResumeUploadedAt}
+            onDownloadLatestResume={onDownloadLatestResume}
+            onOpenResumeVersions={onOpenResumeVersions}
+            resumeListLoaded={resumeListLoaded}
+          />
+          <AiAssistantPanel onOpenAiAssistant={onOpenAiAssistant} />
+        </SidebarFooter>
       )}
     </SidebarRoot>
   );

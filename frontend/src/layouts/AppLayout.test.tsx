@@ -313,11 +313,11 @@ describe('AppLayout', () => {
       version: 1,
     };
 
-    it('does not fetch uploaded resumes on layout mount', async () => {
+    it('loads uploaded resumes on layout mount for the sidebar card', async () => {
       renderLayout();
 
       expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
-      expect(listResumesMock).not.toHaveBeenCalled();
+      await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
     });
 
     it('loads uploaded resumes when opening resume versions', async () => {
@@ -340,15 +340,14 @@ describe('AppLayout', () => {
       expect(screen.getByRole('navigation', { name: /mobile navigation/i })).toBeInTheDocument();
     });
 
-    it('loads resumes on download latest click when none exist', async () => {
-      const user = userEvent.setup();
+    it('shows disabled download when no resumes exist after preload', async () => {
+      listResumesMock.mockResolvedValueOnce([]);
       renderLayout();
 
-      expect(listResumesMock).not.toHaveBeenCalled();
-
-      await user.click(screen.getByRole('button', { name: /download latest/i }));
-
       await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
+
+      const downloadButton = screen.getByRole('button', { name: /download latest/i });
+      expect(downloadButton).toBeDisabled();
       expect(downloadResumeMock).not.toHaveBeenCalled();
     });
 
