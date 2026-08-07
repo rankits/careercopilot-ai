@@ -1,3 +1,16 @@
+import { yupResolver } from '@hookform/resolvers/yup';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Link from '@mui/material/Link';
+import Typography from '@mui/material/Typography';
 import { useMemo, useState, type MouseEvent } from 'react';
 import {
   Controller,
@@ -18,21 +31,6 @@ import {
   AUTH_FORM_STATIC_COPY,
   AUTH_FORM_VALIDATION_SCHEMAS,
 } from '@/constants/ui';
-import {
-  ArrowForwardIcon,
-  Box,
-  Checkbox,
-  EmailOutlinedIcon,
-  FormControlLabel,
-  Link,
-  LockOutlinedIcon,
-  PersonOutlineIcon,
-  PhoneOutlinedIcon,
-  Typography,
-  VisibilityOffOutlinedIcon,
-  VisibilityOutlinedIcon,
-  yupResolver,
-} from '@/lib/material';
 import {
   composePhoneWithDialCode,
   getDefaultCountryDialCode,

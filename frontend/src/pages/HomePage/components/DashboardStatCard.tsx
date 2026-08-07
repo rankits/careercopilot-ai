@@ -1,6 +1,6 @@
+import Skeleton from '@mui/material/Skeleton';
 import type { ReactNode } from 'react';
 
-import { Skeleton } from '@/lib/material';
 import type { IconTone } from '@/tokens';
 
 import {

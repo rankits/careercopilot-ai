@@ -1,4 +1,10 @@
-import { Box, Dialog, IconButton, MuiButton, Radio, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import MuiButton from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import IconButton from '@mui/material/IconButton';
+import Radio from '@mui/material/Radio';
+import { styled } from '@mui/material/styles';
+
 import {
   borderRadius,
   colorTokens,

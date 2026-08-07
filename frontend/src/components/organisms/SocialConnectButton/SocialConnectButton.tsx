@@ -1,8 +1,11 @@
+import LinkedInIcon from '@mui/icons-material/LinkedIn';
+import Box from '@mui/material/Box';
+import MuiButton from '@mui/material/Button';
+import Chip from '@mui/material/Chip';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import googleBrandIcon from '@/assets/icons/google-brand.svg';
 import { SOCIAL_CONNECT_LABELS } from '@/constants/ui';
-import { Box, Chip, LinkedInIcon, MuiButton } from '@/lib/material';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 import { socialConnectButtonSx } from './styles';

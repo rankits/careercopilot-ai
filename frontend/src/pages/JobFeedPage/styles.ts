@@ -1,4 +1,5 @@
-import type { SxProps, Theme } from '@/lib/material';
+import type { SxProps, Theme } from '@mui/material/styles';
+
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 /** Matches AppLayout compact breakpoint (760px). */
