@@ -32,6 +32,11 @@ export interface ForgotPasswordPayload {
   email: string;
 }
 
+export interface VerifyForgotPasswordOtpPayload {
+  code: string;
+  email: string;
+}
+
 export interface ResetPasswordPayload {
   code: string;
   email: string;

@@ -5,6 +5,8 @@ import {
   stripHtml,
   toIsoDate,
   isRemoteLocation,
+  resolveEmploymentType,
+  resolveRemoteType,
   uniqueTags,
   mapSalaryPeriod,
   applyJobSearchFilters,
@@ -208,5 +210,24 @@ describe('applyJobSearchFilters', () => {
 
   it('returns all jobs when no filters are provided', () => {
     expect(applyJobSearchFilters(jobs, {})).toHaveLength(3);
+  });
+});
+
+describe('resolveRemoteType', () => {
+  it('detects hybrid, remote, and onsite locations', () => {
+    expect(resolveRemoteType({ raw: 'Hybrid - NYC', isRemote: false })).toBe('HYBRID');
+    expect(resolveRemoteType({ raw: 'Remote', isRemote: true })).toBe('REMOTE');
+    expect(resolveRemoteType({ raw: 'Berlin', isRemote: false })).toBe('ONSITE');
+  });
+});
+
+describe('resolveEmploymentType', () => {
+  it('normalizes common provider employment tags', () => {
+    expect(resolveEmploymentType(['Full-Time', 'Senior'])).toBe('FULL_TIME');
+    expect(resolveEmploymentType(['full_time'])).toBe('FULL_TIME');
+    expect(resolveEmploymentType(['Internship'])).toBe('INTERNSHIP');
+    expect(resolveEmploymentType(['part_time'])).toBe('PART_TIME');
+    expect(resolveEmploymentType(['contract'])).toBe('CONTRACT');
+    expect(resolveEmploymentType(['React', 'Node'])).toBeNull();
   });
 });

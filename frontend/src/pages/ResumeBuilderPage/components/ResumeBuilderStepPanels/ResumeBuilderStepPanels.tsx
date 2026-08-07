@@ -184,8 +184,12 @@ function AnalysisDashboard({
           <AnalysisGateBanner
             title={gate.bannerTitle}
             body={gate.bannerBody}
-            primary={{ label: 'Upload another resume', onClick: onReplaceResume }}
-            secondary={{ label: 'Change Role & JD', onClick: onEditTarget, variant: 'outline' }}
+            primary={{ label: 'Continue to Optimize anyway', onClick: onContinue }}
+            secondary={{
+              label: 'Upload another resume',
+              onClick: onReplaceResume,
+              variant: 'outline',
+            }}
           />
         ) : null}
 
@@ -644,6 +648,7 @@ interface ResumeBuilderStepPanelsProps {
   onPreviewResume: () => void;
   onExport: (format: 'pdf' | 'docx', previewRoot?: HTMLElement | null) => void;
   onDone: () => void;
+  onCreateNewResume?: () => void;
   onTemplateChange: (template: ResumeTemplateId) => void;
 }
 
@@ -702,6 +707,7 @@ export function ResumeBuilderStepPanels({
   onPreviewResume: _onPreviewResume,
   onExport,
   onDone,
+  onCreateNewResume,
   onTemplateChange,
 }: ResumeBuilderStepPanelsProps) {
   const atsAnalysis = originalAnalysis ?? analysis;
@@ -822,6 +828,7 @@ export function ResumeBuilderStepPanels({
           targetRole={targetRole}
           template={selectedTemplate}
           onDone={onDone}
+          onCreateNewResume={onCreateNewResume}
           onExport={onExport}
           onTemplateChange={onTemplateChange}
         />

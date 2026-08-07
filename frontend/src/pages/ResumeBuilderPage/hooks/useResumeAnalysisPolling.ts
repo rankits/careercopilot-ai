@@ -204,7 +204,7 @@ export function useResumeAnalysisPolling({
     let cancelled = false;
     let attempt = 0;
     let inFlight = false;
-    const maxAttempts = 40; // slower cadence → fewer calls (~4–5 min)
+    const maxAttempts = 24; // ~2–3 min with backoff; fewer calls than prior 40×1.5s
 
     const clearPoll = () => {
       if (pollTimerRef.current) {

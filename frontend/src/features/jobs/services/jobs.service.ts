@@ -107,6 +107,7 @@ export const jobsService = {
           ...(params.skills ? { skills: params.skills } : {}),
           ...(params.minSalary !== undefined ? { minSalary: params.minSalary } : {}),
           ...(params.maxSalary !== undefined ? { maxSalary: params.maxSalary } : {}),
+          ...(params.currency ? { currency: params.currency } : {}),
         },
       });
       return unwrapListPayload(response);

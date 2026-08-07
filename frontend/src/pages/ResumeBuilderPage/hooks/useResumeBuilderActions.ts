@@ -171,33 +171,38 @@ export function useResumeBuilderActions({
     let cancelled = false;
     setRechecking(true);
 
-    void (async () => {
-      try {
-        if (contentKey && analysis) {
-          await resumeBuilderService.updateContent(resumeId, contentKey);
+    // Debounce content-driven rechecks so Export does not hammer ATS on every keystroke.
+    const timer = window.setTimeout(() => {
+      void (async () => {
+        try {
+          if (cancelled) return;
+          if (contentKey && analysis) {
+            await resumeBuilderService.updateContent(resumeId, contentKey);
+          }
+          const result = await resumeBuilderService.recheckAts(resumeId);
+          if (cancelled) return;
+          recheckContentKeyRef.current = contentKey;
+          // Keep New ATS identical to Optimize strip (server floor was inflating 66 → 76).
+          setRecheckResult(
+            pinRecheckToLiveAts(result, analysis?.baselineAtsScore ?? analysis?.atsScore),
+          );
+          // Do not overwrite the original Analyze-step ATS snapshot with export recheck scores.
+        } catch (error) {
+          if (!cancelled) {
+            showToast({
+              message: getApiErrorMessage(error, 'Could not recalculate ATS score.'),
+              severity: 'error',
+            });
+          }
+        } finally {
+          if (!cancelled) setRechecking(false);
         }
-        const result = await resumeBuilderService.recheckAts(resumeId);
-        if (cancelled) return;
-        recheckContentKeyRef.current = contentKey;
-        // Keep New ATS identical to Optimize strip (server floor was inflating 66 → 76).
-        setRecheckResult(
-          pinRecheckToLiveAts(result, analysis?.baselineAtsScore ?? analysis?.atsScore),
-        );
-        // Do not overwrite the original Analyze-step ATS snapshot with export recheck scores.
-      } catch (error) {
-        if (!cancelled) {
-          showToast({
-            message: getApiErrorMessage(error, 'Could not recalculate ATS score.'),
-            severity: 'error',
-          });
-        }
-      } finally {
-        if (!cancelled) setRechecking(false);
-      }
-    })();
+      })();
+    }, 800);
 
     return () => {
       cancelled = true;
+      window.clearTimeout(timer);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps -- recheck only when export opens or content key changes
   }, [step, resumeId, editedContent]);
@@ -262,6 +267,20 @@ export function useResumeBuilderActions({
       try {
         const uploaded = await resumeBuilderService.uploadResume(file);
 
+        const readability = await resumeBuilderService.waitForReadableResume(uploaded.id);
+        if (!readability.ok) {
+          setUploadError(
+            readability.message ||
+              'Please upload a valid resume (PDF or DOCX) to continue with ATS analysis.',
+          );
+          try {
+            await resumeBuilderService.deleteResume(uploaded.id);
+          } catch {
+            // Best-effort cleanup of unreadable upload.
+          }
+          return;
+        }
+
         // Fully reset UI state for the new resume so Live Preview/Optimize step hydrate correctly.
         // (hydrateFromExistingAnalysis only sets edited content when the current draft is empty.)
         setAnalysis(null);
@@ -289,7 +308,7 @@ export function useResumeBuilderActions({
         setExistingResumes((prev) => [uploaded, ...prev.filter((r) => r.id !== uploaded.id)]);
         void navigate(`${ROUTES.RESUME_BUILDER}/${uploaded.id}`, { replace: true });
         setStep(2);
-        void hydrateFromExistingAnalysis(uploaded.id, { force: true });
+        // Skip force hydrate on fresh upload — no analysis exists yet (avoids a useless getAnalysis).
       } catch {
         setUploadError('Upload failed. Please try again.');
       } finally {
@@ -299,7 +318,6 @@ export function useResumeBuilderActions({
     [
       analyzedFingerprintRef,
       editedContentRef,
-      hydrateFromExistingAnalysis,
       navigate,
       setAnalysis,
       setCleanSnapshot,
@@ -343,6 +361,22 @@ export function useResumeBuilderActions({
       showToast({ message: 'Please upload or select a resume first.', severity: 'warning' });
       setStep(1);
       return;
+    }
+
+    try {
+      const status = await resumeBuilderService.getResumeStatus(resumeId);
+      if (String(status.status || '').toUpperCase() === 'FAILED') {
+        showToast({
+          message:
+            status.failureReason?.trim() ||
+            'Please upload a valid resume (PDF or DOCX) to continue with ATS analysis.',
+          severity: 'warning',
+        });
+        setStep(1);
+        return;
+      }
+    } catch {
+      // If status check fails, continue — analyze will surface errors.
     }
 
     const fingerprint = analysisInputFingerprint({
@@ -557,13 +591,21 @@ export function useResumeBuilderActions({
         recheck = null;
       }
 
-      const refreshed = await resumeBuilderService.getAnalysis(resumeId);
+      // Skip trailing getAnalysis when recheck succeeded — avoids an extra ATS round trip.
+      // Only refetch analysis when recheck failed and we still need suggestion/status sync.
+      const refreshed = recheck
+        ? null
+        : await resumeBuilderService.getAnalysis(resumeId).catch(() => null);
       mergeRecheckIntoAnalysis(refreshed, recheck, localContent);
       if (recheck) {
         setRecheckResult(
           pinRecheckToLiveAts(recheck, analysis?.baselineAtsScore ?? analysis?.atsScore),
         );
         recheckContentKeyRef.current = localContent;
+      } else {
+        // Content changed; clear stale export recheck so Export will recalculate once.
+        setRecheckResult(null);
+        recheckContentKeyRef.current = '';
       }
       showToast({
         message:

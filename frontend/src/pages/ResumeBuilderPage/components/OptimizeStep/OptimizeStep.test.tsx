@@ -125,6 +125,57 @@ describe('OptimizeStep', () => {
     expect(onApplySuggestion).toHaveBeenCalledWith(11, expect.stringMatching(/Java/i));
   });
 
+  it('applies summary suggestion into draft content for live preview', () => {
+    const onApplySuggestion = vi.fn();
+    const onEditedContentChange = vi.fn();
+
+    render(
+      <OptimizeStep
+        analysis={
+          {
+            ...analysis,
+            optimizedSummary: 'Java engineer with Spring Boot experience',
+          } as never
+        }
+        applyingId={null}
+        editedContent={analysis.editedContent}
+        jobDescription="Java Spring Boot developer needed"
+        preferredSkills={[]}
+        saving={false}
+        suggestions={[
+          {
+            id: 21,
+            title: 'Improve summary',
+            category: 'summary',
+            originalText: 'Engineer',
+            suggestedText: 'Java engineer with Spring Boot experience',
+            impact: 'HIGH',
+            status: 'PENDING',
+            reason: 'Align summary to JD',
+          },
+        ]}
+        targetRole="Java Developer"
+        template="classic"
+        onApplySuggestion={onApplySuggestion}
+        onApplyAllSuggestions={vi.fn()}
+        onIgnoreSuggestion={vi.fn()}
+        onEditedContentChange={onEditedContentChange}
+        onExportStep={vi.fn()}
+        onSaveContent={vi.fn()}
+        onTemplateChange={vi.fn()}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole('button', { name: /Apply next fix/i }));
+
+    const latestContent = onEditedContentChange.mock.calls.at(-1)?.[0] as string;
+    expect(latestContent).toMatch(/Java engineer with Spring Boot experience/i);
+    expect(onApplySuggestion).toHaveBeenCalledWith(
+      21,
+      expect.stringMatching(/Java engineer with Spring Boot experience/i),
+    );
+  });
+
   it('applies all pending suggestions in one action', () => {
     const onApplyAllSuggestions = vi.fn();
     const onEditedContentChange = vi.fn();

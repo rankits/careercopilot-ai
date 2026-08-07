@@ -28,6 +28,7 @@ import {
 
 export interface ResumeVersionsDialogProps {
   downloadingId?: string | null;
+  isLoading?: boolean;
   onClose: () => void;
   onDownload: (resume: UploadedResumeVersion) => void;
   open: boolean;
@@ -53,6 +54,7 @@ const formatUploadedAt = (value: string) => {
 
 export function ResumeVersionsDialog({
   downloadingId = null,
+  isLoading = false,
   onClose,
   onDownload,
   open,
@@ -81,7 +83,13 @@ export function ResumeVersionsDialog({
           newer ones.
         </Typography>
 
-        {resumes.length === 0 ? (
+        {isLoading ? (
+          <VersionsEmpty>
+            <Typography color="text.secondary" variant="body2">
+              Loading uploaded resumes…
+            </Typography>
+          </VersionsEmpty>
+        ) : resumes.length === 0 ? (
           <VersionsEmpty>
             <DescriptionOutlinedIcon color="disabled" />
             <Typography color="text.secondary" variant="body2">

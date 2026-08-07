@@ -1,10 +1,14 @@
+import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
+import { authReducer } from '@/features/auth/authSlice';
 
 import { RegisterPage } from './RegisterPage';
 
@@ -17,23 +21,27 @@ vi.mock('@/features/auth/services/auth.service', () => ({
 }));
 
 function renderPage() {
+  const testStore = configureStore({ reducer: { auth: authReducer } });
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
 
   return {
     queryClient,
+    store: testStore,
     ...render(
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <MemoryRouter initialEntries={['/register']}>
-            <Routes>
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/profile" element={<h1>Profile destination</h1>} />
-              <Route path="/login" element={<h1>Login destination</h1>} />
-            </Routes>
-          </MemoryRouter>
-        </ToastProvider>
+        <Provider store={testStore}>
+          <ToastProvider>
+            <MemoryRouter initialEntries={['/register']}>
+              <Routes>
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/profile" element={<h1>Profile destination</h1>} />
+                <Route path="/login" element={<h1>Login destination</h1>} />
+              </Routes>
+            </MemoryRouter>
+          </ToastProvider>
+        </Provider>
       </QueryClientProvider>,
     ),
   };
@@ -68,10 +76,7 @@ describe('RegisterPage', () => {
     expect(screen.getByRole('heading', { name: /create account/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /careercopilot/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /career journey illustration/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /login from header/i })).toHaveAttribute(
-      'href',
-      '/login',
-    );
+    expect(screen.getByRole('link', { name: /^login$/i })).toHaveAttribute('href', '/login');
     expect(
       screen.getByRole('heading', { name: /start your smarter career journey/i }),
     ).toBeInTheDocument();
@@ -110,8 +115,10 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(await screen.findByText(/enter a valid email address/i)).toBeInTheDocument();
-    expect(screen.getByText(/phone number must be 10 digits/i)).toBeInTheDocument();
-    expect(screen.getByText(/password must be at least 8 characters/i)).toBeInTheDocument();
+    expect(screen.getByText(/enter a valid phone number/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/use 8\+ characters with uppercase, lowercase, number/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/passwords must match/i)).toBeInTheDocument();
     expect(registerMock).not.toHaveBeenCalled();
   }, 15_000);
@@ -159,10 +166,12 @@ describe('RegisterPage', () => {
         firstName: 'Ada',
         lastName: 'Lovelace',
         password: 'Str0ng!Passw0rd',
-        phone: '9876543210',
+        phone: '+919876543210',
       }),
     );
-    expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
     expect(
       queryClient.getMutationCache().find({ mutationKey: ['auth', 'register'] })?.state.status,
     ).toBe('success');
@@ -215,7 +224,9 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(registerMock).toHaveBeenCalledTimes(2);
-    expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
   }, 15_000);
 
   it('shows the backend registration error message when the API provides one', async () => {
@@ -225,7 +236,7 @@ describe('RegisterPage', () => {
       response: {
         data: {
           code: 'CONFLICT',
-          message: 'An account with this email already exists',
+          message: 'This email already exists',
           requestId: '7b5b53e2-fcb4-43c8-b081-7dc26240182b',
           status: 'error',
         },
@@ -236,8 +247,6 @@ describe('RegisterPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /an account with this email already exists/i,
-    );
+    expect(await screen.findByRole('alert')).toHaveTextContent(/this email already exists/i);
   }, 15_000);
 });

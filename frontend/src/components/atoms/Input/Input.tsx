@@ -11,6 +11,8 @@ export interface InputProps extends Omit<
   errorMessage?: string;
   helperText?: ReactNode;
   inputVariant?: InputVariant;
+  /** Keeps helper-text height reserved so error show/hide does not jump the layout. */
+  stabilizeHelper?: boolean;
   size?: InputSize;
   startAdornment?: ReactNode;
   endAdornment?: ReactNode;
@@ -24,6 +26,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
     helperText,
     inputVariant = 'outline',
     size = 'medium',
+    stabilizeHelper = false,
     startAdornment,
     tone = 'default',
     ...props
@@ -35,29 +38,41 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
   const inputLabelSlotProps = slotProps?.inputLabel;
   const htmlInputSlotProps = slotProps?.htmlInput;
   const inputSlotProps = slotProps?.input;
+  const hasMessage = Boolean(errorMessage || helperText);
+  const resolvedHelperText = stabilizeHelper
+    ? errorMessage || helperText || '\u00a0'
+    : errorMessage || helperText;
 
   return (
     <TextField
       {...restProps}
       error={Boolean(errorMessage)}
-      helperText={errorMessage || helperText}
+      helperText={resolvedHelperText}
       inputRef={ref}
       size={size}
       variant="outlined"
       slotProps={{
         ...slotProps,
+        formHelperText: {
+          ...(typeof slotProps?.formHelperText === 'object' ? slotProps.formHelperText : {}),
+          'aria-hidden': stabilizeHelper && !hasMessage ? true : undefined,
+        },
         htmlInput: {
           ...(typeof legacyInputProps === 'object' && legacyInputProps ? legacyInputProps : {}),
           ...(typeof htmlInputSlotProps === 'function' ? {} : htmlInputSlotProps),
         },
         input: {
           ...(typeof inputSlotProps === 'function' ? {} : inputSlotProps),
-          endAdornment: endAdornment ? (
-            <InputAdornment position="end">{endAdornment}</InputAdornment>
-          ) : undefined,
-          startAdornment: startAdornment ? (
-            <InputAdornment position="start">{startAdornment}</InputAdornment>
-          ) : undefined,
+          ...(endAdornment
+            ? {
+                endAdornment: <InputAdornment position="end">{endAdornment}</InputAdornment>,
+              }
+            : {}),
+          ...(startAdornment
+            ? {
+                startAdornment: <InputAdornment position="start">{startAdornment}</InputAdornment>,
+              }
+            : {}),
         },
         inputLabel: {
           shrink: true,
@@ -66,8 +81,10 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
       }}
       sx={getInputSx({
         consumerSx,
+        hasHelperMessage: hasMessage,
         inputVariant,
         size,
+        stabilizeHelper,
         tone: resolvedTone,
       })}
     />

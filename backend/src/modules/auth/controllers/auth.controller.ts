@@ -84,6 +84,11 @@ export const forgotPasswordController = catchAsync(async (req: Request, res: Res
   return res.status(200).json(successResponse(result.message));
 });
 
+export const verifyForgotPasswordOtpController = catchAsync(async (req: Request, res: Response) => {
+  const result = await authService.verifyForgotPasswordOtp(req.body, getRequestContext(req));
+  return res.status(200).json(successResponse(result.message));
+});
+
 export const resetPasswordController = catchAsync(async (req: Request, res: Response) => {
   const result = await authService.resetPassword(req.body, getRequestContext(req));
   return res.status(200).json(successResponse(result.message));
@@ -132,6 +137,7 @@ export default {
   requestLoginOtpController,
   verifyLoginOtpController,
   forgotPasswordController,
+  verifyForgotPasswordOtpController,
   resetPasswordController,
   changePasswordController,
   refreshController,

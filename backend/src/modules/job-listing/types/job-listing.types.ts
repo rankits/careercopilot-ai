@@ -7,6 +7,12 @@ export interface JobSearchFilters {
   skills?: string[];
   minSalary?: number;
   maxSalary?: number;
+  /**
+   * Optional ISO currency code.
+   * When omitted with min/max salary, USD bands are converted across currencies.
+   * When set, salary filters apply only within that currency.
+   */
+  currency?: string;
   postedWithinDays?: number;
   postedSince?: Date;
 }
@@ -74,6 +80,8 @@ export interface JobListDto {
   publishedAt: string | null;
   /** Primary JobSource apply URL (priority desc); http(s) only, else null. */
   applyUrl: string | null;
+  /** Present for authenticated users when the job is bookmarked (Application status SAVED). */
+  isSaved?: boolean;
   /** Optional internal eligibility metadata for recommendation filtering when providers expose it. */
   recommendationEligibility?: JobRecommendationEligibility;
 }

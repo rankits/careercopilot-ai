@@ -39,8 +39,9 @@ export const resumeAnalysisConfig = {
   provider:
     optional(process.env.AI_RESUME_ANALYSIS_PROVIDER) ??
     optional(process.env.AI_RESUME_PARSER_PROVIDER) ??
-    'openrouter',
-  fallbackProviders: optional(process.env.AI_RESUME_ANALYSIS_FALLBACK_PROVIDERS),
+    'groq',
+  fallbackProviders:
+    optional(process.env.AI_RESUME_ANALYSIS_FALLBACK_PROVIDERS) ?? 'openrouter,openai,google',
 
   model: optional(process.env.AI_RESUME_ANALYSIS_MODEL),
   parserModel: optional(process.env.AI_RESUME_PARSER_MODEL) ?? 'gemini-2.0-flash',

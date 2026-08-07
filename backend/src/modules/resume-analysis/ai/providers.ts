@@ -52,15 +52,11 @@ const providerHasCredentials = (provider: ResumeAnalysisAiProvider): boolean => 
 };
 
 /**
- * OpenRouter first (default), then configured fallbacks (Groq / OpenAI / Google).
- * Only providers with API keys are returned.
+ * Strict order: Groq first (when keyed), then OpenRouter → OpenAI → Google.
+ * Only providers with API keys are returned. Fallbacks run only after Groq fails.
  */
 const getProviderFallbackChain = (): ResumeAnalysisAiProvider[] => {
-  const primary = getAiProvider();
-  const configuredFallbacks = (
-    resumeAnalysisConfig.fallbackProviders ||
-    (primary === 'openrouter' ? 'groq,openai,google' : primary === 'groq' ? 'openrouter' : 'groq')
-  )
+  const configuredFallbacks = (resumeAnalysisConfig.fallbackProviders || 'openrouter,openai,google')
     .split(',')
     .map((item) => item.trim().toLowerCase())
     .filter(Boolean)
@@ -73,21 +69,18 @@ const getProviderFallbackChain = (): ResumeAnalysisAiProvider[] => {
     })
     .filter((item): item is ResumeAnalysisAiProvider => item != null);
 
-  // Prefer OpenRouter at the front whenever its key exists.
-  const preferred: ResumeAnalysisAiProvider[] = providerHasCredentials('openrouter')
-    ? ['openrouter', primary, ...configuredFallbacks]
-    : [primary, ...configuredFallbacks];
+  // Groq always leads when a key exists — ignore mis-set primary env (e.g. openrouter).
+  const ordered: ResumeAnalysisAiProvider[] = providerHasCredentials('groq')
+    ? ['groq', ...configuredFallbacks.filter((p) => p !== 'groq')]
+    : [getAiProvider(), ...configuredFallbacks];
 
-  const chain = Array.from(new Set(preferred));
-  return chain.filter(providerHasCredentials);
+  return Array.from(new Set(ordered)).filter(providerHasCredentials);
 };
 
 const OPENROUTER_DEFAULT_MODELS = [
   'google/gemini-2.5-flash',
-  // Prefer concrete free Gemini / Gemma — skip flaky openrouter/free auto-router.
+  // One free fallback only — avoid cascading through every free model.
   'google/gemini-2.0-flash-exp:free',
-  'google/gemma-3-27b-it:free',
-  'google/gemma-4-26b-a4b-it:free',
 ];
 
 const isOpenRouterFreeAutoRouter = (model: string): boolean =>
@@ -110,10 +103,21 @@ const getRequestTimeoutMs = (model?: string): number => {
   return Math.min(configured, 180000);
 };
 
-/** Cap resume/JD size so free-tier prompts fit input token budgets. */
+/** Cap resume/JD size so free-tier prompts fit input token budgets.
+ * Prefer keeping a leading SKILLS block so truncation does not drop match evidence.
+ */
 const truncateForAi = (text: string, maxChars: number): string => {
   const trimmed = text.trim();
   if (trimmed.length <= maxChars) return trimmed;
+
+  const skillsMatch = trimmed.match(/^(SKILLS\n[^\n]+(?:\n|$))/i);
+  const skillsPrefix = skillsMatch?.[1]?.trim() ?? '';
+  if (skillsPrefix && skillsPrefix.length + 80 < maxChars) {
+    const restBudget = maxChars - skillsPrefix.length - 40;
+    const rest = trimmed.slice(skillsPrefix.length).trim();
+    return `${skillsPrefix}\n\n${rest.slice(0, restBudget)}\n\n[...truncated for AI token budget...]`;
+  }
+
   return `${trimmed.slice(0, maxChars)}\n\n[...truncated for AI token budget...]`;
 };
 
@@ -121,7 +125,7 @@ const OPENAI_DEFAULT_MODELS = ['gpt-4o-mini', 'gpt-4o'];
 
 const getModelCandidates = (provider: ResumeAnalysisAiProvider): string[] => {
   if (provider === 'openrouter') {
-    const primary = resumeAnalysisConfig.model || OPENROUTER_DEFAULT_MODELS[0];
+    const primary = resumeAnalysisConfig.model || OPENROUTER_DEFAULT_MODELS[0]!;
     const fallbacks = (
       resumeAnalysisConfig.fallbackModels || OPENROUTER_DEFAULT_MODELS.slice(1).join(',')
     )
@@ -133,32 +137,30 @@ const getModelCandidates = (provider: ResumeAnalysisAiProvider): string[] => {
     // openrouter/free often returns empty / safety text — skip unless explicitly allowed.
     const allowAutoFree = resumeAnalysisConfig.allowOpenRouterFreeAuto;
 
-    const models = Array.from(new Set([primary, ...fallbacks])).filter(
-      (model) => allowAutoFree || !isOpenRouterFreeAutoRouter(model),
-    );
+    // Cap to primary + 1 fallback so we do not cascade through every free model.
+    const models = Array.from(new Set([primary, ...fallbacks]))
+      .filter((model) => allowAutoFree || !isOpenRouterFreeAutoRouter(model))
+      .slice(0, 2);
 
     return models.length > 0 ? models : [OPENROUTER_DEFAULT_MODELS[0]!];
   }
 
   if (provider === 'openai') {
-    const primary = resumeAnalysisConfig.model || OPENAI_DEFAULT_MODELS[0];
-    const fallbacks = (resumeAnalysisConfig.fallbackModels || OPENAI_DEFAULT_MODELS[1])
-      .split(',')
-      .map((model) => model.trim())
-      .filter(Boolean);
-    return Array.from(new Set([primary, ...fallbacks]));
+    const primary = resumeAnalysisConfig.model || OPENAI_DEFAULT_MODELS[0]!;
+    // Single OpenAI model — no multi-model fan-out.
+    return [primary.includes('/') ? OPENAI_DEFAULT_MODELS[0]! : primary];
   }
 
   if (provider === 'groq') {
-    // Prefer smaller/faster models first when daily token budget is tight.
+    // One Groq model only — next provider is the fallback, not more Groq models.
     const primary = resumeAnalysisConfig.groqModel;
     const groqSafe = primary.includes('/') ? 'llama-3.1-8b-instant' : primary;
-    return Array.from(new Set([groqSafe, 'llama-3.1-8b-instant', 'llama-3.3-70b-versatile']));
+    return [groqSafe];
   }
 
   const configuredModel = resumeAnalysisConfig.model || resumeAnalysisConfig.parserModel;
   const googleSafe = configuredModel.includes('/') ? 'gemini-2.0-flash' : configuredModel;
-  return Array.from(new Set([googleSafe, 'gemini-2.0-flash', 'gemini-1.5-flash']));
+  return [googleSafe];
 };
 
 const createGoogleClient = (model: string): ChatGoogleGenerativeAI => {
