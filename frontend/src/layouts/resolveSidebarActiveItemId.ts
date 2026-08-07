@@ -2,7 +2,11 @@ import { ROUTES } from '@/constants/routes';
 
 /** Map the current pathname to the sidebar/bottom-nav active item id. */
 export function resolveSidebarActiveItemId(pathname: string): string {
-  if (pathname === ROUTES.PROFILE_EDIT || pathname.startsWith(`${ROUTES.PROFILE}/`)) {
+  if (
+    pathname === ROUTES.PROFILE_EDIT ||
+    pathname.startsWith(`${ROUTES.PROFILE}/`) ||
+    pathname.startsWith('/settings/')
+  ) {
     return 'settings';
   }
   if (pathname === ROUTES.SAVED_JOBS) {
@@ -16,6 +20,9 @@ export function resolveSidebarActiveItemId(pathname: string): string {
   }
   if (pathname === ROUTES.AUTO_APPLY) {
     return 'auto-apply';
+  }
+  if (pathname === ROUTES.AI_MAIL || pathname.startsWith(`${ROUTES.AI_MAIL}/`)) {
+    return 'ai-mail';
   }
   if (
     pathname === ROUTES.ASSISTED_APPLICATIONS ||

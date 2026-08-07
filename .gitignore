@@ -18,6 +18,8 @@ frontend/test-results/
 frontend/blob-report/
 
 flow-diagrames
+docs/*
+!docs/auto-apply/
 docs/
 # Local manual deploy config (never commit secrets)
 deploy/manual-deploy.env

@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as authService from '@/modules/auth/services/auth.service.js';
+import * as googleLoginService from '@/modules/auth/services/google-login.service.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import { catchAsync } from '@/shared/utils/catchAsync.js';
 import { successResponse } from '@/shared/utils/response.js';
@@ -130,6 +131,24 @@ export const meController = catchAsync(async (req: Request, res: Response) => {
   return res.status(200).json(successResponse('Current session', toSafeUserResponse(user)));
 });
 
+export const googleLoginStartController = catchAsync(async (req: Request, res: Response) => {
+  const result = await googleLoginService.startGoogleLogin(req.body);
+  return res.status(200).json(successResponse('Google sign-in started', result));
+});
+
+export const googleLoginCallbackController = catchAsync(async (req: Request, res: Response) => {
+  const session = await googleLoginService.completeGoogleLogin(req.body, getRequestContext(req));
+  setRefreshTokenCookie(res, session.tokens.refreshToken);
+  return res.status(200).json({
+    ...successResponse('Login successful', {
+      user: toSafeUserResponse(session.user),
+      returnPath: session.returnPath,
+    }),
+    accessToken: session.tokens.accessToken,
+    accessTokenExpiresInSeconds: session.tokens.accessTokenExpiresInSeconds,
+  });
+});
+
 export default {
   registerController,
   resendOtpController,
@@ -144,4 +163,6 @@ export default {
   logoutController,
   logoutAllController,
   meController,
+  googleLoginStartController,
+  googleLoginCallbackController,
 };

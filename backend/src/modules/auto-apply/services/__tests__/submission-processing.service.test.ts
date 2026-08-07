@@ -88,6 +88,7 @@ describe('SubmissionProcessingService', () => {
       reopenFromWithdrawn: vi.fn(),
       updateProgressStep: vi.fn(),
     };
+    consentRepo = {
       findManyByUserId: vi.fn(),
       findActiveByType: vi.fn().mockResolvedValue(activeConsent),
       findById: vi.fn(),
