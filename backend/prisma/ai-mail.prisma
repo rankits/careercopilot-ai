@@ -1,0 +1,176 @@
+enum AiMailDraftStatus {
+  input
+  generating
+  generated
+  edited
+  generation_failed
+  ready_to_send
+  archived
+}
+
+enum AiMailGenerationAttemptStatus {
+  started
+  succeeded
+  failed
+  cancelled
+}
+
+enum AiMailRevisionSource {
+  ai_generated
+  ai_regenerated
+  user_saved
+  restored
+}
+
+enum MailDeliveryStatus {
+  pending
+  sending
+  sent
+  failed
+  unknown
+  cancelled
+}
+
+enum MailDeliveryProvider {
+  google
+}
+
+enum MailDeliveryUserResolution {
+  confirmed_sent
+  confirmed_not_sent
+}
+
+model AiMailDraft {
+  id                   String            @id @default(uuid()) @db.Uuid
+  userId               String            @map("user_id")
+  recruiterEmail       String            @map("recruiter_email")
+  recruiterName        String?           @map("recruiter_name")
+  companyName          String?           @map("company_name")
+  roleTitle            String?           @map("role_title")
+  jobUrl               String?           @map("job_url")
+  jobDescription       String            @map("job_description") @db.Text
+  additionalContext    String?           @map("additional_context") @db.Text
+  resumeId             String            @map("resume_id")
+  profileSnapshotId    String?           @map("profile_snapshot_id")
+  constraints          Json              @db.JsonB
+  subject              String?
+  bodyText             String?           @map("body_text") @db.Text
+  bodyHtml             String?           @map("body_html") @db.Text
+  status               AiMailDraftStatus @default(input)
+  version              Int               @default(1)
+  provider             String?
+  providerModel        String?           @map("provider_model")
+  providerRequestId    String?           @map("provider_request_id")
+  generatedAt          DateTime?         @map("generated_at")
+  userEdited           Boolean           @default(false) @map("user_edited")
+  contentHash          String?           @map("content_hash")
+  lastContextHash      String?           @map("last_context_hash")
+  followUpToDeliveryId String?           @map("follow_up_to_delivery_id") @db.Uuid
+  archivedAt           DateTime?         @map("archived_at")
+  createdAt            DateTime          @default(now()) @map("created_at")
+  updatedAt            DateTime          @updatedAt @map("updated_at")
+
+  attempts           AiMailGenerationAttempt[]
+  revisions          AiMailDraftRevision[]
+  deliveries         MailDelivery[]            @relation("DraftDeliveries")
+  followUpToDelivery MailDelivery?             @relation("FollowUpDraft", fields: [followUpToDeliveryId], references: [id], onDelete: SetNull)
+
+  @@index([userId, updatedAt(sort: Desc)])
+  @@index([resumeId])
+  @@index([userId, status, updatedAt(sort: Desc)])
+  @@index([followUpToDeliveryId])
+  @@map("ai_mail_drafts")
+}
+
+model AiMailGenerationAttempt {
+  id                  String                        @id @default(uuid()) @db.Uuid
+  draftId             String                        @map("draft_id") @db.Uuid
+  userId              String                        @map("user_id")
+  operation           String
+  providerName        String                        @map("provider_name")
+  providerModel       String?                       @map("provider_model")
+  status              AiMailGenerationAttemptStatus @default(started)
+  durationMs          Int?                          @map("duration_ms")
+  inputTokenCount     Int?                          @map("input_token_count")
+  outputTokenCount    Int?                          @map("output_token_count")
+  providerRequestId   String?                       @map("provider_request_id")
+  normalizedErrorCode String?                       @map("normalized_error_code")
+  retryCount          Int                           @default(0) @map("retry_count")
+  contextHash         String?                       @map("context_hash")
+  promptVersion       String?                       @map("prompt_version")
+  outputSchemaVersion String?                       @map("output_schema_version")
+  idempotencyKey      String?                       @map("idempotency_key")
+  createdAt           DateTime                      @default(now()) @map("created_at")
+  updatedAt           DateTime                      @updatedAt @map("updated_at")
+
+  draft AiMailDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@index([draftId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([providerName, normalizedErrorCode, createdAt(sort: Desc)])
+  @@index([providerRequestId])
+  @@index([userId, draftId, operation, idempotencyKey])
+  @@map("ai_mail_generation_attempts")
+}
+
+model AiMailDraftRevision {
+  id             String               @id @default(uuid()) @db.Uuid
+  draftId        String               @map("draft_id") @db.Uuid
+  draftVersion   Int                  @map("draft_version")
+  revisionNumber Int                  @map("revision_number")
+  source         AiMailRevisionSource
+  operation      String?
+  subject        String?
+  bodyText       String?              @map("body_text") @db.Text
+  contextHash    String?              @map("context_hash")
+  promptVersion  String?              @map("prompt_version")
+  providerName   String?              @map("provider_name")
+  providerModel  String?              @map("provider_model")
+  createdAt      DateTime             @default(now()) @map("created_at")
+
+  draft AiMailDraft @relation(fields: [draftId], references: [id], onDelete: Cascade)
+
+  @@unique([draftId, revisionNumber])
+  @@index([draftId, createdAt(sort: Desc)])
+  @@map("ai_mail_draft_revisions")
+}
+
+model MailDelivery {
+  id                   String                       @id @default(uuid()) @db.Uuid
+  userId               String                       @map("user_id")
+  draftId              String                       @map("draft_id") @db.Uuid
+  draftVersion         Int                          @map("draft_version")
+  contentHash          String                       @map("content_hash")
+  connectedAccountId   Int                          @map("connected_account_id")
+  provider             MailDeliveryProvider
+  status               MailDeliveryStatus           @default(pending)
+  idempotencyKey       String                       @map("idempotency_key")
+  providerMessageId    String?                      @map("provider_message_id")
+  providerThreadId     String?                      @map("provider_thread_id")
+  recipientEmail       String                       @map("recipient_email")
+  recipientHash        String?                      @map("recipient_hash")
+  fromEmail            String                       @map("from_email")
+  resumeId             String                       @map("resume_id")
+  subjectSnapshot      String?                      @map("subject_snapshot")
+  companyNameSnapshot  String?                      @map("company_name_snapshot")
+  roleTitleSnapshot    String?                      @map("role_title_snapshot")
+  normalizedErrorCode  String?                      @map("normalized_error_code")
+  userResolution       MailDeliveryUserResolution?  @map("user_resolution")
+  userResolvedAt       DateTime?                    @map("user_resolved_at")
+  attemptedAt          DateTime                     @default(now()) @map("attempted_at")
+  sentAt               DateTime?                    @map("sent_at")
+  createdAt            DateTime                     @default(now()) @map("created_at")
+  updatedAt            DateTime                     @updatedAt @map("updated_at")
+
+  draft          AiMailDraft   @relation("DraftDeliveries", fields: [draftId], references: [id], onDelete: Cascade)
+  followUpDrafts AiMailDraft[] @relation("FollowUpDraft")
+
+  @@unique([userId, idempotencyKey])
+  @@index([draftId, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status, updatedAt(sort: Desc)])
+  @@index([draftId, contentHash, draftVersion, status])
+  @@index([userId, recipientHash, createdAt(sort: Desc)])
+  @@index([userId, status, createdAt(sort: Desc)])
+  @@map("mail_deliveries")
+}
