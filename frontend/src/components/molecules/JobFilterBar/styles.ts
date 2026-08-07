@@ -1,4 +1,5 @@
-import { styled } from '@/lib/material';
+import { styled } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, jobFeedTokens, spacing } from '@/tokens';
 
 /** Matches AppLayout compact breakpoint (760px). */

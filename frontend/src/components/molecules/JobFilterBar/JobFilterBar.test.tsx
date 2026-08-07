@@ -1,20 +1,16 @@
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JOB_FILTER_BAR_COPY } from '@/constants/ui';
-import * as material from '@/lib/material';
 
 import type { JobFilter } from './JobFilterBar';
 import { JobFilterBar } from './JobFilterBar';
 
-vi.mock('@/lib/material', async () => {
-  const actual = await vi.importActual<typeof material>('@/lib/material');
-  return {
-    ...actual,
-    useMediaQuery: vi.fn(),
-  };
-});
+vi.mock('@mui/material/useMediaQuery', () => ({
+  default: vi.fn(),
+}));
 
 const mockFilters: JobFilter[] = [
   { active: true, icon: 'ai', id: 'ai-match', label: 'AI Match' },
@@ -24,7 +20,7 @@ const mockFilters: JobFilter[] = [
 
 describe('JobFilterBar', () => {
   beforeEach(() => {
-    vi.mocked(material.useMediaQuery).mockReturnValue(false);
+    vi.mocked(useMediaQuery).mockReturnValue(false);
   });
 
   it('renders all filter buttons with correct labels and aria-pressed attributes', () => {
@@ -67,7 +63,7 @@ describe('JobFilterBar', () => {
   });
 
   it('does not render scroll buttons when not in compact mode', () => {
-    vi.mocked(material.useMediaQuery).mockReturnValue(false);
+    vi.mocked(useMediaQuery).mockReturnValue(false);
 
     render(<JobFilterBar filters={mockFilters} />);
 
@@ -76,7 +72,7 @@ describe('JobFilterBar', () => {
   });
 
   it('renders scroll buttons in compact mode', () => {
-    vi.mocked(material.useMediaQuery).mockReturnValue(true);
+    vi.mocked(useMediaQuery).mockReturnValue(true);
 
     render(<JobFilterBar filters={mockFilters} />);
 
@@ -88,7 +84,7 @@ describe('JobFilterBar', () => {
   });
 
   it('scrolls the track when scroll buttons are clicked in compact mode', async () => {
-    vi.mocked(material.useMediaQuery).mockReturnValue(true);
+    vi.mocked(useMediaQuery).mockReturnValue(true);
 
     render(<JobFilterBar filters={mockFilters} />);
 
@@ -123,7 +119,7 @@ describe('JobFilterBar', () => {
   });
 
   it('disables scroll buttons when track cannot be scrolled', () => {
-    vi.mocked(material.useMediaQuery).mockReturnValue(true);
+    vi.mocked(useMediaQuery).mockReturnValue(true);
 
     render(<JobFilterBar filters={mockFilters} />);
 

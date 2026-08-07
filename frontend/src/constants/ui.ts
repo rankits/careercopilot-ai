@@ -1,3 +1,15 @@
+
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import * as yup from 'yup';
 
 import type {
@@ -9,20 +21,6 @@ import type { AuthPageFeature } from '@/components/organisms/AuthPageLayout/inte
 import type { SidebarNavItem } from '@/components/organisms/Sidebar/interfaces';
 
 import { ROUTES } from '@/constants/routes';
-import {
-  AssignmentOutlinedIcon,
-  AutoAwesomeOutlinedIcon,
-  BookmarkBorderOutlinedIcon,
-  CheckCircleOutlineIcon,
-  EditNoteOutlinedIcon,
-  FolderOutlinedIcon,
-  GridViewOutlinedIcon,
-  InsightsOutlinedIcon,
-  LockOutlinedIcon,
-  SearchOutlinedIcon,
-  SecurityOutlinedIcon,
-} from '@/lib/material';
-
 /* ----------------------------------------------------------------------------
  * Brand & actions shared across multiple components.
  * -------------------------------------------------------------------------- */
@@ -415,6 +413,30 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
         excludeEmptyString: true,
         message: 'Enter a valid phone number',
       }),
+  }),
+  forgotPassword: yup.object({
+    email: yup
+      .string()
+      .trim()
+      .email('Enter a valid email address')
+      .max(AUTH_FIELD_LIMITS.email, 'Email cannot exceed 300 characters')
+      .required('Email is required'),
+    confirmPassword: yup
+      .string()
+      .oneOf([yup.ref('password')], 'Passwords must match')
+      .required('Confirm password is required'),
+    password: yup
+      .string()
+      .required('Password is required')
+      .min(8, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .max(AUTH_FIELD_LIMITS.password, 'Password cannot exceed 128 characters')
+      .matches(/[A-Z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/[a-z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/\d/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(
+        /[^A-Za-z0-9]/,
+        'Use 8+ characters with uppercase, lowercase, number & special character',
+      ),
   }),
 } as const;
 
