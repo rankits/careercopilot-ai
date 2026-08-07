@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { EmbeddingConfig } from '@/modules/ai-embeddings/config/embedding.config.js';
 import { createEmbeddingProvider } from '@/modules/ai-embeddings/embedding-provider.factory.js';
 import {
@@ -7,6 +7,10 @@ import {
 } from '@/modules/ai-embeddings/observability/embedding.metrics.js';
 import type { EmbeddingHttpClient } from '@/modules/ai-embeddings/providers/embedding-http.client.js';
 import { OpenRouterEmbeddingProvider } from '@/modules/ai-embeddings/providers/openrouter-embedding.provider.js';
+import {
+  embeddingProviderCircuitBreaker,
+  fingerprintCircuitBreakerScope,
+} from '@/modules/ai-embeddings/utils/embedding-circuit-breaker.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
 class RecordingHttpClient implements EmbeddingHttpClient {
@@ -64,9 +68,23 @@ const baseConfig: EmbeddingConfig = {
   },
 };
 
+// Breaker state is scoped per API key fingerprint (so a shared vs.
+// recommendation OpenRouter key never cross-block each other); reset the
+// scopes exercised by this file's fixtures before/after every test.
+const testBreakerScopes = ['openrouter-secret-key', 'secret-key', 'key'].map((apiKey) =>
+  fingerprintCircuitBreakerScope('openrouter', apiKey),
+);
+const resetTestBreakerScopes = () =>
+  Promise.all(testBreakerScopes.map((scope) => embeddingProviderCircuitBreaker.close(scope)));
+
 describe('OpenRouterEmbeddingProvider', () => {
-  beforeEach(() => {
+  beforeEach(async () => {
     resetEmbeddingMetricsForTests();
+    await resetTestBreakerScopes();
+  });
+
+  afterEach(async () => {
+    await resetTestBreakerScopes();
   });
 
   describe('factory and configuration', () => {
@@ -414,6 +432,86 @@ describe('OpenRouterEmbeddingProvider', () => {
         code: 'OPENROUTER_EMBEDDING_REQUEST_FAILED',
       });
       expect(http.calls).toHaveLength(3);
+    });
+  });
+
+  describe('circuit breaker on insufficient credits (HTTP 402)', () => {
+    const buildProvider = (http: EmbeddingHttpClient) =>
+      new OpenRouterEmbeddingProvider(
+        {
+          provider: 'openrouter',
+          model: 'model',
+          dimensions: 768,
+          batchSize: 16,
+          timeoutMs: 10_000,
+          maxRetries: 3,
+          documentPrefix: '',
+          queryPrefix: '',
+          apiKey: 'key',
+          baseUrl: 'https://openrouter.ai/api/v1',
+        },
+        http,
+      );
+
+    it('classifies HTTP 402 as OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS and does not retry', async () => {
+      const creditsError = new AppError(
+        'Insufficient credits. This account never purchased credits.',
+        402,
+        'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+      );
+      const http = new RecordingHttpClient([creditsError]);
+      const provider = buildProvider(http);
+
+      await expect(provider.generateEmbedding('test')).rejects.toMatchObject({
+        code: 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+        statusCode: 402,
+      });
+      expect(http.calls).toHaveLength(1);
+    });
+
+    it('opens the circuit breaker after insufficient credits and skips the API on the next call', async () => {
+      const creditsError = new AppError('Insufficient credits.', 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+      const http = new RecordingHttpClient([
+        creditsError,
+        { data: [{ index: 0, embedding: vector(768) }] },
+      ]);
+      const provider = buildProvider(http);
+
+      await expect(provider.generateEmbedding('first')).rejects.toMatchObject({
+        code: 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+      });
+      expect(http.calls).toHaveLength(1);
+
+      const scope = fingerprintCircuitBreakerScope('openrouter', 'key');
+      const state = await embeddingProviderCircuitBreaker.getState(scope);
+      expect(state.open).toBe(true);
+      expect(state.code).toBe('OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+
+      // Second call must short-circuit: no additional HTTP call, distinct error code.
+      await expect(provider.generateEmbedding('second')).rejects.toMatchObject({
+        code: 'EMBEDDING_PROVIDER_CIRCUIT_OPEN',
+        statusCode: 503,
+      });
+      expect(http.calls).toHaveLength(1);
+    });
+
+    it('resumes calling the API once the breaker is closed', async () => {
+      const creditsError = new AppError('Insufficient credits.', 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+      const http = new RecordingHttpClient([
+        creditsError,
+        { data: [{ index: 0, embedding: vector(768) }] },
+      ]);
+      const provider = buildProvider(http);
+
+      await expect(provider.generateEmbedding('first')).rejects.toMatchObject({
+        code: 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+      });
+
+      await embeddingProviderCircuitBreaker.close(fingerprintCircuitBreakerScope('openrouter', 'key'));
+
+      const result = await provider.generateEmbedding('second');
+      expect(result).toHaveLength(768);
+      expect(http.calls).toHaveLength(2);
     });
   });
 });

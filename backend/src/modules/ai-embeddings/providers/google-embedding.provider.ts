@@ -7,6 +7,7 @@ import {
   FetchEmbeddingHttpClient,
   type EmbeddingHttpClient,
 } from '@/modules/ai-embeddings/providers/embedding-http.client.js';
+import { fingerprintCircuitBreakerScope } from '@/modules/ai-embeddings/utils/embedding-circuit-breaker.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
 interface GoogleEmbeddingResponse {
@@ -29,7 +30,10 @@ export class GoogleEmbeddingProvider extends BaseEmbeddingProvider {
     options: GoogleEmbeddingProviderOptions,
     http: EmbeddingHttpClient = new FetchEmbeddingHttpClient(),
   ) {
-    super(options);
+    super({
+      ...options,
+      breakerScope: fingerprintCircuitBreakerScope(options.provider, options.apiKey),
+    });
     this.apiKey = options.apiKey;
     this.baseUrl = options.baseUrl.replace(/\/+$/, '');
     this.timeoutMs = options.timeoutMs;

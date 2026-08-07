@@ -85,6 +85,18 @@ const authSlice = createSlice({
       persistAuthSession(action.payload.accessToken, action.payload.user);
       persistProfileComplete(isProfileComplete);
     },
+    establishSession(state, action: PayloadAction<AuthResponse>) {
+      const isProfileComplete = action.payload.user.isProfileCreated === true;
+      state.isLoading = false;
+      state.user = action.payload.user;
+      state.accessToken = action.payload.accessToken;
+      state.isAuthenticated = true;
+      state.isProfileComplete = isProfileComplete;
+      state.isSessionResolved = true;
+      state.error = null;
+      persistAuthSession(action.payload.accessToken, action.payload.user);
+      persistProfileComplete(isProfileComplete);
+    },
   },
   extraReducers: (builder) => {
     builder

@@ -1,0 +1,165 @@
+import { JobApplicationStatus } from '@prisma/client';
+import {
+  AutoApplyChannelValue,
+  JobApplicationDto,
+  JobApplicationStatusValue,
+} from '@/modules/auto-apply/types/job-application.types.js';
+import { EligibilityResult } from '@/modules/auto-apply/types/eligibility.types.js';
+
+export interface UpdateJobApplicationStatusData {
+  status: JobApplicationStatusValue;
+  eligibilityResult?: EligibilityResult;
+}
+
+export interface CreateJobApplicationData {
+  userId: string;
+  jobId: string;
+  canonicalJobId: string;
+  companySlug: string;
+  jobTitle: string;
+}
+
+export interface UpdatePlanData {
+  channel: AutoApplyChannelValue;
+  resumeVersionId: string | null;
+  planInputsHash: string;
+  coverLetterContent?: string | null;
+}
+
+export interface FinalizeSubmissionData {
+  status: JobApplicationStatusValue;
+  externalApplicationId?: string;
+  externalConfirmationUrl?: string;
+  failureCode?: string;
+  failureMessage?: string;
+  markSubmittedNow?: boolean;
+}
+
+/** User-safe message for optimistic-lock / stale-status conflicts (AA-010). */
+export const STATUS_CONFLICT_MESSAGE =
+  'This application was already updated. Refresh to see its current state.';
+
+export interface IJobApplicationRepository {
+  findManyByUserId(userId: string): Promise<JobApplicationDto[]>;
+  findById(userId: string, id: string): Promise<JobApplicationDto | null>;
+  findByUserIdAndJobId(userId: string, jobId: string): Promise<JobApplicationDto | null>;
+  findByUserIdAndCanonicalJobId(
+    userId: string,
+    canonicalJobId: string,
+  ): Promise<JobApplicationDto | null>;
+  create(data: CreateJobApplicationData): Promise<JobApplicationDto>;
+  /**
+   * CAS status update: `WHERE id AND userId AND status = expectedStatus`.
+   * Throws 404 APPLICATION_NOT_FOUND or 409 INVALID_STATUS_TRANSITION (AA-010).
+   */
+  updateStatus(
+    userId: string,
+    id: string,
+    data: UpdateJobApplicationStatusData,
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto>;
+  /** Persists planner output (channel, selected resume, inputs hash) —
+   * bumps `planVersion` only when `planInputsHash` actually changes from
+   * the stored value, so it reflects meaningful regenerations rather than
+   * every idempotent re-poll. Never itself changes `status`. */
+  updatePlan(userId: string, id: string, data: UpdatePlanData): Promise<JobApplicationDto>;
+  /** Atomically claims a QUEUED application for processing by moving it to
+   * SUBMITTING — the worker's locking mechanism. Returns null (no-op) if
+   * the application isn't currently QUEUED, so redelivered/duplicate queue
+   * messages never double-process the same submission. */
+  claimForSubmission(userId: string, id: string): Promise<JobApplicationDto | null>;
+  /**
+   * CAS finalize: `WHERE id AND userId AND status = expectedStatus` (typically
+   * SUBMITTING). Throws 404 / 409 INVALID_STATUS_TRANSITION (AA-010).
+   */
+  finalizeSubmission(
+    userId: string,
+    id: string,
+    data: FinalizeSubmissionData,
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto>;
+  /** Counts submissions in consumed statuses (queued/submitting/submitted/…)
+   * created or queued since `since` — used by the readiness limit gate. */
+  countConsumedSince(userId: string, since: Date): Promise<number>;
+  /** Persists a trusted match score snapshot used by the readiness gate. */
+  updateMatchScore(userId: string, id: string, matchScore: number): Promise<JobApplicationDto>;
+  /**
+   * Atomically re-checks daily/weekly consumed counts under a row lock on
+   * the user's ApplicationRule, then transitions APPROVED|SUBMISSION_FAILED → QUEUED.
+   * Throws LIMIT_REACHED / INVALID_STATUS_TRANSITION / APPLICATION_NOT_FOUND.
+   */
+  queueAtomically(
+    userId: string,
+    id: string,
+    limits: { dailyLimit: number; weeklyLimit: number | null },
+  ): Promise<JobApplicationDto>;
+  delete(userId: string, id: string): Promise<boolean>;
+  /** Resets a withdrawn submission so the same job can be applied again. */
+  reopenFromWithdrawn(userId: string, id: string): Promise<JobApplicationDto>;
+  /** AA-043: persist last-viewed workspace step. */
+  updateProgressStep(userId: string, id: string, progressStep: string): Promise<JobApplicationDto>;
+  /** AA-060: persist per-application resume selection. */
+  updateResumeSelection(
+    userId: string,
+    id: string,
+    resumeVersionId: string,
+  ): Promise<JobApplicationDto>;
+  /**
+   * AA-070: CAS handoff — set ACTION_REQUIRED + handoffOpenedAt + confirmation URL
+   * when status matches expectedStatus. Returns null if CAS missed (race).
+   */
+  recordHandoffOpened(
+    userId: string,
+    id: string,
+    data: { applyUrl: string; openedAt: Date },
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto | null>;
+  /** AA-072: mark applied (SUBMITTED) with optional notes/date. */
+  markApplied(
+    userId: string,
+    id: string,
+    data: { submittedAt: Date; appliedNotes: string | null },
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto | null>;
+  /** AA-073: abandon with reason. */
+  abandonApplication(
+    userId: string,
+    id: string,
+    data: {
+      abandonReason: string;
+      abandonNote: string | null;
+      targetStatus?: JobApplicationStatusValue;
+    },
+    expectedStatus: JobApplicationStatusValue,
+  ): Promise<JobApplicationDto | null>;
+  /** AA-072: update notes/date on already-SUBMITTED application. */
+  updateAppliedDetails(
+    userId: string,
+    id: string,
+    data: { submittedAt?: Date; appliedNotes?: string | null },
+  ): Promise<JobApplicationDto>;
+}
+
+export interface InitiateJobApplicationResult {
+  application: JobApplicationDto;
+  /** Fuzzy company+title matches among the caller's other active
+   * submissions — a warning, never a block (AJA-PROD-007 / AJA-DATA-003). */
+  possibleDuplicates: JobApplicationDto[];
+  /** AA-042: true when this initiate call reopened a withdrawn application. */
+  wasReopened?: boolean;
+}
+
+export interface IJobApplicationService {
+  listApplications(userId: string): Promise<JobApplicationDto[]>;
+  getApplication(userId: string, id: string): Promise<JobApplicationDto>;
+  initiate(userId: string, jobId: string): Promise<InitiateJobApplicationResult>;
+  evaluateEligibility(userId: string, id: string): Promise<JobApplicationDto>;
+  transitionStatus(
+    userId: string,
+    id: string,
+    toStatus: JobApplicationStatus,
+  ): Promise<JobApplicationDto>;
+  withdraw(userId: string, id: string): Promise<JobApplicationDto>;
+  delete(userId: string, id: string): Promise<boolean>;
+  reopen(userId: string, id: string): Promise<JobApplicationDto>;
+}

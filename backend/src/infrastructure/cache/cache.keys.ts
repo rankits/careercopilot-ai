@@ -18,4 +18,9 @@ export const CacheKeys = {
     PROFILE: (userId: string | number) => `careercopilot:user:profile:${userId}`,
     PREFIX: 'careercopilot:user:*',
   },
+  AI_EMBEDDINGS: {
+    /** Circuit-breaker state for a given embedding provider (e.g. "openrouter"). */
+    CIRCUIT_BREAKER: (provider: string) => `careercopilot:ai-embeddings:circuit:${provider}`,
+    PREFIX: 'careercopilot:ai-embeddings:*',
+  },
 } as const;

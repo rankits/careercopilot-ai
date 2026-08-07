@@ -12,11 +12,15 @@ import { authReducer } from '@/features/auth/authSlice';
 
 import { RegisterPage } from './RegisterPage';
 
-const { registerMock } = vi.hoisted(() => ({ registerMock: vi.fn() }));
+const { registerMock, startGoogleLoginMock } = vi.hoisted(() => ({
+  registerMock: vi.fn(),
+  startGoogleLoginMock: vi.fn(),
+}));
 
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
     register: registerMock,
+    startGoogleLogin: startGoogleLoginMock,
   },
 }));
 
@@ -66,6 +70,50 @@ async function completeValidForm(user: ReturnType<typeof userEvent.setup>) {
 describe('RegisterPage', () => {
   beforeEach(() => {
     registerMock.mockReset();
+    startGoogleLoginMock.mockReset();
+  });
+
+  it('starts Google sign-in and redirects to the authorization URL', async () => {
+    const user = setupUser();
+    const assignMock = vi.fn();
+    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        assign: assignMock,
+        hash: '',
+        href: 'http://localhost/register',
+        pathname: '/register',
+        search: '',
+      },
+    });
+    startGoogleLoginMock.mockResolvedValue({
+      authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?mock=1',
+    });
+
+    try {
+      renderPage();
+
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
+
+      await waitFor(() => expect(startGoogleLoginMock).toHaveBeenCalledWith(undefined));
+      expect(assignMock).toHaveBeenCalledWith(
+        'https://accounts.google.com/o/oauth2/v2/auth?mock=1',
+      );
+    } finally {
+      if (locationDescriptor) {
+        Object.defineProperty(window, 'location', locationDescriptor);
+      }
+    }
+  });
+
+  it('shows a coming-soon toast for LinkedIn sign-in', async () => {
+    const user = setupUser();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /continue with linkedin/i }));
+
+    expect(await screen.findByText(/linkedin sign-in is not available yet/i)).toBeInTheDocument();
   });
 
   it('renders the shared registration form and links to login', async () => {
