@@ -1,11 +1,9 @@
-import {
-  CheckCircleIcon,
-  IconButton,
-  Menu,
-  styled,
-  type SxProps,
-  type Theme,
-} from '@/lib/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import IconButton from '@mui/material/IconButton';
+import Menu from '@mui/material/Menu';
+import { styled } from '@mui/material/styles';
+import type { SxProps, Theme } from '@mui/material/styles';
+
 import {
   borderRadius,
   colorTokens,
