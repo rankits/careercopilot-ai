@@ -9,7 +9,6 @@ import { Button } from '@/components/atoms/Button';
 import { APP_ACTIONS, JOB_UI } from '@/constants/ui';
 import { DASHBOARD_JOB_ROW_COPY, DASHBOARD_JOB_ROW_LIMITS } from '@/constants/ui';
 
-
 import type { JobCardData } from '../JobCard';
 
 import {

@@ -2,6 +2,7 @@ import LinkedInIcon from '@mui/icons-material/LinkedIn';
 import Box from '@mui/material/Box';
 import MuiButton from '@mui/material/Button';
 import Chip from '@mui/material/Chip';
+import type { SxProps, Theme } from '@mui/material/styles';
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
 import googleBrandIcon from '@/assets/icons/google-brand.svg';
@@ -42,26 +43,26 @@ export function SocialConnectButton({
 }: SocialConnectButtonProps) {
   const isDisabled = Boolean(disabled || comingSoon);
 
+  const sx: SxProps<Theme> = isDisabled
+    ? {
+        ...(socialConnectButtonSx as object),
+        '&.Mui-disabled': {
+          bgcolor: colorTokens.backgroundApp,
+          borderColor: colorTokens.borderDefault,
+          color: colorTokens.textSecondary,
+          opacity: 0.72,
+        },
+      }
+    : socialConnectButtonSx;
+
   return (
     <MuiButton
       {...props}
       aria-disabled={isDisabled}
       disabled={isDisabled}
       fullWidth
+      sx={sx}
       type="button"
-      sx={[
-        socialConnectButtonSx,
-        isDisabled
-          ? {
-              '&.Mui-disabled': {
-                bgcolor: colorTokens.backgroundApp,
-                borderColor: colorTokens.borderDefault,
-                color: colorTokens.textSecondary,
-                opacity: 0.72,
-              },
-            }
-          : null,
-      ]}
     >
       {providerIcons[provider]}
       <Box alignItems="center" display="flex" gap={spacing[2]} justifyContent="space-between">

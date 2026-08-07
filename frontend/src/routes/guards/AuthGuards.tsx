@@ -3,7 +3,6 @@ import { Navigate, Outlet } from 'react-router-dom';
 
 import { RouteLoading } from '@/routes/components/RouteLoading';
 
-
 import { useAuthBootstrap } from '@/features/auth/hooks/useAuthBootstrap';
 import { useAppSelector } from '@/hooks/redux';
 

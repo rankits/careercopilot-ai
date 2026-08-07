@@ -4,8 +4,6 @@ import { Component, type ErrorInfo, type ReactNode } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 
-
-
 interface RouteErrorBoundaryProps {
   children: ReactNode;
 }
