@@ -21,8 +21,12 @@ export const UserMenuButton = styled('button')({
   textAlign: 'left',
 
   '@media (max-width: 56rem)': {
-    gap: 0,
-    gridTemplateColumns: 'auto',
+    gap: spacing[2],
+    gridTemplateColumns: 'auto auto',
+
+    '& .header-user-meta': {
+      display: 'none',
+    },
   },
 });
 

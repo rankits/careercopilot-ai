@@ -11,17 +11,18 @@ import { useCurrentUser } from '@/features/user/hooks/useCurrentUser';
 import { useUpdateUserProfile } from '@/features/user/hooks/useUpdateUserProfile';
 
 import { mapUserProfileUpdateError } from '@/features/user/utils/mapUserProfileUpdateError';
-import { Box, MenuItem, Paper, Skeleton, TextField } from '@/lib/material';
+import { Box, MenuItem, Paper, Skeleton } from '@/lib/material';
 
 import { useSetupDirty } from './SetupDirtyContext';
 import {
   COUNTRY_OPTIONS,
-  isValidE164Phone,
+  isValidPhone,
   joinFullName,
   splitFullName,
   validateFullName,
 } from './setupFormUtils';
 import { SetupSectionHeading } from './SetupSectionHeading';
+import { SetupTextField } from './SetupTextField';
 
 type FieldErrors = Partial<
   Record<'fullName' | 'phone' | 'currentLocation' | 'currentCountry', string>
@@ -84,8 +85,8 @@ export function PersonalContactSection() {
     if (fullNameError) {
       next.fullName = fullNameError;
     }
-    if (!isValidE164Phone(phone)) {
-      next.phone = 'Enter a valid phone number, e.g. +14155552671.';
+    if (!isValidPhone(phone)) {
+      next.phone = 'Enter a valid phone number, e.g. 9876543210 or +919876543210.';
     }
     if (!currentLocation.trim()) {
       next.currentLocation = 'Enter your current city or region.';
@@ -217,7 +218,7 @@ export function PersonalContactSection() {
           gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
         }}
       >
-        <TextField
+        <SetupTextField
           error={Boolean(showError('fullName'))}
           fullWidth
           helperText={showError('fullName')}
@@ -227,14 +228,14 @@ export function PersonalContactSection() {
           required
           value={fullName}
         />
-        <TextField
+        <SetupTextField
           disabled
           fullWidth
           helperText="To change your email, go to Account settings."
           label="Email"
           value={user?.email ?? ''}
         />
-        <TextField
+        <SetupTextField
           error={Boolean(showError('phone'))}
           fullWidth
           helperText={
@@ -246,7 +247,7 @@ export function PersonalContactSection() {
           onBlur={() => setTouched((current) => ({ ...current, phone: true }))}
           value={phone}
         />
-        <TextField
+        <SetupTextField
           error={Boolean(showError('currentLocation'))}
           fullWidth
           helperText={
@@ -259,7 +260,7 @@ export function PersonalContactSection() {
           required
           value={currentLocation}
         />
-        <TextField
+        <SetupTextField
           error={Boolean(showError('currentCountry'))}
           fullWidth
           helperText={
@@ -281,7 +282,7 @@ export function PersonalContactSection() {
               {country.label}
             </MenuItem>
           ))}
-        </TextField>
+        </SetupTextField>
       </Box>
       <Box>
         <Button disabled={!isDirty} isLoading={isSaving} onClick={() => void handleSave()}>
