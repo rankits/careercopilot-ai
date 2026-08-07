@@ -1,15 +1,14 @@
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
+import Skeleton from '@mui/material/Skeleton';
+
 import { Button } from '@/components/atoms/Button';
 import type { JobCardData } from '@/components/molecules';
 
 import { DASHBOARD_COPY } from '@/constants/pages/dashboard';
 import { ROUTES } from '@/constants/routes';
 import { JOB_UI } from '@/constants/ui';
-import {
-  ArrowForwardIcon,
-  LocationOnOutlinedIcon,
-  Skeleton,
-  WorkOutlineOutlinedIcon,
-} from '@/lib/material';
 
 import {
   EmptyText,

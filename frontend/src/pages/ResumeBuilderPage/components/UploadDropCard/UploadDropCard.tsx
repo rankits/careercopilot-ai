@@ -1,12 +1,10 @@
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
 import type { DragEvent, RefObject } from 'react';
 
-import {
-  Box,
-  CircularProgress,
-  CloudUploadOutlinedIcon,
-  FolderOutlinedIcon,
-  Typography,
-} from '@/lib/material';
 import { colorTokens } from '@/tokens';
 
 import { CardSubtitle, CardTitle, DropZone, ErrorText, UploadCard } from './styles';

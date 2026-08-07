@@ -1,3 +1,6 @@
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useEffect, useRef, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
@@ -11,7 +14,6 @@ import { useCopilotSession } from '@/features/copilot/hooks/useCopilotSession';
 
 import { BRAND_NAME, CAREER_COPILOT_COPY } from '@/constants/ui';
 import { COPILOT_SUGGESTED_PROMPTS } from '@/features/copilot/types/copilot.types';
-import { Box, CircularProgress, useMediaQuery } from '@/lib/material';
 
 import {
   ChatDialogPaperSx,

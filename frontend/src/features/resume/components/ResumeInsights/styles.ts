@@ -1,4 +1,6 @@
-import { Box, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+
 import { borderRadius, borderWidth, colorTokens, spacing } from '@/tokens';
 
 export const InsightsCard = styled(Box)({

@@ -1,11 +1,9 @@
-import type { SvgIconComponent } from '@/lib/material';
-import {
-  AutoAwesomeOutlinedIcon,
-  BarChartOutlinedIcon,
-  CloudUploadOutlinedIcon,
-  DownloadIcon,
-  WorkOutlineOutlinedIcon,
-} from '@/lib/material';
+import type { SvgIconComponent } from '@mui/icons-material';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import DownloadIcon from '@mui/icons-material/Download';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 
 export type ResumeBuilderStep = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10;
 

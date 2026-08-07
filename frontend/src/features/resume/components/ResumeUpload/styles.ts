@@ -1,4 +1,7 @@
-import { Box, styled, type SxProps, type Theme } from '@/lib/material';
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+import type { SxProps, Theme } from '@mui/material/styles';
+
 import { borderRadius, borderWidth, colorTokens, shadows, spacing } from '@/tokens';
 
 export const UploadCard = styled(Box)({
