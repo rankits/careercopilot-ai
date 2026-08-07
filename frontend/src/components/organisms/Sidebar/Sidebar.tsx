@@ -55,11 +55,8 @@ import {
   MobileDrawerTitleGroup,
   MoreNavButton,
   NavButton,
-<<<<<<< HEAD
   ResumeScoreBadge,
   SidebarFooter,
-=======
->>>>>>> feat(auto-apply): phase 1 - safety cleanup, dead code removal, decisions
   SidebarHeader,
   SidebarLogoImage,
   SidebarLogoLink,
@@ -560,7 +557,6 @@ export function Sidebar({
       </SidebarNav>
 
       {collapsed ? null : (
-<<<<<<< HEAD
         <SidebarFooter>
           <LatestResumePanel
             hasLatestResume={hasLatestResume}
@@ -574,15 +570,6 @@ export function Sidebar({
           />
           <AiAssistantPanel onOpenAiAssistant={onOpenAiAssistant} />
         </SidebarFooter>
-=======
-        <SidebarPanel>
-          <Typography sx={sidebarTextSx.title}>Upload Resume</Typography>
-          <Typography sx={sidebarTextSx.muted}>Get AI analysis and better job matches</Typography>
-          <Button fullWidth onClick={onUploadResume} size="small">
-            Upload Now
-          </Button>
-        </SidebarPanel>
->>>>>>> feat(auto-apply): phase 1 - safety cleanup, dead code removal, decisions
       )}
     </SidebarRoot>
   );

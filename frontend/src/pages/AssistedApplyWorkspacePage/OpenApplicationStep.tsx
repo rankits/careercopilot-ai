@@ -19,7 +19,6 @@ import {
   Dialog,
   DialogActions,
   DialogContent,
-  DialogContentText,
   DialogTitle,
   MuiButton,
   Stack,
@@ -180,6 +179,32 @@ export function OpenApplicationStep({
 
       {localError ? <Alert severity="error">{localError}</Alert> : null}
 
+      {popupBlockedUrl ? (
+        <Alert
+          action={
+            <Stack direction="row" spacing={1}>
+              <MuiButton
+                component="a"
+                href={popupBlockedUrl}
+                rel="noopener noreferrer"
+                size="small"
+                target="_blank"
+                variant="outlined"
+              >
+                Open manually
+              </MuiButton>
+              <MuiButton onClick={() => void handleCopy()} size="small" variant="text">
+                {copied ? 'Copied!' : 'Copy link'}
+              </MuiButton>
+            </Stack>
+          }
+          severity="warning"
+        >
+          Your browser blocked the new tab. Use the link below to continue on the employer&apos;s
+          site.
+        </Alert>
+      ) : null}
+
       <WorkspaceStickyActions>
         <Box>
           {blocked && !alreadyOpened ? (
@@ -251,38 +276,6 @@ export function OpenApplicationStep({
           </Box>
         ) : null}
       </WorkspaceStickyActions>
-
-      {/* AA-071 popup blocked recovery */}
-      <Dialog
-        aria-labelledby="popup-blocked-title"
-        onClose={() => setPopupBlockedUrl(null)}
-        open={Boolean(popupBlockedUrl)}
-      >
-        <DialogTitle id="popup-blocked-title">Your browser blocked the new tab</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            We&apos;ve already recorded that you opened this application. Use the link below to
-            continue on the employer&apos;s site.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          {effectiveApplyUrl ? (
-            <MuiButton
-              component="a"
-              href={effectiveApplyUrl}
-              rel="noopener noreferrer"
-              target="_blank"
-              variant="contained"
-            >
-              Open manually
-            </MuiButton>
-          ) : null}
-          <MuiButton onClick={() => void handleCopy()} variant="outlined">
-            {copied ? 'Copied!' : 'Copy link'}
-          </MuiButton>
-          <MuiButton onClick={() => setPopupBlockedUrl(null)}>Close</MuiButton>
-        </DialogActions>
-      </Dialog>
 
       {/* AA-072 mark as applied */}
       <Dialog

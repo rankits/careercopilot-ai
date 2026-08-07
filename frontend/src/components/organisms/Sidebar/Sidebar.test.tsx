@@ -31,7 +31,7 @@ describe('Sidebar', () => {
     );
     expect(screen.getByRole('link', { name: /ai match/i })).toHaveAttribute('href', '/ai-match');
     expect(screen.queryByRole('button', { name: /^ai match$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /applications/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^applications$/i })).toHaveAttribute(
       'href',
       '/applications',
     );
@@ -42,7 +42,9 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: /^Auto Apply$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /download latest/i })).toBeInTheDocument();
-    expect(screen.getByText(/no resume uploaded yet|your most recent upload will appear here/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/no resume uploaded yet|your most recent upload will appear here/i),
+    ).toBeInTheDocument();
   });
 
   it('collapses labels for icon-only mode and exposes names via aria-label', () => {

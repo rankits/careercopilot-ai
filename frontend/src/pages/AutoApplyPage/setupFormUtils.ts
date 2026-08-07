@@ -38,6 +38,42 @@ export function joinFullName(firstName?: string | null, lastName?: string | null
   return [firstName, lastName].filter(Boolean).join(' ').trim();
 }
 
+export function validateFullName(fullName: string): string | undefined {
+  const trimmed = fullName.trim();
+  if (!trimmed) {
+    return 'Enter your full name.';
+  }
+
+  const { firstName, lastName } = splitFullName(trimmed);
+  if (!firstName) {
+    return 'Enter your full name.';
+  }
+  if (!lastName) {
+    return 'Please enter both your first and last name.';
+  }
+
+  return undefined;
+}
+
+export function validateBasicIdentityFields(input: {
+  preferredName: string;
+  authorizationCountry: string;
+}): Partial<Record<'preferredName' | 'authorizationCountry', string>> {
+  const errors: Partial<Record<'preferredName' | 'authorizationCountry', string>> = {};
+
+  const preferredName = input.preferredName.trim();
+  if (preferredName.length > 80) {
+    errors.preferredName = 'Preferred name must be 80 characters or fewer.';
+  }
+
+  const authorizationCountry = input.authorizationCountry.trim();
+  if (authorizationCountry && !/^[A-Za-z]{2}$/.test(authorizationCountry)) {
+    errors.authorizationCountry = 'Enter a 2-letter country code, e.g. US.';
+  }
+
+  return errors;
+}
+
 export function isValidHttpUrl(value: string): boolean {
   if (!value.trim()) return true;
   try {
@@ -51,8 +87,7 @@ export function isValidHttpUrl(value: string): boolean {
 export const WORK_AUTHORIZATION_OPTIONS = [
   {
     value: 'AUTHORIZED_NO_SPONSORSHIP',
-    label: (countryLabel: string) =>
-      `Authorized to work in ${countryLabel} without sponsorship`,
+    label: (countryLabel: string) => `Authorized to work in ${countryLabel} without sponsorship`,
   },
   {
     value: 'NEEDS_SPONSORSHIP',

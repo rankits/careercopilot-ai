@@ -1,7 +1,5 @@
 import type { SetupSectionId, SetupStatusDto } from '@/features/auto-apply/types/autoApply.types';
-import {
-  firstIncompleteRequiredSectionId,
-} from '@/features/auto-apply/utils/setupSectionNavigation';
+import { firstIncompleteRequiredSectionId } from '@/features/auto-apply/utils/setupSectionNavigation';
 import {
   Alert,
   Box,
@@ -16,6 +14,8 @@ import {
   TextField,
   Typography,
 } from '@/lib/material';
+
+import { setupPageSx } from './setupPageStyles';
 
 export interface SetupChecklistProps {
   activeSection: SetupSectionId;
@@ -67,12 +67,16 @@ export function SetupChecklist({
     );
   }
 
-  if (!status) return null;
+  if (!status) {
+    return (
+      <Alert severity="info" sx={{ mb: 3 }}>
+        Loading your setup checklist…
+      </Alert>
+    );
+  }
 
   const nextSectionId = firstIncompleteRequiredSectionId(status.sections);
-  const allRequiredComplete = status.sections
-    .filter((s) => s.required)
-    .every((s) => s.complete);
+  const allRequiredComplete = status.sections.filter((s) => s.required).every((s) => s.complete);
   const primaryLabel = allRequiredComplete ? 'Review setup' : 'Continue setup';
 
   return (
@@ -88,12 +92,9 @@ export function SetupChecklist({
         overflow: 'hidden',
       }}
     >
-      <Stack
-        spacing={1}
-        sx={{ borderBottom: 1, borderColor: 'divider', p: 2 }}
-      >
+      <Stack spacing={1} sx={{ borderBottom: 1, borderColor: 'divider', p: 2 }}>
         <Box>
-          <Typography component="p" sx={{ fontSize: 13, fontWeight: 700, mb: 0.75 }} variant="subtitle1">
+          <Typography component="p" sx={{ ...setupPageSx.sidebarTitle, mb: 0.75 }}>
             Your setup
           </Typography>
           <LinearProgress
@@ -167,7 +168,7 @@ export function SetupChecklist({
                   color: section.complete ? 'success.dark' : 'text.secondary',
                   display: 'flex',
                   flex: '0 0 auto',
-                  fontSize: 11,
+                  fontSize: '0.75rem',
                   fontWeight: 700,
                   height: 20,
                   justifyContent: 'center',
@@ -177,10 +178,10 @@ export function SetupChecklist({
                 {section.complete ? <CheckCircleIcon sx={{ fontSize: 16 }} /> : sectionNumber}
               </Box>
               <Box sx={{ minWidth: 0 }}>
-                <Typography noWrap sx={{ fontSize: 12, fontWeight: 600 }}>
+                <Typography noWrap sx={setupPageSx.sidebarItemTitle}>
                   {section.label}
                 </Typography>
-                <Typography color="text.secondary" sx={{ fontSize: 10 }}>
+                <Typography color="text.secondary" sx={setupPageSx.sidebarItemCaption}>
                   {section.required ? 'Required' : 'Optional'}
                 </Typography>
               </Box>
