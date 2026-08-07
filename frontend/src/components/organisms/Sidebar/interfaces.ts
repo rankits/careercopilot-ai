@@ -8,6 +8,14 @@ export interface SidebarNavItem {
   icon: SvgIconComponent;
   id: string;
   label: string;
+  /** Compact label for the mobile bottom bar; falls back to `label`. */
+  shortLabel?: string;
+}
+
+export interface SidebarNavSection {
+  id: string;
+  itemIds: readonly string[];
+  label: string;
 }
 
 export interface SidebarProps {
@@ -16,13 +24,18 @@ export interface SidebarProps {
   isDownloadingLatestResume?: boolean;
   items?: SidebarNavItem[];
   latestResumeName?: string | null;
+  latestResumeScore?: number | null;
+  latestResumeUploadedAt?: string | null;
   mobileMode?: MobileSidebarMode;
+  onOpenAiAssistant?: () => void;
   onDownloadLatestResume?: () => void;
   onItemSelect?: (item: SidebarNavItem) => void;
   onLogoutClick?: () => void;
   onOpenResumeVersions?: () => void;
   onSettingsClick?: () => void;
   onVariantChange?: (variant: SidebarVariant) => void;
+  resumeListLoaded?: boolean;
+  sections?: readonly SidebarNavSection[];
   tone?: SidebarTone;
   userName?: string;
   variant?: SidebarVariant;

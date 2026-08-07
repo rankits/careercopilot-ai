@@ -6,6 +6,7 @@ import type {
 import { colorTokens } from '@/tokens';
 
 export const applicationDetailStatusOptions = [
+  { label: 'Saved', value: 'SAVED' as ApiApplicationStatus },
   { label: 'Preparing', value: 'PREPARING' as ApiApplicationStatus },
   { label: 'Applied', value: 'APPLIED' as ApiApplicationStatus },
   { label: 'Screening', value: 'SCREENING' as ApiApplicationStatus },

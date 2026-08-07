@@ -63,12 +63,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(function Input(
         },
         input: {
           ...(typeof inputSlotProps === 'function' ? {} : inputSlotProps),
-          endAdornment: endAdornment ? (
-            <InputAdornment position="end">{endAdornment}</InputAdornment>
-          ) : undefined,
-          startAdornment: startAdornment ? (
-            <InputAdornment position="start">{startAdornment}</InputAdornment>
-          ) : undefined,
+          ...(endAdornment
+            ? {
+                endAdornment: <InputAdornment position="end">{endAdornment}</InputAdornment>,
+              }
+            : {}),
+          ...(startAdornment
+            ? {
+                startAdornment: <InputAdornment position="start">{startAdornment}</InputAdornment>,
+              }
+            : {}),
         },
         inputLabel: {
           shrink: true,

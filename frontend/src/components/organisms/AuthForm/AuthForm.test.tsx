@@ -108,6 +108,35 @@ describe('AuthForm', () => {
     await waitFor(() => expect(handleSubmit).toHaveBeenCalledTimes(1));
   });
 
+  it('submits rememberMe as a boolean when the checkbox is toggled', async () => {
+    const user = userEvent.setup();
+    const handleSubmit = vi.fn();
+
+    render(<AuthForm onValidSubmit={handleSubmit} />);
+
+    const rememberMe = screen.getByRole('checkbox', { name: /remember me/i });
+    expect(rememberMe).toBeChecked();
+
+    await user.click(rememberMe);
+    expect(rememberMe).not.toBeChecked();
+    await user.click(rememberMe);
+    expect(rememberMe).toBeChecked();
+
+    await user.type(screen.getByRole('textbox', { name: /email address/i }), 'user@example.com');
+    await user.type(screen.getByLabelText(/^password$/i, { selector: 'input' }), 'password123');
+    await user.click(screen.getByRole('button', { name: /login/i }));
+
+    await waitFor(() => expect(handleSubmit).toHaveBeenCalledTimes(1));
+    expect(handleSubmit.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        email: 'user@example.com',
+        password: 'password123',
+        rememberMe: true,
+      }),
+    );
+    expect(typeof handleSubmit.mock.calls[0]?.[0]?.rememberMe).toBe('boolean');
+  });
+
   it('shows validation errors from the active yup schema', async () => {
     const user = userEvent.setup();
     const handleSubmit = vi.fn();

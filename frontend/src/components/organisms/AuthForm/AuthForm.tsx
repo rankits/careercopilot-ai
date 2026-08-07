@@ -1,5 +1,12 @@
 import { useMemo, useState, type MouseEvent } from 'react';
-import { useForm, type FieldValues, type Path, type Resolver } from 'react-hook-form';
+import {
+  Controller,
+  useForm,
+  type DefaultValues,
+  type FieldValues,
+  type Path,
+  type Resolver,
+} from 'react-hook-form';
 
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -99,11 +106,14 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
   );
   const schema = validationSchema ?? AUTH_FORM_VALIDATION_SCHEMAS[mode];
   const {
+    control,
     formState: { errors },
     handleSubmit,
     register,
     trigger,
   } = useForm<TFormValues>({
+    defaultValues: (mode === 'login' ? { rememberMe: true } : undefined) as
+      DefaultValues<TFormValues> | undefined,
     mode: 'onTouched',
     reValidateMode: 'onChange',
     resolver: yupResolver(schema) as Resolver<TFormValues>,
@@ -288,7 +298,20 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
         {mode === 'login' ? (
           <Box sx={authFormSx.actions}>
             <FormControlLabel
-              control={<Checkbox defaultChecked {...register('rememberMe' as Path<TFormValues>)} />}
+              control={
+                <Controller
+                  control={control}
+                  name={'rememberMe' as Path<TFormValues>}
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={Boolean(field.value)}
+                      inputRef={field.ref}
+                      onBlur={field.onBlur}
+                      onChange={(_event, checked) => field.onChange(checked)}
+                    />
+                  )}
+                />
+              }
               label={AUTH_FORM_STATIC_COPY.rememberMeLabel}
             />
             <Link

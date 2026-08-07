@@ -20,6 +20,7 @@ import {
 } from '@/modules/jobs/events/job.events.js';
 import { serializeJobSemanticContent } from '@/modules/jobs/utils/job-semantic-content.js';
 import { resolveJobEffectiveDate } from '@/modules/jobs/utils/job-effective-date-resolver.js';
+import { resolveEmploymentType, resolveRemoteType } from '@/modules/jobs/utils/provider-mapping.js';
 import { jobAgePolicy } from '@/modules/jobs/policies/job-age-policy.js';
 import { jobsLogger } from '@/shared/utils/logger.js';
 
@@ -52,6 +53,7 @@ export interface CanonicalJobWrite {
   companySlug: string;
   title: string;
   remoteType: string;
+  employmentType: string | null;
   descriptionHtml: string;
   descriptionText: string;
   salaryMin?: number;
@@ -184,6 +186,7 @@ class PrismaJobPersistenceTransaction implements JobPersistenceTransaction {
         descriptionHtml: input.descriptionHtml,
         descriptionText: input.descriptionText,
         remoteType: input.remoteType,
+        employmentType: input.employmentType,
         salaryMin: input.salaryMin,
         salaryMax: input.salaryMax,
         currency: input.currency,
@@ -205,6 +208,7 @@ class PrismaJobPersistenceTransaction implements JobPersistenceTransaction {
         descriptionHtml: input.descriptionHtml,
         descriptionText: input.descriptionText,
         remoteType: input.remoteType,
+        employmentType: input.employmentType,
         salaryMin: input.salaryMin,
         salaryMax: input.salaryMax,
         currency: input.currency,
@@ -426,15 +430,20 @@ export class PrismaJobRepository implements IJobRepository {
         };
       }
 
+      const remoteType = resolveRemoteType(job.location);
+      const employmentType = resolveEmploymentType(job.tags);
+      const hasHybridTag = job.tags.some((tag) => /\bhybrid\b/i.test(tag));
+      const resolvedRemoteType = remoteType === 'HYBRID' || hasHybridTag ? 'HYBRID' : remoteType;
+
       const incomingSemantic = serializeJobSemanticContent({
         companySlug: job.normalizedCompany,
         companyName: job.companyName,
         title: job.title,
         descriptionText: job.description,
-        remoteType: job.location.isRemote ? 'REMOTE' : 'ONSITE',
+        remoteType: resolvedRemoteType,
         skills,
         tags,
-        employmentType: null,
+        employmentType,
       });
       const semanticChanged =
         existing !== null && serializeJobSemanticContent(existing) !== incomingSemantic;
@@ -458,7 +467,8 @@ export class PrismaJobRepository implements IJobRepository {
         title: job.title,
         descriptionHtml: job.description,
         descriptionText: job.description,
-        remoteType: job.location.isRemote ? 'REMOTE' : 'ONSITE',
+        remoteType: resolvedRemoteType,
+        employmentType,
         salaryMin: job.salary?.min,
         salaryMax: job.salary?.max,
         currency: job.salary?.currency,

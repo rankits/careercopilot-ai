@@ -52,7 +52,7 @@ export function useLogin() {
       await loginMutation.mutateAsync({
         email: values.email.trim().toLowerCase(),
         password: values.password,
-        rememberMe: values.rememberMe,
+        rememberMe: Boolean(values.rememberMe),
       });
 
       return { succeeded: true };

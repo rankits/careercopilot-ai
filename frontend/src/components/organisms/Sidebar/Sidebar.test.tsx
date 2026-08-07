@@ -18,6 +18,8 @@ describe('Sidebar', () => {
 
     expect(screen.getByLabelText(/primary navigation/i)).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^career copilot$/i })).toHaveAttribute('href', '/app');
+    expect(screen.getByText('CAREER')).toBeInTheDocument();
+    expect(screen.getByText('RESUME')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
       'aria-current',
       'page',
@@ -103,6 +105,9 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /^jobs feed$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^ai match$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^applications$/i })).toBeInTheDocument();
+    expect(screen.getByText(/^home$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^jobs$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^apps$/i)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^saved jobs$/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument();
 
@@ -118,7 +123,7 @@ describe('Sidebar', () => {
     expect(screen.getByRole('link', { name: /^resume builder$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^saved resumes$/i })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /download latest resume/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /download latest/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /edit profile/i })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: /^logout$/i }));

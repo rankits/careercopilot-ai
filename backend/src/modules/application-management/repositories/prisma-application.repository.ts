@@ -162,6 +162,26 @@ export class PrismaApplicationRepository implements IApplicationRepository {
     return app ? this.mapToDto(app) : null;
   }
 
+  async findSavedJobIds(userId: string, jobIds: string[]): Promise<string[]> {
+    if (jobIds.length === 0) {
+      return [];
+    }
+
+    const saved = await prisma.application.findMany({
+      where: {
+        userId,
+        jobId: { in: jobIds },
+        currentStatus: ApplicationStatus.SAVED,
+        archivedAt: null,
+      },
+      select: { jobId: true },
+    });
+
+    return saved
+      .map((row) => row.jobId)
+      .filter((jobId): jobId is string => typeof jobId === 'string' && jobId.length > 0);
+  }
+
   async list(options: ApplicationListOptions): Promise<PaginatedApplicationResult<ApplicationDto>> {
     const { userId, filters, pagination, sortBy } = options;
     const where: Prisma.ApplicationWhereInput = { userId };
@@ -190,10 +210,21 @@ export class PrismaApplicationRepository implements IApplicationRepository {
       ];
     }
 
+    if (filters.sourceType) {
+      if (Array.isArray(filters.sourceType)) {
+        where.primarySourceType = { in: filters.sourceType };
+      } else {
+        where.primarySourceType = filters.sourceType;
+      }
+    }
+
     const [field, direction] = sortBy.split(':') as [string, 'asc' | 'desc'];
-    const orderBy: Prisma.ApplicationOrderByWithRelationInput = {
-      [field]: direction,
-    };
+    const orderBy: Prisma.ApplicationOrderByWithRelationInput[] =
+      field === 'priority'
+        ? [{ priority: direction }, { updatedAt: 'desc' }]
+        : field === 'appliedAt'
+          ? [{ appliedAt: { sort: direction, nulls: 'last' } }, { createdAt: direction }]
+          : [{ [field]: direction }];
 
     const skip = (pagination.page - 1) * pagination.limit;
 
