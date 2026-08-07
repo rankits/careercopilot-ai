@@ -271,7 +271,7 @@ determine_version() {
   if [[ -n "${VERSION_OVERRIDE}" ]]; then
     VERSION="${VERSION_OVERRIDE}"
   else
-    VERSION="$(git rev-parse --short=12 HEAD)"
+    VERSION="$(git rev-parse --short=12 HEAD 2>/dev/null || echo "manual-$(date +%s)")"
   fi
 
   [[ -n "${VERSION}" ]] || die "VERSION resolved empty."

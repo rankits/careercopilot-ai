@@ -45,14 +45,14 @@ export function SocialConnectButton({
 
   const sx: SxProps<Theme> = isDisabled
     ? {
-        ...(socialConnectButtonSx as object),
-        '&.Mui-disabled': {
-          bgcolor: colorTokens.backgroundApp,
-          borderColor: colorTokens.borderDefault,
-          color: colorTokens.textSecondary,
-          opacity: 0.72,
-        },
-      }
+      ...(socialConnectButtonSx as object),
+      '&.Mui-disabled': {
+        bgcolor: colorTokens.backgroundApp,
+        borderColor: colorTokens.borderDefault,
+        color: colorTokens.textSecondary,
+        opacity: 0.72,
+      },
+    }
     : socialConnectButtonSx;
 
   return (

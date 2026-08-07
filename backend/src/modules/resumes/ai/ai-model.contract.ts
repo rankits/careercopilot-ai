@@ -3,7 +3,7 @@ import type { ZodType } from 'zod';
 export interface StructuredAiExtractionRequest<T> {
   systemPrompt: string;
   documentText: string;
-  schema: ZodType<T>;
+  schema: ZodType<T, any, any>;
   metadata?: {
     resumeId?: string;
     promptVersion?: string;
