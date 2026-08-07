@@ -8,7 +8,6 @@ import { RouteLoading } from '@/routes/components/RouteLoading';
 import { App } from '@/app/App';
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
-import { AiMailPage } from '@/pages/AiMailPage';
 import { GoogleAuthCallbackPage } from '@/pages/GoogleAuthCallbackPage';
 import { ConnectedAccountsPage } from '@/pages/Settings/ConnectedAccountsPage';
 import { OAuthResultPage } from '@/pages/Settings/OAuthResultPage';

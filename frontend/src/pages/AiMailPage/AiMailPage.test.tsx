@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
+import type { AiMailDraft } from '@/features/ai-mail/types/aiMail.types';
+
 import { AiMailPage } from './AiMailPage';
 
 const {
@@ -82,7 +84,7 @@ const {
     eligibleForAiMail: true,
     isPrimary: true,
   };
-  const draftState = {
+  const draftState: AiMailDraft = {
     id: 'draft-1',
     userId: 'user-1',
     recruiterEmail: 'recruiter@example.com',
@@ -102,7 +104,7 @@ const {
     },
     subject: '',
     bodyText: '',
-    status: 'input' as import('@/features/ai-mail/types/aiMail.types').MailDraftStatus,
+    status: 'input',
     version: 1,
     userEdited: false,
     createdAt: '2026-08-07T00:00:00.000Z',
