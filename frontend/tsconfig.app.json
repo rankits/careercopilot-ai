@@ -22,10 +22,10 @@
     "paths": {
       "@/*": ["src/*"],
       "@components/*": ["src/components/*"],
-      "@core/*": ["src/core/*"],
       "@hooks/*": ["src/hooks/*"],
       "@lib/*": ["src/lib/*"],
       "@styles/*": ["src/styles/*"]
+
     }
   },
   "include": ["src"],

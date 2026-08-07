@@ -1,18 +1,16 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import CheckIcon from '@mui/icons-material/Check';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
 import { useEffect, useState, type DragEvent, type RefObject } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import {
-  AutoAwesomeOutlinedIcon,
-  Box,
-  CheckIcon,
-  CircularProgress,
-  CloudUploadOutlinedIcon,
-  DescriptionOutlinedIcon,
-  LightbulbOutlinedIcon,
-  SearchOutlinedIcon,
-  Typography,
-} from '@/lib/material';
 import type {
   AnalysisResult,
   KeywordsResponse,

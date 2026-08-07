@@ -1,3 +1,7 @@
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
@@ -29,7 +33,6 @@ import {
 import { jobDetailPath } from '@/constants/routes';
 import type { ListJobsParams } from '@/features/jobs/types/job.types';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
-import { Box, Chip, Typography, useMediaQuery } from '@/lib/material';
 
 import { jobFeedPageSx } from './styles';
 

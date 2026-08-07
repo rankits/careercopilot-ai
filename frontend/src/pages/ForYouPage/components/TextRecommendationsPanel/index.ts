@@ -1,1 +1,0 @@
-export { TextRecommendationsPanel } from './TextRecommendationsPanel';

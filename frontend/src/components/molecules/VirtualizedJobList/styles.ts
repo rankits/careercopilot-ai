@@ -1,4 +1,5 @@
-import { styled } from '@/lib/material';
+import { styled } from '@mui/material/styles';
+
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const VirtualListRoot = styled('div')({

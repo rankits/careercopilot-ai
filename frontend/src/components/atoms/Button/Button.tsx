@@ -1,6 +1,10 @@
-import type { ElementType } from 'react';
 
-import { CircularProgress, MuiButton, type MuiButtonProps } from '@/lib/material';
+
+
+import MuiButton from '@mui/material/Button';
+import type { ButtonProps as MuiButtonProps } from '@mui/material/Button';
+import CircularProgress from '@mui/material/CircularProgress';
+import type { ElementType } from 'react';
 
 import { getButtonSx, type ButtonSize, type ButtonTone, type ButtonVariant } from './styles';
 

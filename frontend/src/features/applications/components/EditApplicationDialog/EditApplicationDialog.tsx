@@ -1,3 +1,7 @@
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
+import MenuItem from '@mui/material/MenuItem';
 import { useEffect, useState } from 'react';
 import { flushSync } from 'react-dom';
 
@@ -32,7 +36,6 @@ import type {
   EditApplicationFormState,
 } from '@/features/applications/utils/editApplicationValidation';
 import { validateEditApplicationForm } from '@/features/applications/utils/editApplicationValidation';
-import { BusinessCenterOutlinedIcon, CloseIcon, MenuItem, TuneOutlinedIcon } from '@/lib/material';
 
 import {
   ApplicationDialog,

@@ -1,15 +1,14 @@
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
+import ShowChartOutlinedIcon from '@mui/icons-material/ShowChartOutlined';
+import CircularProgress from '@mui/material/CircularProgress';
+import { styled } from '@mui/material/styles';
+
 import { Button } from '@/components/atoms/Button';
 
 import heroPenguinUrl from '@/assets/illustrations/penguine-hero-section.png';
 import { LANDING_COPY, LANDING_SECTION_IDS } from '@/constants/pages/landing';
-import {
-  CheckCircleOutlineIcon,
-  CircularProgress,
-  PlayArrowIcon,
-  SendOutlinedIcon,
-  ShowChartOutlinedIcon,
-  styled,
-} from '@/lib/material';
 import {
   borderRadius,
   borderWidth,

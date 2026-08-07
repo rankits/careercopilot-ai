@@ -1,4 +1,5 @@
-import type { SxProps, Theme } from '@/lib/material';
+import type { SxProps, Theme } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, shadows, spacing } from '@/tokens';
 
 const compactBreakpoint = '@media (max-width: 47.5rem)';

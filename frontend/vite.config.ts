@@ -9,10 +9,24 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
       '@components': path.resolve(__dirname, './src/components'),
-      '@core': path.resolve(__dirname, './src/core'),
       '@hooks': path.resolve(__dirname, './src/hooks'),
       '@lib': path.resolve(__dirname, './src/lib'),
       '@styles': path.resolve(__dirname, './src/styles'),
+    },
+  },
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+          if (id.includes('@mui')) return 'mui';
+          if (id.includes('@react-pdf')) return 'pdf';
+          if (id.includes('@tanstack') || id.includes('axios') || id.includes('@reduxjs')) {
+            return 'data';
+          }
+          return 'vendor';
+        },
+      },
     },
   },
   server: {
@@ -27,3 +41,4 @@ export default defineConfig({
     },
   },
 });
+

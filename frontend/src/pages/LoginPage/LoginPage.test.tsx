@@ -24,6 +24,8 @@ vi.mock('@/features/auth/services/auth.service', () => ({
     login: loginMock,
     forgotPassword: forgotPasswordMock,
     resetPassword: resetPasswordMock,
+    refreshSession: vi.fn().mockRejectedValue(new Error('No session')),
+    getCurrentUser: vi.fn(),
   },
 }));
 
@@ -201,7 +203,8 @@ describe('LoginPage', () => {
     );
     expect(store.getState().auth.isAuthenticated).toBe(true);
     expect(store.getState().auth.isProfileComplete).toBe(false);
-    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe(JSON.stringify('token'));
+    expect(store.getState().auth.accessToken).toBe('token');
+    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
     expect(localStorage.getItem(STORAGE_KEYS.PROFILE_COMPLETE)).toBe(JSON.stringify(false));
     expect(localStorage.getItem(STORAGE_KEYS.USER_ID)).toBe(JSON.stringify('1'));
     expect(

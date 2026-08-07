@@ -1,17 +1,15 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 import type { FieldErrors, UseFormRegister, UseFormRegisterReturn } from 'react-hook-form';
 
 import { Input } from '@/components/atoms';
 
 import type { ResumeProfileFormValues } from '@/features/resume/types/resume.types';
-import {
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Chip,
-  ExpandMoreIcon,
-  Typography,
-} from '@/lib/material';
 
 import { ReviewFields, reviewSectionSx, StyledAccordion } from './styles';
 
