@@ -1,3 +1,20 @@
+
+
+
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import CloseIcon from '@mui/icons-material/Close';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import LogoutIcon from '@mui/icons-material/Logout';
+import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import Box from '@mui/material/Box';
+import Divider from '@mui/material/Divider';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 
@@ -14,22 +31,7 @@ import {
   SIDEBAR_COPY,
   USER_INITIALS_FALLBACK,
 } from '@/constants/ui';
-import {
-  Box,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  CloseIcon,
-  DescriptionOutlinedIcon,
-  Divider,
-  Drawer,
-  EditOutlinedIcon,
-  FileDownloadOutlinedIcon,
-  IconButton,
-  LogoutIcon,
-  MoreHorizIcon,
-  Tooltip,
-  Typography,
-} from '@/lib/material';
+import { prefetchRoute } from '@/routes/lazyPages';
 
 import type { SidebarNavItem, SidebarProps } from './interfaces';
 import {
@@ -91,6 +93,8 @@ function SidebarNavButton({
         }
         onSelect?.(item);
       }}
+      onFocus={() => prefetchRoute(item.href)}
+      onMouseEnter={() => prefetchRoute(item.href)}
       tone={tone}
     >
       <Icon fontSize="small" />
@@ -137,6 +141,8 @@ function BottomNavItem({
         }
         onSelect?.(item);
       }}
+      onFocus={() => prefetchRoute(item.href)}
+      onMouseEnter={() => prefetchRoute(item.href)}
     >
       <Icon fontSize="small" />
       <span>{item.label}</span>
@@ -212,6 +218,8 @@ function MobileMoreDrawer({
                   onItemSelect?.(item);
                   onClose();
                 }}
+                onFocus={() => prefetchRoute(item.href)}
+                onMouseEnter={() => prefetchRoute(item.href)}
               >
                 <Icon fontSize="small" />
                 <span>{item.label}</span>
@@ -263,6 +271,8 @@ function MobileMoreDrawer({
               onSettingsClick?.();
               onClose();
             }}
+            onFocus={() => prefetchRoute(ROUTES.PROFILE_EDIT)}
+            onMouseEnter={() => prefetchRoute(ROUTES.PROFILE_EDIT)}
             type="button"
           >
             <EditOutlinedIcon fontSize="small" />
