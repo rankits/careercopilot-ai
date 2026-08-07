@@ -4,8 +4,4 @@ import { downloadResumeBlobController } from '../controllers/resume.controller.j
 
 export const extensionResumeRouter = Router();
 
-extensionResumeRouter.get(
-  '/resume-blob',
-  authMiddleware,
-  downloadResumeBlobController
-);
+extensionResumeRouter.get('/resume-blob', authMiddleware, downloadResumeBlobController);

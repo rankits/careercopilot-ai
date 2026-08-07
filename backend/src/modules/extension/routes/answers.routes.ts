@@ -7,18 +7,10 @@ const router = express.Router();
 
 const requireUser = [authMiddleware, requirePrincipalType('USER')] as const;
 
-router.get(
-  '/answers',
-  ...requireUser,
-  ExtensionAnswersController.getAnswers
-);
+router.get('/answers', ...requireUser, ExtensionAnswersController.getAnswers);
 
 import { ExtensionDraftAnswerController } from '../controllers/draft-answer.controller.js';
 
-router.post(
-  '/draft-answer',
-  ...requireUser,
-  ExtensionDraftAnswerController.generateDraft
-);
+router.post('/draft-answer', ...requireUser, ExtensionDraftAnswerController.generateDraft);
 
 export const extensionAnswersRouter = router;

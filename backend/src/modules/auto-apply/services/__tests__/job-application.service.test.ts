@@ -96,12 +96,16 @@ describe('JobApplicationService', () => {
       reopenFromWithdrawn: vi
         .fn()
         .mockResolvedValue({ ...baseApplication, status: 'DISCOVERED', planVersion: 2 }),
-      updateProgressStep: vi.fn().mockImplementation((_userId, _id, progressStep) =>
-        Promise.resolve({ ...baseApplication, progressStep }),
-      ),
-      updateResumeSelection: vi.fn().mockImplementation((_userId, _id, resumeVersionId) =>
-        Promise.resolve({ ...baseApplication, resumeVersionId }),
-      ),
+      updateProgressStep: vi
+        .fn()
+        .mockImplementation((_userId, _id, progressStep) =>
+          Promise.resolve({ ...baseApplication, progressStep }),
+        ),
+      updateResumeSelection: vi
+        .fn()
+        .mockImplementation((_userId, _id, resumeVersionId) =>
+          Promise.resolve({ ...baseApplication, resumeVersionId }),
+        ),
       recordHandoffOpened: vi.fn().mockResolvedValue(null),
       markApplied: vi.fn().mockResolvedValue(null),
       abandonApplication: vi.fn().mockResolvedValue(null),

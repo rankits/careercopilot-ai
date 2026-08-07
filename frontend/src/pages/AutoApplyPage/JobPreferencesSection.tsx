@@ -3,9 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
-import {
-  useUpsertApplicationAnswer,
-} from '@/features/auto-apply/hooks/useApplicationAnswers';
+import { useUpsertApplicationAnswer } from '@/features/auto-apply/hooks/useApplicationAnswers';
 import {
   useCandidateProfile,
   useUpsertCandidateProfile,
@@ -61,7 +59,10 @@ const LOCATION_SUGGESTIONS = [
 const MAX_TAG_COUNT = 20;
 
 type FieldErrors = Partial<
-  Record<'desiredRoles' | 'preferredLocations' | 'remotePreferences' | 'noticePeriod' | 'salaryMax', string>
+  Record<
+    'desiredRoles' | 'preferredLocations' | 'remotePreferences' | 'noticePeriod' | 'salaryMax',
+    string
+  >
 >;
 
 export function JobPreferencesSection() {
@@ -220,7 +221,8 @@ export function JobPreferencesSection() {
       showToast({ message: 'Job preferences saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't save your details. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't save your details. Try again.",
         severity: 'error',
       });
     }
@@ -235,7 +237,10 @@ export function JobPreferencesSection() {
   }
 
   return (
-    <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 640 }} variant="outlined">
+    <Paper
+      sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 640 }}
+      variant="outlined"
+    >
       <SetupSectionHeading required sectionId="preferences" title="Job preferences" />
 
       <Autocomplete

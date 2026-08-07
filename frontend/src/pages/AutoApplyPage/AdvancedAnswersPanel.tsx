@@ -86,15 +86,19 @@ export function AdvancedAnswersPanel({
   };
 
   return (
-    <Accordion expanded={expanded} onChange={(_event, next) => setExpanded(next)} variant="outlined">
+    <Accordion
+      expanded={expanded}
+      onChange={(_event, next) => setExpanded(next)}
+      variant="outlined"
+    >
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
         <Typography variant="subtitle1">Advanced answers</Typography>
       </AccordionSummary>
       <AccordionDetails>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Typography color="text.secondary" variant="body2">
-            Manage custom answer keys beyond the common questions above. Demographic, disability, and
-            veteran-status questions are always rejected — never stored, per platform policy.
+            Manage custom answer keys beyond the common questions above. Demographic, disability,
+            and veteran-status questions are always rejected — never stored, per platform policy.
           </Typography>
 
           {suggestedQuestionKey && (

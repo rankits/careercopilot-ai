@@ -12,13 +12,15 @@ const requireUser = [authMiddleware, requirePrincipalType('USER')] as const;
 const AutofillRequestSchema = z.object({
   body: z.object({
     url: z.string().url(),
-    fields: z.array(z.object({
-      identifier: z.string(),
-      tagName: z.string(),
-      type: z.string(),
-      name: z.string().optional(),
-      label: z.string(),
-    }))
+    fields: z.array(
+      z.object({
+        identifier: z.string(),
+        tagName: z.string(),
+        type: z.string(),
+        name: z.string().optional(),
+        label: z.string(),
+      }),
+    ),
   }),
 });
 

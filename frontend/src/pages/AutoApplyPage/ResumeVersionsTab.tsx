@@ -228,9 +228,13 @@ export function ResumeVersionsTab() {
               </Typography>
             </Box>
             <Box>
-              <Typography fontWeight={700} variant="caption">Parsing insights</Typography>
+              <Typography fontWeight={700} variant="caption">
+                Parsing insights
+              </Typography>
               <Typography color="text.secondary" display="block" variant="caption">
-                {profileQuery.data?.skills.length ?? 0} skills · {profileQuery.data?.education.length ?? 0} education entries · {profileQuery.data?.experience.length ?? 0} roles
+                {profileQuery.data?.skills.length ?? 0} skills ·{' '}
+                {profileQuery.data?.education.length ?? 0} education entries ·{' '}
+                {profileQuery.data?.experience.length ?? 0} roles
               </Typography>
             </Box>
           </Box>

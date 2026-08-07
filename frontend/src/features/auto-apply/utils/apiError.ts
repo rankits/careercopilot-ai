@@ -30,8 +30,7 @@ export function normalizeAutoApplyError(error: unknown, fallbackMessage: string)
     const statusCode = error.response?.status;
 
     if (typeof payload === 'object' && payload !== null) {
-      const code =
-        'code' in payload && typeof payload.code === 'string' ? payload.code : undefined;
+      const code = 'code' in payload && typeof payload.code === 'string' ? payload.code : undefined;
       const rawMessage =
         'message' in payload && typeof payload.message === 'string'
           ? payload.message

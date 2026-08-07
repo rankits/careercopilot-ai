@@ -37,10 +37,7 @@ export function buildImproveResumeHref(input: {
   return `${ROUTES.RESUME_BUILDER}/${input.resumeId}?${params.toString()}`;
 }
 
-export function resolveSafeReturnTo(
-  raw: string | null | undefined,
-  fallback: string,
-): string {
+export function resolveSafeReturnTo(raw: string | null | undefined, fallback: string): string {
   return isSafeAssistedApplyReturnTo(raw) ? decodeURIComponent(raw!) : fallback;
 }
 
@@ -62,9 +59,7 @@ export function navigateAfterAssistedApplyExit(
 }
 
 /** Extract jobApplicationId from a safe Assisted Apply returnTo path. */
-export function extractJobApplicationIdFromReturnTo(
-  raw: string | null | undefined,
-): string | null {
+export function extractJobApplicationIdFromReturnTo(raw: string | null | undefined): string | null {
   if (!isSafeAssistedApplyReturnTo(raw)) return null;
   let decoded = raw!;
   try {

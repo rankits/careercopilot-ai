@@ -23,9 +23,7 @@ describe('legacy-status-repair.util (AA-093)', () => {
   });
 
   it('is idempotent for already WITHDRAWN rows (not eligible)', () => {
-    const plan = planLegacyStatusRepairs([
-      { id: '1', userId: 'u1', status: 'WITHDRAWN' },
-    ]);
+    const plan = planLegacyStatusRepairs([{ id: '1', userId: 'u1', status: 'WITHDRAWN' }]);
     expect(plan[0]?.eligible).toBe(false);
   });
 });

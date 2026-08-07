@@ -170,8 +170,7 @@ export function useTrackAndOpenApply() {
           jobApplicationId: result.application.id,
         };
       } catch (error) {
-        const alreadyTracked =
-          isAutoApplyClientError(error) && error.code === 'APPLICATION_EXISTS';
+        const alreadyTracked = isAutoApplyClientError(error) && error.code === 'APPLICATION_EXISTS';
         const existingId = existingApplicationIdFromError(error);
 
         if (alreadyTracked && (existingId || input.jobId)) {

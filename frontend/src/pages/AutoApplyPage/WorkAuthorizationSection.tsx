@@ -102,7 +102,8 @@ export function WorkAuthorizationSection() {
       showToast({ message: 'Work authorization details saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't save your details. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't save your details. Try again.",
         severity: 'error',
       });
     }
@@ -117,7 +118,10 @@ export function WorkAuthorizationSection() {
   }
 
   return (
-    <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }} variant="outlined">
+    <Paper
+      sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
+      variant="outlined"
+    >
       <SetupSectionHeading
         helperText="This helps us flag jobs where sponsorship or authorization is a hard requirement. It never appears on any application without your review."
         required
@@ -136,11 +140,7 @@ export function WorkAuthorizationSection() {
             <FormControlLabel
               control={<Radio />}
               key={option.value}
-              label={
-                typeof option.label === 'function'
-                  ? option.label(countryLabel)
-                  : option.label
-              }
+              label={typeof option.label === 'function' ? option.label(countryLabel) : option.label}
               value={option.value}
             />
           ))}
@@ -159,16 +159,8 @@ export function WorkAuthorizationSection() {
           onChange={(event) => setSponsorshipChoice(event.target.value as SponsorshipChoice)}
           value={sponsorshipChoice}
         >
-          <FormControlLabel
-            control={<Radio />}
-            label="Yes, I'll need sponsorship"
-            value="yes"
-          />
-          <FormControlLabel
-            control={<Radio />}
-            label="No, I don't need sponsorship"
-            value="no"
-          />
+          <FormControlLabel control={<Radio />} label="Yes, I'll need sponsorship" value="yes" />
+          <FormControlLabel control={<Radio />} label="No, I don't need sponsorship" value="no" />
           <FormControlLabel control={<Radio />} label="Not sure yet" value="unknown" />
         </RadioGroup>
         <Box component="p" sx={{ color: 'text.secondary', fontSize: '0.875rem', m: 0, mt: 0.5 }}>
@@ -177,7 +169,11 @@ export function WorkAuthorizationSection() {
       </FormControl>
 
       <Box>
-        <Button disabled={!isDirty} isLoading={upsertAnswer.isPending || upsertProfile.isPending} onClick={() => void handleSave()}>
+        <Button
+          disabled={!isDirty}
+          isLoading={upsertAnswer.isPending || upsertProfile.isPending}
+          onClick={() => void handleSave()}
+        >
           Save
         </Button>
       </Box>

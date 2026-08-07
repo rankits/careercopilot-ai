@@ -6,9 +6,7 @@ const PRIVACY_VERIFICATION_KEY = 'privacyPolicy';
 
 type VerificationRecord = Record<string, unknown>;
 
-function readPrivacyAcknowledgement(
-  verification: unknown,
-): PrivacyAcknowledgementDto | null {
+function readPrivacyAcknowledgement(verification: unknown): PrivacyAcknowledgementDto | null {
   if (!verification || typeof verification !== 'object') return null;
   const entry = (verification as VerificationRecord)[PRIVACY_VERIFICATION_KEY];
   if (!entry || typeof entry !== 'object') return null;
