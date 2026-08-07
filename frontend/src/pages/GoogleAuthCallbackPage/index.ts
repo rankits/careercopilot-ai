@@ -1,0 +1,1 @@
+export { GoogleAuthCallbackPage } from './GoogleAuthCallbackPage';

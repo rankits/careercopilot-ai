@@ -259,6 +259,7 @@ determine_version() {
   stage "Determine immutable version"
   cd "${REPO_ROOT}"
 
+  # Use || true to avoid exiting on WSL/Windows git worktree path errors
   if [[ -n "$(git status --porcelain 2>/dev/null || true)" ]]; then
     if [[ "${ALLOW_DIRTY}" == "true" ]]; then
       warn "Git working tree is dirty; continuing because --allow-dirty was set."

@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Career Copilot",
+  "version": "1.0.0",
+  "description": "Career Copilot Assisted Apply",
+  "action": {
+    "default_popup": "src/popup/index.html"
+  },
+  "background": {
+    "service_worker": "src/background.ts",
+    "type": "module"
+  },
+  "permissions": [
+    "activeTab",
+    "storage",
+    "scripting",
+    "alarms",
+    "tabs"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["http://*/*", "https://*/*"],
+      "js": ["src/content/index.tsx"]
+    }
+  ],
+  "optional_host_permissions": [],
+  "homepage_url": "https://careercopilot.com/privacy"
+}

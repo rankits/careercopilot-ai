@@ -2,6 +2,7 @@ import { authSwagger } from '@/modules/auth/swagger/index.js';
 import { userSwagger } from '@/modules/user/swagger/index.js';
 import { adminSwagger } from '@/modules/admin/swagger/index.js';
 import { applicationSwagger } from '@/modules/application-management/swagger/index.js';
+import { autoApplySwagger } from '@/modules/auto-apply/swagger/index.js';
 import { recommendationsSwagger } from '@/modules/recommendations/swagger/index.js';
 import { env } from '@/shared/config/env.conf.js';
 
@@ -41,6 +42,7 @@ export const swaggerSpec = {
     ...userSwagger,
     ...adminSwagger,
     ...applicationSwagger,
+    ...autoApplySwagger,
     ...recommendationsSwagger,
   },
 };

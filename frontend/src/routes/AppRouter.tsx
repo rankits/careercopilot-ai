@@ -8,6 +8,10 @@ import { RouteLoading } from '@/routes/components/RouteLoading';
 import { App } from '@/app/App';
 import { ROUTES } from '@/constants/routes';
 import { AppLayout } from '@/layouts/AppLayout';
+import { GoogleAuthCallbackPage } from '@/pages/GoogleAuthCallbackPage';
+import { AiMailPage } from '@/pages/AiMailPage';
+import { ConnectedAccountsPage } from '@/pages/Settings/ConnectedAccountsPage';
+import { OAuthResultPage } from '@/pages/Settings/OAuthResultPage';
 import {
   GuestRoute,
   LandingRoute,
@@ -16,7 +20,12 @@ import {
 } from '@/routes/guards/AuthGuards';
 import {
   LazyAiMatchPage,
+  LazyApplicationDetailPage,
   LazyApplicationsPage,
+  LazyAssistedApplicationsPage,
+  LazyAssistedApplyWorkspacePage,
+  LazyAutoApplyPage,
+  LazyBrowserExtensionPage,
   LazyEditProfilePage,
   LazyHomePage,
   LazyJobDetailPage,
@@ -41,6 +50,7 @@ function LazyRoute({ children }: { children: ReactNode }) {
 /** Shared route tree for the data router and for MemoryRouter-based tests. */
 export const appRouteObjects: RouteObject[] = [
   { path: ROUTES.HOME, element: <LandingRoute /> },
+  { path: ROUTES.GOOGLE_AUTH_CALLBACK, element: <GoogleAuthCallbackPage /> },
   {
     element: <GuestRoute />,
     children: [
@@ -130,6 +140,50 @@ export const appRouteObjects: RouteObject[] = [
             ),
           },
           {
+            path: ROUTES.APPLICATION_DETAIL,
+            element: (
+              <LazyRoute>
+                <LazyApplicationDetailPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.ASSISTED_APPLICATIONS,
+            element: (
+              <LazyRoute>
+                <LazyAssistedApplicationsPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.AUTO_APPLY,
+            element: (
+              <LazyRoute>
+                <LazyAutoApplyPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.AI_MAIL,
+            element: <AiMailPage />,
+          },
+          {
+            path: ROUTES.BROWSER_EXTENSION,
+            element: (
+              <LazyRoute>
+                <LazyBrowserExtensionPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.ASSISTED_APPLY_WORKSPACE,
+            element: (
+              <LazyRoute>
+                <LazyAssistedApplyWorkspacePage />
+              </LazyRoute>
+            ),
+          },
+          {
             path: ROUTES.SAVED_RESUMES,
             element: (
               <LazyRoute>
@@ -160,6 +214,14 @@ export const appRouteObjects: RouteObject[] = [
                 <LazyEditProfilePage />
               </LazyRoute>
             ),
+          },
+          {
+            path: ROUTES.CONNECTED_ACCOUNTS,
+            element: <ConnectedAccountsPage />,
+          },
+          {
+            path: `${ROUTES.CONNECTED_ACCOUNTS}/google/result`,
+            element: <OAuthResultPage />,
           },
         ],
       },

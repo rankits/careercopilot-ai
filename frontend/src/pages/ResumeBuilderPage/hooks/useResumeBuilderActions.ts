@@ -9,6 +9,8 @@ import {
 import type { NavigateFunction } from 'react-router-dom';
 
 import { ROUTES } from '@/constants/routes';
+import { autoApplyService } from '@/features/auto-apply/services/autoApply.service';
+import { navigateAfterAssistedApplyExit } from '@/features/auto-apply/utils/returnToNavigation';
 import type {
   AnalysisResult,
   KeywordsResponse,
@@ -73,6 +75,8 @@ export function useResumeBuilderActions({
   selectedTemplate,
   setSelectedTemplate,
   hydrateFromExistingAnalysis,
+  returnTo,
+  jobApplicationId,
 }: {
   resumeId: string;
   setResumeId: Dispatch<SetStateAction<string>>;
@@ -110,6 +114,8 @@ export function useResumeBuilderActions({
   selectedTemplate: ResumeTemplateId;
   setSelectedTemplate: Dispatch<SetStateAction<ResumeTemplateId>>;
   hydrateFromExistingAnalysis: (id: string, options?: { force?: boolean }) => Promise<void>;
+  returnTo?: string | null;
+  jobApplicationId?: string | null;
 }) {
   const [existingResumes, setExistingResumes] = useState<UploadedResume[]>([]);
   const [isDragging, setIsDragging] = useState(false);
@@ -470,7 +476,9 @@ export function useResumeBuilderActions({
     setExperienceLevel('mid');
     setSkills([]);
     setStep(1);
-    void navigate(ROUTES.RESUME_BUILDER, { replace: true });
+    if (!navigateAfterAssistedApplyExit(navigate, returnTo, false)) {
+      void navigate(ROUTES.RESUME_BUILDER, { replace: true });
+    }
   };
 
   const mergeRecheckIntoAnalysis = (
@@ -742,7 +750,7 @@ export function useResumeBuilderActions({
         await resumeBuilderService.updateContent(resumeId, editedContent);
       }
       const label = `${targetRole || analysis?.targetRole || 'Resume'} — ${new Date().toLocaleDateString()}`;
-      await resumeBuilderService.saveVersion(resumeId, label, editedContent);
+      const savedVersion = await resumeBuilderService.saveVersion(resumeId, label, editedContent);
       setVersions(await resumeBuilderService.getVersions(resumeId));
       // Refresh Upload list so this resume appears only after a real save.
       try {
@@ -758,13 +766,26 @@ export function useResumeBuilderActions({
         // Non-blocking — save already succeeded.
       }
       markSnapshotClean({ content: editedContent });
+
+      if (jobApplicationId && savedVersion?.id != null) {
+        await autoApplyService.syncBuilderResume(jobApplicationId, {
+          resumeId,
+          builderVersionId: savedVersion.id,
+          label,
+        });
+      }
+
       if (options?.navigateAfter) {
         allowLeaveRef.current = true;
         showToast({
-          message: 'Resume saved successfully',
+          message: jobApplicationId
+            ? 'Resume saved and selected for Assisted Apply'
+            : 'Resume saved successfully',
           severity: 'success',
         });
-        void navigate(ROUTES.SAVED_RESUMES);
+        if (!navigateAfterAssistedApplyExit(navigate, returnTo, true)) {
+          void navigate(ROUTES.SAVED_RESUMES);
+        }
       }
     } catch (error) {
       showToast({

@@ -129,6 +129,15 @@ const buildEmbeddingConfig = (openrouter: OpenRouterEmbeddingSettings) =>
     batchSize: positiveInteger(process.env.AI_EMBEDDING_BATCH_SIZE, 32),
     batchMaxCharacters: positiveInteger(process.env.AI_EMBEDDING_BATCH_MAX_CHARACTERS, 200_000),
     maxRetries: positiveInteger(process.env.AI_EMBEDDING_MAX_RETRIES, 3),
+    /**
+     * How long a provider's circuit breaker stays open after a permanent
+     * failure (e.g. insufficient credits) before the next request is
+     * allowed to probe the API again. See provider-circuit-breaker.ts.
+     */
+    circuitBreakerTtlSeconds: positiveInteger(
+      process.env.AI_EMBEDDING_CIRCUIT_BREAKER_TTL_SECONDS,
+      1800,
+    ),
     documentPrefix: process.env.AI_EMBEDDING_DOCUMENT_PREFIX ?? '',
     queryPrefix: process.env.AI_EMBEDDING_QUERY_PREFIX ?? '',
     google: {

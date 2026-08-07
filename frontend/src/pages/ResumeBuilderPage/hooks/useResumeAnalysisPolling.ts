@@ -47,6 +47,7 @@ export function useResumeAnalysisPolling({
   setSkills,
   setEditedContent,
   setCleanSnapshot,
+  assistedApplyHydratedForRef,
 }: {
   resumeId: string;
   step: Step;
@@ -69,6 +70,7 @@ export function useResumeAnalysisPolling({
   setSkills: Dispatch<SetStateAction<string[]>>;
   setEditedContent: Dispatch<SetStateAction<string>>;
   setCleanSnapshot: Dispatch<SetStateAction<CleanSnapshot>>;
+  assistedApplyHydratedForRef?: React.MutableRefObject<string | null>;
 }) {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   /** Frozen ATS snapshot from the last completed analysis run (Analyze step display). */
@@ -148,20 +150,23 @@ export function useResumeAnalysisPolling({
           }
         }
         if (options?.force) {
-          // Re-selecting / re-uploading must not keep unsaved Define Role edits.
-          setTargetRole(result.targetRole?.trim() || '');
-          setJobDescription(result.jobDescription?.trim() || '');
-          setIndustry('');
-          setEmploymentType('');
-          setExperienceLevel('mid');
-          setSkills([]);
-          setCleanSnapshot((prev) => ({
-            ...prev,
-            targetRole: result.targetRole?.trim() || '',
-            jobDescription: result.jobDescription?.trim() || '',
-            skillsKey: '',
-            skills: [],
-          }));
+          // Re-selecting / re-uploading must not keep unsaved Define Role edits,
+          // unless Assisted Apply already prefilled this session.
+          if (!assistedApplyHydratedForRef?.current) {
+            setTargetRole(result.targetRole?.trim() || '');
+            setJobDescription(result.jobDescription?.trim() || '');
+            setIndustry('');
+            setEmploymentType('');
+            setExperienceLevel('mid');
+            setSkills([]);
+            setCleanSnapshot((prev) => ({
+              ...prev,
+              targetRole: result.targetRole?.trim() || '',
+              jobDescription: result.jobDescription?.trim() || '',
+              skillsKey: '',
+              skills: [],
+            }));
+          }
         } else {
           if (result.targetRole?.trim()) {
             setTargetRole((prev) => (prev.trim() ? prev : result.targetRole));

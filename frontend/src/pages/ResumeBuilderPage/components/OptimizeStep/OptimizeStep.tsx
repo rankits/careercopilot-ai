@@ -278,9 +278,9 @@ export function OptimizeStep({
       localOverrides.length === 0
         ? merged
         : (() => {
-            const overrideIds = new Set(localOverrides.map((item) => item.id));
-            return [...localOverrides, ...merged.filter((item) => !overrideIds.has(item.id))];
-          })();
+          const overrideIds = new Set(localOverrides.map((item) => item.id));
+          return [...localOverrides, ...merged.filter((item) => !overrideIds.has(item.id))];
+        })();
 
     const haveSkills = new Set(draft.skillsList.map((skill) => skill.toLowerCase()));
     const marked = withOverrides.map((item) => {
@@ -377,10 +377,10 @@ export function OptimizeStep({
   const pushDraftToParent = (next: ResumeDraft, options?: { fromApply?: boolean }) => {
     const withOriginal = options?.fromApply
       ? {
-          ...next,
-          // Keep "original" template + export fallback in sync with structured edits.
-          originalText: serializeResumeDraft(next) || next.originalText,
-        }
+        ...next,
+        // Keep "original" template + export fallback in sync with structured edits.
+        originalText: serializeResumeDraft(next) || next.originalText,
+      }
       : next;
     const serialized =
       serializeResumeDraft(withOriginal) || editedContent || analysis?.editedContent || '';
@@ -548,11 +548,10 @@ export function OptimizeStep({
       const orderedIds = new Set(ordered.map((item) => item.id));
       const extras = [...appliedIds]
         .filter((id) => !orderedIds.has(id))
-        .map((id): SuggestionItem | null => {
+        .flatMap((id) => {
           const fromPending = pendingSuggestions.find((item) => item.id === id);
-          return fromPending ? { ...fromPending, status: 'APPLIED' } : null;
-        })
-        .filter((item): item is SuggestionItem => item != null);
+          return fromPending ? [{ ...fromPending, status: 'APPLIED' as const }] : [];
+        });
       return [...rest, ...marked, ...extras];
     });
 
@@ -727,11 +726,11 @@ export function OptimizeStep({
                     suggestionSection === 'skills'
                       ? draft.skillsList.join(', ') || 'No skills yet'
                       : getSectionText(
-                          draft,
-                          suggestionSection === 'other' ? 'summary' : suggestionSection,
-                        ) ||
-                        suggestion.originalText ||
-                        'No excerpt available';
+                        draft,
+                        suggestionSection === 'other' ? 'summary' : suggestionSection,
+                      ) ||
+                      suggestion.originalText ||
+                      'No excerpt available';
 
                   return (
                     <SuggestionCard

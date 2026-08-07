@@ -1,6 +1,7 @@
 import {
   IMessageBus,
   IMessageBusDriver,
+  InFlightWaitResult,
   MessageHandler,
   PublishOptions,
   SubscribeOptions,
@@ -48,6 +49,14 @@ export class MessageBusService implements IMessageBus {
     options?: SubscribeOptions,
   ): Promise<void> {
     return this.driver.ensureQueue(queue, exchange, routingKey, options);
+  }
+
+  async cancelConsumers(): Promise<void> {
+    return this.driver.cancelConsumers();
+  }
+
+  async waitForInFlight(timeoutMs: number): Promise<InFlightWaitResult> {
+    return this.driver.waitForInFlight(timeoutMs);
   }
 
   async close(): Promise<void> {

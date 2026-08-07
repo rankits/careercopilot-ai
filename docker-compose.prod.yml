@@ -269,6 +269,30 @@ services:
     healthcheck:
       disable: true
 
+  application-submission-worker:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.prod
+    container_name: career_copilot_application_submission_worker_prod
+    restart: always
+    # Exceeds APPLICATION_SUBMISSION_WORKER_DRAIN_TIMEOUT_MS default (30s) so SIGTERM drain can finish (AA-008).
+    stop_grace_period: 45s
+    command: npm run worker:application-submission:build
+    environment:
+      NODE_ENV: ${NODE_ENV:-production}
+      DATABASE_URL: ${DATABASE_URL:?DATABASE_URL is required in .env}
+      RABBITMQ_URL: ${RABBITMQ_URL:?RABBITMQ_URL is required in .env}
+      RUN_MIGRATIONS: 'false'
+      ENABLE_AUTO_APPLY: ${ENABLE_AUTO_APPLY:-true}
+      LOGGING_ENABLED: ${LOGGING_ENABLED:-true}
+      LOG_PRETTY: ${LOG_PRETTY:-false}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
   job-embedding-worker:
     build:
       context: ./backend

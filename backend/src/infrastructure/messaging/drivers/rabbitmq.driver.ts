@@ -5,6 +5,7 @@ import {
   MessageEnvelope,
   PublishOptions,
   SubscribeOptions,
+  InFlightWaitResult,
 } from '@/infrastructure/messaging/messaging.interface.js';
 import { QoSPresets } from '@/infrastructure/messaging/messaging.topology.js';
 import { logger } from '@/shared/logger/logger.js';
@@ -27,6 +28,8 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
   private url: string;
   private isConnecting = false;
   private readonly log = logger.child({ component: 'rabbitmq' });
+  private readonly consumerTags = new Set<string>();
+  private readonly inFlight = new Set<Promise<void>>();
 
   constructor(url?: string) {
     this.url = url || process.env.RABBITMQ_URL || 'amqp://localhost:5672';
@@ -197,6 +200,13 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
     await this.assertQueue(queue, exchange, routingKey, options);
   }
 
+  private trackInFlight(work: Promise<void>): void {
+    this.inFlight.add(work);
+    void work.finally(() => {
+      this.inFlight.delete(work);
+    });
+  }
+
   async subscribe<T>(
     queue: string,
     exchange: string,
@@ -207,76 +217,115 @@ export class RabbitMQBusDriver implements IMessageBusDriver {
     const { channel, config } = await this.assertQueue(queue, exchange, routingKey, options);
     await channel.prefetch(config.prefetch || 10);
 
-    await channel.consume(
+    const { consumerTag } = await channel.consume(
       queue,
-      async (msg: ConsumeMessage | null) => {
+      (msg: ConsumeMessage | null) => {
         if (!msg) return;
 
-        const attempt =
-          typeof msg.properties.headers?.['x-attempt'] === 'number'
-            ? (msg.properties.headers['x-attempt'] as number)
-            : 1;
+        const work = (async () => {
+          const attempt =
+            typeof msg.properties.headers?.['x-attempt'] === 'number'
+              ? (msg.properties.headers['x-attempt'] as number)
+              : 1;
 
-        try {
-          const payload = JSON.parse(msg.content.toString('utf8')) as T;
-          const envelope: MessageEnvelope<T> = {
-            id: msg.properties.messageId || `${Date.now()}`,
-            timestamp: msg.properties.timestamp
-              ? new Date(msg.properties.timestamp).toISOString()
-              : new Date().toISOString(),
-            exchange: msg.fields.exchange,
-            routingKey: msg.fields.routingKey,
-            attempt,
-            payload,
-          };
+          try {
+            const payload = JSON.parse(msg.content.toString('utf8')) as T;
+            const envelope: MessageEnvelope<T> = {
+              id: msg.properties.messageId || `${Date.now()}`,
+              timestamp: msg.properties.timestamp
+                ? new Date(msg.properties.timestamp).toISOString()
+                : new Date().toISOString(),
+              exchange: msg.fields.exchange,
+              routingKey: msg.fields.routingKey,
+              attempt,
+              payload,
+            };
 
-          await handler(envelope);
+            await handler(envelope);
 
-          if (!config.autoAck) {
-            channel.ack(msg);
+            if (!config.autoAck) {
+              channel.ack(msg);
+            }
+          } catch (error) {
+            const maxRetries = config.maxRetries ?? 3;
+
+            if (attempt < maxRetries) {
+              const nextAttempt = attempt + 1;
+              channel.ack(msg);
+
+              setTimeout(async () => {
+                try {
+                  const retryChannel = await this.getChannel();
+                  retryChannel.publish(exchange, routingKey, msg.content, {
+                    ...msg.properties,
+                    headers: {
+                      ...msg.properties.headers,
+                      'x-attempt': nextAttempt,
+                    },
+                  });
+                } catch (requeueError) {
+                  this.log.error(
+                    { err: requeueError, queue, exchange, routingKey, attempt: nextAttempt },
+                    'RabbitMQ requeue failed',
+                  );
+                }
+              }, config.retryDelayMs || 5000);
+            } else {
+              this.log.error(
+                { err: error, queue, exchange, routingKey, attempt, maxRetries },
+                'RabbitMQ message handler failed; sending to DLQ/nack',
+              );
+              channel.nack(msg, false, false);
+            }
           }
-        } catch (error) {
-          const maxRetries = config.maxRetries ?? 3;
+        })();
 
-          if (attempt < maxRetries) {
-            const nextAttempt = attempt + 1;
-            channel.ack(msg);
-
-            setTimeout(async () => {
-              try {
-                const retryChannel = await this.getChannel();
-                retryChannel.publish(exchange, routingKey, msg.content, {
-                  ...msg.properties,
-                  headers: {
-                    ...msg.properties.headers,
-                    'x-attempt': nextAttempt,
-                  },
-                });
-              } catch (requeueError) {
-                this.log.error(
-                  { err: requeueError, queue, exchange, routingKey, attempt: nextAttempt },
-                  'RabbitMQ requeue failed',
-                );
-              }
-            }, config.retryDelayMs || 5000);
-          } else {
-            this.log.error(
-              { err: error, queue, exchange, routingKey, attempt, maxRetries },
-              'RabbitMQ message handler failed; sending to DLQ/nack',
-            );
-            channel.nack(msg, false, false);
-          }
-        }
+        this.trackInFlight(work);
       },
       { noAck: config.autoAck ?? false },
     );
 
-    this.log.info({ queue, exchange, routingKey }, 'RabbitMQ consumer subscribed');
+    this.consumerTags.add(consumerTag);
+    this.log.info({ queue, exchange, routingKey, consumerTag }, 'RabbitMQ consumer subscribed');
+  }
+
+  async cancelConsumers(): Promise<void> {
+    const channel = this.channel;
+    if (!channel || this.consumerTags.size === 0) {
+      this.consumerTags.clear();
+      return;
+    }
+
+    const tags = [...this.consumerTags];
+    this.consumerTags.clear();
+    for (const consumerTag of tags) {
+      try {
+        await channel.cancel(consumerTag);
+        this.log.info({ consumerTag }, 'RabbitMQ consumer cancelled');
+      } catch (error) {
+        this.log.warn({ err: error, consumerTag }, 'RabbitMQ consumer cancel failed');
+      }
+    }
+  }
+
+  async waitForInFlight(timeoutMs: number): Promise<InFlightWaitResult> {
+    if (this.inFlight.size === 0) {
+      return 'idle';
+    }
+
+    const pending = Promise.allSettled([...this.inFlight]).then(() => 'idle' as const);
+    const timedOut = new Promise<'timeout'>((resolve) => {
+      const timer = setTimeout(() => resolve('timeout'), Math.max(0, timeoutMs));
+      timer.unref?.();
+    });
+
+    return Promise.race([pending, timedOut]);
   }
 
   async close(): Promise<void> {
     this.log.info('Disconnecting RabbitMQ');
     try {
+      await this.cancelConsumers();
       if (this.channel) {
         await this.channel.close();
         this.channel = null;
