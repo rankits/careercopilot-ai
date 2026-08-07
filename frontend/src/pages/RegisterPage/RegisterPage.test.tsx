@@ -8,11 +8,15 @@ import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
 import { RegisterPage } from './RegisterPage';
 
-const { registerMock } = vi.hoisted(() => ({ registerMock: vi.fn() }));
+const { registerMock, startGoogleLoginMock } = vi.hoisted(() => ({
+  registerMock: vi.fn(),
+  startGoogleLoginMock: vi.fn(),
+}));
 
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
     register: registerMock,
+    startGoogleLogin: startGoogleLoginMock,
   },
 }));
 
@@ -58,6 +62,7 @@ async function completeValidForm(user: ReturnType<typeof userEvent.setup>) {
 describe('RegisterPage', () => {
   beforeEach(() => {
     registerMock.mockReset();
+    startGoogleLoginMock.mockReset();
   });
 
   it('renders the shared registration form and links to login', async () => {
@@ -201,9 +206,9 @@ describe('RegisterPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /unable to create your account\. please try again/i,
-    );
+    expect(
+      await screen.findByText(/unable to create your account\. please try again/i),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /create account/i })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: /create account/i }));
@@ -230,8 +235,8 @@ describe('RegisterPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /an account with this email already exists/i,
-    );
+    expect(
+      await screen.findByText(/an account with this email already exists/i),
+    ).toBeInTheDocument();
   }, 15_000);
 });

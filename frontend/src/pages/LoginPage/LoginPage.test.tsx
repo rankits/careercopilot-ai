@@ -13,13 +13,15 @@ import { authReducer } from '@/features/auth/authSlice';
 
 import { LoginPage } from './LoginPage';
 
-const { loginMock } = vi.hoisted(() => ({
+const { loginMock, startGoogleLoginMock } = vi.hoisted(() => ({
   loginMock: vi.fn(),
+  startGoogleLoginMock: vi.fn(),
 }));
 
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
     login: loginMock,
+    startGoogleLogin: startGoogleLoginMock,
   },
 }));
 
@@ -59,7 +61,51 @@ async function completeValidForm(user: ReturnType<typeof userEvent.setup>) {
 describe('LoginPage', () => {
   beforeEach(() => {
     loginMock.mockReset();
+    startGoogleLoginMock.mockReset();
     localStorage.clear();
+  });
+
+  it('starts Google sign-in and redirects to the authorization URL', async () => {
+    const user = userEvent.setup();
+    const assignMock = vi.fn();
+    const locationDescriptor = Object.getOwnPropertyDescriptor(window, 'location');
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      value: {
+        assign: assignMock,
+        hash: '',
+        href: 'http://localhost/login',
+        pathname: '/login',
+        search: '',
+      },
+    });
+    startGoogleLoginMock.mockResolvedValue({
+      authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?mock=1',
+    });
+
+    try {
+      renderPage();
+
+      await user.click(screen.getByRole('button', { name: /continue with google/i }));
+
+      await waitFor(() => expect(startGoogleLoginMock).toHaveBeenCalledWith(undefined));
+      expect(assignMock).toHaveBeenCalledWith(
+        'https://accounts.google.com/o/oauth2/v2/auth?mock=1',
+      );
+    } finally {
+      if (locationDescriptor) {
+        Object.defineProperty(window, 'location', locationDescriptor);
+      }
+    }
+  });
+
+  it('shows a coming-soon toast for LinkedIn sign-in', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('button', { name: /continue with linkedin/i }));
+
+    expect(await screen.findByText(/linkedin sign-in is not available yet/i)).toBeInTheDocument();
   });
 
   it('renders the shared login form and navigates to registration', async () => {
@@ -229,9 +275,7 @@ describe('LoginPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /^login$/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      /unable to log in\. please try again/i,
-    );
+    expect(await screen.findByText(/unable to log in\. please try again/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /^login$/i })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: /^login$/i }));
@@ -260,6 +304,6 @@ describe('LoginPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /^login$/i }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/invalid email or password/i);
+    expect(await screen.findByText(/invalid email or password/i)).toBeInTheDocument();
   });
 });
