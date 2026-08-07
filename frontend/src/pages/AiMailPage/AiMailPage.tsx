@@ -1105,7 +1105,7 @@ export function AiMailPage() {
                           </Button>
                         </Stack>
                         <Button
-                          disabled={isGenerating || selectedDraft?.status === 'archived'}
+                          disabled={isGenerating}
                           fullWidth
                           isLoading={regenerateDraft.isPending}
                           onClick={() => void handleRegenerateEmail()}

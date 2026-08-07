@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
 import { requirePrincipalType } from '@/shared/middlewares/rbac.middleware.js';
-import { generateAutofillAnswersController } from '../controllers/autofill.controller.js';
+import { generateAutofillAnswersController } from '@/modules/extension/controllers/autofill.controller.js';
 
 const router = express.Router();
 
