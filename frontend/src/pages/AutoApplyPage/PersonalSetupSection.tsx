@@ -5,11 +5,12 @@ import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { resumeService } from '@/features/resume/services/resume.service';
-import { Box, Paper, TextField } from '@/lib/material';
+import { Box, Paper } from '@/lib/material';
 
 import { PersonalContactSection } from './PersonalContactSection';
 import { validateBasicIdentityFields } from './setupFormUtils';
 import { SetupSectionHeading } from './SetupSectionHeading';
+import { SetupTextField } from './SetupTextField';
 
 const profileKey = ['resume-profile', 'me'] as const;
 
@@ -111,7 +112,7 @@ export function PersonalSetupSection() {
             gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
           }}
         >
-          <TextField
+          <SetupTextField
             error={Boolean(showError('authorizationCountry'))}
             fullWidth
             helperText={showError('authorizationCountry')}
@@ -121,7 +122,7 @@ export function PersonalSetupSection() {
             placeholder="US"
             value={authorizationCountry}
           />
-          <TextField
+          <SetupTextField
             error={Boolean(showError('preferredName'))}
             fullWidth
             helperText={showError('preferredName')}

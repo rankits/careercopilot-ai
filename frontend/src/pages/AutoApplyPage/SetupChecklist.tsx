@@ -11,11 +11,12 @@ import {
   MenuItem,
   MuiButton,
   Stack,
-  TextField,
   Typography,
 } from '@/lib/material';
+import { fontSize, fontWeight } from '@/tokens';
 
 import { setupPageSx } from './setupPageStyles';
+import { SetupTextField } from './SetupTextField';
 
 export interface SetupChecklistProps {
   activeSection: SetupSectionId;
@@ -122,7 +123,7 @@ export function SetupChecklist({
         </Stack>
       </Stack>
 
-      <TextField
+      <SetupTextField
         aria-label="Choose setup section"
         onChange={(event) => onSelectSection(event.target.value as SetupSectionId)}
         select
@@ -135,7 +136,7 @@ export function SetupChecklist({
             {index + 1}. {section.label} · {section.required ? 'Required' : 'Optional'}
           </MenuItem>
         ))}
-      </TextField>
+      </SetupTextField>
       <List
         aria-label="Application Setup checklist"
         disablePadding
@@ -168,8 +169,8 @@ export function SetupChecklist({
                   color: section.complete ? 'success.dark' : 'text.secondary',
                   display: 'flex',
                   flex: '0 0 auto',
-                  fontSize: '0.75rem',
-                  fontWeight: 700,
+                  fontSize: fontSize.xs,
+                  fontWeight: fontWeight.bold,
                   height: 20,
                   justifyContent: 'center',
                   width: 20,

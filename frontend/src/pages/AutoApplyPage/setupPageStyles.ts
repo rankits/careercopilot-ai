@@ -1,9 +1,10 @@
 import type { SxProps, Theme } from '@mui/material/styles';
 
-import { colorTokens, fontSize, fontWeight } from '@/tokens';
+import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 const compactBreakpoint = '@media (max-width: 47.5rem)';
 
+/** Typography + field styles aligned with Applications / Saved Jobs page tokens. */
 export const setupPageSx = {
   pageTitle: {
     color: colorTokens.textPrimary,
@@ -35,17 +36,45 @@ export const setupPageSx = {
     flexShrink: 0,
     fontSize: fontSize.sm,
   },
+  /** Matches applications SectionTitle (dialog section headers). */
   sectionTitle: {
-    fontSize: fontSize.lg,
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.base,
     fontWeight: fontWeight.bold,
-    letterSpacing: '-0.02em',
-    lineHeight: 1.3,
+    letterSpacing: '-0.01em',
+    lineHeight: 1.25,
     m: 0,
   },
   sectionHelper: {
     color: colorTokens.textSecondary,
     fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    lineHeight: 1.45,
+  },
+  subsectionTitle: {
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semiBold,
+    lineHeight: 1.25,
+    m: 0,
+  },
+  bodyText: {
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
     lineHeight: 1.5,
+  },
+  bodySecondary: {
+    color: colorTokens.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    lineHeight: 1.45,
+  },
+  labelStrong: {
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semiBold,
+    lineHeight: 1.4,
   },
   sectionBadge: {
     fontSize: fontSize.xs,
@@ -53,21 +82,26 @@ export const setupPageSx = {
     height: '1.375rem',
   },
   sidebarTitle: {
-    fontSize: fontSize.sm,
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.base,
     fontWeight: fontWeight.bold,
-    lineHeight: 1.3,
+    lineHeight: 1.25,
   },
   sidebarItemTitle: {
+    color: colorTokens.textPrimary,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semiBold,
+    lineHeight: 1.4,
   },
   sidebarItemCaption: {
     color: colorTokens.textSecondary,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
     lineHeight: 1.4,
   },
   summaryTitle: {
-    fontSize: fontSize.sm,
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.base,
     fontWeight: fontWeight.bold,
     mb: 1.5,
   },
@@ -77,24 +111,81 @@ export const setupPageSx = {
   },
   summaryBody: {
     fontSize: fontSize.sm,
-    fontWeight: fontWeight.bold,
+    fontWeight: fontWeight.semiBold,
   },
   summaryCaption: {
     color: colorTokens.textSecondary,
-    fontSize: fontSize.xs,
-    lineHeight: 1.4,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    lineHeight: 1.45,
   },
   summaryHighlight: {
     color: colorTokens.actionPrimary,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
     fontWeight: fontWeight.bold,
     mb: 0.75,
   },
   summaryListItem: {
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    lineHeight: 1.45,
   },
   tipText: {
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semiBold,
+    lineHeight: 1.45,
+  },
+  errorText: {
+    color: colorTokens.feedbackError,
+    fontSize: fontSize.xs,
+    lineHeight: 1.25,
+    m: 0,
+    mt: 0.5,
+  },
+  successText: {
+    color: colorTokens.feedbackSuccess,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    lineHeight: 1.45,
+  },
+  formLabel: {
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semiBold,
+    lineHeight: 1.4,
+    mb: 0.75,
+  },
+  radioLabel: {
+    '& .MuiFormControlLabel-label': {
+      fontSize: fontSize.sm,
+      fontWeight: fontWeight.medium,
+      lineHeight: 1.45,
+    },
   },
 } satisfies Record<string, SxProps<Theme>>;
+
+/** Matches `@/components/atoms/Input` field sizing for raw MUI TextFields. */
+export const setupFieldSx: SxProps<Theme> = {
+  '& .MuiInputBase-input': {
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.base,
+  },
+  '& .MuiInputLabel-root': {
+    color: colorTokens.textSecondary,
+    fontSize: fontSize.sm,
+  },
+  '& .MuiInputLabel-root.Mui-focused': {
+    color: colorTokens.textSecondary,
+  },
+  '& .MuiFormHelperText-root': {
+    color: colorTokens.textSecondary,
+    fontSize: fontSize.xs,
+    lineHeight: 1.25,
+    marginInline: 0,
+    mt: spacing[1],
+  },
+  '& .MuiOutlinedInput-root': {
+    borderRadius: borderRadius.lg,
+    minHeight: spacing[12],
+  },
+};

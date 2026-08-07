@@ -8,12 +8,13 @@ import {
   useUpsertCandidateProfile,
 } from '@/features/auto-apply/hooks/useCandidateProfile';
 
-import { Box, CircularProgress, Paper, TextField, Typography } from '@/lib/material';
+import { Box, CircularProgress, Paper, Typography } from '@/lib/material';
 
 import { useSetupDirty } from './SetupDirtyContext';
 import { isValidHttpUrl } from './setupFormUtils';
 import { setupPageSx } from './setupPageStyles';
 import { SetupSectionHeading } from './SetupSectionHeading';
+import { SetupTextField } from './SetupTextField';
 
 type LinkField = 'linkedin' | 'github' | 'portfolio' | 'behance' | 'stackoverflow' | 'medium';
 type FieldErrors = Partial<Record<LinkField, string>>;
@@ -135,7 +136,7 @@ export function ProfessionalLinksSection() {
         sectionId="links"
         title="Professional links"
       />
-      <TextField
+      <SetupTextField
         error={Boolean(errors.linkedin)}
         fullWidth
         helperText={errors.linkedin}
@@ -144,7 +145,7 @@ export function ProfessionalLinksSection() {
         placeholder="https://linkedin.com/in/..."
         value={linkedin}
       />
-      <TextField
+      <SetupTextField
         error={Boolean(errors.github)}
         fullWidth
         helperText={errors.github}
@@ -153,7 +154,7 @@ export function ProfessionalLinksSection() {
         placeholder="https://github.com/..."
         value={github}
       />
-      <TextField
+      <SetupTextField
         error={Boolean(errors.portfolio)}
         fullWidth
         helperText={errors.portfolio}
@@ -162,7 +163,7 @@ export function ProfessionalLinksSection() {
         placeholder="https://..."
         value={portfolio}
       />
-      <TextField
+      <SetupTextField
         error={Boolean(errors.behance)}
         fullWidth
         helperText={errors.behance}
@@ -171,7 +172,7 @@ export function ProfessionalLinksSection() {
         placeholder="https://behance.net/..."
         value={behance}
       />
-      <TextField
+      <SetupTextField
         error={Boolean(errors.stackoverflow)}
         fullWidth
         helperText={errors.stackoverflow}
@@ -180,7 +181,7 @@ export function ProfessionalLinksSection() {
         placeholder="https://stackoverflow.com/users/..."
         value={stackoverflow}
       />
-      <TextField
+      <SetupTextField
         error={Boolean(errors.medium)}
         fullWidth
         helperText={errors.medium}

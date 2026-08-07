@@ -37,6 +37,9 @@ import {
   type UploadedResume,
 } from '@/services/resumeBuilder.service';
 
+import { setupPageSx } from './setupPageStyles';
+import { SetupSectionHeading } from './SetupSectionHeading';
+
 interface SelectableResume {
   resumeId: string;
   title: string;
@@ -196,15 +199,11 @@ export function ResumeVersionsTab() {
       sx={{ display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
     >
       <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
-        <Typography
-          component="h2"
-          data-setup-heading
-          id="setup-resumes-heading"
-          tabIndex={-1}
-          variant="h6"
-        >
-          Primary resume
-        </Typography>
+        <SetupSectionHeading
+          headingId="setup-resumes-heading"
+          sectionId="resumes"
+          title="Primary resume"
+        />
 
         {versions?.find((version) => version.isActive) ? (
           <Box
@@ -220,17 +219,19 @@ export function ResumeVersionsTab() {
             }}
           >
             <Box>
-              <Typography fontWeight={700} variant="body2">
+              <Typography sx={setupPageSx.labelStrong}>
                 {versions.find((version) => version.isActive)?.label}
               </Typography>
-              <Typography color="success.main" variant="caption">
+              <Typography sx={setupPageSx.successText}>
                 Parsed successfully · Current primary
               </Typography>
             </Box>
             <Box>
-              <Typography fontWeight={700} variant="caption">Parsing insights</Typography>
-              <Typography color="text.secondary" display="block" variant="caption">
-                {profileQuery.data?.skills.length ?? 0} skills · {profileQuery.data?.education.length ?? 0} education entries · {profileQuery.data?.experience.length ?? 0} roles
+              <Typography sx={setupPageSx.labelStrong}>Parsing insights</Typography>
+              <Typography display="block" sx={setupPageSx.bodySecondary}>
+                {profileQuery.data?.skills?.length ?? 0} skills ·{' '}
+                {profileQuery.data?.education?.length ?? 0} education entries ·{' '}
+                {profileQuery.data?.experience?.length ?? 0} roles
               </Typography>
             </Box>
           </Box>
@@ -244,7 +245,7 @@ export function ResumeVersionsTab() {
           </Box>
         ) : !versions || versions.length === 0 ? (
           <Box id="setup-field-defaultResume">
-            <Typography sx={{ mb: 1.5 }} variant="body2">
+            <Typography sx={{ ...setupPageSx.bodySecondary, mb: 1.5 }}>
               No approved resumes yet.
             </Typography>
             <Button
@@ -273,12 +274,10 @@ export function ResumeVersionsTab() {
                 }}
               >
                 <Box sx={{ flex: 1, minWidth: 0 }}>
-                  <Typography fontWeight={600} noWrap variant="body2">
+                  <Typography noWrap sx={setupPageSx.labelStrong}>
                     {version.label}
                   </Typography>
-                  <Typography color="text.secondary" variant="caption">
-                    {version.category}
-                  </Typography>
+                  <Typography sx={setupPageSx.bodySecondary}>{version.category}</Typography>
                 </Box>
                 {version.isActive ? (
                   <Chip aria-label="Default resume" color="primary" label="Default" size="small" />
@@ -309,7 +308,7 @@ export function ResumeVersionsTab() {
 
       {unapprovedCatalog.length > 0 ? (
         <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2 }} variant="outlined">
-          <Typography component="h3" variant="subtitle1">
+          <Typography component="h3" sx={setupPageSx.subsectionTitle}>
             Approve from Resume Builder
           </Typography>
           {savedQuery.isLoading || uploadedQuery.isLoading ? (
@@ -332,11 +331,11 @@ export function ResumeVersionsTab() {
                   }}
                 >
                   <Box sx={{ flex: 1, minWidth: 0 }}>
-                    <Typography fontWeight={600} noWrap variant="body2">
+                    <Typography noWrap sx={setupPageSx.labelStrong}>
                       {resume.title}
                     </Typography>
                     {resume.subtitle ? (
-                      <Typography color="text.secondary" noWrap variant="caption">
+                      <Typography noWrap sx={setupPageSx.bodySecondary}>
                         {resume.subtitle}
                       </Typography>
                     ) : null}
@@ -367,7 +366,7 @@ export function ResumeVersionsTab() {
       >
         <DialogTitle id="delete-resume-title">Delete this resume from Assisted Apply?</DialogTitle>
         <DialogContent>
-          <Typography id="delete-resume-description" variant="body2">
+          <Typography id="delete-resume-description" sx={setupPageSx.bodySecondary}>
             This won&apos;t delete it from Resume Builder.
           </Typography>
         </DialogContent>

@@ -44,7 +44,7 @@ export function SetupSectionHeading({
         )}
       </Box>
       {helperText ? (
-        <Typography color="text.secondary" sx={setupPageSx.sectionHelper} variant="body2">
+        <Typography color="text.secondary" sx={setupPageSx.sectionHelper}>
           {helperText}
         </Typography>
       ) : null}
