@@ -3,6 +3,7 @@ import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
 import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
 import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
@@ -83,6 +84,7 @@ export const HEADER_SEARCH_COPY = {
 
 export const HEADER_USER_MENU_COPY = {
   ariaLabel: 'User menu',
+  connectedAccounts: 'Connected Accounts',
   editProfile: 'Edit Profile',
   logout: 'Logout',
   roleLabel: 'Frontend Developer',
@@ -529,6 +531,7 @@ export const CAREER_COPILOT_COPY = {
  * -------------------------------------------------------------------------- */
 
 export const SIDEBAR_NAV_LABELS = {
+  aiMailComposer: 'AI Mail Composer',
   applicationSetup: 'Application Setup',
   browserExtension: 'Browser Extension',
   applications: 'Applications',
@@ -591,6 +594,12 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     label: SIDEBAR_NAV_LABELS.applicationSetup,
   },
   {
+    href: ROUTES.AI_MAIL,
+    icon: EmailOutlinedIcon,
+    id: 'ai-mail',
+    label: SIDEBAR_NAV_LABELS.aiMailComposer,
+  },
+  {
     href: ROUTES.ASSISTED_APPLICATIONS,
     icon: TaskAltOutlinedIcon,
     id: 'assisted-applications',
@@ -626,6 +635,7 @@ export const DEFAULT_SIDEBAR_SECTIONS = [
       'applications',
       'saved-jobs',
       'auto-apply',
+      'ai-mail',
       'assisted-applications',
       'browser-extension',
     ],
@@ -650,6 +660,7 @@ export const DEFAULT_BOTTOM_NAV_IDS = [
 export const DEFAULT_MOBILE_DRAWER_NAV_IDS = [
   'saved-jobs',
   'auto-apply',
+  'ai-mail',
   'assisted-applications',
   'browser-extension',
   'resume-builder',

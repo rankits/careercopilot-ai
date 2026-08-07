@@ -83,6 +83,44 @@ export const authService = {
     };
   },
 
+  async startGoogleLogin(payload?: { returnPath?: string }): Promise<{ authorizationUrl: string }> {
+    try {
+      const { data } = await httpClient.post<{
+        data?: { authorizationUrl?: string };
+        authorizationUrl?: string;
+      }>('/auth/google/start', payload ?? {});
+      const authorizationUrl = data.data?.authorizationUrl ?? data.authorizationUrl;
+      if (!authorizationUrl) {
+        throw new Error('Missing Google authorization URL');
+      }
+      return { authorizationUrl };
+    } catch (error) {
+      throw new AuthRequestError(
+        getAuthErrorMessage(error, 'Unable to start Google sign-in. Please try again.'),
+      );
+    }
+  },
+
+  async completeGoogleLogin(payload: {
+    code: string;
+    state: string;
+  }): Promise<AuthResponse & { returnPath?: string }> {
+    let data: AuthApiResponse & { data?: { user?: User; returnPath?: string } };
+    try {
+      ({ data } = await httpClient.post<
+        AuthApiResponse & { data?: { user?: User; returnPath?: string } }
+      >('/auth/google/callback', payload));
+    } catch (error) {
+      throw new AuthRequestError(
+        getAuthErrorMessage(error, 'Unable to complete Google sign-in. Please try again.'),
+      );
+    }
+    return {
+      ...parseAuthResponse(data),
+      returnPath: data.data?.returnPath,
+    };
+  },
+
   async forgotPassword(payload: ForgotPasswordPayload): Promise<AuthMessageResponse> {
     try {
       const { data, status } = await httpClient.post<AuthMessageResponse>('/auth/forgot-password', {

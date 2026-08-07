@@ -1,4 +1,6 @@
 import { applicationRoutes } from '@/modules/application-management/index.js';
+import { connectedAccountsRoutes } from '@/modules/connected-accounts/index.js';
+import { aiMailRoutes } from '@/modules/ai-mail/index.js';
 import { autoApplyRoutes } from '@/modules/auto-apply/index.js';
 import express from 'express';
 import { successResponse } from '@/shared/utils/response.js';
@@ -27,9 +29,11 @@ router.use('/resume-analysis', resumeAnalysisRoutes);
 router.use('/jobs', jobListingRoutes); // Public job discovery
 router.use('/jobs-ingestion', jobsRoutes); // Administrative ingestion endpoints
 router.use('/applications', applicationRoutes);
+router.use('/ai-mail', aiMailRoutes);
 router.use('/auto-apply', autoApplyRoutes);
 router.use('/job-recommendations', recommendationsRoutes);
 router.use('/copilot', copilotRoutes);
 router.use('/extension', extensionRoutes);
+router.use('/connected-accounts', connectedAccountsRoutes);
 
 export default router;
