@@ -88,8 +88,7 @@ export class AssistedApplyHandoffService {
       (application.externalConfirmationUrl || application.jobId)
     ) {
       const applyUrl =
-        application.externalConfirmationUrl ??
-        (await this.resolveApplyUrl(application.jobId!));
+        application.externalConfirmationUrl ?? (await this.resolveApplyUrl(application.jobId!));
       return {
         applyUrl,
         openedAt: application.handoffOpenedAt.toISOString(),
@@ -97,7 +96,10 @@ export class AssistedApplyHandoffService {
       };
     }
 
-    if (!HANDOFF_ELIGIBLE.includes(application.status) && application.status !== 'ACTION_REQUIRED') {
+    if (
+      !HANDOFF_ELIGIBLE.includes(application.status) &&
+      application.status !== 'ACTION_REQUIRED'
+    ) {
       throw new AppError(
         'This application is not ready for handoff.',
         409,

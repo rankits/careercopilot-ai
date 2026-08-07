@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  buildImproveResumeHref,
-  isSafeAssistedApplyReturnTo,
-} from './returnToNavigation';
+import { buildImproveResumeHref, isSafeAssistedApplyReturnTo } from './returnToNavigation';
 
 describe('buildImproveResumeHref', () => {
   it('includes assisted-apply source and jobApplicationId for Builder prefill', () => {
@@ -13,9 +10,7 @@ describe('buildImproveResumeHref', () => {
     });
     const url = new URL(href, 'http://localhost');
     expect(url.searchParams.get('source')).toBe('assisted-apply');
-    expect(url.searchParams.get('jobApplicationId')).toBe(
-      '11111111-1111-4111-8111-111111111111',
-    );
+    expect(url.searchParams.get('jobApplicationId')).toBe('11111111-1111-4111-8111-111111111111');
     expect(isSafeAssistedApplyReturnTo(url.searchParams.get('returnTo'))).toBe(true);
   });
 

@@ -21,10 +21,7 @@ export const createJobAnalysisController = async (
     const userId = requireUserPrincipalId(req);
     const jobId = getParam(req.params.jobId, 'jobId');
     const operationId = getOperationId() ?? req.operationId;
-    getOperationLogger().info(
-      { operationId, userId, jobId },
-      'Job page analysis requested',
-    );
+    getOperationLogger().info({ operationId, userId, jobId }, 'Job page analysis requested');
     const analysis = await jobPageAnalyzerService.analyzeOrGetFresh({
       userId,
       jobId,
@@ -73,10 +70,7 @@ export const prepareApplicationController = async (
     const userId = requireUserPrincipalId(req);
     const jobId = getParam(req.params.jobId, 'jobId');
     const operationId = getOperationId() ?? req.operationId;
-    getOperationLogger().info(
-      { operationId, userId, jobId },
-      'Application preparation requested',
-    );
+    getOperationLogger().info({ operationId, userId, jobId }, 'Application preparation requested');
     const result = await prepareApplicationService.prepare({
       userId,
       jobId,

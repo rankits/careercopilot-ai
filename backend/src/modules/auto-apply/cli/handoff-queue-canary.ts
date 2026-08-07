@@ -34,12 +34,7 @@ const main = async (): Promise<void> => {
 
   // Construct with a spy; we only assert the class never invokes it from
   // isDirectHandoffEnabled / the documented no-queue invariant helper path.
-  const service = new AssistedApplyHandoffService(
-    {} as never,
-    {} as never,
-    {} as never,
-    queueSpy,
-  );
+  const service = new AssistedApplyHandoffService({} as never, {} as never, {} as never, queueSpy);
 
   if (!service.isDirectHandoffEnabled('canary-user')) {
     console.log(

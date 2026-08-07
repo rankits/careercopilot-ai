@@ -54,7 +54,10 @@ export class ExtensionDraftAnswerController {
         throw new AppError('No active resume found for drafting.', 400, 'NO_ACTIVE_RESUME');
       }
 
-      const resumeText = await resumeTextLookup.findResumeTextForUser(userId, activeVersion.resumeId);
+      const resumeText = await resumeTextLookup.findResumeTextForUser(
+        userId,
+        activeVersion.resumeId,
+      );
       if (!resumeText) {
         throw new AppError('Active resume has no extracted text.', 400, 'RESUME_TEXT_MISSING');
       }

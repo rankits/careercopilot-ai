@@ -412,9 +412,7 @@ describe('ApplicationReadinessService', () => {
     it('blocks company blacklist / exclusion matches', async () => {
       eligibility.evaluateForJob.mockResolvedValue({
         eligible: false,
-        checks: [
-          { check: 'COMPANY_BLACKLIST', status: 'FAILED', reason: 'Excluded company' },
-        ],
+        checks: [{ check: 'COMPANY_BLACKLIST', status: 'FAILED', reason: 'Excluded company' }],
       });
       const result = await service.evaluate({ userId, jobId, stage: 'HANDOFF' });
       expect(result.ready).toBe(false);

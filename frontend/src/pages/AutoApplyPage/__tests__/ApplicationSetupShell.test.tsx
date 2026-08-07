@@ -101,7 +101,12 @@ describe('Application Setup a11y AA-030', () => {
           readyForAssistedApply: false,
           gaps: [],
           sections: [
-            { id: 'personal', label: 'Personal & contact details', complete: false, required: true },
+            {
+              id: 'personal',
+              label: 'Personal & contact details',
+              complete: false,
+              required: true,
+            },
             { id: 'resumes', label: 'Resumes', complete: false, required: true },
           ],
         }}
@@ -111,7 +116,10 @@ describe('Application Setup a11y AA-030', () => {
     expect(
       screen.getByRole('button', { name: /Personal & contact details, incomplete, required/i }),
     ).toBeInTheDocument();
-    expect(screen.getByRole('progressbar')).toHaveAttribute('aria-label', 'Setup 25 percent complete');
+    expect(screen.getByRole('progressbar')).toHaveAttribute(
+      'aria-label',
+      'Setup 25 percent complete',
+    );
   });
 
   it('renders the setup overview from the same completion status', () => {

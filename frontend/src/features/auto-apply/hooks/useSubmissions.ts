@@ -67,11 +67,7 @@ export function useDeleteSubmission() {
       try {
         await autoApplyService.deleteSubmission(id);
       } catch (error) {
-        throw handleAutoApplyMutationError(
-          error,
-          'Unable to delete this submission.',
-          queryClient,
-        );
+        throw handleAutoApplyMutationError(error, 'Unable to delete this submission.', queryClient);
       }
     },
     mutationKey: ['auto-apply', 'submissions', 'delete'],
@@ -89,11 +85,7 @@ export function useReopenSubmission() {
       try {
         return await autoApplyService.reopenSubmission(id);
       } catch (error) {
-        throw handleAutoApplyMutationError(
-          error,
-          'Unable to reopen this submission.',
-          queryClient,
-        );
+        throw handleAutoApplyMutationError(error, 'Unable to reopen this submission.', queryClient);
       }
     },
     mutationKey: ['auto-apply', 'submissions', 'reopen'],

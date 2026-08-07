@@ -125,11 +125,11 @@ function isPersonalComplete(
   const prefs = profile?.preferences;
   return Boolean(
     profile &&
-      contact?.firstName?.trim() &&
-      contact?.lastName?.trim() &&
-      contact?.email?.trim() &&
-      prefs?.currentLocation?.trim() &&
-      prefs?.currentCountry?.trim(),
+    contact?.firstName?.trim() &&
+    contact?.lastName?.trim() &&
+    contact?.email?.trim() &&
+    prefs?.currentLocation?.trim() &&
+    prefs?.currentCountry?.trim(),
   );
 }
 

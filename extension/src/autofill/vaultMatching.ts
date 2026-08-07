@@ -10,9 +10,13 @@ export const KNOWN_VAULT_KEYS = [
   'last_name',
 ];
 
-export function matchFieldToVaultKey(field: { label: string; name?: string; type?: string }): string | null {
+export function matchFieldToVaultKey(field: {
+  label: string;
+  name?: string;
+  type?: string;
+}): string | null {
   const textToMatch = `${field.label} ${field.name || ''}`.toLowerCase();
-  
+
   if (textToMatch.includes('years of experience') || textToMatch.includes('how many years')) {
     return 'years_of_experience';
   }

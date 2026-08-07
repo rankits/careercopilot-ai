@@ -19,8 +19,8 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
         const res = await fetch(`${API_URL}/extension/resume-blob`, {
           headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
+            Authorization: `Bearer ${accessToken}`,
+          },
         });
 
         if (!res.ok) {
@@ -37,7 +37,7 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
         }
 
         const arrayBuffer = await res.arrayBuffer();
-        
+
         let binary = '';
         const bytes = new Uint8Array(arrayBuffer);
         const len = bytes.byteLength;
@@ -59,20 +59,20 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       try {
         const { accessToken } = await chrome.storage.local.get(['accessToken']);
         if (!accessToken) throw new Error('No access token');
-        
+
         const res = await fetch(`${API_URL}/extension/draft-answer`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ question: request.question })
+          body: JSON.stringify({ question: request.question }),
         });
-        
+
         if (!res.ok) {
           throw new Error(`Failed to draft answer: ${res.statusText}`);
         }
-        
+
         const data = await res.json();
         sendResponse({ success: true, data: data.data });
       } catch (err: any) {
@@ -93,8 +93,8 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
 
         const res = await fetch(`${API_URL}/extension/answers`, {
           headers: {
-            'Authorization': `Bearer ${accessToken}`
-          }
+            Authorization: `Bearer ${accessToken}`,
+          },
         });
 
         if (!res.ok) {

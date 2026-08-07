@@ -19,8 +19,6 @@ export async function downloadPreviewAsPdf(
   const pages = Array.from(previewRoot.querySelectorAll<HTMLElement>('.preview-page'));
   if (pages.length === 0) return false;
 
-  /* jsPDF/html2canvas typings are not fully resolved in the ESLint TS program. */
-  /* eslint-disable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   const doc = new jsPDF({ orientation: 'portrait', unit: 'pt', format: 'a4' });
   const pageWidth = doc.internal.pageSize.getWidth();
   const pageHeight = doc.internal.pageSize.getHeight();
@@ -52,7 +50,6 @@ export async function downloadPreviewAsPdf(
   }
 
   doc.save(fileName);
-  /* eslint-enable @typescript-eslint/no-unsafe-assignment, @typescript-eslint/no-unsafe-call, @typescript-eslint/no-unsafe-member-access */
   return true;
 }
 

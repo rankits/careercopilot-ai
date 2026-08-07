@@ -21,10 +21,10 @@ describe('POST /api/v1/extension/draft-answer', () => {
         passwordHash: 'dummy',
       },
     });
-    // In auto-apply module, userId is often the string UUID from Auth layer, 
+    // In auto-apply module, userId is often the string UUID from Auth layer,
     // but in some schemas it uses string version of ID or UUID. Let's create a UUID.
     userId = crypto.randomUUID();
-    
+
     // Create an auth user to link
     await prisma.authUser.create({
       data: {
@@ -48,7 +48,7 @@ describe('POST /api/v1/extension/draft-answer', () => {
       data: {
         userId,
         extractedText: 'Software Engineer with 10 years of experience in Node.js',
-        status: 'READY'
+        status: 'READY',
       },
     });
 
@@ -82,8 +82,12 @@ describe('POST /api/v1/extension/draft-answer', () => {
   });
 
   afterAll(async () => {
-    await prisma.applicationConsent.deleteMany({ where: { userId: { in: [userId, noConsentUserId] } } });
-    await prisma.approvedResumeVersion.deleteMany({ where: { userId: { in: [userId, noConsentUserId] } } });
+    await prisma.applicationConsent.deleteMany({
+      where: { userId: { in: [userId, noConsentUserId] } },
+    });
+    await prisma.approvedResumeVersion.deleteMany({
+      where: { userId: { in: [userId, noConsentUserId] } },
+    });
     await prisma.resume.deleteMany({ where: { userId: { in: [userId, noConsentUserId] } } });
     await prisma.authUser.deleteMany({ where: { id: { in: [userId, noConsentUserId] } } });
     await prisma.user.deleteMany({ where: { email: { contains: 'draft-test' } } });

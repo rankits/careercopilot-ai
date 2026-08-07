@@ -3,7 +3,10 @@ import { ExtensionPairingController } from '@/modules/extension/controllers/pair
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
 import { requireRole } from '@/shared/middlewares/rbac.middleware.js';
 import { validateResource } from '@/shared/middlewares/validateResource.js';
-import { redeemPairingCodeSchema, revokeDeviceSchema } from '@/modules/extension/validations/pairing.validation.js';
+import {
+  redeemPairingCodeSchema,
+  revokeDeviceSchema,
+} from '@/modules/extension/validations/pairing.validation.js';
 
 const router = Router();
 
@@ -12,7 +15,7 @@ router.post(
   '/pair/start',
   authMiddleware,
   requireRole('USER'),
-  ExtensionPairingController.startPairing
+  ExtensionPairingController.startPairing,
 );
 
 // Used by the extension to redeem the code
@@ -20,23 +23,18 @@ router.post(
 router.post(
   '/pair/complete',
   validateResource(redeemPairingCodeSchema),
-  ExtensionPairingController.redeemPairingCode
+  ExtensionPairingController.redeemPairingCode,
 );
 
 // Used by the web app to manage paired devices
-router.get(
-  '/devices',
-  authMiddleware,
-  requireRole('USER'),
-  ExtensionPairingController.listDevices
-);
+router.get('/devices', authMiddleware, requireRole('USER'), ExtensionPairingController.listDevices);
 
 router.delete(
   '/devices/:deviceId',
   authMiddleware,
   requireRole('USER'),
   validateResource(revokeDeviceSchema),
-  ExtensionPairingController.revokeDevice
+  ExtensionPairingController.revokeDevice,
 );
 
 export default router;

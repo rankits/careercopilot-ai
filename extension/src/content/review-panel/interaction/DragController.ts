@@ -15,7 +15,12 @@ export class DragController {
     this.handlePointerUp = this.handlePointerUp.bind(this);
   }
 
-  startDrag(e: React.PointerEvent, panelRef: React.RefObject<HTMLElement | null>, currentX: number, currentY: number) {
+  startDrag(
+    e: React.PointerEvent,
+    panelRef: React.RefObject<HTMLElement | null>,
+    currentX: number,
+    currentY: number,
+  ) {
     // Ignore interactive elements
     const target = e.target as HTMLElement;
     if (target.tagName === 'BUTTON' || target.closest('button')) return;
@@ -24,7 +29,7 @@ export class DragController {
     if (!this.panelElement) return;
 
     (e.target as Element).setPointerCapture(e.pointerId);
-    
+
     this.isDragging = true;
     this.initialX = e.clientX;
     this.initialY = e.clientY;
@@ -33,17 +38,17 @@ export class DragController {
 
     document.addEventListener('pointermove', this.handlePointerMove);
     document.addEventListener('pointerup', this.handlePointerUp);
-    
+
     // Disable text selection
     document.body.style.userSelect = 'none';
   }
 
   private handlePointerMove(e: PointerEvent) {
     if (!this.isDragging || !this.panelElement) return;
-    
+
     const deltaX = e.clientX - this.initialX;
     const deltaY = e.clientY - this.initialY;
-    
+
     const newX = this.currentX + deltaX;
     const newY = this.currentY + deltaY;
 
@@ -57,21 +62,21 @@ export class DragController {
 
     document.removeEventListener('pointermove', this.handlePointerMove);
     document.removeEventListener('pointerup', this.handlePointerUp);
-    
+
     document.body.style.userSelect = '';
 
     if (this.panelElement) {
       this.panelElement.style.transform = ''; // reset transform
-      
+
       const deltaX = e.clientX - this.initialX;
       const deltaY = e.clientY - this.initialY;
-      
+
       const rawX = this.currentX + deltaX;
       const rawY = this.currentY + deltaY;
 
       const rect = this.panelElement.getBoundingClientRect();
       const clamped = ViewportConstraintManager.clampPosition(rawX, rawY, rect.width, rect.height);
-      
+
       this.onDragEnd(clamped.x, clamped.y);
     }
   }

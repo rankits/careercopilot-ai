@@ -18,7 +18,7 @@ describe('GET /api/v1/extension/answers', () => {
         email: 'extension.tester@example.com',
         role: { connect: { name: 'USER' } },
         status: 'Active',
-      }
+      },
     });
     testUserId = user.id;
     testUserPrincipalId = String(user.id);
@@ -43,8 +43,8 @@ describe('GET /api/v1/extension/answers', () => {
           questionKey: 'gender',
           answer: 'Male',
           sensitive: true, // Sensitive!
-        }
-      ]
+        },
+      ],
     });
 
     // Generate token
@@ -69,11 +69,11 @@ describe('GET /api/v1/extension/answers', () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data).toBeDefined();
-    
+
     // Check that normal keys are returned
     expect(res.body.data.answers['years_of_experience']).toBe('5 years');
     expect(res.body.data.answers['github_url']).toBe('https://github.com/extension');
-    
+
     // Check that sensitive keys are filtered
     expect(res.body.data.answers['gender']).toBeUndefined();
 

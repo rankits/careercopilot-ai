@@ -48,7 +48,7 @@ export const ExtensionPairingService = {
    */
   async redeemPairingCode(
     code: string,
-    context: { ipAddress?: string; userAgent?: string }
+    context: { ipAddress?: string; userAgent?: string },
   ): Promise<{ accessToken: string; refreshToken: string; expiresInSeconds: number }> {
     const codeHash = hashValue(code);
 
@@ -114,7 +114,7 @@ export const ExtensionPairingService = {
    */
   async rotateSession(
     rawRefreshToken: string,
-    context: { ipAddress?: string; userAgent?: string }
+    context: { ipAddress?: string; userAgent?: string },
   ): Promise<{ accessToken: string; refreshToken: string; expiresInSeconds: number }> {
     const refreshTokenHash = hashValue(rawRefreshToken);
     const device = await prisma.extensionDevice.findUnique({
@@ -135,7 +135,7 @@ export const ExtensionPairingService = {
     // Generate new device tokens
     const newRawRefreshToken = randomBytes(64).toString('hex');
     const newRefreshTokenHash = hashValue(newRawRefreshToken);
-    
+
     // Update hash in place for a single device binding.
     await prisma.extensionDevice.update({
       where: { id: device.id },
@@ -152,7 +152,7 @@ export const ExtensionPairingService = {
       role: device.user.role.name,
       tokenVersion: device.user.tokenVersion,
     };
-    
+
     const access = TokenService.generateAccessToken(userCtx);
 
     return {
@@ -189,5 +189,5 @@ export const ExtensionPairingService = {
       where: { id: deviceId },
       data: { revokedAt: new Date() },
     });
-  }
+  },
 };

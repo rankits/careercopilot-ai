@@ -17,12 +17,8 @@ describe('assisted-apply-rollout.util (AA-092)', () => {
   });
 
   it('allowlist always wins', () => {
-    expect(
-      isUserInRollout('vip', { percent: 0, allowlist: ['vip'] }),
-    ).toBe(true);
-    expect(
-      isUserInRollout('other', { percent: 0, allowlist: ['vip'] }),
-    ).toBe(false);
+    expect(isUserInRollout('vip', { percent: 0, allowlist: ['vip'] })).toBe(true);
+    expect(isUserInRollout('other', { percent: 0, allowlist: ['vip'] })).toBe(false);
   });
 
   it('percent 100 includes everyone', () => {
