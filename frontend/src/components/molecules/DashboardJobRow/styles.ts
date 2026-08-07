@@ -1,4 +1,6 @@
-import { MuiButton, styled } from '@/lib/material';
+import MuiButton from '@mui/material/Button';
+import { styled } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, jobFeedTokens, spacing } from '@/tokens';
 
 export const DashboardJobRowRoot = styled('article', {
