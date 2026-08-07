@@ -1,4 +1,7 @@
-import { Box, Typography, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 import { border, borderRadius, muted, scrollableMultilineSx, t, title } from '../../styles/shared';
@@ -14,7 +17,7 @@ export const SectionEditorShell = styled(Box)({
 export const ScrollableEntries = styled(Box)({
   display: 'grid',
   gap: spacing[3],
-  maxHeight: '22rem',
+  maxHeight: 'min(32rem, 55vh)',
   minWidth: 0,
   overflowX: 'hidden',
   overflowY: 'auto',

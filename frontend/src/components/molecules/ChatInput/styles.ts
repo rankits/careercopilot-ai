@@ -1,4 +1,9 @@
-import { Box, IconButton, SendIcon, TextField, styled } from '@/lib/material';
+import SendIcon from '@mui/icons-material/Send';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
+import TextField from '@mui/material/TextField';
+
 import { borderRadius, colorTokens, spacing } from '@/tokens';
 
 export const ChatInputRoot = styled(Box)({

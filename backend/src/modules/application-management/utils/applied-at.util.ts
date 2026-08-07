@@ -9,6 +9,20 @@ export function getTodayDateInputValue(date = new Date()): string {
   return `${year}-${month}-${day}`;
 }
 
+/**
+ * Latest YYYY-MM-DD accepted for appliedAt.
+ * Uses UTC today + 1 day so clients ahead of the server timezone (e.g. IST vs UTC)
+ * are not rejected for selecting their local "today".
+ */
+export function getMaxAllowedAppliedAtDate(date = new Date()): string {
+  const max = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate() + 1));
+  const year = max.getUTCFullYear();
+  const month = String(max.getUTCMonth() + 1).padStart(2, '0');
+  const day = String(max.getUTCDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
 export function parseAppliedAtDate(appliedAt: string): Date {
   const normalized = appliedAt.trim();
 
@@ -16,7 +30,7 @@ export function parseAppliedAtDate(appliedAt: string): Date {
     throw new AppError('Applied date is invalid', 400, 'INVALID_APPLIED_AT');
   }
 
-  if (normalized > getTodayDateInputValue()) {
+  if (normalized > getMaxAllowedAppliedAtDate()) {
     throw new AppError('Applied date cannot be in the future', 400, 'INVALID_APPLIED_AT');
   }
 

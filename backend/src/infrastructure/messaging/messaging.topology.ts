@@ -9,6 +9,7 @@ export const MessageQueues = {
   AUTH_USER_SIGNED_IN: 'careercopilot.auth.user_signed_in',
   EMAIL_SEND: 'careercopilot.email.send',
   JOB_EMBEDDING_REQUESTS: 'careercopilot.job_embeddings.requests',
+  RESUME_ANALYSIS_REQUESTS: 'careercopilot.resume_analysis.requests',
   APPLICATION_SUBMIT: 'careercopilot.applications.submit',
 } as const;
 
@@ -18,6 +19,7 @@ export const MessageRoutingKeys = {
   USER_REGISTERED: 'user.registered',
   EMAIL_SEND: 'email.send',
   JOB_SEMANTIC_CONTENT_CHANGED: 'jobs.semantic-content.changed.v1',
+  RESUME_ANALYSIS_REQUESTED: 'resume-analysis.requested.v1',
   APPLICATION_SUBMIT: 'applications.submit',
 } as const;
 

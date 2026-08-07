@@ -13,15 +13,23 @@ import { authReducer } from '@/features/auth/authSlice';
 
 import { LoginPage } from './LoginPage';
 
-const { loginMock, startGoogleLoginMock } = vi.hoisted(() => ({
-  loginMock: vi.fn(),
-  startGoogleLoginMock: vi.fn(),
-}));
+const { loginMock, forgotPasswordMock, resetPasswordMock, startGoogleLoginMock } = vi.hoisted(
+  () => ({
+    loginMock: vi.fn(),
+    forgotPasswordMock: vi.fn(),
+    resetPasswordMock: vi.fn(),
+    startGoogleLoginMock: vi.fn(),
+  }),
+);
 
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
     login: loginMock,
+    forgotPassword: forgotPasswordMock,
+    resetPassword: resetPasswordMock,
     startGoogleLogin: startGoogleLoginMock,
+    refreshSession: vi.fn().mockRejectedValue(new Error('No session')),
+    getCurrentUser: vi.fn(),
   },
 }));
 
@@ -58,10 +66,46 @@ async function completeValidForm(user: ReturnType<typeof userEvent.setup>) {
   await user.type(screen.getByLabelText(/^password$/i), 'password123');
 }
 
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    clear: () => {
+      store = {};
+    },
+    getItem: (key: string) => store[key] ?? null,
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() {
+      return Object.keys(store).length;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: localStorageMock,
+  writable: true,
+});
+
 describe('LoginPage', () => {
   beforeEach(() => {
     loginMock.mockReset();
+    forgotPasswordMock.mockReset();
+    resetPasswordMock.mockReset();
     startGoogleLoginMock.mockReset();
+    forgotPasswordMock.mockResolvedValue({
+      message: 'If an account with that email exists, a verification code has been sent.',
+      status: 'success',
+    });
+    resetPasswordMock.mockResolvedValue({
+      message: 'Password has been reset. Please sign in with your new password.',
+      status: 'success',
+    });
     localStorage.clear();
   });
 
@@ -112,7 +156,7 @@ describe('LoginPage', () => {
     const user = userEvent.setup();
     renderPage();
 
-    expect(screen.getByRole('main')).toHaveStyle({ overflow: 'hidden' });
+    expect(screen.getByRole('main')).toHaveStyle({ minHeight: '100dvh' });
     expect(screen.getByRole('heading', { name: /welcome back!/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /careercopilot/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /careercopilot/i })).not.toHaveStyle({
@@ -136,15 +180,31 @@ describe('LoginPage', () => {
     expect(screen.getByText(/^application tracking$/i)).toBeInTheDocument();
     expect(screen.queryByText(/^resume score$/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/^jobs aggregated$/i)).not.toBeInTheDocument();
-    expect(screen.getByText(/^your data is safe$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^privacy first$/i)).toBeInTheDocument();
-    expect(screen.getByText(/^ai you can trust$/i)).toBeInTheDocument();
-    expect(screen.getByLabelText(/security and trust/i)).toBeInTheDocument();
+    expect(screen.queryByText(/^your data is safe$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^privacy first$/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^ai you can trust$/i)).not.toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /remember me/i })).toBeChecked();
 
     await user.click(screen.getByRole('link', { name: /create account/i }));
 
     expect(screen.getByRole('heading', { name: /register destination/i })).toBeInTheDocument();
+  });
+
+  it('opens and closes the forgot password dialog', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(screen.getByRole('link', { name: /forgot password/i }));
+
+    expect(await screen.findByRole('heading', { name: /forgot password\?/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /send reset link/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /email address/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /close dialog/i }));
+
+    await waitFor(() =>
+      expect(screen.queryByRole('heading', { name: /forgot password\?/i })).not.toBeInTheDocument(),
+    );
   });
 
   it('blocks missing and malformed credentials before calling the API', async () => {
@@ -191,7 +251,8 @@ describe('LoginPage', () => {
     );
     expect(store.getState().auth.isAuthenticated).toBe(true);
     expect(store.getState().auth.isProfileComplete).toBe(false);
-    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBe(JSON.stringify('token'));
+    expect(store.getState().auth.accessToken).toBe('token');
+    expect(localStorage.getItem(STORAGE_KEYS.ACCESS_TOKEN)).toBeNull();
     expect(localStorage.getItem(STORAGE_KEYS.PROFILE_COMPLETE)).toBe(JSON.stringify(false));
     expect(localStorage.getItem(STORAGE_KEYS.USER_ID)).toBe(JSON.stringify('1'));
     expect(
@@ -275,7 +336,9 @@ describe('LoginPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /^login$/i }));
 
-    expect(await screen.findByText(/unable to log in\. please try again/i)).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      /unable to log in\. please try again/i,
+    );
     expect(screen.getByRole('button', { name: /^login$/i })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: /^login$/i }));
@@ -304,6 +367,6 @@ describe('LoginPage', () => {
     await completeValidForm(user);
     await user.click(screen.getByRole('button', { name: /^login$/i }));
 
-    expect(await screen.findByText(/invalid email or password/i)).toBeInTheDocument();
+    expect(await screen.findByRole('alert')).toHaveTextContent(/invalid email or password/i);
   });
 });

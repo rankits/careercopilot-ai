@@ -683,7 +683,7 @@ describe('AiMatchPage', () => {
 
     renderPage(true, '/ai-match?mode=resume');
 
-    expect(await screen.findByRole('status')).toHaveTextContent(/upload and confirm/i);
+    expect(await screen.findByRole('status', { name: /upload and confirm/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /add resume/i })).toHaveAttribute('href', '/profile');
     expect(generateResumeMock).not.toHaveBeenCalled();
   });
@@ -883,7 +883,9 @@ describe('AiMatchPage', () => {
     listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
     renderPage(false);
 
-    expect(await screen.findByRole('status')).toHaveTextContent(/complete your profile/i);
+    expect(
+      await screen.findByRole('status', { name: /complete your profile/i }),
+    ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /complete profile/i })).toHaveAttribute(
       'href',
       '/profile',

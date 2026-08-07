@@ -88,4 +88,69 @@ describe('groundSkillGapAgainstResume', () => {
     );
     expect(gap.crossDomain).toBe(false);
   });
+
+  it('grounds JD skills from structuredSkills when resume extract is lossy', () => {
+    const gap = groundSkillGapAgainstResume({
+      resumeText: 'Name only\nSome garbamos text without skill tokens',
+      structuredSkills: ['React', 'TypeScript', 'Redux Toolkit'],
+      jobDescription: REACT_JD,
+      targetRole: 'React Developer',
+      aiMatched: ['React', 'TypeScript'],
+      aiMissing: ['React', 'TypeScript', 'Redux Toolkit'],
+    });
+
+    expect(gap.matchedSkills).toEqual(
+      expect.arrayContaining(['React', 'TypeScript', 'Redux Toolkit']),
+    );
+    expect(gap.crossDomain).toBe(false);
+    expect(gap.skillMatch).toBeGreaterThan(0);
+  });
+
+  it('matches angular on resume against Angular in JD', () => {
+    const gap = groundSkillGapAgainstResume({
+      resumeText: `
+SKILLS
+angular, typescript, rxjs, html, css
+
+EXPERIENCE
+Built SPA dashboards with angular and typescript.
+`,
+      jobDescription: `
+Angular Developer
+Required Skills: Angular, TypeScript, RxJS, HTML5, CSS3
+`,
+      targetRole: 'Angular Developer',
+      aiMatched: [],
+      aiMissing: ['Angular', 'TypeScript', 'RxJS'],
+    });
+
+    expect(gap.matchedSkills).toEqual(expect.arrayContaining(['Angular', 'TypeScript']));
+    expect(gap.crossDomain).toBe(false);
+  });
+
+  it('grounds space-separated PDF skill grids against a matching JD', () => {
+    const gap = groundSkillGapAgainstResume({
+      resumeText: `
+Name
+Skills
+React TypeScript Node.js Docker AWS
+Experience
+Built apps with React
+`,
+      jobDescription: `
+React Developer
+Required: React, TypeScript, Node.js, Docker, AWS, Kafka
+`,
+      targetRole: 'React Developer',
+      aiMatched: [],
+      aiMissing: ['React', 'TypeScript', 'Node.js', 'Docker', 'AWS', 'Kafka'],
+    });
+
+    expect(gap.matchedSkills).toEqual(
+      expect.arrayContaining(['React', 'TypeScript', 'Node.js', 'Docker', 'AWS']),
+    );
+    expect(gap.missingSkills).toEqual(expect.arrayContaining(['Kafka']));
+    expect(gap.skillMatch).toBeGreaterThan(50);
+    expect(gap.crossDomain).toBe(false);
+  });
 });

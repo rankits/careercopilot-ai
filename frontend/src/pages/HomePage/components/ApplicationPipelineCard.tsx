@@ -1,12 +1,11 @@
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import RateReviewOutlinedIcon from '@mui/icons-material/RateReviewOutlined';
+import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
+import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
+import Skeleton from '@mui/material/Skeleton';
+
 import { DASHBOARD_COPY } from '@/constants/pages/dashboard';
 import { ROUTES } from '@/constants/routes';
-import {
-  BusinessCenterOutlinedIcon,
-  RateReviewOutlinedIcon,
-  SendOutlinedIcon,
-  Skeleton,
-  WorkspacePremiumOutlinedIcon,
-} from '@/lib/material';
 
 import type { DashboardPipelineStageModel } from '../hooks/useDashboardOverview';
 import {

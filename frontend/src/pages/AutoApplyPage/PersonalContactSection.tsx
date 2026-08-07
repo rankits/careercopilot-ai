@@ -10,13 +10,8 @@ import {
 import { useCurrentUser } from '@/features/user/hooks/useCurrentUser';
 import { useUpdateUserProfile } from '@/features/user/hooks/useUpdateUserProfile';
 
-import {
-  Box,
-  MenuItem,
-  Paper,
-  Skeleton,
-  TextField,
-} from '@/lib/material';
+import { mapUserProfileUpdateError } from '@/features/user/utils/mapUserProfileUpdateError';
+import { Box, MenuItem, Paper, Skeleton, TextField } from '@/lib/material';
 
 import { useSetupDirty } from './SetupDirtyContext';
 import {
@@ -24,6 +19,7 @@ import {
   isValidE164Phone,
   joinFullName,
   splitFullName,
+  validateFullName,
 } from './setupFormUtils';
 import { SetupSectionHeading } from './SetupSectionHeading';
 
@@ -43,6 +39,7 @@ export function PersonalContactSection() {
   const [currentLocation, setCurrentLocation] = useState('');
   const [currentCountry, setCurrentCountry] = useState('');
   const [errors, setErrors] = useState<FieldErrors>({});
+  const [touched, setTouched] = useState<Partial<Record<keyof FieldErrors, boolean>>>({});
   const [locationSaveFailed, setLocationSaveFailed] = useState(false);
 
   const savedSnapshot = useMemo(
@@ -83,8 +80,9 @@ export function PersonalContactSection() {
 
   const validate = (): FieldErrors => {
     const next: FieldErrors = {};
-    if (!fullName.trim()) {
-      next.fullName = 'Enter your full name.';
+    const fullNameError = validateFullName(fullName);
+    if (fullNameError) {
+      next.fullName = fullNameError;
     }
     if (!isValidE164Phone(phone)) {
       next.phone = 'Enter a valid phone number, e.g. +14155552671.';
@@ -98,13 +96,21 @@ export function PersonalContactSection() {
     return next;
   };
 
-  const userFieldsChanged =
-    fullName !== savedSnapshot.fullName || phone !== savedSnapshot.phone;
+  const showError = (field: keyof FieldErrors) => (touched[field] ? errors[field] : undefined);
+
+  const userFieldsChanged = fullName !== savedSnapshot.fullName || phone !== savedSnapshot.phone;
   const locationFieldsChanged =
     currentLocation !== savedSnapshot.currentLocation ||
     currentCountry !== savedSnapshot.currentCountry;
 
   const handleSave = async () => {
+    setTouched({
+      fullName: true,
+      phone: true,
+      currentLocation: true,
+      currentCountry: true,
+    });
+
     const validationErrors = validate();
     setErrors(validationErrors);
     if (Object.keys(validationErrors).length > 0) return;
@@ -127,8 +133,16 @@ export function PersonalContactSection() {
         });
         userSaved = true;
       }
-    } catch {
-      showToast({ message: "We couldn't save your details. Try again.", severity: 'error' });
+    } catch (error) {
+      const mapped = mapUserProfileUpdateError(error);
+      if (Object.keys(mapped.fieldErrors).length > 0) {
+        setErrors((current) => ({ ...current, ...mapped.fieldErrors }));
+        setTouched((current) => ({
+          ...current,
+          ...Object.fromEntries(Object.keys(mapped.fieldErrors).map((field) => [field, true])),
+        }));
+      }
+      showToast({ message: mapped.toastMessage, severity: 'error' });
       return;
     }
 
@@ -147,8 +161,7 @@ export function PersonalContactSection() {
       setLocationSaveFailed(true);
       if (userSaved && shouldSaveUser) {
         showToast({
-          message:
-            "Your name and phone were saved, but we couldn't save your location. Try again.",
+          message: "Your name and phone were saved, but we couldn't save your location. Try again.",
           severity: 'warning',
         });
       } else {
@@ -169,7 +182,13 @@ export function PersonalContactSection() {
     return (
       <Paper sx={{ borderRadius: 2, p: { xs: 2, sm: 3 }, width: '100%' }} variant="outlined">
         <SetupSectionHeading required sectionId="personal" title="Personal & contact details" />
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
+        <Box
+          sx={{
+            display: 'grid',
+            gap: 2,
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+          }}
+        >
           {Array.from({ length: 5 }).map((_, index) => (
             <Skeleton height={56} key={`personal-skeleton-${index}`} variant="rounded" />
           ))}
@@ -191,13 +210,20 @@ export function PersonalContactSection() {
       variant="outlined"
     >
       <SetupSectionHeading required sectionId="personal" title="Personal & contact details" />
-      <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' } }}>
+      <Box
+        sx={{
+          display: 'grid',
+          gap: 2,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, minmax(0, 1fr))' },
+        }}
+      >
         <TextField
-          error={Boolean(errors.fullName)}
+          error={Boolean(showError('fullName'))}
           fullWidth
-          helperText={errors.fullName}
+          helperText={showError('fullName')}
           label="Full name"
           onChange={(event) => setFullName(event.target.value)}
+          onBlur={() => setTouched((current) => ({ ...current, fullName: true }))}
           required
           value={fullName}
         />
@@ -209,37 +235,40 @@ export function PersonalContactSection() {
           value={user?.email ?? ''}
         />
         <TextField
-          error={Boolean(errors.phone)}
+          error={Boolean(showError('phone'))}
           fullWidth
           helperText={
-            errors.phone ??
+            showError('phone') ??
             "Used only if an employer's application requires it. We never sell your data."
           }
           label="Phone number"
           onChange={(event) => setPhone(event.target.value)}
+          onBlur={() => setTouched((current) => ({ ...current, phone: true }))}
           value={phone}
         />
         <TextField
-          error={Boolean(errors.currentLocation)}
+          error={Boolean(showError('currentLocation'))}
           fullWidth
           helperText={
-            errors.currentLocation ??
+            showError('currentLocation') ??
             'Used to check location eligibility for jobs that require you to be in a specific area.'
           }
           label="Current city or region"
           onChange={(event) => setCurrentLocation(event.target.value)}
+          onBlur={() => setTouched((current) => ({ ...current, currentLocation: true }))}
           required
           value={currentLocation}
         />
         <TextField
-          error={Boolean(errors.currentCountry)}
+          error={Boolean(showError('currentCountry'))}
           fullWidth
           helperText={
-            errors.currentCountry ??
+            showError('currentCountry') ??
             'Used to check location eligibility for jobs that require you to be in a specific area.'
           }
           label="Country"
           onChange={(event) => setCurrentCountry(event.target.value)}
+          onBlur={() => setTouched((current) => ({ ...current, currentCountry: true }))}
           required
           select
           value={currentCountry}

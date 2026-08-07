@@ -53,18 +53,20 @@ export async function downloadPreviewAsPdf(
   return true;
 }
 
+/**
+ * Always export a text-based PDF (react-pdf), never an html2canvas image PDF.
+ * Image PDFs look like the preview but yield empty text on re-upload → Skill Match 0%.
+ * `previewRoot` is retained for API compatibility; visual capture is available via
+ * `downloadPreviewAsPdf` only when explicitly needed.
+ */
 export async function downloadResumePdf(
   draft: ResumeDraft,
   fileName?: string,
   template: ResumeTemplateId = 'classic',
-  previewRoot?: HTMLElement | null,
+  _previewRoot?: HTMLElement | null,
 ) {
+  void _previewRoot;
   const name = resolveFileName(draft, fileName);
-
-  if (previewRoot) {
-    const captured = await downloadPreviewAsPdf(previewRoot, name);
-    if (captured) return;
-  }
 
   const blob = await pdf(<ResumePdfDocument draft={draft} template={template} />).toBlob();
   const url = URL.createObjectURL(blob);

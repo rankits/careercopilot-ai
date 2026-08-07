@@ -1,3 +1,4 @@
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
@@ -10,66 +11,68 @@ import { useAppSelector } from '@/hooks/redux';
 
 import { AppHeader, CareerCopilot, Sidebar } from '@/components';
 import { ROUTES } from '@/constants/routes';
-import { CopilotSessionProvider } from '@/features/copilot';
+import { CopilotSessionProvider, useCopilotSession } from '@/features/copilot';
 import { resumeService } from '@/features/resume/services/resume.service';
 import type { UploadedResumeVersion } from '@/features/resume/types/resume.types';
-import { useMediaQuery } from '@/lib/material';
+import { toTitleCase } from '@/lib/toTitleCase';
+
+import { resolveSidebarActiveItemId } from './resolveSidebarActiveItemId';
 
 export function AppLayout() {
+  return (
+    <CopilotSessionProvider>
+      <AppLayoutShell />
+    </CopilotSessionProvider>
+  );
+}
+
+function AppLayoutShell() {
   const isMobile = useMediaQuery('(max-width: 760px)');
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { toggleOpen } = useCopilotSession();
   const [sidebarVariant, setSidebarVariant] = useState<SidebarVariant>('open');
   const [uploadedResumes, setUploadedResumes] = useState<UploadedResumeVersion[]>([]);
+  const [resumesLoaded, setResumesLoaded] = useState(false);
+  const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
-  const activeItemId =
-    pathname === ROUTES.PROFILE_EDIT ||
-    pathname.startsWith(`${ROUTES.PROFILE}/`) ||
-    pathname.startsWith('/settings/')
-      ? 'settings'
-      : pathname === ROUTES.SAVED_JOBS
-        ? 'saved-jobs'
-        : pathname === ROUTES.AI_MATCH
-          ? 'ai-match'
-          : pathname === ROUTES.AI_MAIL
-            ? 'ai-mail'
-            : pathname === ROUTES.AUTO_APPLY
-              ? 'auto-apply'
-              : pathname === ROUTES.ASSISTED_APPLICATIONS || pathname.startsWith('/assisted-apply/')
-                ? 'assisted-applications'
-                : pathname === ROUTES.BROWSER_EXTENSION
-                  ? 'browser-extension'
-                  : pathname === ROUTES.APPLICATIONS
-                    ? 'applications'
-                    : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
-                      ? 'jobs-feed'
-                      : pathname === ROUTES.SAVED_RESUMES ||
-                          pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
-                        ? 'saved-resumes'
-                        : pathname.startsWith(ROUTES.RESUME_BUILDER)
-                          ? 'resume-builder'
-                          : 'dashboard';
+  const activeItemId = resolveSidebarActiveItemId(pathname);
 
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);
-  const userName = user?.name ?? user?.email ?? 'User';
+  const userName = user?.name ? toTitleCase(user.name) : (user?.email ?? 'User');
   const userRoleLabel = user?.role === 'admin' || user?.role === 'ADMIN' ? 'Admin' : undefined;
   const latestResume = uploadedResumes[0] ?? null;
 
   const refreshUploadedResumes = useCallback(async () => {
+    setIsLoadingResumes(true);
     try {
       const resumes = await resumeService.listResumes();
       setUploadedResumes(resumes);
+      setResumesLoaded(true);
+      return resumes;
     } catch {
       setUploadedResumes([]);
+      setResumesLoaded(true);
+      return [];
+    } finally {
+      setIsLoadingResumes(false);
     }
   }, []);
 
+  const ensureUploadedResumesLoaded = useCallback(async () => {
+    if (resumesLoaded) {
+      return uploadedResumes;
+    }
+
+    return refreshUploadedResumes();
+  }, [refreshUploadedResumes, resumesLoaded, uploadedResumes]);
+
   useEffect(() => {
-    void refreshUploadedResumes();
-  }, [refreshUploadedResumes, pathname]);
+    void ensureUploadedResumesLoaded();
+  }, [ensureUploadedResumesLoaded]);
 
   const handleDownload = async (resume: UploadedResumeVersion) => {
     setDownloadingId(resume.id);
@@ -85,19 +88,52 @@ export function AppLayout() {
     }
   };
 
+  const handleDownloadLatestResume = () => {
+    void (async () => {
+      const resumes = await ensureUploadedResumesLoaded();
+      const latest = resumes[0];
+
+      if (!latest) {
+        showToast({
+          message: 'No resume uploaded yet. Add one from Edit Profile.',
+          severity: 'info',
+        });
+        return;
+      }
+
+      await handleDownload(latest);
+    })();
+  };
+
+  const handleOpenResumeVersions = () => {
+    setIsVersionsOpen(true);
+    void ensureUploadedResumesLoaded();
+  };
+
   return (
-    <CopilotSessionProvider>
+    <>
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <div className="app-shell">
         <Sidebar
           activeItemId={activeItemId}
           isDownloadingLatestResume={Boolean(latestResume && downloadingId === latestResume.id)}
-          latestResumeName={latestResume?.originalName ?? null}
+          latestResumeName={resumesLoaded ? (latestResume?.originalName ?? null) : null}
+          latestResumeUploadedAt={latestResume?.uploadedAt ?? null}
           mobileMode={isMobile ? 'bottomNav' : undefined}
-          onDownloadLatestResume={() => {
-            if (latestResume) void handleDownload(latestResume);
+          onDownloadLatestResume={handleDownloadLatestResume}
+          onLogoutClick={() => {
+            if (!isLoggingOut) {
+              void logout();
+            }
           }}
-          onOpenResumeVersions={() => setIsVersionsOpen(true)}
+          onOpenAiAssistant={toggleOpen}
+          onOpenResumeVersions={handleOpenResumeVersions}
+          onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
           onVariantChange={setSidebarVariant}
+          resumeListLoaded={resumesLoaded}
+          userName={userName}
           variant={sidebarVariant}
         />
         <div className="content-shell">
@@ -113,20 +149,21 @@ export function AppLayout() {
             userName={userName}
             userRoleLabel={userRoleLabel}
           />
-          <main className="main-content">
+          <main className="main-content" id="main-content" tabIndex={-1}>
             <Outlet />
           </main>
         </div>
-        <CareerCopilot />
       </div>
+      <CareerCopilot />
 
       <ResumeVersionsDialog
         downloadingId={downloadingId}
+        isLoading={isLoadingResumes}
         onClose={() => setIsVersionsOpen(false)}
         onDownload={(resume) => void handleDownload(resume)}
         open={isVersionsOpen}
         resumes={uploadedResumes}
       />
-    </CopilotSessionProvider>
+    </>
   );
 }

@@ -5,11 +5,11 @@ import { DEFAULT_AUTO_HIDE_DURATION } from './constants';
 import { ToastContext, type ToastOptions, type ToastSeverity } from './ToastContext';
 
 interface ToastState {
+  actionLabel?: string;
   autoHideDuration: number;
   message: string;
-  severity: ToastSeverity;
-  actionLabel?: string;
   onAction?: () => void;
+  severity: ToastSeverity;
 }
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -17,11 +17,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
   const showToast = useCallback((options: ToastOptions) => {
     setToast({
+      actionLabel: options.actionLabel,
       autoHideDuration: options.autoHideDuration ?? DEFAULT_AUTO_HIDE_DURATION,
       message: options.message,
-      severity: options.severity ?? 'info',
-      actionLabel: options.actionLabel,
       onAction: options.onAction,
+      severity: options.severity ?? 'info',
     });
   }, []);
 
@@ -41,11 +41,11 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
 
           setToast(null);
         }}
-        sx={{ top: { xs: '4.75rem', sm: '5rem' } }}
+        sx={{ top: { xs: '1rem', sm: '1.25rem' } }}
       >
         <Alert
           action={
-            toast?.actionLabel && toast?.onAction ? (
+            toast?.actionLabel && toast.onAction ? (
               <Button
                 color="inherit"
                 onClick={() => {

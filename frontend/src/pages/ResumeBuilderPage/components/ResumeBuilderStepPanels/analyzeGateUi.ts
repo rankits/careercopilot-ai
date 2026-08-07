@@ -67,14 +67,14 @@ export function getAnalyzeGateUi(input: {
   if (kind === 'low_match') {
     return {
       kind,
-      subtitle: 'Your resume is too far from this JD to continue optimizing.',
+      subtitle: 'Low match for this JD — you can still continue and rebuild your resume.',
       bannerTitle: LOW_JD_MATCH_MESSAGE,
-      bannerBody: `ATS is ${analysis?.atsScore ?? 0}/100 and Skill Match is ${analysis?.skillMatch ?? 0}/100. Upload a better-matching resume, or switch to a related-field Target Role / JD, then re-analyze.`,
-      tipTitle: 'Resume does not match this JD enough to continue.',
+      bannerBody: `ATS is ${analysis?.atsScore ?? 0}/100 and Skill Match is ${analysis?.skillMatch ?? 0}/100. Continue to Optimize to rebuild toward this role, or upload a better-matching resume / change the Target Role & JD.`,
+      tipTitle: 'Low match — continue to rebuild anyway.',
       tipText:
-        'Skill match must be at least 25% and ATS at least 35%. Skills matter more — ATS alone is not enough.',
-      ctaLabel: 'Upload another resume',
-      ctaAction: 'replace_resume',
+        'Skill match under 25% or ATS under 35% is a warning, not a hard stop. Optimize can still help you rewrite toward this JD.',
+      ctaLabel: 'Continue to Optimize anyway',
+      ctaAction: 'continue',
     };
   }
 

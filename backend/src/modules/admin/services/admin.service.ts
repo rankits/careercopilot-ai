@@ -22,6 +22,7 @@ import type {
   SafeAdmin,
   SystemStats,
 } from '@/modules/admin/types/admin.types.js';
+import { logger } from '@/shared/logger/logger.js';
 
 export const login = async (
   input: AdminLoginInput,
@@ -135,7 +136,10 @@ export const changePassword = async (
       timestamp: new Date().toISOString(),
     })
     .catch((err: unknown) =>
-      console.error('[AdminService] Failed to publish auth.updated event:', err),
+      logger.warn(
+        { err, event: 'admin.publish_failed', reason: 'auth.updated' },
+        'Failed to publish auth.updated event',
+      ),
     );
 
   return { message: 'Password changed. You have been signed out of all other sessions.' };

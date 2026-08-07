@@ -1,5 +1,7 @@
 export interface AnalysisInput {
   resumeId: string;
+  /** Owning principal — required for IDOR-safe reads/writes. */
+  userId: string;
   targetRole: string;
   experienceLevel: string;
   jobDescription?: string;

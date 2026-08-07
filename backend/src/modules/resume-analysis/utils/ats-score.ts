@@ -8,6 +8,11 @@ import {
   uniqSkills,
 } from '@/modules/resume-analysis/utils/text-match.js';
 import {
+  extractRequiredYearsFromJd,
+  estimateCandidateYears,
+  yearsMatchScore,
+} from '@/modules/resume-analysis/utils/experience-years.js';
+import {
   extractProfessionalSkillsFromText,
   normalizeProfessionalSkills,
   skillAppearsIn,
@@ -269,11 +274,28 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
     input.appliedSuggestions.length > 0 ? appliedHits.length / input.appliedSuggestions.length : 0;
 
   const contentQuality = clampScore(
-    40 +
-      sectionCoverage * 25 +
-      highCoverage * 20 +
-      appliedRatio * 15 +
-      (content.length > 600 ? 5 : 0),
+    35 +
+      sectionCoverage * 22 +
+      highCoverage * 18 +
+      appliedRatio * 12 +
+      (content.length > 600 ? 5 : 0) +
+      // Professional language / action verbs in experience bullets
+      (/\b(led|built|designed|implemented|delivered|optimized|developed|created|improved|managed|owned)\b/i.test(
+        content,
+      )
+        ? 6
+        : 0) +
+      // Completeness: projects + certifications signals
+      (/\bprojects?\b/i.test(content) ? 3 : 0) +
+      (/\bcertifications?\b/i.test(content) ? 2 : 0) -
+      // Duplicate consecutive lines hurt quality
+      (content
+        .split(/\n/)
+        .map((line) => line.trim().toLowerCase())
+        .filter(Boolean)
+        .some((line, index, all) => index > 0 && line === all[index - 1] && line.length > 20)
+        ? 8
+        : 0),
   );
 
   const jdBlob = [input.jobDescription ?? '', input.targetRole ?? ''].join('\n');
@@ -289,13 +311,19 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
   const jdHits = jdTerms.filter((term) => termAppearsIn(content, term)).length;
   const jdCoverage = jdTerms.length > 0 ? jdHits / jdTerms.length : highCoverage;
 
+  const requiredYears = extractRequiredYearsFromJd(jdBlob);
+  const candidateYears = estimateCandidateYears(content);
+  const yearsScore = yearsMatchScore(requiredYears, candidateYears);
+
+  // Weighted JD↔resume comparison: skills + keywords + tenure + quality + structure.
   const absoluteScore = clampScore(
-    keywordMatch * 0.3 +
-      skillMatch * 0.26 +
-      contentQuality * 0.18 +
-      formattingScore * 0.12 +
-      readability * 0.05 +
-      jdCoverage * 100 * 0.09,
+    skillMatch * 0.28 +
+      keywordMatch * 0.22 +
+      yearsScore * 0.14 +
+      contentQuality * 0.14 +
+      jdCoverage * 100 * 0.1 +
+      formattingScore * 0.08 +
+      readability * 0.04,
   );
 
   // Improvement signals — these drive score UP after Optimize applies suggestions / JD skills.
@@ -326,9 +354,8 @@ export const scoreEditedResume = (input: AtsScoreInput): AtsScoreResult => {
   const markedApplied = input.appliedSuggestions.length > 0;
   const optimizeSucceeded =
     (skillsRecoveredWell && (suggestionsAppliedWell || markedApplied)) ||
-    (skillMatch >= 90 &&
-      (suggestionsAppliedWell || markedApplied || newlyMatchedSkills.length >= 2)) ||
-    (skillMatch >= 95 && keywordMatch >= 65) ||
+    (skillMatch >= 90 && (suggestionsAppliedWell || markedApplied)) ||
+    (skillMatch >= 95 && keywordMatch >= 65 && markedApplied) ||
     (skillMatch >= 100 && markedApplied);
 
   let atsScore: number;

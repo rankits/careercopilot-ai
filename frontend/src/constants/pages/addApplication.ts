@@ -1,7 +1,5 @@
 import { applicationStatusOptions } from '@/constants/pages/applications';
-import { jobs } from '@/constants/pages/jobFeed';
 import type { ApplicationPriority } from '@/features/applications/types/application.view.types';
-import { colorTokens, palette } from '@/tokens';
 
 export type AddApplicationEntryMode = 'manual' | 'job-feed' | 'external-url';
 
@@ -12,6 +10,7 @@ export interface JobFeedPickerJob {
   initials: string;
   location: string;
   match: number;
+  publishedAt: string | null;
   title: string;
   type: string;
 }
@@ -77,28 +76,11 @@ export const jobFeedPickerFilters = {
     { label: 'On-site', value: 'on-site' },
   ],
   recommended: [
-    { label: 'Recommended for you', value: 'recommended' },
+    { label: 'Recommended', value: 'recommended' },
     { label: 'Best match', value: 'best-match' },
     { label: 'Recently posted', value: 'recent' },
   ],
 };
-
-const pickerAvatarColors = [
-  colorTokens.actionPrimary,
-  palette.blue600,
-  colorTokens.feedbackSuccess,
-];
-
-export const jobFeedPickerJobs: JobFeedPickerJob[] = jobs.slice(0, 3).map((job, index) => ({
-  avatarColor: pickerAvatarColors[index] ?? colorTokens.actionPrimary,
-  company: job.company,
-  id: `${job.company}-${job.title}`.toLowerCase().replace(/\s+/g, '-'),
-  initials: job.logo.toUpperCase(),
-  location: job.location,
-  match: job.match ?? 0,
-  title: job.title,
-  type: job.type,
-}));
 
 export function getTodayDateInputValue(date = new Date()): string {
   const year = date.getFullYear();

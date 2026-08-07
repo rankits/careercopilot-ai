@@ -29,6 +29,11 @@ export interface ResumeReparseInput {
 
 const sanitizeExtractedText = (value: string): string => value.replace(/\u0000/g, '');
 
+const INVALID_RESUME_EXTRACT_MESSAGE =
+  'Please upload a valid resume (PDF or DOCX) to continue with ATS analysis.';
+
+const MIN_EXTRACT_CHARS = 80;
+
 const runParsingPipeline = async (input: {
   resumeId: string;
   userId: string;
@@ -39,6 +44,24 @@ const runParsingPipeline = async (input: {
   sourceHash: string;
 }): Promise<void> => {
   const extractedText = sanitizeExtractedText(input.extractedText);
+
+  // Image-only / corrupted / empty extracts cannot support ATS — fail early.
+  if (extractedText.trim().length < MIN_EXTRACT_CHARS) {
+    await resumeRepository.updateResumeStatus(
+      input.resumeId,
+      ResumeStatus.FAILED,
+      INVALID_RESUME_EXTRACT_MESSAGE,
+    );
+    jobsLogger.warn(
+      {
+        resumeId: input.resumeId,
+        extractedTextLength: extractedText.trim().length,
+      },
+      'Resume extract too short — marking FAILED',
+    );
+    return;
+  }
+
   const parserVersion =
     resumeConfig.parserEngine === 'AI'
       ? `${resumeConfig.ai.provider}:${resumeConfig.ai.model}`
@@ -62,6 +85,24 @@ const runParsingPipeline = async (input: {
     });
 
     const quality = extractionQualityService.analyze(extractedText);
+
+    // Extremely poor quality (likely image PDF / unreadable) → hard fail for ATS gate.
+    if (quality.score < 0.25 && extractedText.trim().length < 200) {
+      await resumeRepository.updateParseRun(parseRun.id, {
+        status: ResumeParseStatus.FAILED,
+        errorMessage: INVALID_RESUME_EXTRACT_MESSAGE,
+        confidence: quality.score,
+        warnings: quality.warnings,
+        requiresReview: true,
+        completedAt: new Date(),
+      });
+      await resumeRepository.updateResumeStatus(
+        input.resumeId,
+        ResumeStatus.FAILED,
+        INVALID_RESUME_EXTRACT_MESSAGE,
+      );
+      return;
+    }
 
     await resumeRepository.updateParseRun(parseRun.id, {
       status: ResumeParseStatus.CHECKING_EXTRACTION,
@@ -95,7 +136,10 @@ const runParsingPipeline = async (input: {
         fileName: input.fileName,
       },
     });
-    console.log('Parsed data ', parsed);
+    jobsLogger.debug(
+      { parsedKeys: Object.keys((parsed as object) ?? {}) },
+      'Resume parse completed',
+    );
     const normalizedData = resumeNormaliserService.normalize(parsed.data);
 
     await resumeRepository.updateParseRun(parseRun.id, {

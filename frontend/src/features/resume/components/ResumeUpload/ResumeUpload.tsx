@@ -1,19 +1,17 @@
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import LinearProgress from '@mui/material/LinearProgress';
+import Typography from '@mui/material/Typography';
 import { useRef, useState, type ChangeEvent, type DragEvent, type ReactNode } from 'react';
 
 import { Button } from '@/components/atoms';
 
 import { resumePrimaryActionSx } from '@/features/resume/styles';
 import type { ResumeParseProgress } from '@/features/resume/types/resume.types';
-import {
-  Box,
-  CheckCircleOutlineIcon,
-  Chip,
-  CloudUploadOutlinedIcon,
-  DeleteOutlineIcon,
-  DescriptionOutlinedIcon,
-  LinearProgress,
-  Typography,
-} from '@/lib/material';
 import { spacing } from '@/tokens';
 
 import {
@@ -248,15 +246,7 @@ export function ResumeUpload({ onRemove, onUpload, parseProgress, summary }: Res
               </Button>
             </Box>
           ) : (
-            <Button
-              onClick={(event) => {
-                event.stopPropagation();
-                inputRef.current?.click();
-              }}
-              size="medium"
-              sx={resumePrimaryActionSx}
-              type="button"
-            >
+            <Button disabled size="medium" sx={resumePrimaryActionSx} type="button">
               Parse resume
             </Button>
           )}

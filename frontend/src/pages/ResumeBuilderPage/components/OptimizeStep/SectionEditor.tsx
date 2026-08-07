@@ -1,8 +1,14 @@
+import AddIcon from '@mui/icons-material/Add';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import { AddIcon, Box, DeleteOutlineIcon, IconButton, TextField, Typography } from '@/lib/material';
+import { isValidPhoneNumber, sanitizePhoneInput } from '@/utils/phone';
 
 import type {
   CustomField,
@@ -42,9 +48,10 @@ export function SectionEditor({
   recommendedSkills = [],
   onChange,
 }: SectionEditorProps) {
+  // Scope editors to the active section so Experience only shows experience, etc.
   return (
     <SectionEditorShell>
-      <ContactEditor draft={draft} onChange={onChange} />
+      {section === 'summary' ? <ContactEditor draft={draft} onChange={onChange} /> : null}
 
       {section === 'skills' ? (
         <SkillsTextEditor draft={draft} recommendedSkills={recommendedSkills} onChange={onChange} />
@@ -64,7 +71,7 @@ export function SectionEditor({
         />
       )}
 
-      <CustomFieldsEditor draft={draft} onChange={onChange} />
+      {section === 'achievements' ? <CustomFieldsEditor draft={draft} onChange={onChange} /> : null}
     </SectionEditorShell>
   );
 }
@@ -102,7 +109,17 @@ function ContactEditor({
           size="small"
           label="Phone"
           value={draft.phone}
-          onChange={(event) => onChange({ ...draft, phone: event.target.value })}
+          inputProps={{ inputMode: 'tel', maxLength: 16 }}
+          onChange={(event) => {
+            const next = sanitizePhoneInput(event.target.value);
+            onChange({ ...draft, phone: next });
+          }}
+          helperText={
+            draft.phone && draft.phone.length > 0 && !isValidPhoneNumber(draft.phone)
+              ? 'Use 10 digits or +91… (e.g. +919876543210)'
+              : undefined
+          }
+          error={Boolean(draft.phone && draft.phone.length > 0 && !isValidPhoneNumber(draft.phone))}
         />
         <TextField
           size="small"

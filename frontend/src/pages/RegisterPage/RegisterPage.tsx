@@ -40,7 +40,7 @@ export function RegisterPage() {
           const result = await submit(values);
 
           if (result.succeeded) {
-            showToast({ message: 'Account created successfully', severity: 'success' });
+            showToast({ message: 'Create account successfully', severity: 'success' });
           } else {
             showToast({
               message: result.errorMessage ?? 'Unable to create your account. Please try again.',

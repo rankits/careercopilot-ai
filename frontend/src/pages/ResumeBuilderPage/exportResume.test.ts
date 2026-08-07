@@ -119,8 +119,8 @@ describe('exportResume', () => {
     expect(click).toHaveBeenCalled();
   });
 
-  it('prefers preview page capture when preview root is provided', async () => {
-    const { jsPDF } = await import('jspdf');
+  it('exports a text-based PDF even when a preview root is provided', async () => {
+    const { pdf } = await import('@react-pdf/renderer');
     const preview = document.createElement('div');
     const page = document.createElement('div');
     page.className = 'preview-page';
@@ -130,10 +130,11 @@ describe('exportResume', () => {
     const draft = {
       ...createEmptyDraft('Engineer'),
       fullName: 'Alex Rivera',
+      skillsList: ['React', 'TypeScript'],
     };
 
     await downloadResumePdf(draft, 'preview.pdf', 'modern', preview);
-    expect(jsPDF).toHaveBeenCalled();
+    expect(pdf).toHaveBeenCalled();
     preview.remove();
   });
 });

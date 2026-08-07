@@ -52,7 +52,7 @@ export const findLatestRecommendationRun = async (
   unitOfWork.execute(({ runs }) => runs.findLatestByUser(userId));
 
 export const DEFAULT_RECOMMENDATION_FRESHNESS_TTL_MS =
-  Number(process.env['RECOMMENDATION_FRESHNESS_TTL_MS']) || 72 * 60 * 60 * 1000; // 72 hours
+  Number(process.env.RECOMMENDATION_FRESHNESS_TTL_MS) || 72 * 60 * 60 * 1000; // 72 hours
 
 export const isRecommendationSetStale = async (
   deps: RecommendationReadinessDependencies,

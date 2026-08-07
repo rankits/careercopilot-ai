@@ -95,21 +95,27 @@ export function serializeResumeDraft(draft: ResumeDraft): string {
 
   const customText = draft.customFields
     .filter((field) => field.label || field.value)
-    .map((field) => `${field.label}\n${field.value}`.trim())
-    .join('\n\n');
+    .map((field) => {
+      const label = field.label.trim() || 'Additional';
+      const value = field.value.trim();
+      // One-line Label: value so ADDITIONAL round-trips without Interests swallowing links.
+      return value ? `${label}: ${value}` : label;
+    })
+    .join('\n');
 
+  // Clear section headers so parse + preview keep content under the right block.
   return (
     [
       draft.fullName,
       draft.role,
       contact,
-      draft.summary && `SUMMARY\n${draft.summary}`,
-      experienceText && `EXPERIENCE\n${experienceText}`,
-      draft.education && `EDUCATION\n${draft.education}`,
+      draft.summary && `PROFESSIONAL SUMMARY\n${draft.summary.trim()}`,
+      experienceText && `WORK EXPERIENCE\n${experienceText}`,
+      draft.education && `EDUCATION\n${draft.education.trim()}`,
       draft.skillsList.length > 0 && `SKILLS\n${draft.skillsList.join(', ')}`,
       projectsText && `PROJECTS\n${projectsText}`,
-      draft.certifications && `CERTIFICATIONS\n${draft.certifications}`,
-      draft.achievements && `ACHIEVEMENTS\n${draft.achievements}`,
+      draft.certifications && `CERTIFICATIONS\n${draft.certifications.trim()}`,
+      draft.achievements && `ACHIEVEMENTS\n${draft.achievements.trim()}`,
       customText && `ADDITIONAL\n${customText}`,
     ]
       .filter(Boolean)
@@ -141,44 +147,126 @@ export function normalizeSuggestionMatchText(value: string): string {
     .toLowerCase();
 }
 
+function suggestionTokens(value: string): string[] {
+  return normalizeSuggestionMatchText(value)
+    .split(/\s+/)
+    .filter((token) => token.length > 2);
+}
+
+/** Jaccard-ish overlap so fuzzy line replace works when OCR drifts. */
+export function suggestionOverlapRatio(a: string, b: string): number {
+  const left = new Set(suggestionTokens(a));
+  const right = new Set(suggestionTokens(b));
+  if (left.size === 0 || right.size === 0) return 0;
+  let hits = 0;
+  for (const token of left) {
+    if (right.has(token)) hits += 1;
+  }
+  return hits / Math.max(left.size, right.size);
+}
+
+function stripBulletPrefix(value: string): string {
+  return value.replace(/^[\s|*]*[-*•●·▪▸►○◦]+\s*/, '').trim();
+}
+
+function withBulletPrefix(oldLine: string, next: string): string {
+  const body = stripBulletPrefix(next);
+  if (!body) return oldLine;
+  if (/^[\s|*]*[-*•●·▪▸►○◦]/.test(oldLine) || /^[\s|*]*[-*•]/.test(next)) {
+    return `- ${body}`;
+  }
+  return body;
+}
+
+function formatBulletLines(text: string): string {
+  return text
+    .replace(/\r\n/g, '\n')
+    .split(/\n/)
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => {
+      const body = stripBulletPrefix(line);
+      return body ? `- ${body}` : '';
+    })
+    .filter(Boolean)
+    .join('\n');
+}
+
 /**
  * Replace original with suggested inside haystack.
- * Falls back to normalized / line-level matching when exact substring fails.
+ * Prefers in-place replace over append so Apply never duplicates content.
  */
 export function replaceSuggestionText(
   haystack: string,
   originalText: string,
   suggestedText: string,
+  options?: { style?: 'prose' | 'bullets' },
 ): { next: string; applied: boolean } {
+  const style = options?.style ?? 'prose';
   const original = originalText.trim();
   const suggested = suggestedText.trim();
   if (!suggested) return { next: haystack, applied: false };
 
-  if (original && haystack.includes(original)) {
-    return { next: haystack.replace(original, suggested), applied: true };
+  const suggestedNorm = normalizeSuggestionMatchText(suggested);
+  const haystackNorm = normalizeSuggestionMatchText(haystack);
+
+  // Already applied — only skip when the full suggestion is already the section body.
+  // Substring matches used to false-positive and make Apply look like a live-preview no-op.
+  if (
+    suggestedNorm &&
+    suggestedNorm.length >= 12 &&
+    (haystackNorm === suggestedNorm ||
+      (haystackNorm.includes(suggestedNorm) &&
+        suggestedNorm.length >= Math.max(24, haystackNorm.length * 0.8)))
+  ) {
+    return { next: haystack, applied: true };
   }
 
-  if (!original) {
-    const trimmed = haystack.trim();
+  if (original && haystack.includes(original)) {
+    const next = haystack.replace(original, suggested);
     return {
-      next: trimmed ? `${trimmed}\n${suggested}` : suggested,
+      next: style === 'bullets' ? formatBulletLines(next) : next,
       applied: true,
     };
   }
 
-  const normOriginal = normalizeSuggestionMatchText(original);
-  if (!normOriginal) {
-    return { next: haystack, applied: false };
-  }
+  const normOriginal = original ? normalizeSuggestionMatchText(original) : '';
 
   // Whole-block normalized equality (common when bullets/spacing differ).
-  if (normalizeSuggestionMatchText(haystack) === normOriginal) {
-    return { next: suggested, applied: true };
+  if (normOriginal && haystackNorm === normOriginal) {
+    return {
+      next: style === 'bullets' ? formatBulletLines(suggested) : suggested,
+      applied: true,
+    };
+  }
+
+  // Empty original: rewrite existing content instead of appending duplicates.
+  if (!original) {
+    const trimmed = haystack.trim();
+    if (!trimmed) {
+      return {
+        next: style === 'bullets' ? formatBulletLines(suggested) : suggested,
+        applied: true,
+      };
+    }
+    if (style === 'prose') {
+      return { next: suggested, applied: true };
+    }
+    const lines = trimmed.split(/\n/).filter((line) => line.trim());
+    if (lines.length <= 1) {
+      return { next: formatBulletLines(suggested), applied: true };
+    }
+    // Multi-bullet block with no original: replace the first bullet only.
+    const nextLines = [...lines];
+    nextLines[0] = withBulletPrefix(lines[0]!, suggested);
+    return { next: formatBulletLines(nextLines.join('\n')), applied: true };
   }
 
   const lines = haystack.split(/\n/);
+
+  // Exact / contains line match.
   let applied = false;
-  const nextLines = lines.map((line) => {
+  let nextLines = lines.map((line) => {
     if (applied) return line;
     const normLine = normalizeSuggestionMatchText(line);
     if (!normLine) return line;
@@ -188,19 +276,79 @@ export function replaceSuggestionText(
       (normLine.length >= 12 && normOriginal.includes(normLine))
     ) {
       applied = true;
-      return suggested;
+      return withBulletPrefix(line, suggested);
     }
     return line;
   });
+  if (applied) {
+    return {
+      next: style === 'bullets' ? formatBulletLines(nextLines.join('\n')) : nextLines.join('\n'),
+      applied: true,
+    };
+  }
 
-  if (applied) return { next: nextLines.join('\n'), applied: true };
+  // Fuzzy: replace the line that best overlaps the original (or suggested rewrite).
+  let bestIdx = -1;
+  let bestScore = 0;
+  lines.forEach((line, index) => {
+    if (!line.trim()) return;
+    const score = Math.max(
+      suggestionOverlapRatio(line, original),
+      suggestionOverlapRatio(line, suggested) * 0.85,
+    );
+    if (score > bestScore) {
+      bestScore = score;
+      bestIdx = index;
+    }
+  });
 
-  // Soft fallback: append so Apply never silently no-ops for experience/projects.
-  const trimmed = haystack.trim();
+  if (bestIdx >= 0 && bestScore >= 0.4) {
+    nextLines = [...lines];
+    nextLines[bestIdx] = withBulletPrefix(lines[bestIdx]!, suggested);
+    return {
+      next: style === 'bullets' ? formatBulletLines(nextLines.join('\n')) : nextLines.join('\n'),
+      applied: true,
+    };
+  }
+
+  // Multi-line original: replace contiguous window with best overlap.
+  const originalLineCount = Math.max(1, original.split(/\n/).filter((line) => line.trim()).length);
+  if (originalLineCount > 1 && lines.length >= originalLineCount) {
+    let windowBest = -1;
+    let windowScore = 0;
+    for (let start = 0; start <= lines.length - originalLineCount; start += 1) {
+      const block = lines.slice(start, start + originalLineCount).join('\n');
+      const score = suggestionOverlapRatio(block, original);
+      if (score > windowScore) {
+        windowScore = score;
+        windowBest = start;
+      }
+    }
+    if (windowBest >= 0 && windowScore >= 0.4) {
+      const before = lines.slice(0, windowBest);
+      const after = lines.slice(windowBest + originalLineCount);
+      const replacement = suggested.split(/\n/).filter((line) => line.trim());
+      const merged = [...before, ...replacement, ...after].join('\n');
+      return {
+        next: style === 'bullets' ? formatBulletLines(merged) : merged,
+        applied: true,
+      };
+    }
+  }
+
+  // Last resort for bullets: append only when clearly new and not overlapping.
+  if (style === 'bullets' && bestScore < 0.25) {
+    const trimmed = haystack.trim();
+    const bullet = suggested.startsWith('-') ? suggested : `- ${stripBulletPrefix(suggested)}`;
+    return {
+      next: formatBulletLines(trimmed ? `${trimmed}\n${bullet}` : bullet),
+      applied: true,
+    };
+  }
+
+  // Prose last resort: replace whole section rather than concatenating duplicates.
   return {
-    next: trimmed
-      ? `${trimmed}\n${suggested.startsWith('-') ? suggested : `- ${suggested}`}`
-      : suggested,
+    next: suggested,
     applied: true,
   };
 }
@@ -210,9 +358,61 @@ function applyToEntryDetails(
   original: string,
   suggested: string,
 ): Array<ExperienceEntry | ProjectEntry> {
-  if (entries.length === 0) return entries;
+  const bulletBody = stripBulletPrefix(suggested);
+  const bullet = bulletBody ? `- ${bulletBody}` : suggested;
+
+  // HIGH IMPACT apply must never no-op when the section is still empty.
+  if (entries.length === 0) {
+    return [
+      {
+        id: newId(),
+        company: '',
+        title: '',
+        startDate: '',
+        endDate: '',
+        details: formatBulletLines(bullet),
+      },
+    ];
+  }
 
   const normOriginal = original ? normalizeSuggestionMatchText(original) : '';
+  const looksLikeTitle =
+    Boolean(suggested) &&
+    !/\n/.test(suggested) &&
+    suggested.length <= 90 &&
+    !/[.!?]$/.test(suggested.trim());
+
+  // Title / company rename (common project & role suggestions).
+  if (normOriginal) {
+    const titleIndex = entries.findIndex((entry) => {
+      const titleNorm = normalizeSuggestionMatchText(entry.title);
+      const companyNorm = normalizeSuggestionMatchText(entry.company);
+      return (
+        (titleNorm &&
+          (titleNorm === normOriginal ||
+            titleNorm.includes(normOriginal) ||
+            normOriginal.includes(titleNorm))) ||
+        (companyNorm &&
+          (companyNorm === normOriginal ||
+            companyNorm.includes(normOriginal) ||
+            normOriginal.includes(companyNorm)))
+      );
+    });
+    if (titleIndex >= 0 && looksLikeTitle) {
+      return entries.map((entry, index) => {
+        if (index !== titleIndex) return entry;
+        const titleNorm = normalizeSuggestionMatchText(entry.title);
+        const replaceTitle =
+          titleNorm &&
+          (titleNorm === normOriginal ||
+            titleNorm.includes(normOriginal) ||
+            normOriginal.includes(titleNorm));
+        return replaceTitle
+          ? { ...entry, title: suggested.trim() }
+          : { ...entry, company: suggested.trim() };
+      });
+    }
+  }
 
   // Prefer the entry that actually contains the original excerpt.
   if (normOriginal) {
@@ -220,13 +420,16 @@ function applyToEntryDetails(
       if (!entry.details.trim()) return false;
       return (
         entry.details.includes(original) ||
-        normalizeSuggestionMatchText(entry.details).includes(normOriginal)
+        normalizeSuggestionMatchText(entry.details).includes(normOriginal) ||
+        suggestionOverlapRatio(entry.details, original) >= 0.4
       );
     });
     if (matchIndex >= 0) {
       return entries.map((entry, index) => {
         if (index !== matchIndex) return entry;
-        const result = replaceSuggestionText(entry.details, original, suggested);
+        const result = replaceSuggestionText(entry.details, original, suggested, {
+          style: 'bullets',
+        });
         return { ...entry, details: result.next };
       });
     }
@@ -240,7 +443,13 @@ function applyToEntryDetails(
 
   return entries.map((entry, index) => {
     if (index !== targetIndex) return entry;
-    const result = replaceSuggestionText(entry.details || '', original, suggested);
+    // Short title-like suggestion with empty original: update the title when empty/weak.
+    if (!normOriginal && looksLikeTitle && (!entry.title.trim() || entry.title.length < 8)) {
+      return { ...entry, title: suggested.trim() };
+    }
+    const result = replaceSuggestionText(entry.details || '', original, suggested, {
+      style: 'bullets',
+    });
     return { ...entry, details: result.next };
   });
 }
@@ -257,17 +466,12 @@ export function applyTextReplaceToDraft(
   if (!suggested) return draft;
 
   if (target === 'skills') {
-    // Only add skill chips — never dump summary/experience prose into Skills.
+    // Only skill chips — never dump summary/experience prose into Skills.
     const suggestedSkills = splitSkillTokens(suggested);
-    const originalSkills = new Set(splitSkillTokens(original).map((skill) => skill.toLowerCase()));
+    const originalSkills = splitSkillTokens(original);
+    const originalSet = new Set(originalSkills.map((skill) => skill.toLowerCase()));
 
     let toAdd = suggestedSkills;
-    if (originalSkills.size > 0 && suggestedSkills.length > 1) {
-      const delta = suggestedSkills.filter((skill) => !originalSkills.has(skill.toLowerCase()));
-      if (delta.length > 0) toAdd = delta;
-    }
-
-    // Single-token / short suggestions: trust the suggested text as one skill name.
     if (toAdd.length === 0 && suggested.length > 0 && suggested.length <= 48) {
       const single = suggested
         .replace(/^add\s+/i, '')
@@ -275,19 +479,35 @@ export function applyTextReplaceToDraft(
         .trim();
       if (single && !/\n/.test(single)) toAdd = [single];
     }
-
     // Guard: long narrative blobs must not become skills.
     if (suggested.length > 120 && toAdd.length > 6) {
       toAdd = toAdd.slice(0, 1);
     }
-
-    const existing = new Set(draft.skillsList.map((skill) => skill.toLowerCase()));
-    toAdd = toAdd.filter((skill) => !existing.has(skill.toLowerCase()));
     if (toAdd.length === 0) return draft;
 
+    const coversMostDraft =
+      draft.skillsList.length > 0 &&
+      draft.skillsList.filter((skill) => originalSet.has(skill.toLowerCase())).length >=
+        Math.ceil(draft.skillsList.length * 0.6);
+
+    // Full rewrite only when original looks like the current skills section.
+    const isRewrite = toAdd.length >= 3 && originalSkills.length >= 3 && coversMostDraft;
+
+    if (isRewrite) {
+      const keep = draft.skillsList.filter((skill) => !originalSet.has(skill.toLowerCase()));
+      return {
+        ...draft,
+        skillsList: mergeSkillLists(keep, toAdd),
+      };
+    }
+
+    // Default: add missing skills only (never duplicate on re-Apply).
+    const existing = new Set(draft.skillsList.map((skill) => skill.toLowerCase()));
+    const missing = toAdd.filter((skill) => !existing.has(skill.toLowerCase()));
+    if (missing.length === 0) return draft;
     return {
       ...draft,
-      skillsList: mergeSkillLists(draft.skillsList, toAdd),
+      skillsList: mergeSkillLists(draft.skillsList, missing),
     };
   }
 
@@ -306,10 +526,21 @@ export function applyTextReplaceToDraft(
   }
 
   const existing = draft[target];
-  const replaced = replaceSuggestionText(existing, original, suggested);
+  const replaced = replaceSuggestionText(existing, original, suggested, { style: 'prose' });
+  const nextText = replaced.next;
+  // If fuzzy match left the section unchanged but AI suggested a distinct rewrite, force it.
+  if (
+    normalizeSuggestionMatchText(nextText) === normalizeSuggestionMatchText(existing) &&
+    normalizeSuggestionMatchText(suggested) !== normalizeSuggestionMatchText(existing)
+  ) {
+    return {
+      ...draft,
+      [target]: suggested,
+    };
+  }
   return {
     ...draft,
-    [target]: replaced.next,
+    [target]: nextText,
   };
 }
 

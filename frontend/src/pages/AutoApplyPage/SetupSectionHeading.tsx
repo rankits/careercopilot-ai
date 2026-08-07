@@ -1,11 +1,14 @@
 import type { SetupSectionId } from '@/features/auto-apply/types/autoApply.types';
 import { Box, Chip, Typography } from '@/lib/material';
 
+import { setupPageSx } from './setupPageStyles';
+
 export interface SetupSectionHeadingProps {
   sectionId: SetupSectionId;
   title: string;
   required?: boolean;
   helperText?: string;
+  headingId?: string;
 }
 
 export function SetupSectionHeading({
@@ -13,6 +16,7 @@ export function SetupSectionHeading({
   title,
   required,
   helperText,
+  headingId,
 }: SetupSectionHeadingProps) {
   return (
     <Box sx={{ mb: 1 }}>
@@ -20,8 +24,8 @@ export function SetupSectionHeading({
         <Typography
           component="h2"
           data-setup-heading
-          id={`setup-section-heading-${sectionId}`}
-          sx={{ fontSize: { xs: 17, sm: 19 }, fontWeight: 700, letterSpacing: '-0.02em' }}
+          id={headingId ?? `setup-section-heading-${sectionId}`}
+          sx={setupPageSx.sectionTitle}
           tabIndex={-1}
         >
           {title}
@@ -34,15 +38,13 @@ export function SetupSectionHeading({
               bgcolor: required ? 'primary.50' : 'grey.100',
               border: 0,
               color: required ? 'primary.main' : 'text.secondary',
-              fontSize: 10,
-              fontWeight: 700,
-              height: 20,
+              ...setupPageSx.sectionBadge,
             }}
           />
         )}
       </Box>
       {helperText ? (
-        <Typography color="text.secondary" variant="body2">
+        <Typography color="text.secondary" sx={setupPageSx.sectionHelper} variant="body2">
           {helperText}
         </Typography>
       ) : null}

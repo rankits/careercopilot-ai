@@ -1,3 +1,4 @@
+import { Suspense } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
 import { RouteLoading } from '@/routes/components/RouteLoading';
@@ -7,6 +8,7 @@ import { useAppSelector } from '@/hooks/redux';
 
 import { ROUTES } from '@/constants/routes';
 import { getPostAuthRoute } from '@/features/auth/utils/getPostAuthRoute';
+import { LazyLandingPage } from '@/routes/lazyPages';
 
 export function ProtectedRoute() {
   const { isSessionResolved } = useAuthBootstrap();
@@ -14,7 +16,7 @@ export function ProtectedRoute() {
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
 
   if (!isSessionResolved) {
-    return <RouteLoading />;
+    return <RouteLoading label="Loading session" />;
   }
 
   if (!isAuthenticated) {
@@ -28,17 +30,12 @@ export function ProtectedRoute() {
   return <Outlet />;
 }
 
+/** Login / register — reachable even when already signed in (e.g. switch account). */
 export function GuestRoute() {
   const { isSessionResolved } = useAuthBootstrap();
-  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
 
   if (!isSessionResolved) {
-    return <RouteLoading />;
-  }
-
-  if (isAuthenticated) {
-    return <Navigate replace to={getPostAuthRoute(isProfileComplete)} />;
+    return <RouteLoading label="Loading session" />;
   }
 
   return <Outlet />;
@@ -56,7 +53,7 @@ export function OnboardingRoute() {
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   if (!isSessionResolved) {
-    return <RouteLoading />;
+    return <RouteLoading label="Loading session" />;
   }
 
   if (!isAuthenticated) {
@@ -66,13 +63,34 @@ export function OnboardingRoute() {
   return <Outlet />;
 }
 
+/** Public marketing landing for guests; authenticated users continue into the app. */
+export function LandingRoute() {
+  const { isSessionResolved } = useAuthBootstrap();
+  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
+  const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
+
+  if (!isSessionResolved) {
+    return <RouteLoading label="Loading session" />;
+  }
+
+  if (isAuthenticated) {
+    return <Navigate replace to={getPostAuthRoute(isProfileComplete)} />;
+  }
+
+  return (
+    <Suspense fallback={<RouteLoading />}>
+      <LazyLandingPage />
+    </Suspense>
+  );
+}
+
 export function RootRedirect() {
   const { isSessionResolved } = useAuthBootstrap();
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
 
   if (!isSessionResolved) {
-    return <RouteLoading />;
+    return <RouteLoading label="Loading session" />;
   }
 
   if (!isAuthenticated) {

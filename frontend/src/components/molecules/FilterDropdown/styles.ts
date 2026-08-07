@@ -1,4 +1,5 @@
-import { styled } from '@/lib/material';
+import { styled } from '@mui/material/styles';
+
 import {
   borderRadius,
   colorTokens,
@@ -79,6 +80,7 @@ export const DropdownButton = styled('button', {
 
   '& svg': {
     color: 'currentColor',
+    flexShrink: 0,
     justifySelf: 'end',
     opacity: 0.72,
     transition: 'transform 160ms ease, opacity 160ms ease',

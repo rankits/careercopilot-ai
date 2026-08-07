@@ -1,7 +1,13 @@
+import CircularProgress from '@mui/material/CircularProgress';
 import { observeElementRect, useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
 
-import { VirtualListItem, VirtualListRoot, VirtualListSpacer } from './styles';
+import {
+  VirtualListItem,
+  VirtualListLoadingMore,
+  VirtualListRoot,
+  VirtualListSpacer,
+} from './styles';
 
 /** Approximate JobCard row height including gap. */
 const ESTIMATED_ROW_HEIGHT = 140;
@@ -28,7 +34,10 @@ export interface VirtualizedJobListProps<TItem> {
   ariaLabel: string;
   endReachedThreshold?: number;
   getKey: (item: TItem) => string;
+  /** Shows a compact spinner under the list while the next page loads. */
+  isLoadingMore?: boolean;
   items: TItem[];
+  loadingMoreLabel?: string;
   onEndReached?: () => void;
   renderItem: (item: TItem) => ReactNode;
 }
@@ -37,7 +46,9 @@ export function VirtualizedJobList<TItem>({
   ariaLabel,
   endReachedThreshold = DEFAULT_END_THRESHOLD,
   getKey,
+  isLoadingMore = false,
   items,
+  loadingMoreLabel = 'Loading more jobs…',
   onEndReached,
   renderItem,
 }: VirtualizedJobListProps<TItem>) {
@@ -75,7 +86,7 @@ export function VirtualizedJobList<TItem>({
   }, [items.length]);
 
   useEffect(() => {
-    if (!onEndReached || items.length === 0) return;
+    if (!onEndReached || items.length === 0 || isLoadingMore) return;
 
     const lastItem = virtualItems[virtualItems.length - 1];
     if (!lastItem) return;
@@ -86,7 +97,7 @@ export function VirtualizedJobList<TItem>({
 
     endReachedIndexRef.current = items.length;
     onEndReached();
-  }, [endReachedThreshold, items.length, onEndReached, virtualItems]);
+  }, [endReachedThreshold, isLoadingMore, items.length, onEndReached, virtualItems]);
 
   return (
     <VirtualListRoot aria-label={ariaLabel} ref={parentRef} role="list">
@@ -112,6 +123,13 @@ export function VirtualizedJobList<TItem>({
           );
         })}
       </VirtualListSpacer>
+
+      {isLoadingMore ? (
+        <VirtualListLoadingMore aria-busy="true" aria-live="polite" role="status">
+          <CircularProgress color="inherit" size={18} thickness={5} />
+          {loadingMoreLabel}
+        </VirtualListLoadingMore>
+      ) : null}
     </VirtualListRoot>
   );
 }

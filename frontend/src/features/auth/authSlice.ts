@@ -5,22 +5,21 @@ import { authService } from '@/features/auth/services/auth.service';
 import type { AuthResponse, AuthState, LoginPayload } from '@/features/auth/types/auth.types';
 import { getAuthErrorMessage } from '@/features/auth/utils/apiError';
 import {
-  getAccessToken,
-  getStoredUser,
-  hasAuthSession,
   invalidateAuthSession,
   persistAuthSession,
+  setAccessToken as persistMemoryAccessToken,
 } from '@/features/auth/utils/authSession';
 import { storage } from '@/utils/storage';
 
 const storedProfileComplete = storage.get<boolean>(STORAGE_KEYS.PROFILE_COMPLETE) ?? false;
 
 const initialState: AuthState = {
-  user: getStoredUser(),
-  accessToken: getAccessToken(),
-  isAuthenticated: hasAuthSession(),
+  user: null,
+  accessToken: null,
+  isAuthenticated: false,
   isProfileComplete: storedProfileComplete,
-  isSessionResolved: !getAccessToken() || !getStoredUser(),
+  // Always bootstrap via refresh cookie — access token is memory-only.
+  isSessionResolved: false,
   isLoading: false,
   error: null,
 };
@@ -68,11 +67,23 @@ const authSlice = createSlice({
       state.isSessionResolved = action.payload;
     },
     setAccessToken(state, action: PayloadAction<string>) {
-      if (!state.user) {
-        return;
-      }
+      persistMemoryAccessToken(action.payload);
       state.accessToken = action.payload;
+      if (state.user) {
+        state.isAuthenticated = true;
+      }
+    },
+    establishSession(state, action: PayloadAction<AuthResponse>) {
+      const isProfileComplete = action.payload.user.isProfileCreated === true;
+      state.isLoading = false;
+      state.user = action.payload.user;
+      state.accessToken = action.payload.accessToken;
       state.isAuthenticated = true;
+      state.isProfileComplete = isProfileComplete;
+      state.isSessionResolved = true;
+      state.error = null;
+      persistAuthSession(action.payload.accessToken, action.payload.user);
+      persistProfileComplete(isProfileComplete);
     },
     establishSession(state, action: PayloadAction<AuthResponse>) {
       const isProfileComplete = action.payload.user.isProfileCreated === true;
@@ -92,7 +103,8 @@ const authSlice = createSlice({
       .addCase(login.pending, (state) => {
         state.isLoading = true;
         state.error = null;
-        state.isSessionResolved = false;
+        // Keep isSessionResolved true — flipping it false unmounts GuestRoute
+        // (login form → blank loader flash) and retriggers auth bootstrap.
       })
       .addCase(login.fulfilled, (state, action) => {
         const isProfileComplete = action.payload.user.isProfileCreated === true;

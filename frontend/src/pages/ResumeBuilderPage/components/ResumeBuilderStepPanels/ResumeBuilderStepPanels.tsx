@@ -1,18 +1,16 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import CheckIcon from '@mui/icons-material/Check';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
 import { useEffect, useState, type DragEvent, type RefObject } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import {
-  AutoAwesomeOutlinedIcon,
-  Box,
-  CheckIcon,
-  CircularProgress,
-  CloudUploadOutlinedIcon,
-  DescriptionOutlinedIcon,
-  LightbulbOutlinedIcon,
-  SearchOutlinedIcon,
-  Typography,
-} from '@/lib/material';
 import type {
   AnalysisResult,
   KeywordsResponse,
@@ -184,8 +182,12 @@ function AnalysisDashboard({
           <AnalysisGateBanner
             title={gate.bannerTitle}
             body={gate.bannerBody}
-            primary={{ label: 'Upload another resume', onClick: onReplaceResume }}
-            secondary={{ label: 'Change Role & JD', onClick: onEditTarget, variant: 'outline' }}
+            primary={{ label: 'Continue to Optimize anyway', onClick: onContinue }}
+            secondary={{
+              label: 'Upload another resume',
+              onClick: onReplaceResume,
+              variant: 'outline',
+            }}
           />
         ) : null}
 
@@ -612,6 +614,8 @@ interface ResumeBuilderStepPanelsProps {
   editedContent: string;
   saving: boolean;
   recheckResult: RecheckResult | null;
+  /** Live Optimize ATS — Export New ATS must match. */
+  optimizedAtsScore?: number | null;
   rechecking: boolean;
   exportingFormat: 'pdf' | 'docx' | null;
   versions: ResumeVersion[];
@@ -642,6 +646,7 @@ interface ResumeBuilderStepPanelsProps {
   onPreviewResume: () => void;
   onExport: (format: 'pdf' | 'docx', previewRoot?: HTMLElement | null) => void;
   onDone: () => void;
+  onCreateNewResume?: () => void;
   onTemplateChange: (template: ResumeTemplateId) => void;
 }
 
@@ -669,6 +674,7 @@ export function ResumeBuilderStepPanels({
   editedContent,
   saving,
   recheckResult,
+  optimizedAtsScore = null,
   rechecking,
   exportingFormat,
   versions,
@@ -699,6 +705,7 @@ export function ResumeBuilderStepPanels({
   onPreviewResume: _onPreviewResume,
   onExport,
   onDone,
+  onCreateNewResume,
   onTemplateChange,
 }: ResumeBuilderStepPanelsProps) {
   const atsAnalysis = originalAnalysis ?? analysis;
@@ -779,6 +786,7 @@ export function ResumeBuilderStepPanels({
           editedContent={editedContent}
           jobDescription={jobDescription}
           preferredSkills={skills}
+          recheckResult={recheckResult}
           saving={saving}
           suggestions={suggestions.length > 0 ? suggestions : (analysis?.suggestions ?? [])}
           targetRole={targetRole}
@@ -811,13 +819,14 @@ export function ResumeBuilderStepPanels({
           exportingFormat={exportingFormat}
           jobDescription={jobDescription}
           preferredSkills={skills}
+          optimizedAtsScore={optimizedAtsScore}
           recheckResult={recheckResult}
           rechecking={rechecking}
           savingVersion={savingVersion}
           targetRole={targetRole}
           template={selectedTemplate}
-          onBack={() => onGoTo(5)}
           onDone={onDone}
+          onCreateNewResume={onCreateNewResume}
           onExport={onExport}
           onTemplateChange={onTemplateChange}
         />

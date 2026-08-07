@@ -13,7 +13,6 @@ export default defineConfig({
     alias: {
       '@': path.resolve(configDir, './src'),
       '@components': path.resolve(configDir, './src/components'),
-      '@core': path.resolve(configDir, './src/core'),
       '@hooks': path.resolve(configDir, './src/hooks'),
       '@lib': path.resolve(configDir, './src/lib'),
       '@styles': path.resolve(configDir, './src/styles'),
@@ -50,6 +49,12 @@ export default defineConfig({
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],
       reportsDirectory: './coverage',
+      thresholds: {
+        lines: 45,
+        functions: 45,
+        branches: 35,
+        statements: 45,
+      },
     },
     environment: 'jsdom',
     // Provide Vite env vars for unit tests (production builds must set these explicitly).
@@ -59,7 +64,7 @@ export default defineConfig({
       VITE_APP_ENV: 'test',
       VITE_PUBLIC_APP_URL: 'http://localhost:3000',
     },
-    // Playwright specs live under e2e/ and must not be collected by Vitest.
+    // Playwright specs must not be collected by Vitest.
     exclude: ['**/node_modules/**', '**/dist/**', 'e2e/**'],
     // Cap fork workers so Windows does not time out spawning jsdom pools
     // under heavy parallel load ("Timeout waiting for worker to respond").

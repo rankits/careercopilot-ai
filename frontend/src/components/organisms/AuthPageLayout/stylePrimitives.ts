@@ -1,4 +1,8 @@
-import { Box, styled, Typography, type SxProps, type Theme } from '@/lib/material';
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+import type { SxProps, Theme } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
+
 import {
   borderRadius,
   borderWidth,
@@ -54,11 +58,11 @@ export const borderedCardSurface = {
 } as const;
 
 export const authLayout = {
-  contentColumns: `minmax(0, 52fr) minmax(${sizing[30]}, 48fr)`,
+  contentColumns: `minmax(0, 52fr) minmax(0, 48fr)`,
   contentMaxWidth: sizing[100],
   formMaxWidth: sizing[38],
   mobileColumn: 'minmax(0, 1fr)',
-  registerColumns: `minmax(${sizing[30]}, 45fr) minmax(0, 55fr)`,
+  registerColumns: `minmax(0, 45fr) minmax(0, 55fr)`,
   viewportHeight: '100dvh',
 } as const;
 
@@ -88,5 +92,5 @@ export const createIconSurface = (
 
 export const createResponsiveColumns = (desktopColumns: string) => ({
   xs: authLayout.mobileColumn,
-  lg: desktopColumns,
+  md: desktopColumns,
 });

@@ -1,27 +1,29 @@
-import { Box, IconButton, LocationOnOutlinedIcon, MuiButton, styled } from '@/lib/material';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import Box from '@mui/material/Box';
+import MuiButton from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
+
 import {
   borderRadius,
   colorTokens,
   fontSize,
   fontWeight,
   jobFeedTokens,
-  palette,
   shadows,
   spacing,
 } from '@/tokens';
 
-const mobileBreakpoint = '@media (max-width: 47.5rem)';
+const compactBreakpoint = '@media (max-width: 47.5rem)';
 const tabletBreakpoint = '@media (max-width: 75rem)';
 
 export const ApplicationsRoot = styled('section')({
   display: 'grid',
   gap: spacing[5],
-  marginInline: 'auto',
-  maxWidth: '82rem',
   minWidth: 0,
   width: '100%',
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     gap: spacing[4],
   },
 });
@@ -39,6 +41,30 @@ export const PageHeader = styled(Box)({
 });
 
 export const PageHeaderContent = styled(Box)({
+  alignItems: 'center',
+  display: 'grid',
+  gap: spacing[4],
+  gridTemplateColumns: 'auto minmax(0, 1fr)',
+  minWidth: 0,
+
+  [compactBreakpoint]: {
+    gap: spacing[3],
+  },
+});
+
+export const PageHeaderIcon = styled(Box)({
+  alignItems: 'center',
+  background: colorTokens.actionPrimarySurface,
+  borderRadius: borderRadius.xl,
+  color: colorTokens.actionPrimary,
+  display: 'grid',
+  flexShrink: 0,
+  height: spacing[12],
+  justifyItems: 'center',
+  width: spacing[12],
+});
+
+export const PageHeaderCopy = styled(Box)({
   display: 'grid',
   gap: spacing[1],
   minWidth: 0,
@@ -56,10 +82,14 @@ export const PageEyebrow = styled('p')({
 
 export const PageTitle = styled('h1')({
   color: colorTokens.textPrimary,
-  fontSize: 'clamp(1.75rem, 4vw, 1.875rem)',
+  fontSize: fontSize['2xl'],
   fontWeight: fontWeight.extraBold,
-  lineHeight: 1.15,
+  lineHeight: 1.2,
   margin: 0,
+
+  [compactBreakpoint]: {
+    fontSize: fontSize.xl,
+  },
 });
 
 export const PageSubtitle = styled('p')({
@@ -68,7 +98,6 @@ export const PageSubtitle = styled('p')({
   fontWeight: fontWeight.medium,
   lineHeight: 1.5,
   margin: 0,
-  maxWidth: '36rem',
 });
 
 export const PageHeaderActions = styled(Box)({
@@ -82,7 +111,7 @@ export const PageHeaderActions = styled(Box)({
     width: '100%',
   },
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     flexDirection: 'column',
 
     '& .MuiButton-root': {
@@ -101,22 +130,17 @@ export const MetricsGrid = styled(Box)({
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
   },
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     gap: spacing[3],
     gridTemplateColumns: '1fr',
   },
 });
 
 export const FilterPanel = styled(Box)({
-  background: colorTokens.backgroundCard,
-  border: `0.0625rem solid ${colorTokens.borderDefault}`,
-  borderRadius: borderRadius.xl,
-  boxShadow: shadows.card,
   display: 'grid',
-  gap: 0,
+  gap: spacing[3],
   maxWidth: '100%',
   minWidth: 0,
-  overflow: 'hidden',
   width: '100%',
 });
 
@@ -125,7 +149,6 @@ export const FilterActionsBar = styled(Box)({
   display: 'grid',
   gap: spacing[2],
   gridTemplateColumns: 'minmax(0, 1.45fr) repeat(3, minmax(0, 1fr))',
-  padding: spacing[4],
 
   '& > .applications-search-field': {
     minWidth: 0,
@@ -134,7 +157,6 @@ export const FilterActionsBar = styled(Box)({
 
   [tabletBreakpoint]: {
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-    padding: spacing[3],
 
     '& > .applications-search-field': {
       gridColumn: '1 / -1',
@@ -145,10 +167,9 @@ export const FilterActionsBar = styled(Box)({
     },
   },
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     gap: spacing[3],
     gridTemplateColumns: 'minmax(0, 1fr)',
-    padding: spacing[3],
 
     '& > .applications-search-field': {
       gridColumn: 'auto',
@@ -198,7 +219,7 @@ export const StatusTab = styled('button', {
   transition:
     'color 160ms ease, background 160ms ease, border-color 160ms ease, transform 160ms ease, box-shadow 160ms ease',
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     fontSize: fontSize.xs,
     height: spacing[8],
     paddingInline: spacing[2],
@@ -219,7 +240,7 @@ export const StatusTabCount = styled('span', {
   shouldForwardProp: (prop) => prop !== 'active',
 })<{ active?: boolean }>(({ active }) => ({
   alignItems: 'center',
-  background: active ? colorTokens.backgroundCard : palette.gray100,
+  background: active ? colorTokens.backgroundCard : jobFeedTokens.badgeBackground,
   borderRadius: borderRadius.full,
   color: active ? colorTokens.actionPrimary : colorTokens.textSecondary,
   display: 'inline-flex',
@@ -235,7 +256,7 @@ export const StatusTabCount = styled('span', {
 
 export const TablePanel = styled(Box)({
   background: colorTokens.backgroundCard,
-  border: `0.0625rem solid ${colorTokens.borderDefault}`,
+  border: `0.0625rem solid ${colorTokens.borderSubtle}`,
   borderRadius: borderRadius.xl,
   boxShadow: shadows.card,
   display: 'grid',
@@ -245,14 +266,14 @@ export const TablePanel = styled(Box)({
 
 export const TableToolbar = styled(Box)({
   alignItems: 'center',
-  borderBottom: `0.0625rem solid ${colorTokens.borderDefault}`,
+  borderBottom: `0.0625rem solid ${colorTokens.borderSubtle}`,
   display: 'flex',
   flexWrap: 'wrap',
   gap: spacing[3],
   justifyContent: 'space-between',
   padding: `${spacing[3]} ${spacing[4]}`,
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     alignItems: 'stretch',
     flexDirection: 'column',
     padding: spacing[3],
@@ -262,10 +283,11 @@ export const TableToolbar = styled(Box)({
 export const TableToolbarText = styled('p')({
   color: colorTokens.textSecondary,
   fontSize: fontSize.sm,
+  fontWeight: fontWeight.medium,
   lineHeight: 1.4,
   margin: 0,
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     fontSize: fontSize.xs,
   },
 });
@@ -280,7 +302,7 @@ export const ViewToggleGroup = styled(Box)({
   gap: spacing[1],
   padding: spacing[1],
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     display: 'none',
   },
 });
@@ -293,7 +315,7 @@ export const ViewToggleButton = styled(IconButton, {
   shouldForwardProp: (prop) => prop !== 'active',
 })<{ active: boolean }>(({ active }) => ({
   '&:hover': {
-    background: active ? colorTokens.backgroundCard : 'rgba(255,255,255,0.6)',
+    background: active ? colorTokens.backgroundCard : colorTokens.backgroundCardTranslucent,
   },
   background: active ? colorTokens.backgroundCard : 'transparent',
   borderRadius: borderRadius.md,
@@ -349,7 +371,7 @@ export const TableCell = styled('td')({
 
 export const TableStickyHeadCell = styled(TableHeadCell)({
   background: colorTokens.actionPrimarySurface,
-  boxShadow: '-0.25rem 0 0.75rem rgba(15, 23, 42, 0.08)',
+  boxShadow: shadows.focus,
   position: 'sticky',
   right: 0,
   zIndex: 2,
@@ -357,7 +379,7 @@ export const TableStickyHeadCell = styled(TableHeadCell)({
 
 export const TableStickyCell = styled(TableCell)({
   background: colorTokens.backgroundCard,
-  boxShadow: '-0.25rem 0 0.75rem rgba(15, 23, 42, 0.08)',
+  boxShadow: shadows.focus,
   position: 'sticky',
   right: 0,
   zIndex: 1,
@@ -454,14 +476,14 @@ export const RowActionButton = styled(IconButton)({
 
 export const PaginationBar = styled(Box)({
   alignItems: 'center',
-  borderTop: `0.0625rem solid ${colorTokens.borderDefault}`,
+  borderTop: `0.0625rem solid ${colorTokens.borderSubtle}`,
   display: 'flex',
   flexWrap: 'wrap',
   gap: spacing[4],
   justifyContent: 'space-between',
   padding: `${spacing[3]} ${spacing[4]}`,
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     alignItems: 'stretch',
     flexDirection: 'column',
     gap: spacing[3],
@@ -476,7 +498,7 @@ export const PaginationControls = styled(Box)({
   gap: spacing[1],
   justifyContent: 'center',
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     width: '100%',
   },
 });
@@ -501,7 +523,7 @@ export const PaginationButton = styled(MuiButton, {
 }));
 
 export const PaginationPageSize = styled(Box)({
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     width: '100%',
   },
 });
@@ -516,7 +538,7 @@ export const ApplicationsGrid = styled(Box)({
     gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
   },
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     gap: spacing[3],
     gridTemplateColumns: '1fr',
     padding: spacing[3],
@@ -531,16 +553,16 @@ export const ApplicationCard = styled('article', {
     boxShadow: shadows.card,
   },
   background: colorTokens.backgroundCard,
-  border: `0.0625rem solid ${selected ? colorTokens.actionPrimary : colorTokens.borderDefault}`,
+  border: `0.0625rem solid ${selected ? colorTokens.actionPrimary : colorTokens.borderSubtle}`,
   borderRadius: borderRadius.xl,
-  boxShadow: selected ? '0 0 0 0.1875rem rgba(37, 99, 235, 0.12)' : 'none',
+  boxShadow: selected ? shadows.focus : 'none',
   display: 'grid',
   gap: spacing[3],
   minWidth: 0,
   padding: spacing[4],
   transition: 'border-color 160ms ease, box-shadow 160ms ease',
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     padding: spacing[3],
   },
 }));
@@ -573,7 +595,7 @@ export const ApplicationCardTitle = styled('h3')({
   margin: 0,
   overflowWrap: 'anywhere',
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     fontSize: fontSize.sm,
   },
 });
@@ -624,7 +646,7 @@ export const ApplicationCardFooter = styled(Box)({
   justifyContent: 'space-between',
   paddingTop: spacing[3],
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     alignItems: 'stretch',
     flexDirection: 'column',
   },
@@ -642,20 +664,47 @@ export const ApplicationCardDate = styled('span')({
 });
 
 export const ApplicationCardActions = styled(RowActions)({
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     justifyContent: 'flex-end',
   },
 });
 
 export const EmptyState = styled(Box)({
   alignItems: 'center',
-  color: colorTokens.textSecondary,
-  display: 'flex',
-  flexDirection: 'column',
-  fontSize: fontSize.sm,
-  gap: spacing[4],
-  justifyContent: 'center',
-  minHeight: '12rem',
-  padding: spacing[8],
+  background: colorTokens.backgroundCard,
+  border: `0.0625rem solid ${colorTokens.borderSubtle}`,
+  borderRadius: borderRadius.xl,
+  boxShadow: shadows.card,
+  display: 'grid',
+  gap: spacing[3],
+  justifyItems: 'center',
+  padding: `${spacing[8]} ${spacing[4]}`,
   textAlign: 'center',
+  width: '100%',
+});
+
+export const EmptyStateIcon = styled(Box)({
+  alignItems: 'center',
+  background: colorTokens.actionPrimarySurface,
+  borderRadius: borderRadius.full,
+  color: colorTokens.actionPrimary,
+  display: 'grid',
+  height: spacing[12],
+  justifyItems: 'center',
+  width: spacing[12],
+});
+
+export const EmptyStateTitle = styled('h2')({
+  color: colorTokens.textPrimary,
+  fontSize: fontSize.lg,
+  fontWeight: fontWeight.bold,
+  margin: 0,
+});
+
+export const EmptyStateDescription = styled('p')({
+  color: colorTokens.textSecondary,
+  fontSize: fontSize.sm,
+  lineHeight: 1.5,
+  margin: 0,
+  maxWidth: '28rem',
 });

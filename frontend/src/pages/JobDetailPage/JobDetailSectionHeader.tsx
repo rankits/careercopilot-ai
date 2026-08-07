@@ -1,4 +1,5 @@
-import { Box, Typography } from '@/lib/material';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 
 import { jobDetailPageSx } from './styles';
 

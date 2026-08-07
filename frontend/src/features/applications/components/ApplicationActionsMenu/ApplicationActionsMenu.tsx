@@ -1,14 +1,12 @@
+import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
+import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import { useState, type MouseEvent, type ReactNode } from 'react';
 
-import {
-  ArchiveOutlinedIcon,
-  DeleteOutlineIcon,
-  EditOutlinedIcon,
-  Menu,
-  MenuItem,
-  SwapHorizOutlinedIcon,
-  UnarchiveOutlinedIcon,
-} from '@/lib/material';
 import { colorTokens, fontSize, fontWeight } from '@/tokens';
 
 export interface ApplicationActionsMenuProps {

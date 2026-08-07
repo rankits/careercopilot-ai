@@ -1,10 +1,7 @@
-import {
-  BusinessCenterOutlinedIcon,
-  CheckCircleOutlineIcon,
-  EventOutlinedIcon,
-  InsightsOutlinedIcon,
-} from '@/lib/material';
-
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 export type {
   ApplicationPriority,
   ApplicationRecord,

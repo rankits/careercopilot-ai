@@ -6,8 +6,10 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { JobFeedPage } from './JobFeedPage';
 
-const { listJobsMock } = vi.hoisted(() => ({
+const { listJobsMock, listSavedJobsMock, saveJobMock } = vi.hoisted(() => ({
   listJobsMock: vi.fn(),
+  listSavedJobsMock: vi.fn(),
+  saveJobMock: vi.fn(),
 }));
 
 vi.mock('@/features/jobs/services/jobs.service', () => ({
@@ -18,8 +20,8 @@ vi.mock('@/features/jobs/services/jobs.service', () => ({
 
 vi.mock('@/features/applications/services/applications.service', () => ({
   applicationsService: {
-    listSavedJobs: vi.fn().mockResolvedValue([]),
-    saveJob: vi.fn(),
+    listSavedJobs: listSavedJobsMock,
+    saveJob: saveJobMock,
     unsaveJob: vi.fn(),
   },
 }));
@@ -50,6 +52,7 @@ const apiJobs = {
       skills: ['React', 'TypeScript'],
       publishedAt: '2026-07-30T00:00:00.000Z',
       applyUrl: 'https://careers.microsoft.com/1',
+      isSaved: true,
     },
     {
       id: 'job-google',
@@ -76,6 +79,10 @@ const apiJobs = {
 beforeEach(() => {
   listJobsMock.mockReset();
   listJobsMock.mockResolvedValue(apiJobs);
+  listSavedJobsMock.mockReset();
+  listSavedJobsMock.mockResolvedValue([]);
+  saveJobMock.mockReset();
+  saveJobMock.mockResolvedValue(undefined);
 });
 
 const expectListJobsCalledWith = (params: Record<string, unknown>) => {
@@ -91,10 +98,38 @@ describe('JobFeedPage', () => {
 
     expect(await screen.findByText(/microsoft/i)).toBeInTheDocument();
     expectListJobsCalledWith({ page: 1, limit: 20, sortBy: 'newest' });
+    expect(listSavedJobsMock).not.toHaveBeenCalled();
     expect(screen.getByText(/2 jobs found/i)).toBeInTheDocument();
     const applyButtons = screen.getAllByRole('button', { name: /apply to/i });
     expect(applyButtons[0]).toBeEnabled();
     expect(applyButtons[1]).toBeDisabled();
+  });
+
+  it('saves a job without loading the saved applications list', async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    expect(await screen.findByText(/microsoft/i)).toBeInTheDocument();
+    expect(listSavedJobsMock).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: /save frontend engineer/i }));
+
+    await waitFor(() => {
+      expect(saveJobMock).toHaveBeenCalledWith('job-google');
+    });
+    expect(listSavedJobsMock).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: /unsave frontend engineer/i })).toBeInTheDocument();
+  });
+
+  it('shows saved state from the job list API without calling listSavedJobs', async () => {
+    renderPage();
+
+    expect(await screen.findByText(/microsoft/i)).toBeInTheDocument();
+    expect(listSavedJobsMock).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('button', { name: /unsave senior frontend engineer/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /save frontend engineer/i })).toBeInTheDocument();
   });
 
   it('updates workMode in the request when a filter is selected', async () => {
@@ -157,12 +192,37 @@ describe('JobFeedPage', () => {
     renderPage();
     await screen.findByText(/microsoft/i);
 
-    fireEvent.change(screen.getByPlaceholderText(/search title, company/i), {
+    fireEvent.change(screen.getByPlaceholderText(/search jobs, companies, or keywords/i), {
       target: { value: 'go' },
     });
 
     expect(screen.getByText(/searching/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/search jobs/i)).toHaveAttribute('aria-busy', 'true');
+  });
+
+  it('debounces search so rapid keystrokes do not call the API per character', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    renderPage();
+    await screen.findByText(/microsoft/i);
+    const initialCalls = listJobsMock.mock.calls.length;
+
+    const input = screen.getByPlaceholderText(/search jobs, companies, or keywords/i);
+    fireEvent.change(input, { target: { value: 'r' } });
+    fireEvent.change(input, { target: { value: 're' } });
+    fireEvent.change(input, { target: { value: 'react' } });
+
+    expect(listJobsMock.mock.calls.length).toBe(initialCalls);
+
+    await vi.advanceTimersByTimeAsync(399);
+    expect(listJobsMock.mock.calls.length).toBe(initialCalls);
+
+    await vi.advanceTimersByTimeAsync(1);
+    await waitFor(() => {
+      expectListJobsCalledWith({ query: 'react', page: 1 });
+    });
+    expect(listJobsMock.mock.calls.length).toBe(initialCalls + 1);
+
+    vi.useRealTimers();
   });
 
   it('keeps the filter toolbar zones available for search, chips, and controls', async () => {

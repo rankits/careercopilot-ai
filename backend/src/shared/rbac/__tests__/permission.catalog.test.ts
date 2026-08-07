@@ -31,6 +31,8 @@ describe('permission catalog constants', () => {
     expect(RESUME_PERMISSIONS.UPDATE_OWN).toBe('resume.update.own');
     expect(RESUME_PERMISSIONS.DELETE_OWN).toBe('resume.delete.own');
     expect(RESUME_PERMISSIONS.READ_ANALYSIS_OWN).toBe('resume-analysis.read.own');
+    expect(RESUME_PERMISSIONS.UPDATE_ANALYSIS_OWN).toBe('resume-analysis.update.own');
+    expect(RESUME_PERMISSIONS.DELETE_ANALYSIS_OWN).toBe('resume-analysis.delete.own');
     expect(JOBS_PERMISSIONS.READ).toBe('jobs.read');
     expect(JOBS_PERMISSIONS.CREATE).toBe('jobs.create');
     expect(JOBS_PERMISSIONS.UPDATE).toBe('jobs.update');

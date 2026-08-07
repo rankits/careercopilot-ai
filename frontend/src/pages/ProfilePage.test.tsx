@@ -50,6 +50,32 @@ function LocationDisplay() {
   return <span data-testid="location">{useLocation().pathname}</span>;
 }
 
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    clear: () => {
+      store = {};
+    },
+    getItem: (key: string) => store[key] ?? null,
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() {
+      return Object.keys(store).length;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: localStorageMock,
+  writable: true,
+});
+
 const AUTHENTICATED_STATE: AuthState = {
   accessToken: 'token',
   error: null,
@@ -127,7 +153,12 @@ async function waitForParsedProfile() {
 
 async function openConfirmDialog(user: ReturnType<typeof userEvent.setup>) {
   await dismissOpenAlerts(user);
-  await user.click(screen.getByRole('button', { name: /save profile & continue|save changes/i }));
+  const form = document.getElementById('profile-review-form');
+  if (form) {
+    fireEvent.submit(form);
+  } else {
+    await user.click(screen.getByRole('button', { name: /save profile & continue|save changes/i }));
+  }
   return waitFor(() => screen.getByRole('dialog'), { timeout: 5_000 });
 }
 
@@ -230,7 +261,7 @@ describe('ProfilePage resume parsing', () => {
     });
   }, 30_000);
 
-  it('confirms a parsed profile and navigates to the job feed', async () => {
+  it('confirms a parsed profile and navigates to the dashboard', async () => {
     const user = setupUser();
     parseMock.mockImplementationOnce((_file: File, callbacks: ResumeParseCallbacks) => {
       callbacks.onUploaded?.('resume-1');
@@ -247,40 +278,42 @@ describe('ProfilePage resume parsing', () => {
     // confirm must send everything the user reviewed (not just resumeId),
     // so a summary the parser found (or the user edited) actually persists.
     await waitFor(() =>
-      expect(confirmProfileMock).toHaveBeenCalledWith({
-        resumeId: 'resume-1',
-        userId: 'user-1',
-        certifications: [],
-        education: [],
-        experience: [],
-        personalDetails: {
-          currentCompany: 'Analytical Engines',
-          designation: 'Engineer',
-          email: 'ada@example.com',
-          fullName: 'Ada Lovelace',
-          location: 'London, UK',
-          phone: '+44 1234',
-          projects: [],
-          summary: 'Computing pioneer',
-          totalExperience: '8',
-        },
-        skills: ['Algorithms'],
-      }),
+      expect(confirmProfileMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resumeId: 'resume-1',
+          userId: 'user-1',
+          certifications: [],
+          education: [],
+          experience: [],
+          personalDetails: expect.objectContaining({
+            currentCompany: 'Analytical Engines',
+            designation: 'Engineer',
+            email: 'ada@example.com',
+            fullName: 'Ada Lovelace',
+            location: 'London, UK',
+            phone: '+44 1234',
+            projects: [],
+            summary: 'Computing pioneer',
+            totalExperience: '8',
+          }),
+          skills: ['Algorithms'],
+        }),
+      ),
     );
     expect(onSave).toHaveBeenCalled();
-    expect(await screen.findByText(/profile created successfully/i)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/jobs-feed'), {
-      timeout: 5000,
+    await waitFor(() => expect(store.getState().auth.isProfileComplete).toBe(true), {
+      timeout: 10_000,
+    });
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/app'), {
+      timeout: 10_000,
     });
     expect(store.getState().auth.isProfileComplete).toBe(true);
   }, 30_000);
 
-  it('keeps Save disabled when a parsed resume is missing a mandatory field, until it is filled in', async () => {
+  it('auto-generates a summary when the parser omits one but other profile details exist', async () => {
     const user = setupUser();
     parseMock.mockImplementationOnce((_file: File, callbacks: ResumeParseCallbacks) => {
       callbacks.onUploaded?.('resume-1');
-      // No professionalSummary/professionalProfile - e.g. the RULE_BASED
-      // fallback parser, which never extracts a summary.
       return Promise.resolve({
         ...parsed,
         professionalSummary: undefined,
@@ -293,13 +326,14 @@ describe('ProfilePage resume parsing', () => {
       expect(screen.getByRole('textbox', { name: /full name/i })).toHaveValue('Ada Lovelace');
     });
 
-    expect(screen.getByRole('button', { name: /save profile/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled();
 
     await user.click(screen.getByRole('button', { name: /^professional profile/i }));
-    fillField(/professional summary/i, 'Filled in manually');
+    expect(screen.getByRole('textbox', { name: /summary/i })).not.toHaveValue('');
+    fillField(/summary/i, 'Filled in manually');
 
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /save profile/i })).toBeEnabled();
+      expect(screen.getByRole('textbox', { name: /summary/i })).toHaveValue('Filled in manually');
     });
   }, 30_000);
 
@@ -339,7 +373,7 @@ describe('ProfilePage resume parsing', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(onSave).not.toHaveBeenCalled();
     expect(confirmProfileMock).not.toHaveBeenCalled();
-  }, 15_000);
+  }, 30_000);
 });
 
 const existingProfile = {

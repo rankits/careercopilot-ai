@@ -28,6 +28,26 @@ export interface RegisterPayload {
   phone?: string;
 }
 
+export interface ForgotPasswordPayload {
+  email: string;
+}
+
+export interface VerifyForgotPasswordOtpPayload {
+  code: string;
+  email: string;
+}
+
+export interface ResetPasswordPayload {
+  code: string;
+  email: string;
+  newPassword: string;
+}
+
+export interface AuthMessageResponse {
+  message: string;
+  status?: 'success' | 'error';
+}
+
 export interface AuthResponse {
   accessToken: string;
   accessTokenExpiresInSeconds?: number;

@@ -17,7 +17,9 @@ describe('Sidebar', () => {
     renderSidebar(<Sidebar />);
 
     expect(screen.getByLabelText(/primary navigation/i)).toBeInTheDocument();
-    expect(screen.getByRole('img', { name: /career copilot/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^career copilot$/i })).toHaveAttribute('href', '/app');
+    expect(screen.getByText('CAREER')).toBeInTheDocument();
+    expect(screen.getByText('RESUME')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /dashboard/i })).toHaveAttribute(
       'aria-current',
       'page',
@@ -29,7 +31,7 @@ describe('Sidebar', () => {
     );
     expect(screen.getByRole('link', { name: /ai match/i })).toHaveAttribute('href', '/ai-match');
     expect(screen.queryByRole('button', { name: /^ai match$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /applications/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^applications$/i })).toHaveAttribute(
       'href',
       '/applications',
     );
@@ -38,46 +40,20 @@ describe('Sidebar', () => {
       '/auto-apply',
     );
     expect(screen.queryByRole('link', { name: /^Auto Apply$/i })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^profile$/i })).toHaveAttribute(
-      'href',
-      '/profile/edit',
-    );
+    expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /download latest/i })).toBeInTheDocument();
-    expect(screen.getByText(/no resume uploaded yet/i)).toBeInTheDocument();
-  });
-
-  it('shows the latest resume download action when a resume is available', async () => {
-    const user = userEvent.setup();
-    const handleDownload = vi.fn();
-
-    renderSidebar(
-      <Sidebar
-        latestResumeName="sonal-resume.pdf"
-        onDownloadLatestResume={handleDownload}
-        onOpenResumeVersions={vi.fn()}
-      />,
-    );
-
-    expect(screen.getByText(/latest resume/i)).toBeInTheDocument();
-    expect(screen.getByText(/download your most recent uploaded resume/i)).toBeInTheDocument();
-    expect(screen.queryByText('sonal-resume.pdf')).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /view all versions/i })).toBeInTheDocument();
-
-    await user.click(screen.getByRole('button', { name: /download latest/i }));
-    expect(handleDownload).toHaveBeenCalledTimes(1);
+    expect(
+      screen.getByText(/no resume uploaded yet|your most recent upload will appear here/i),
+    ).toBeInTheDocument();
   });
 
   it('collapses labels for icon-only mode and exposes names via aria-label', () => {
-    renderSidebar(<Sidebar variant="collapsed" latestResumeName="sonal-resume.pdf" />);
+    renderSidebar(<Sidebar variant="collapsed" />);
 
-    expect(screen.getByRole('img', { name: /career copilot/i })).toHaveAttribute(
-      'src',
-      expect.stringContaining('penguin'),
-    );
+    expect(screen.getByRole('link', { name: /^career copilot$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^dashboard$/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /^jobs feed$/i })).toBeInTheDocument();
     expect(screen.queryByText(/upload resume/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/latest resume/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /^applications$/i })).toBeInTheDocument();
   });
 
@@ -119,14 +95,47 @@ describe('Sidebar', () => {
     expect(handleVariantChange).toHaveBeenCalledWith('collapsed');
   });
 
-  it('renders bottom navigation for mobile mode', () => {
-    renderSidebar(<Sidebar mobileMode="bottomNav" />);
+  it('renders bottom navigation with a More drawer for overflow destinations', async () => {
+    const user = userEvent.setup();
+    const handleLogout = vi.fn();
+    const handleSettings = vi.fn();
+
+    renderSidebar(
+      <Sidebar
+        mobileMode="bottomNav"
+        onLogoutClick={handleLogout}
+        onSettingsClick={handleSettings}
+        userName="Ada Lovelace"
+      />,
+    );
 
     expect(screen.getByLabelText(/mobile navigation/i)).toBeInTheDocument();
-    expect(screen.getAllByRole('link')).toHaveLength(5);
-    expect(screen.getByRole('link', { name: /^profile$/i })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: /^dashboard$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^jobs feed$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^ai match$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^applications$/i })).toBeInTheDocument();
+    expect(screen.getByText(/^home$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^jobs$/i)).toBeInTheDocument();
+    expect(screen.getByText(/^apps$/i)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^saved jobs$/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /open more menu/i }));
+
+    expect(screen.getByLabelText(/more navigation/i)).toBeInTheDocument();
+    expect(screen.getByText(/^ada lovelace$/i)).toBeInTheDocument();
+    expect(screen.getByText('AL')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^saved jobs$/i })).toHaveAttribute(
       'href',
-      '/profile/edit',
+      '/saved-jobs',
     );
+    expect(screen.getByRole('link', { name: /^resume builder$/i })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /^saved resumes$/i })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /download latest/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /edit profile/i })).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /^logout$/i }));
+    expect(handleLogout).toHaveBeenCalledTimes(1);
   });
 });

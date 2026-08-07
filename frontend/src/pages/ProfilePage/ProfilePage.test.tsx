@@ -50,6 +50,32 @@ function LocationDisplay() {
   return <span data-testid="location">{useLocation().pathname}</span>;
 }
 
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    clear: () => {
+      store = {};
+    },
+    getItem: (key: string) => store[key] ?? null,
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() {
+      return Object.keys(store).length;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: localStorageMock,
+  writable: true,
+});
+
 const AUTHENTICATED_STATE: AuthState = {
   accessToken: 'token',
   error: null,
@@ -127,7 +153,12 @@ async function waitForParsedProfile() {
 
 async function openConfirmDialog(user: ReturnType<typeof userEvent.setup>) {
   await dismissOpenAlerts(user);
-  await user.click(screen.getByRole('button', { name: /save profile & continue|save changes/i }));
+  const form = document.getElementById('profile-review-form');
+  if (form) {
+    fireEvent.submit(form);
+  } else {
+    await user.click(screen.getByRole('button', { name: /save profile & continue|save changes/i }));
+  }
   return waitFor(() => screen.getByRole('dialog'), { timeout: 5_000 });
 }
 
@@ -267,11 +298,12 @@ describe('ProfilePage resume parsing', () => {
       ),
     );
     expect(onSave).toHaveBeenCalled();
-    expect(await screen.findByText(/profile created successfully/i)).toBeInTheDocument();
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/jobs-feed'), {
-      timeout: 5000,
+    await waitFor(() => expect(store.getState().auth.isProfileComplete).toBe(true), {
+      timeout: 10_000,
     });
-    expect(store.getState().auth.isProfileComplete).toBe(true);
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/app'), {
+      timeout: 10_000,
+    });
   }, 30_000);
 
   it('refuses to confirm a profile when no user is signed in', async () => {

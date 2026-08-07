@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -24,7 +24,8 @@ describe('AuthForm', () => {
     expect(screen.getByRole('textbox', { name: /last name/i })).toBeInTheDocument();
     expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toBeInTheDocument();
     expect(screen.getByLabelText(/confirm password/i, { selector: 'input' })).toBeInTheDocument();
-    expect(screen.getByTestId('PhoneOutlinedIcon')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /country dial code/i })).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /phone number/i })).toBeInTheDocument();
     expect(screen.queryByText(/forgot password/i)).not.toBeInTheDocument();
     expect(screen.queryByRole('checkbox', { name: /remember me/i })).not.toBeInTheDocument();
   });
@@ -51,7 +52,7 @@ describe('AuthForm', () => {
     );
     expect(screen.getByRole('textbox', { name: /phone number/i })).toHaveAttribute(
       'maxlength',
-      '10',
+      '15',
     );
     expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toHaveAttribute(
       'maxlength',
@@ -67,7 +68,7 @@ describe('AuthForm', () => {
     render(<AuthForm mode="register" />);
     const longName = 'A'.repeat(81);
     const longEmail = `${'a'.repeat(300)}@example.com`;
-    const longPhone = '1'.repeat(11);
+    const longPhone = '1'.repeat(20);
     const longPassword = 'P'.repeat(129);
 
     const firstNameInput = screen.getByRole('textbox', { name: /first name/i });
@@ -82,33 +83,58 @@ describe('AuthForm', () => {
 
     expect(firstNameInput).toHaveValue('A'.repeat(80));
     expect(emailInput).toHaveValue(longEmail.slice(0, 300));
-    expect(phoneInput).toHaveValue('1'.repeat(10));
+    expect(phoneInput).toHaveValue('1'.repeat(15));
     expect(passwordInput).toHaveValue('P'.repeat(128));
   });
 
-  it('submits the form and calls social handlers', async () => {
+  it('renders social actions as disabled coming soon controls', () => {
+    render(<AuthForm />);
+
+    expect(screen.getByRole('button', { name: /continue with google/i })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /continue with linkedin/i })).toBeDisabled();
+    expect(screen.getAllByText(/coming soon/i)).toHaveLength(2);
+  });
+
+  it('submits the form with credentials', async () => {
     const user = userEvent.setup();
-    const handleGoogle = vi.fn();
-    const handleLinkedIn = vi.fn();
     const handleSubmit = vi.fn();
 
-    render(
-      <AuthForm
-        onGoogleConnect={handleGoogle}
-        onLinkedInConnect={handleLinkedIn}
-        onValidSubmit={handleSubmit}
-      />,
-    );
+    render(<AuthForm onValidSubmit={handleSubmit} />);
 
-    await user.click(screen.getByRole('button', { name: /continue with google/i }));
-    await user.click(screen.getByRole('button', { name: /continue with linkedin/i }));
     await user.type(screen.getByRole('textbox', { name: /email address/i }), 'user@example.com');
     await user.type(screen.getByLabelText(/^password$/i, { selector: 'input' }), 'password123');
     await user.click(screen.getByRole('button', { name: /login/i }));
 
-    expect(handleGoogle).toHaveBeenCalledTimes(1);
-    expect(handleLinkedIn).toHaveBeenCalledTimes(1);
-    expect(handleSubmit).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(handleSubmit).toHaveBeenCalledTimes(1));
+  });
+
+  it('submits rememberMe as a boolean when the checkbox is toggled', async () => {
+    const user = userEvent.setup();
+    const handleSubmit = vi.fn();
+
+    render(<AuthForm onValidSubmit={handleSubmit} />);
+
+    const rememberMe = screen.getByRole('checkbox', { name: /remember me/i });
+    expect(rememberMe).toBeChecked();
+
+    await user.click(rememberMe);
+    expect(rememberMe).not.toBeChecked();
+    await user.click(rememberMe);
+    expect(rememberMe).toBeChecked();
+
+    await user.type(screen.getByRole('textbox', { name: /email address/i }), 'user@example.com');
+    await user.type(screen.getByLabelText(/^password$/i, { selector: 'input' }), 'password123');
+    await user.click(screen.getByRole('button', { name: /login/i }));
+
+    await waitFor(() => expect(handleSubmit).toHaveBeenCalledTimes(1));
+    expect(handleSubmit.mock.calls[0]?.[0]).toEqual(
+      expect.objectContaining({
+        email: 'user@example.com',
+        password: 'password123',
+        rememberMe: true,
+      }),
+    );
+    expect(typeof handleSubmit.mock.calls[0]?.[0]?.rememberMe).toBe('boolean');
   });
 
   it('shows validation errors from the active yup schema', async () => {
@@ -143,14 +169,14 @@ describe('AuthForm', () => {
     expect(screen.getByRole('textbox', { name: /current role/i })).toBeInTheDocument();
   });
 
-  it('keeps only ten digits in the phone number field', async () => {
+  it('keeps national phone digits without a leading plus when dial code is separate', async () => {
     const user = userEvent.setup();
     render(<AuthForm mode="register" />);
     const phoneInput = screen.getByRole('textbox', { name: /phone number/i });
 
-    await user.type(phoneInput, 'call +91 98765@43210');
+    await user.type(phoneInput, '+91 98765@43210');
 
-    expect(phoneInput).toHaveValue('9198765432');
+    expect(phoneInput).toHaveValue('919876543210');
   });
 
   it('disables submit action while submitting', () => {

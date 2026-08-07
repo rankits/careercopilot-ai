@@ -1,31 +1,24 @@
-import { Box, IconButton, styled } from '@/lib/material';
-import { borderRadius, colorTokens, spacing } from '@/tokens';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
 
-const mobileBreakpoint = '@media (max-width: 47.5rem)';
-const tabletBreakpoint = '@media (max-width: 75rem)';
+import { borderRadius, colorTokens, shadows, spacing } from '@/tokens';
+
+const compactBreakpoint = '@media (max-width: 47.5rem)';
 
 export const StatusTabsScrollerRoot = styled(Box)({
   alignItems: 'center',
-  borderBottom: `0.0625rem solid ${colorTokens.borderDefault}`,
   display: 'flex',
   gap: spacing[2],
   maxWidth: '100%',
   minHeight: spacing[12],
   minWidth: 0,
   overflow: 'hidden',
-  paddingBlock: spacing[3],
-  paddingInline: spacing[4],
   width: '100%',
 
-  [tabletBreakpoint]: {
-    paddingInline: spacing[3],
-  },
-
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     gap: spacing[1],
     minHeight: spacing[10],
-    paddingBlock: spacing[2],
-    paddingInline: spacing[2],
   },
 });
 
@@ -49,7 +42,7 @@ export const StatusTabsRow = styled('div')({
     display: 'none',
   },
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     gap: spacing[1],
   },
 });
@@ -66,15 +59,15 @@ export const StatusTabsScrollButton = styled(IconButton)({
     color: colorTokens.actionPrimary,
   },
   background: colorTokens.backgroundCard,
-  border: `0.0625rem solid ${colorTokens.borderDefault}`,
+  border: `0.0625rem solid ${colorTokens.borderSubtle}`,
   borderRadius: borderRadius.full,
-  boxShadow: '0 1px 3px rgba(15, 23, 42, 0.08)',
+  boxShadow: shadows.card,
   color: colorTokens.textSecondary,
   flexShrink: 0,
   height: spacing[8],
   width: spacing[8],
 
-  [mobileBreakpoint]: {
+  [compactBreakpoint]: {
     height: spacing[6],
     width: spacing[6],
   },
@@ -93,11 +86,11 @@ export const StatusTabsFade = styled('span', {
   zIndex: 1,
   ...(edge === 'left'
     ? {
-        background: 'linear-gradient(90deg, #ffffff 20%, rgba(255, 255, 255, 0))',
+        background: `linear-gradient(90deg, ${colorTokens.backgroundApp} 20%, transparent)`,
         left: 0,
       }
     : {
-        background: 'linear-gradient(270deg, #ffffff 20%, rgba(255, 255, 255, 0))',
+        background: `linear-gradient(270deg, ${colorTokens.backgroundApp} 20%, transparent)`,
         right: 0,
       }),
 }));

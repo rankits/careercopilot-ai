@@ -3,7 +3,7 @@ import { AppError } from '@/shared/utils/errors/AppError.js';
 import { successResponse } from '@/shared/utils/response.js';
 import { ApplicationManagementService } from '@/modules/application-management/services/application.service.js';
 import { PrismaApplicationRepository } from '@/modules/application-management/repositories/prisma-application.repository.js';
-import { ApplicationStatus, ApplicationPriority } from '@prisma/client';
+import { ApplicationStatus, ApplicationPriority, ApplicationSourceType } from '@prisma/client';
 import { ListApplicationsQuerySchema } from '@/modules/application-management/validations/application.validation.js';
 
 const repository = new PrismaApplicationRepository();
@@ -89,12 +89,20 @@ export const getApplicationsController = async (
       }
     }
 
+    let sourceTypeFilter: ApplicationSourceType | ApplicationSourceType[] | undefined;
+    if (query.sourceType) {
+      const raw = Array.isArray(query.sourceType) ? query.sourceType : query.sourceType.split(',');
+      sourceTypeFilter =
+        raw.length === 1 ? (raw[0] as ApplicationSourceType) : (raw as ApplicationSourceType[]);
+    }
+
     const result = await applicationService.getApplications({
       userId,
       filters: {
         status: statusFilter,
         archived: query.archived,
         search: query.search,
+        sourceType: sourceTypeFilter,
       },
       pagination: { page: query.page, limit: query.limit },
       sortBy: query.sortBy,

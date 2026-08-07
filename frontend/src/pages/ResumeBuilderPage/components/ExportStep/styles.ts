@@ -1,4 +1,6 @@
-import { Box, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const ExportLayout = styled(Box)({
@@ -109,5 +111,31 @@ export const ExportPreviewCard = styled(Box)({
     marginBottom: spacing[3],
     textTransform: 'uppercase',
     letterSpacing: '0.04em',
+  },
+});
+
+/** Desktop: one row. Tablet/mobile: responsive 2-col grid so actions never overflow. */
+export const ExportActions = styled(Box)({
+  display: 'flex',
+  flexWrap: 'nowrap',
+  alignItems: 'center',
+  gap: spacing[3],
+  marginBottom: spacing[5],
+  width: '100%',
+  '& > *': {
+    flex: '1 1 0',
+    minWidth: 0,
+  },
+  '@media (max-width: 900px)': {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    gap: spacing[3],
+    '& > *': {
+      flex: 'unset',
+      width: '100%',
+    },
+  },
+  '@media (max-width: 28rem)': {
+    gridTemplateColumns: '1fr',
   },
 });
