@@ -1,0 +1,178 @@
+import type { SxProps, Theme } from '@mui/material/styles';
+
+export const assistedApplicationsPageSx = {
+  root: {
+    maxWidth: 1220,
+    mx: 'auto',
+    overflowX: 'hidden',
+    p: { xs: 2, sm: 3, lg: 4 },
+    pb: { xs: 10, md: 5 },
+  },
+  pageHeader: {
+    alignItems: { xs: 'stretch', sm: 'flex-start' },
+    display: 'flex',
+    flexDirection: { xs: 'column', sm: 'row' },
+    gap: 2,
+    justifyContent: 'space-between',
+    mb: 3,
+  },
+  pageTitle: {
+    fontSize: { xs: '1.5rem', sm: '2.125rem' },
+    fontWeight: 700,
+    letterSpacing: '-0.03em',
+    mb: 0.5,
+  },
+  howItWorksButton: {
+    alignSelf: { xs: 'stretch', sm: 'auto' },
+    flexShrink: 0,
+  },
+  metricsGrid: {
+    display: 'grid',
+    gap: 1.5,
+    gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
+    mb: 3,
+  },
+  metricCard: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: { xs: 1.5, sm: 2 },
+    minWidth: 0,
+    p: { xs: 1.75, sm: 2.25 },
+  },
+  metricIconWrap: {
+    alignItems: 'center',
+    bgcolor: 'primary.50',
+    borderRadius: 2,
+    color: 'primary.main',
+    display: 'flex',
+    flexShrink: 0,
+    height: { xs: 44, sm: 52 },
+    justifyContent: 'center',
+    width: { xs: 44, sm: 52 },
+  },
+  metricCopy: {
+    minWidth: 0,
+  },
+  filtersWrap: {
+    alignItems: { lg: 'center' },
+    display: 'flex',
+    flexDirection: { xs: 'column', lg: 'row' },
+    gap: 1.5,
+    justifyContent: 'space-between',
+    mb: 2,
+  },
+  searchField: {
+    flex: { lg: 1 },
+    maxWidth: { lg: 430 },
+    width: '100%',
+  },
+  filterControls: {
+    display: 'grid',
+    gap: 1,
+    gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, minmax(0, 1fr))' },
+    width: { xs: '100%', lg: 'auto' },
+  },
+  tableHeader: {
+    bgcolor: 'grey.50',
+    display: { xs: 'none', md: 'grid' },
+    gridTemplateColumns: 'minmax(0, 1.7fr) minmax(210px, .9fr) 150px 48px',
+    px: 2.5,
+    py: 1.5,
+  },
+  applicationRow: {
+    alignItems: { md: 'center' },
+    cursor: 'pointer',
+    display: 'grid',
+    gap: { xs: 1.25, md: 1.5 },
+    gridTemplateAreas: {
+      xs: `
+        "details actions"
+        "status status"
+        "updated updated"
+      `,
+      md: 'none',
+    },
+    gridTemplateColumns: {
+      xs: 'minmax(0, 1fr) auto',
+      md: 'minmax(0, 1.7fr) minmax(210px, .9fr) 150px 48px',
+    },
+    p: { xs: 2, md: 2.5 },
+    '&:hover': { bgcolor: 'grey.50' },
+  },
+  applicationDetails: {
+    alignItems: 'center',
+    display: 'flex',
+    gap: 1.5,
+    gridArea: { xs: 'details', md: 'auto' },
+    minWidth: 0,
+  },
+  applicationAvatar: {
+    alignItems: 'center',
+    bgcolor: 'primary.50',
+    borderRadius: 2,
+    color: 'primary.main',
+    display: 'flex',
+    flexShrink: 0,
+    fontSize: { xs: 16, sm: 18 },
+    fontWeight: 800,
+    height: { xs: 40, sm: 48 },
+    justifyContent: 'center',
+    width: { xs: 40, sm: 48 },
+  },
+  applicationCopy: {
+    minWidth: 0,
+  },
+  applicationTitle: {
+    fontWeight: 700,
+    overflow: 'hidden',
+    overflowWrap: 'anywhere',
+    textOverflow: 'ellipsis',
+    whiteSpace: { xs: 'normal', md: 'nowrap' },
+  },
+  applicationCompany: {
+    color: 'text.secondary',
+    overflow: 'hidden',
+    overflowWrap: 'anywhere',
+    textOverflow: 'ellipsis',
+    whiteSpace: { xs: 'normal', md: 'nowrap' },
+  },
+  applicationStatus: {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 1,
+    gridArea: { xs: 'status', md: 'auto' },
+  },
+  applicationUpdated: {
+    gridArea: { xs: 'updated', md: 'auto' },
+  },
+  applicationActions: {
+    alignSelf: { xs: 'start', md: 'center' },
+    gridArea: { xs: 'actions', md: 'auto' },
+  },
+  footerBanner: {
+    alignItems: { xs: 'stretch', sm: 'center' },
+    bgcolor: 'primary.50',
+    display: 'flex',
+    flexDirection: { xs: 'column', sm: 'row' },
+    gap: 2,
+    justifyContent: 'space-between',
+    mt: 2,
+    p: { xs: 2, sm: 2.5 },
+  },
+  paginationWrap: {
+    alignItems: { xs: 'stretch', sm: 'center' },
+    display: 'flex',
+    flexDirection: { xs: 'column', sm: 'row' },
+    gap: 1.5,
+    justifyContent: 'space-between',
+    mt: 2,
+  },
+  paginationControls: {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 0.5,
+    justifyContent: { xs: 'center', sm: 'flex-end' },
+  },
+} satisfies Record<string, SxProps<Theme>>;

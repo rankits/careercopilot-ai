@@ -7,7 +7,6 @@ import { expect, test, type Page } from '@playwright/test';
  */
 
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'careercopilot_access_token',
   PROFILE_COMPLETE: 'careercopilot_profile_complete',
   USER: 'careercopilot_user',
 } as const;
@@ -17,8 +16,7 @@ const JOB_ID = 'e2e-job-1';
 
 async function seedOnboardedSession(page: Page) {
   await page.addInitScript(
-    ({ tokenKey, profileKey, userKey }) => {
-      localStorage.setItem(tokenKey, JSON.stringify('e2e-access-token'));
+    ({ profileKey, userKey }) => {
       localStorage.setItem(profileKey, JSON.stringify(true));
       localStorage.setItem(
         userKey,
@@ -27,15 +25,23 @@ async function seedOnboardedSession(page: Page) {
           id: 'user-1',
           name: 'Ada',
           role: 'user',
+          isProfileCreated: true,
         }),
       );
     },
     {
-      tokenKey: STORAGE_KEYS.ACCESS_TOKEN,
       profileKey: STORAGE_KEYS.PROFILE_COMPLETE,
       userKey: STORAGE_KEYS.USER,
     },
   );
+
+  await page.route('**/api/v1/auth/refresh-token', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ accessToken: 'e2e-access-token' }),
+    });
+  });
 }
 
 function ok(data: unknown) {
@@ -49,6 +55,15 @@ async function mockAssistedApplyApis(page: Page, options?: { setupReady?: boolea
     const url = route.request().url();
     const method = route.request().method();
 
+    if (url.includes('/auth/refresh-token')) {
+      await route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ accessToken: 'e2e-access-token' }),
+      });
+      return;
+    }
+
     if (url.includes('/auto-apply/setup-status')) {
       await route.fulfill({
         json: ok({
@@ -58,6 +73,13 @@ async function mockAssistedApplyApis(page: Page, options?: { setupReady?: boolea
             : [{ code: 'PROFILE_INCOMPLETE', message: 'Complete your profile' }],
           sections: [],
         }),
+      });
+      return;
+    }
+
+    if (url.includes('/auto-apply/rollout-flags')) {
+      await route.fulfill({
+        json: ok({ workspace: true, directHandoff: true }),
       });
       return;
     }
@@ -152,6 +174,20 @@ async function mockAssistedApplyApis(page: Page, options?: { setupReady?: boolea
       return;
     }
 
+    if (method === 'POST' && url.includes(`/auto-apply/submissions/${APP_ID}/abandon`)) {
+      await route.fulfill({
+        json: ok({ status: 'WITHDRAWN', abandonReason: 'NOT_INTERESTED' }),
+      });
+      return;
+    }
+
+    if (url.includes('/auto-apply/events')) {
+      await route.fulfill({
+        json: ok([]),
+      });
+      return;
+    }
+
     if (url.includes('/auth/me') || url.includes('/users/me')) {
       await route.fulfill({
         json: ok({ id: 'user-1', email: 'ada@example.com', name: 'Ada' }),
@@ -177,9 +213,28 @@ test.describe('AA-090 Phase 1 Assisted Apply E2E', () => {
   test('abandon affordance is available in workspace menu', async ({ page }) => {
     await seedOnboardedSession(page);
     await mockAssistedApplyApis(page);
+    await page.goto(`/auto-apply?tab=submissions`);
     await page.goto(`/assisted-apply/${APP_ID}?step=open`);
+    await expect(page.getByRole('heading', { name: 'Assisted Apply' })).toBeVisible();
     await page.getByLabel('More application actions').click();
-    await expect(page.getByRole('menuitem', { name: 'Abandon' })).toBeVisible();
+    await expect(page.getByRole('menuitem', { name: 'Stop tracking application' })).toBeVisible();
+  });
+
+  test('abandon flow stops tracking and returns to submissions list', async ({ page }) => {
+    await seedOnboardedSession(page);
+    await mockAssistedApplyApis(page);
+    await page.goto(`/auto-apply?tab=submissions`);
+    await page.goto(`/assisted-apply/${APP_ID}?step=open`);
+    await expect(page.getByRole('heading', { name: 'Assisted Apply' })).toBeVisible();
+    await page.getByLabel('More application actions').click();
+    await page.getByRole('menuitem', { name: 'Stop tracking application' }).click();
+    await expect(
+      page.getByRole('heading', { name: 'Stop tracking this application?' }),
+    ).toBeVisible();
+    await page.getByRole('radio', { name: 'Not interested' }).check();
+    await page.getByRole('button', { name: 'Abandon' }).click();
+    await expect(page.getByText('Application withdrawn.')).toBeVisible();
+    await expect(page).toHaveURL(/\/auto-apply\?tab=submissions/);
   });
 
   test('setup-incomplete redirects to Application Setup', async ({ page }) => {
@@ -211,13 +266,15 @@ test.describe('AA-090 Phase 1 Assisted Apply E2E', () => {
 test.describe('AA-081 mobile viewport smoke', () => {
   test.use({ viewport: { width: 375, height: 812 } });
 
-  test('workspace has no horizontal overflow at 375px', async ({ page }) => {
-    await seedOnboardedSession(page);
-    await mockAssistedApplyApis(page);
-    await page.goto(`/assisted-apply/${APP_ID}?step=open`);
-    const overflow = await page.evaluate(
-      () => document.documentElement.scrollWidth > window.innerWidth + 1,
-    );
-    expect(overflow).toBe(false);
-  });
+  for (const step of ['analysis', 'fit', 'resume', 'open', 'done'] as const) {
+    test(`workspace step "${step}" has no horizontal overflow at 375px`, async ({ page }) => {
+      await seedOnboardedSession(page);
+      await mockAssistedApplyApis(page);
+      await page.goto(`/assisted-apply/${APP_ID}?step=${step}`);
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth > window.innerWidth + 1,
+      );
+      expect(overflow).toBe(false);
+    });
+  }
 });

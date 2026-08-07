@@ -55,6 +55,7 @@ import {
   type FitIssueViewModel,
   type FitViewModel,
 } from './profileMatchViewModel';
+import { assistedApplyWorkspaceSx } from './styles';
 import { assistedApplyTouchTargetSx, WorkspaceStickyActions } from './WorkspaceStickyActions';
 
 type FitSubTab = 'overview' | 'eligibility' | 'role' | 'skills' | 'requirements' | 'missing';
@@ -177,7 +178,11 @@ function DimensionStatusList({ dimensions }: { dimensions: FitDimensionViewModel
               {dim.score != null ? `${dim.score}%` : dim.statusLabel}
             </Typography>
           </Stack>
-          <Typography color="text.secondary" sx={{ mt: 0.25 }} variant="caption">
+          <Typography
+            color="text.secondary"
+            sx={{ mt: 0.25, overflowWrap: 'anywhere' }}
+            variant="caption"
+          >
             {dim.summary}
           </Typography>
         </Box>
@@ -220,17 +225,21 @@ function KpiCard({
       }}
     >
       <Stack alignItems="flex-start" direction="row" justifyContent="space-between" spacing={1}>
-        <Typography color="text.secondary" variant="caption">
+        <Typography color="text.secondary" sx={{ overflowWrap: 'anywhere' }} variant="caption">
           {title}
         </Typography>
         <Box aria-hidden sx={{ color: 'text.secondary', display: 'flex', lineHeight: 0 }}>
           {icon}
         </Box>
       </Stack>
-      <Typography fontWeight={700} sx={{ mt: 0.5, color: valueColor }} variant="subtitle1">
+      <Typography
+        fontWeight={700}
+        sx={{ mt: 0.5, color: valueColor, overflowWrap: 'anywhere' }}
+        variant="subtitle1"
+      >
         {value}
       </Typography>
-      <Typography color="text.secondary" variant="caption">
+      <Typography color="text.secondary" sx={{ overflowWrap: 'anywhere' }} variant="caption">
         {hint}
       </Typography>
     </Box>
@@ -301,8 +310,7 @@ function DimensionRow({
             </Stack>
             <Typography
               color="text.secondary"
-              sx={{ display: { xs: 'none', md: 'block' }, mt: 0.5 }}
-              noWrap
+              sx={{ display: { xs: 'none', md: 'block' }, mt: 0.5, overflowWrap: 'anywhere' }}
               variant="body2"
             >
               {dim.summary}
@@ -447,7 +455,7 @@ function FitSkeleton() {
           gap: 2,
           gridTemplateColumns: {
             xs: '1fr',
-            lg: 'minmax(220px, 280px) minmax(0, 1fr) minmax(240px, 300px)',
+            xl: 'minmax(220px, 280px) minmax(0, 1fr) minmax(240px, 300px)',
           },
         }}
       >
@@ -547,13 +555,13 @@ function ProfileMatchContent({
   const infoRequiredCount = view.informationRequired.length;
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={assistedApplyWorkspaceSx.stepRoot}>
       <Box
         sx={{
           border: 1,
           borderColor: 'divider',
           borderRadius: 1.5,
-          p: 2,
+          p: { xs: 1.5, sm: 2 },
           bgcolor: 'background.paper',
         }}
       >
@@ -581,10 +589,18 @@ function ProfileMatchContent({
               {(company ?? jobTitle ?? 'J').slice(0, 1).toUpperCase()}
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Typography fontWeight={700} variant="subtitle1">
+              <Typography
+                fontWeight={700}
+                sx={assistedApplyWorkspaceSx.overflowWrap}
+                variant="subtitle1"
+              >
                 {jobTitle ?? 'Job'}
               </Typography>
-              <Typography color="text.secondary" variant="body2">
+              <Typography
+                color="text.secondary"
+                sx={assistedApplyWorkspaceSx.overflowWrap}
+                variant="body2"
+              >
                 {[company, workplaceMode ? formatWorkplaceMode(workplaceMode) : null]
                   .filter(Boolean)
                   .join(' · ')}
@@ -611,17 +627,21 @@ function ProfileMatchContent({
         action={
           <MuiButton
             color="inherit"
+            fullWidth
             onClick={() => setHowOpen(true)}
             size="small"
             startIcon={<InfoOutlinedIcon fontSize="small" />}
-            sx={assistedApplyTouchTargetSx}
+            sx={{
+              ...assistedApplyTouchTargetSx,
+              ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+            }}
           >
             Why this matters
           </MuiButton>
         }
         icon={bannerIcon}
         severity={view.banner.tone}
-        sx={{ borderRadius: 1.5 }}
+        sx={{ ...assistedApplyWorkspaceSx.alertWithAction, borderRadius: 1.5 }}
       >
         <Typography fontWeight={700} variant="subtitle2">
           {view.banner.title}
@@ -653,7 +673,7 @@ function ProfileMatchContent({
         </Alert>
       ) : null}
 
-      <Dialog onClose={() => setHowOpen(false)} open={howOpen}>
+      <Dialog fullWidth maxWidth="sm" onClose={() => setHowOpen(false)} open={howOpen}>
         <DialogTitle>How Fit &amp; Eligibility works</DialogTitle>
         <DialogContent>
           <Typography sx={{ mb: 1.5 }} variant="body2">
@@ -686,7 +706,7 @@ function ProfileMatchContent({
           gridTemplateColumns: {
             xs: '1fr',
             md: 'minmax(0, 1fr) minmax(240px, 300px)',
-            lg: 'minmax(220px, 280px) minmax(0, 1fr) minmax(240px, 300px)',
+            xl: 'minmax(220px, 280px) minmax(0, 1fr) minmax(240px, 300px)',
           },
           alignItems: 'start',
           '& > *': { minWidth: 0 },
@@ -694,7 +714,7 @@ function ProfileMatchContent({
       >
         <Stack
           spacing={2}
-          sx={{ gridColumn: { md: '1 / -1', lg: 'auto' }, order: { xs: 1, lg: 0 } }}
+          sx={{ gridColumn: { md: '1 / -1', xl: 'auto' }, order: { xs: 1, xl: 0 } }}
         >
           <Box
             sx={{
@@ -763,9 +783,11 @@ function ProfileMatchContent({
             border: 1,
             borderColor: 'divider',
             borderRadius: 1.5,
+            minWidth: 0,
             p: { xs: 1.5, sm: 2 },
             bgcolor: 'background.paper',
-            order: { xs: 2, lg: 0 },
+            order: { xs: 2, xl: 0 },
+            width: '100%',
           }}
         >
           <Tabs
@@ -796,7 +818,10 @@ function ProfileMatchContent({
                 sx={{
                   display: 'grid',
                   gap: 1.25,
-                  gridTemplateColumns: { xs: '1fr 1fr', sm: 'repeat(4, minmax(0, 1fr))' },
+                  gridTemplateColumns: {
+                    xs: '1fr',
+                    sm: 'repeat(2, minmax(0, 1fr))',
+                  },
                 }}
               >
                 <KpiCard
@@ -864,7 +889,7 @@ function ProfileMatchContent({
                 sx={{
                   display: 'grid',
                   gap: 1.25,
-                  gridTemplateColumns: { xs: '1fr', md: 'repeat(3, minmax(0, 1fr))' },
+                  gridTemplateColumns: { xs: '1fr', xl: 'repeat(3, minmax(0, 1fr))' },
                 }}
               >
                 <SummaryColumn
@@ -911,7 +936,7 @@ function ProfileMatchContent({
               </Box>
 
               {view.advisoryGaps.length > 0 ? (
-                <Alert severity="info" variant="outlined">
+                <Alert severity="info" sx={{ overflowWrap: 'anywhere' }} variant="outlined">
                   <Typography fontWeight={600} variant="subtitle2">
                     Advisory gaps ({view.advisoryGaps.length})
                   </Typography>
@@ -942,8 +967,17 @@ function ProfileMatchContent({
                     bgcolor: row.blocking ? 'error.50' : 'transparent',
                   }}
                 >
-                  <Stack direction="row" justifyContent="space-between" spacing={1}>
-                    <Typography fontWeight={600} variant="subtitle2">
+                  <Stack
+                    alignItems={{ xs: 'flex-start', sm: 'center' }}
+                    direction={{ xs: 'column', sm: 'row' }}
+                    justifyContent="space-between"
+                    spacing={1}
+                  >
+                    <Typography
+                      fontWeight={600}
+                      sx={assistedApplyWorkspaceSx.overflowWrap}
+                      variant="subtitle2"
+                    >
                       {row.title}
                     </Typography>
                     <Chip
@@ -1146,18 +1180,20 @@ function ProfileMatchContent({
           ) : null}
         </Box>
 
-        <Stack spacing={2} sx={{ order: { xs: 3, lg: 0 } }}>
+        <Stack spacing={2} sx={{ minWidth: 0, order: { xs: 3, xl: 0 }, width: '100%' }}>
           <SideCard title="Eligibility Summary">
             <Stack spacing={1}>
               {view.eligibilityChecklist.map((row) => (
                 <Stack
-                  alignItems="center"
-                  direction="row"
+                  alignItems={{ xs: 'flex-start', sm: 'center' }}
+                  direction={{ xs: 'column', sm: 'row' }}
                   justifyContent="space-between"
                   key={row.title}
                   spacing={1}
                 >
-                  <Typography variant="body2">{row.title}</Typography>
+                  <Typography sx={assistedApplyWorkspaceSx.overflowWrap} variant="body2">
+                    {row.title}
+                  </Typography>
                   <Chip
                     color={
                       row.blocking
@@ -1302,6 +1338,33 @@ function ProfileMatchContent({
             >
               Back to Analysis
             </MuiButton>
+            <Typography
+              color="text.secondary"
+              sx={{ display: { xs: 'block', md: 'none' }, textAlign: 'center' }}
+              variant="body2"
+            >
+              Need to make updates?{' '}
+              <MuiButton
+                component={RouterLink}
+                size="small"
+                sx={{ textTransform: 'none', verticalAlign: 'baseline', minWidth: 0, p: 0 }}
+                to={`${ROUTES.AUTO_APPLY}?tab=profile`}
+                variant="text"
+              >
+                Update my profile or answers
+              </MuiButton>
+            </Typography>
+            {(view.eligibility.status === 'NOT_ELIGIBLE' ||
+              view.eligibility.status === 'INFORMATION_REQUIRED') && (
+              <Typography
+                color="text.secondary"
+                sx={{ display: { xs: 'block', sm: 'none' }, textAlign: 'center' }}
+                variant="caption"
+              >
+                You can still review your resume. Employer handoff stays blocked until mandatory
+                conditions are resolved.
+              </Typography>
+            )}
 
             <MuiButton
               onClick={onBack}
@@ -1361,11 +1424,15 @@ function ProfileMatchContent({
         </WorkspaceStickyActions>
       ) : (
         <WorkspaceStickyActions>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: '100%' }}>
             <MuiButton
+              fullWidth
               onClick={onBack}
               startIcon={<ChevronLeftIcon />}
-              sx={assistedApplyTouchTargetSx}
+              sx={{
+                ...assistedApplyTouchTargetSx,
+                ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+              }}
               variant="outlined"
             >
               Back to Analysis
@@ -1373,7 +1440,11 @@ function ProfileMatchContent({
             <MuiButton
               component={RouterLink}
               endIcon={<ChevronRightIcon />}
-              sx={assistedApplyTouchTargetSx}
+              fullWidth
+              sx={{
+                ...assistedApplyTouchTargetSx,
+                ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+              }}
               to={ROUTES.APPLICATIONS}
               variant="contained"
             >
@@ -1466,11 +1537,17 @@ export function FitStep({
     return (
       <Alert
         action={
-          <MuiButton onClick={() => void readinessQuery.refetch()} size="small">
+          <MuiButton
+            fullWidth
+            onClick={() => void readinessQuery.refetch()}
+            size="small"
+            sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
+          >
             Retry
           </MuiButton>
         }
         severity="error"
+        sx={assistedApplyWorkspaceSx.alertWithAction}
       >
         We couldn&apos;t load fit details for this job.
       </Alert>
@@ -1479,7 +1556,7 @@ export function FitStep({
 
   if (!profileMatch || !view) {
     return (
-      <Stack spacing={2}>
+      <Stack spacing={2} sx={assistedApplyWorkspaceSx.stepRoot}>
         <Alert severity="warning">
           <Typography fontWeight={700} variant="subtitle2">
             Fit analysis is not ready
@@ -1491,14 +1568,23 @@ export function FitStep({
         </Alert>
         {prepareError ? <Alert severity="error">{prepareError}</Alert> : null}
         <WorkspaceStickyActions>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1}>
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1} sx={{ width: '100%' }}>
             {onBack ? (
-              <MuiButton onClick={onBack} sx={assistedApplyTouchTargetSx} variant="outlined">
+              <MuiButton
+                fullWidth
+                onClick={onBack}
+                sx={{
+                  ...assistedApplyTouchTargetSx,
+                  ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+                }}
+                variant="outlined"
+              >
                 Back to Analysis
               </MuiButton>
             ) : null}
             <MuiButton
               disabled={prepareMutation.isPending}
+              fullWidth
               onClick={() => {
                 setPrepareError(null);
                 prepareMutation.mutate(
@@ -1524,7 +1610,10 @@ export function FitStep({
                   },
                 );
               }}
-              sx={assistedApplyTouchTargetSx}
+              sx={{
+                ...assistedApplyTouchTargetSx,
+                ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+              }}
               variant="contained"
             >
               {prepareMutation.isPending ? 'Preparing…' : 'Retry preparation'}
@@ -1539,7 +1628,7 @@ export function FitStep({
   const analysisFailed = analysisQuery.data?.status === 'FAILED';
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={assistedApplyWorkspaceSx.stepRoot}>
       {analysisLimited || analysisFailed ? (
         <Alert severity="warning">
           Job posting analysis was {analysisLimited ? 'limited' : 'unsuccessful'}, so some

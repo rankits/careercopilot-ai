@@ -3,10 +3,10 @@ import { useState, type KeyboardEvent } from 'react';
 import { Button } from '@/components/atoms/Button';
 
 import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
+import { Box, Chip, FormHelperText, Stack, Typography } from '@/lib/material';
 
 import { setupPageSx } from './setupPageStyles';
 import { SetupTextField } from './SetupTextField';
-import { Box, Chip, FormHelperText, Stack, TextField, Typography } from '@/lib/material';
 
 export interface ChipListEditorProps {
   id: string;

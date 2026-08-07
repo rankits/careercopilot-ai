@@ -1,10 +1,9 @@
-import { useMemo, useState } from 'react';
-import type { ReactNode } from 'react';
+import { useMemo, useState, type MouseEvent, type ReactNode } from 'react';
 import { Link as RouterLink, useNavigate } from 'react-router-dom';
 
 import { useSubmissions } from '@/features/auto-apply/hooks/useSubmissions';
 
-import { assistedApplyWorkspacePath, ROUTES } from '@/constants/routes';
+import { assistedApplyWorkspacePath, jobDetailPath, ROUTES } from '@/constants/routes';
 import type { JobApplicationDto } from '@/features/auto-apply/types/autoApply.types';
 import {
   labelForViewState,
@@ -21,6 +20,7 @@ import {
   Divider,
   HelpOutlineIcon,
   IconButton,
+  Menu,
   MenuItem,
   MoreVertIcon,
   MuiButton,
@@ -33,7 +33,11 @@ import {
   TextField,
   Typography,
 } from '@/lib/material';
+import { AssistedApplicationsHowItWorksDialog } from '@/pages/AssistedApplicationsPage/AssistedApplicationsHowItWorksDialog';
+import { AbandonApplicationModal } from '@/pages/AssistedApplyWorkspacePage/AbandonApplicationModal';
 import { formatListRelativeTime } from '@/pages/AutoApplyPage/assistedApplicationsListUtils';
+
+import { assistedApplicationsPageSx } from './styles';
 
 const PAGE_SIZE = 5;
 
@@ -62,22 +66,9 @@ function MetricCard({
   detail: string;
 }) {
   return (
-    <Paper sx={{ alignItems: 'center', display: 'flex', gap: 2, p: 2.25 }} variant="outlined">
-      <Box
-        sx={{
-          alignItems: 'center',
-          bgcolor: 'primary.50',
-          borderRadius: 2,
-          color: 'primary.main',
-          display: 'flex',
-          height: 52,
-          justifyContent: 'center',
-          width: 52,
-        }}
-      >
-        {icon}
-      </Box>
-      <Box>
+    <Paper sx={assistedApplicationsPageSx.metricCard} variant="outlined">
+      <Box sx={assistedApplicationsPageSx.metricIconWrap}>{icon}</Box>
+      <Box sx={assistedApplicationsPageSx.metricCopy}>
         <Typography fontWeight={800} variant="h5">
           {value}
         </Typography>
@@ -100,6 +91,10 @@ export function AssistedApplicationsPage() {
   const [timeRange, setTimeRange] = useState('all');
   const [sort, setSort] = useState('newest');
   const [page, setPage] = useState(1);
+  const [menuAnchor, setMenuAnchor] = useState<HTMLElement | null>(null);
+  const [menuApplication, setMenuApplication] = useState<JobApplicationDto | null>(null);
+  const [abandonApplication, setAbandonApplication] = useState<JobApplicationDto | null>(null);
+  const [howItWorksOpen, setHowItWorksOpen] = useState(false);
 
   const counts = useMemo(() => {
     const applied = applications.filter(
@@ -147,33 +142,71 @@ export function AssistedApplicationsPage() {
     void navigate(state === 'OPENED' ? `${workspace}?step=open` : workspace);
   };
 
-  return (
-    <Box
-      sx={{
-        maxWidth: 1220,
-        mx: 'auto',
-        p: { xs: 2, sm: 3, lg: 4 },
-        pb: { xs: 10, md: 5 },
-      }}
-    >
-      <Typography color="text.secondary" sx={{ mb: 1 }} variant="caption">
-        Dashboard {'>'} Assisted Applications
-      </Typography>
-      <Box
-        sx={{
-          alignItems: 'flex-start',
-          display: 'flex',
-          gap: 2,
-          justifyContent: 'space-between',
-          mb: 3,
+  const closeActionsMenu = () => {
+    setMenuAnchor(null);
+    setMenuApplication(null);
+  };
+
+  const openActionsMenu = (event: MouseEvent<HTMLElement>, application: JobApplicationDto) => {
+    event.stopPropagation();
+    setMenuAnchor(event.currentTarget);
+    setMenuApplication(application);
+  };
+
+  const renderApplicationMenuItems = (application: JobApplicationDto) => {
+    const state = toAssistedApplyView(application.status);
+    const items = [
+      <MenuItem
+        key="open-workspace"
+        onClick={() => {
+          openApplication(application);
+          closeActionsMenu();
         }}
       >
-        <Box>
-          <Typography
-            component="h1"
-            sx={{ fontWeight: 700, letterSpacing: '-0.03em', mb: 0.5 }}
-            variant="h4"
-          >
+        {viewGroup(state) === 'applied' ? 'View application' : 'Continue application'}
+      </MenuItem>,
+    ];
+
+    if (application.jobId) {
+      items.push(
+        <MenuItem
+          key="view-job"
+          onClick={() => {
+            void navigate(jobDetailPath(application.jobId!));
+            closeActionsMenu();
+          }}
+        >
+          View job posting
+        </MenuItem>,
+      );
+    }
+
+    if (state !== 'APPLIED' && state !== 'ABANDONED') {
+      items.push(
+        <MenuItem
+          key="abandon"
+          onClick={() => {
+            setAbandonApplication(application);
+            closeActionsMenu();
+          }}
+          sx={{ color: 'error.main' }}
+        >
+          Abandon application
+        </MenuItem>,
+      );
+    }
+
+    return items;
+  };
+
+  return (
+    <Box sx={assistedApplicationsPageSx.root}>
+      <Typography color="text.secondary" sx={{ mb: 1, overflowWrap: 'anywhere' }} variant="caption">
+        Dashboard {'>'} Assisted Applications
+      </Typography>
+      <Box sx={assistedApplicationsPageSx.pageHeader}>
+        <Box sx={{ minWidth: 0 }}>
+          <Typography component="h1" sx={assistedApplicationsPageSx.pageTitle} variant="h4">
             Assisted Applications
           </Typography>
           <Typography color="text.secondary" variant="body2">
@@ -181,22 +214,16 @@ export function AssistedApplicationsPage() {
           </Typography>
         </Box>
         <MuiButton
+          onClick={() => setHowItWorksOpen(true)}
           startIcon={<HelpOutlineIcon />}
-          sx={{ display: { xs: 'none', sm: 'flex' } }}
+          sx={assistedApplicationsPageSx.howItWorksButton}
           variant="outlined"
         >
           How it works
         </MuiButton>
       </Box>
 
-      <Box
-        sx={{
-          display: 'grid',
-          gap: 1.5,
-          gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', lg: 'repeat(4, 1fr)' },
-          mb: 3,
-        }}
-      >
+      <Box sx={assistedApplicationsPageSx.metricsGrid}>
         <MetricCard
           detail="All time"
           icon={<ArticleOutlinedIcon />}
@@ -223,30 +250,20 @@ export function AssistedApplicationsPage() {
         />
       </Box>
 
-      <Box
-        sx={{
-          alignItems: { md: 'center' },
-          display: 'flex',
-          flexDirection: { xs: 'column', md: 'row' },
-          gap: 1.5,
-          justifyContent: 'space-between',
-          mb: 2,
-        }}
-      >
+      <Box sx={assistedApplicationsPageSx.filtersWrap}>
         <TextField
           InputProps={{ startAdornment: <SearchOutlinedIcon color="action" sx={{ mr: 1 }} /> }}
           onChange={(event) => updateFilter(setQuery, event.target.value)}
           placeholder="Search by job title, company or source..."
           size="small"
-          sx={{ maxWidth: { md: 430 }, width: '100%' }}
+          sx={assistedApplicationsPageSx.searchField}
           value={query}
         />
-        <Box sx={{ display: 'flex', gap: 1, width: { xs: '100%', md: 'auto' } }}>
+        <Box sx={assistedApplicationsPageSx.filterControls}>
           <TextField
             onChange={(event) => updateFilter(setStatus, event.target.value)}
             select
             size="small"
-            sx={{ flex: 1, minWidth: 140 }}
             value={status}
           >
             <MenuItem value="all">All Status</MenuItem>
@@ -258,7 +275,6 @@ export function AssistedApplicationsPage() {
             onChange={(event) => updateFilter(setTimeRange, event.target.value)}
             select
             size="small"
-            sx={{ flex: 1, minWidth: 120 }}
             value={timeRange}
           >
             <MenuItem value="all">All Time</MenuItem>
@@ -270,7 +286,6 @@ export function AssistedApplicationsPage() {
             onChange={(event) => updateFilter(setSort, event.target.value)}
             select
             size="small"
-            sx={{ flex: 1, minWidth: 110 }}
             value={sort}
           >
             <MenuItem value="newest">Newest</MenuItem>
@@ -305,15 +320,7 @@ export function AssistedApplicationsPage() {
         </Paper>
       ) : (
         <Paper sx={{ overflow: 'hidden' }} variant="outlined">
-          <Box
-            sx={{
-              bgcolor: 'grey.50',
-              display: { xs: 'none', md: 'grid' },
-              gridTemplateColumns: 'minmax(0, 1.7fr) minmax(210px, .9fr) 150px 48px',
-              px: 2.5,
-              py: 1.5,
-            }}
-          >
+          <Box sx={assistedApplicationsPageSx.tableHeader}>
             {['APPLICATION', 'STATUS', 'LAST UPDATED', ''].map((label) => (
               <Typography
                 color="text.secondary"
@@ -332,44 +339,28 @@ export function AssistedApplicationsPage() {
                 {index ? <Divider /> : null}
                 <Box
                   onClick={() => openApplication(application)}
-                  role="button"
-                  sx={{
-                    alignItems: { md: 'center' },
-                    cursor: 'pointer',
-                    display: 'grid',
-                    gap: 1.5,
-                    gridTemplateColumns: {
-                      xs: '1fr auto',
-                      md: 'minmax(0, 1.7fr) minmax(210px, .9fr) 150px 48px',
-                    },
-                    p: 2.5,
-                    '&:hover': { bgcolor: 'grey.50' },
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      openApplication(application);
+                    }
                   }}
+                  role="button"
+                  sx={assistedApplicationsPageSx.applicationRow}
                   tabIndex={0}
                 >
-                  <Box sx={{ alignItems: 'center', display: 'flex', gap: 1.5, minWidth: 0 }}>
-                    <Box
-                      sx={{
-                        alignItems: 'center',
-                        bgcolor: 'primary.50',
-                        borderRadius: 2,
-                        color: 'primary.main',
-                        display: 'flex',
-                        flexShrink: 0,
-                        fontSize: 18,
-                        fontWeight: 800,
-                        height: 48,
-                        justifyContent: 'center',
-                        width: 48,
-                      }}
-                    >
+                  <Box sx={assistedApplicationsPageSx.applicationDetails}>
+                    <Box sx={assistedApplicationsPageSx.applicationAvatar}>
                       {(application.companySlug ?? 'C').slice(0, 1).toUpperCase()}
                     </Box>
-                    <Box sx={{ minWidth: 0 }}>
-                      <Typography fontWeight={700} noWrap>
+                    <Box sx={assistedApplicationsPageSx.applicationCopy}>
+                      <Typography sx={assistedApplicationsPageSx.applicationTitle} variant="body1">
                         {application.jobTitle ?? 'Untitled job'}
                       </Typography>
-                      <Typography color="text.secondary" noWrap variant="body2">
+                      <Typography
+                        sx={assistedApplicationsPageSx.applicationCompany}
+                        variant="body2"
+                      >
                         {application.companySlug ?? 'Unknown company'}
                       </Typography>
                       <Typography color="text.secondary" variant="caption">
@@ -377,7 +368,7 @@ export function AssistedApplicationsPage() {
                       </Typography>
                     </Box>
                   </Box>
-                  <Box>
+                  <Box sx={assistedApplicationsPageSx.applicationStatus}>
                     <Chip
                       color={statusColor(state)}
                       label={labelForViewState(state)}
@@ -390,14 +381,13 @@ export function AssistedApplicationsPage() {
                           openApplication(application);
                         }}
                         size="small"
-                        sx={{ ml: 1 }}
                         variant="outlined"
                       >
                         Resume
                       </MuiButton>
                     ) : null}
                   </Box>
-                  <Box sx={{ gridColumn: { xs: '1 / -1', md: 'auto' } }}>
+                  <Box sx={assistedApplicationsPageSx.applicationUpdated}>
                     <Typography fontWeight={600} variant="body2">
                       {formatListRelativeTime(application.updatedAt)}
                     </Typography>
@@ -406,11 +396,14 @@ export function AssistedApplicationsPage() {
                     </Typography>
                   </Box>
                   <IconButton
-                    aria-label={`Open ${application.jobTitle ?? 'application'}`}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      openApplication(application);
-                    }}
+                    aria-controls={
+                      menuApplication?.id === application.id ? 'assisted-app-actions' : undefined
+                    }
+                    aria-expanded={menuApplication?.id === application.id ? 'true' : undefined}
+                    aria-haspopup="menu"
+                    aria-label={`More actions for ${application.jobTitle ?? 'application'}`}
+                    onClick={(event) => openActionsMenu(event, application)}
+                    sx={assistedApplicationsPageSx.applicationActions}
                   >
                     <MoreVertIcon />
                   </IconButton>
@@ -421,36 +414,56 @@ export function AssistedApplicationsPage() {
         </Paper>
       )}
 
-      <Paper
-        sx={{
-          alignItems: 'center',
-          bgcolor: 'primary.50',
-          display: 'flex',
-          flexDirection: { xs: 'column', sm: 'row' },
-          gap: 2,
-          justifyContent: 'space-between',
-          mt: 2,
-          p: 2.5,
-        }}
-        variant="outlined"
+      <Menu
+        anchorEl={menuAnchor}
+        id="assisted-app-actions"
+        onClick={(event) => event.stopPropagation()}
+        onClose={closeActionsMenu}
+        open={Boolean(menuAnchor && menuApplication)}
       >
-        <Box>
+        {menuApplication ? renderApplicationMenuItems(menuApplication) : null}
+      </Menu>
+
+      {abandonApplication ? (
+        <AbandonApplicationModal
+          jobApplicationId={abandonApplication.id}
+          onClose={() => setAbandonApplication(null)}
+          open
+        />
+      ) : null}
+
+      <AssistedApplicationsHowItWorksDialog
+        onClose={() => setHowItWorksOpen(false)}
+        open={howItWorksOpen}
+      />
+
+      <Paper sx={assistedApplicationsPageSx.footerBanner} variant="outlined">
+        <Box sx={{ minWidth: 0 }}>
           <Typography fontWeight={700}>Keep your progress safe</Typography>
           <Typography color="text.secondary" variant="body2">
             Your applications are saved automatically. Resume anytime and never lose track.
           </Typography>
         </Box>
-        <MuiButton component={RouterLink} to={ROUTES.DASHBOARD} variant="contained">
+        <MuiButton
+          component={RouterLink}
+          sx={{ alignSelf: { xs: 'stretch', sm: 'auto' }, flexShrink: 0 }}
+          to={ROUTES.DASHBOARD}
+          variant="contained"
+        >
           Explore Dashboard
         </MuiButton>
       </Paper>
 
-      <Box sx={{ alignItems: 'center', display: 'flex', justifyContent: 'space-between', mt: 2 }}>
-        <Typography color="text.secondary" variant="caption">
+      <Box sx={assistedApplicationsPageSx.paginationWrap}>
+        <Typography
+          color="text.secondary"
+          sx={{ textAlign: { xs: 'center', sm: 'left' } }}
+          variant="caption"
+        >
           Showing {filtered.length ? (safePage - 1) * PAGE_SIZE + 1 : 0} to{' '}
           {Math.min(safePage * PAGE_SIZE, filtered.length)} of {filtered.length} applications
         </Typography>
-        <Box sx={{ alignItems: 'center', display: 'flex', gap: 0.5 }}>
+        <Box sx={assistedApplicationsPageSx.paginationControls}>
           <IconButton
             disabled={safePage === 1}
             onClick={() => setPage((current) => Math.max(1, current - 1))}

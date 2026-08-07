@@ -20,6 +20,7 @@ export const loadHomePage = () => import('@/pages/HomePage');
 export const loadJobFeedPage = () => import('@/pages/JobFeedPage');
 export const loadJobDetailPage = () => import('@/pages/JobDetailPage');
 export const loadAiMatchPage = () => import('@/pages/AiMatchPage');
+export const loadAiMailPage = () => import('@/pages/AiMailPage');
 export const loadSavedJobsPage = () => import('@/pages/SavedJobsPage');
 export const loadApplicationsPage = () => import('@/pages/ApplicationsPage');
 export const loadApplicationDetailPage = () => import('@/pages/ApplicationDetailPage');
@@ -41,6 +42,7 @@ export const LazyHomePage = lazyNamed(loadHomePage, 'HomePage');
 export const LazyJobFeedPage = lazyNamed(loadJobFeedPage, 'JobFeedPage');
 export const LazyJobDetailPage = lazyNamed(loadJobDetailPage, 'JobDetailPage');
 export const LazyAiMatchPage = lazyNamed(loadAiMatchPage, 'AiMatchPage');
+export const LazyAiMailPage = lazyNamed(loadAiMailPage, 'AiMailPage');
 export const LazySavedJobsPage = lazyNamed(loadSavedJobsPage, 'SavedJobsPage');
 export const LazyApplicationsPage = lazyNamed(loadApplicationsPage, 'ApplicationsPage');
 export const LazyApplicationDetailPage = lazyNamed(
@@ -67,6 +69,7 @@ const routePrefetchers: Partial<Record<string, () => Promise<unknown>>> = {
   [ROUTES.DASHBOARD]: loadHomePage,
   [ROUTES.JOB_FEED]: loadJobFeedPage,
   [ROUTES.AI_MATCH]: loadAiMatchPage,
+  [ROUTES.AI_MAIL]: loadAiMailPage,
   [ROUTES.SAVED_JOBS]: loadSavedJobsPage,
   [ROUTES.APPLICATIONS]: loadApplicationsPage,
   [ROUTES.AUTO_APPLY]: loadAutoApplyPage,

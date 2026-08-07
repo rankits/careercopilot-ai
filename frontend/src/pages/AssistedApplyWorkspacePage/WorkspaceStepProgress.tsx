@@ -34,8 +34,8 @@ export function WorkspaceStepProgress({ steps, activeStep, onSelect }: Workspace
   return (
     <Box sx={{ mb: 3 }} role="navigation" aria-label="Assisted Apply steps">
       {/* Mobile compact */}
-      <Box sx={{ display: { xs: 'block', md: 'none' } }}>
-        <Typography fontWeight={600} variant="body2">
+      <Box sx={{ display: { xs: 'block', md: 'none' }, position: 'relative', zIndex: 0 }}>
+        <Typography fontWeight={600} sx={{ overflowWrap: 'anywhere' }} variant="body2">
           {activeIndex + 1} of {steps.length}: {activeLabel}
         </Typography>
         <LinearProgress

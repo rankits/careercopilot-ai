@@ -1,6 +1,7 @@
 import { Alert, Box, Stack, Typography } from '@/lib/material';
 
 import { formatRelativeTime } from './activityLabels';
+import { assistedApplyWorkspaceSx } from './styles';
 
 export interface DoneStepProps {
   status: string;
@@ -14,8 +15,10 @@ export function DoneStep({ status, submittedAt }: DoneStepProps) {
   const isCouldNotApply = status === 'COULD_NOT_APPLY';
 
   return (
-    <Stack spacing={2}>
-      <Typography variant="h6">Application tracking completed</Typography>
+    <Stack spacing={2} sx={assistedApplyWorkspaceSx.stepRoot}>
+      <Typography sx={assistedApplyWorkspaceSx.overflowWrap} variant="h6">
+        Application tracking completed
+      </Typography>
 
       {isSubmitted ? (
         <Alert severity="success">
@@ -44,14 +47,18 @@ export function DoneStep({ status, submittedAt }: DoneStepProps) {
 
       <Box
         sx={{
-          p: 2,
+          p: { xs: 1.5, sm: 2 },
           bgcolor: 'background.paper',
           border: 1,
           borderColor: 'divider',
           borderRadius: 1,
         }}
       >
-        <Typography color="text.secondary" variant="body2">
+        <Typography
+          color="text.secondary"
+          sx={assistedApplyWorkspaceSx.overflowWrap}
+          variant="body2"
+        >
           Career Copilot will continue to track this application in your Submissions dashboard.
         </Typography>
       </Box>
