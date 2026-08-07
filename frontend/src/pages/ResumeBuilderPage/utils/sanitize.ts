@@ -4,7 +4,25 @@ export function isNoiseLine(line: string) {
   return /^--\s*\d+\s+of\s+\d+\s*--$/i.test(line) || /^page\s+\d+/i.test(line);
 }
 
-export function matchTopSection(line: string): ResumeSectionId | 'languages' | 'interests' | null {
+export type CustomFieldLabel = 'languages' | 'interests' | 'github' | 'portfolio' | 'additional';
+
+export function matchCustomFieldLabel(line: string): CustomFieldLabel | null {
+  const normalized = line
+    .replace(/^[#*_>\s]+/, '')
+    .replace(/[:\-–—|•●]+$/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  if (!normalized || normalized.length > 40) return null;
+  if (normalized.split(/\s+/).length > 4) return null;
+  if (/^additional(\s+information)?$|^other(\s+details)?$/i.test(normalized)) return 'additional';
+  if (/^languages?$/i.test(normalized)) return 'languages';
+  if (/^interests?$|^hobbies$/i.test(normalized)) return 'interests';
+  if (/^github$|^git\s*hub$/i.test(normalized)) return 'github';
+  if (/^portfolio$|^website$|^personal\s+site$/i.test(normalized)) return 'portfolio';
+  return null;
+}
+
+export function matchTopSection(line: string): ResumeSectionId | CustomFieldLabel | null {
   const normalized = line
     .replace(/^[#*_>\s]+/, '')
     .replace(/[:\-–—|•●]+$/g, '')
@@ -16,9 +34,7 @@ export function matchTopSection(line: string): ResumeSectionId | 'languages' | '
   for (const [id, pattern] of Object.entries(SECTION_ALIASES) as Array<[ResumeSectionId, RegExp]>) {
     if (pattern.test(normalized)) return id;
   }
-  if (/^languages?$/i.test(normalized)) return 'languages';
-  if (/^interests?$|^hobbies$/i.test(normalized)) return 'interests';
-  return null;
+  return matchCustomFieldLabel(normalized);
 }
 
 export function sanitizeExtractedText(input: string): string {
@@ -57,5 +73,14 @@ export function isContactOrMetaLine(line: string): boolean {
       line,
     ) ||
     (/india|indore|mumbai|bangalore|delhi|pune|hyderabad/i.test(line) && line.length < 40)
+  );
+}
+
+/** Lines that belong to link/meta custom fields — never Interests body. */
+export function isLinkOrMetaCustomValue(line: string): boolean {
+  return (
+    isContactOrMetaLine(line) ||
+    /^(github|portfolio|website|linkedin|twitter|x\.com)\b/i.test(line.trim()) ||
+    /\.(com|app|dev|io|net|org)\b/i.test(line)
   );
 }

@@ -1,14 +1,13 @@
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import Box from '@mui/material/Box';
+import Skeleton from '@mui/material/Skeleton';
+import Typography from '@mui/material/Typography';
+
 import { Button } from '@/components/atoms/Button';
 
 import { APP_ACTIONS, JOB_FEED_STATUS_MESSAGES, JOB_FEED_STATUS_RULES } from '@/constants/ui';
-import {
-  Box,
-  CircularProgress,
-  ErrorOutlineIcon,
-  InfoOutlinedIcon,
-  RefreshIcon,
-  Typography,
-} from '@/lib/material';
 import { colorTokens } from '@/tokens';
 
 import { jobFeedStatusSx } from './styles';
@@ -38,9 +37,18 @@ export function JobFeedLoadingState({
   label?: string;
 }) {
   return (
-    <Box aria-busy="true" aria-label={label} sx={jobFeedStatusSx.loadingRoot}>
-      <CircularProgress size={36} />
-      <Typography sx={jobFeedStatusSx.loadingLabel}>{label}</Typography>
+    <Box aria-busy="true" aria-label={label} role="status" sx={jobFeedStatusSx.skeletonRoot}>
+      <Typography component="span" sx={jobFeedStatusSx.visuallyHidden}>
+        {label}
+      </Typography>
+      {Array.from({ length: 4 }, (_, index) => (
+        <Box key={index} sx={jobFeedStatusSx.skeletonCard}>
+          <Skeleton animation="wave" height={22} variant="rounded" width="42%" />
+          <Skeleton animation="wave" height={18} variant="rounded" width="28%" />
+          <Skeleton animation="wave" height={14} variant="rounded" width="70%" />
+          <Skeleton animation="wave" height={14} variant="rounded" width="55%" />
+        </Box>
+      ))}
     </Box>
   );
 }

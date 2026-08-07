@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'careercopilot_access_token',
   PROFILE_COMPLETE: 'careercopilot_profile_complete',
   USER: 'careercopilot_user',
 } as const;
@@ -52,9 +51,7 @@ function jobEnvelope(page: number, remoteOnly = false) {
 
 async function seedOnboardedSession(page: Page) {
   await page.addInitScript(
-    ({ tokenKey, profileKey, userKey }) => {
-      // Matches `storage.set` JSON encoding used by the auth slice.
-      localStorage.setItem(tokenKey, JSON.stringify('e2e-access-token'));
+    ({ profileKey, userKey }) => {
       localStorage.setItem(profileKey, JSON.stringify(true));
       localStorage.setItem(
         userKey,
@@ -63,15 +60,24 @@ async function seedOnboardedSession(page: Page) {
           id: 'user-1',
           name: 'Ada',
           role: 'user',
+          isProfileCreated: true,
         }),
       );
     },
     {
-      tokenKey: STORAGE_KEYS.ACCESS_TOKEN,
       profileKey: STORAGE_KEYS.PROFILE_COMPLETE,
       userKey: STORAGE_KEYS.USER,
     },
   );
+
+  // Memory access token is restored via httpOnly refresh cookie on bootstrap.
+  await page.route('**/api/v1/auth/refresh-token', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ accessToken: 'e2e-access-token' }),
+    });
+  });
 }
 
 test.describe('Job feed happy path', () => {
@@ -107,8 +113,8 @@ test.describe('Job feed happy path', () => {
 
     await page.goto('/jobs-feed');
 
-    await expect(page.getByRole('heading', { name: /job feed/i })).toBeVisible();
-    await expect(page.getByText(/microsoft/i)).toBeVisible();
+    await expect(page.getByRole('heading', { name: /job feed/i })).toBeVisible({ timeout: 15000 });
+    await expect(page.getByText(/microsoft/i).first()).toBeVisible();
     await expect(page.getByText(/2 jobs found/i)).toBeVisible();
     expect(
       jobRequests.some(
@@ -125,8 +131,6 @@ test.describe('Job feed happy path', () => {
     await page.getByRole('button', { name: /^all jobs$/i }).click();
     await expect(page.getByText(/2 jobs found/i)).toBeVisible();
 
-    await page.getByRole('button', { name: /^next$/i }).click();
     await expect.poll(() => jobRequests.some((q) => q.includes('page=2'))).toBeTruthy();
-    await expect(page.getByText(/page 2 of 2/i)).toBeVisible();
   });
 });

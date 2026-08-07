@@ -4,6 +4,7 @@ import type { ApplicationDto } from '../types/application.types';
 
 import {
   applicationsToCsv,
+  APPLICATIONS_EXPORT_EMPTY_MESSAGE,
   buildApplicationsExportFilename,
   escapeCsvCell,
   resolveExportNameParts,
@@ -95,5 +96,10 @@ describe('resolveExportNameParts', () => {
       firstName: 'Grace',
       lastName: 'Hopper',
     });
+  });
+
+  it('uses an export-specific empty message', () => {
+    expect(APPLICATIONS_EXPORT_EMPTY_MESSAGE).toMatch(/nothing to export/i);
+    expect(APPLICATIONS_EXPORT_EMPTY_MESSAGE).not.toMatch(/match the current filters/i);
   });
 });

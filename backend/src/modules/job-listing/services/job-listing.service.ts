@@ -1,4 +1,5 @@
 import { IJobSearchRepository } from '@/modules/job-listing/contracts/IJobSearchRepository.js';
+import type { IApplicationRepository } from '@/modules/application-management/contracts/application.repository.js';
 import {
   JobSearchOptions,
   PaginatedJobResult,
@@ -8,26 +9,59 @@ import {
 import { jobAgePolicy } from '@/modules/jobs/policies/job-age-policy.js';
 
 export class JobListingService {
-  constructor(private readonly searchRepository: IJobSearchRepository) {}
+  constructor(
+    private readonly searchRepository: IJobSearchRepository,
+    private readonly applicationRepository?: Pick<IApplicationRepository, 'findSavedJobIds'>,
+  ) {}
 
-  async searchJobs(options: JobSearchOptions): Promise<PaginatedJobResult<JobListDto>> {
+  async searchJobs(
+    options: JobSearchOptions,
+    userId?: string,
+  ): Promise<PaginatedJobResult<JobListDto>> {
     const storageCutoff = jobAgePolicy.getStorageCutoffDate();
-    if (!storageCutoff) {
-      return this.searchRepository.search(options);
+    const result = storageCutoff
+      ? await this.searchRepository.search({
+          ...options,
+          filters: {
+            ...options.filters,
+            postedSince:
+              !options.filters.postedSince || options.filters.postedSince < storageCutoff
+                ? storageCutoff
+                : options.filters.postedSince,
+          },
+        })
+      : await this.searchRepository.search(options);
+
+    if (!userId || result.items.length === 0 || !this.applicationRepository) {
+      return result;
     }
 
-    const postedSince =
-      !options.filters.postedSince || options.filters.postedSince < storageCutoff
-        ? storageCutoff
-        : options.filters.postedSince;
+    const savedJobIds = new Set(
+      await this.applicationRepository.findSavedJobIds(
+        userId,
+        result.items.map((item) => item.id),
+      ),
+    );
 
-    return this.searchRepository.search({
-      ...options,
-      filters: { ...options.filters, postedSince },
-    });
+    return {
+      ...result,
+      items: result.items.map((item) => ({
+        ...item,
+        isSaved: savedJobIds.has(item.id),
+      })),
+    };
   }
 
-  async getJobDetails(id: string): Promise<JobDetailDto | null> {
-    return this.searchRepository.findById(id);
+  async getJobDetails(id: string, userId?: string): Promise<JobDetailDto | null> {
+    const job = await this.searchRepository.findById(id);
+    if (!job || !userId || !this.applicationRepository) {
+      return job;
+    }
+
+    const savedJobIds = await this.applicationRepository.findSavedJobIds(userId, [id]);
+    return {
+      ...job,
+      isSaved: savedJobIds.includes(id),
+    };
   }
 }

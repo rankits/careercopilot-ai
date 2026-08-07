@@ -1,92 +1,84 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-
-import { Button } from '@/components/atoms/Button';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
+import { useState } from 'react';
 
 import type { JobDescriptionDisplay } from '@/features/jobs/utils/resolveJobDescriptionDisplay';
 import { sanitizeJobHtml } from '@/features/jobs/utils/sanitizeJobHtml';
-import { Box, Typography } from '@/lib/material';
 
 import { JobDetailSectionHeader } from './JobDetailSectionHeader';
 import { jobDetailPageSx } from './styles';
 
-const COLLAPSED_MAX_HEIGHT_PX = 240;
-const LONG_DESCRIPTION_CHARS = 480;
+const COLLAPSED_CHAR_LIMIT = 320;
 
 interface JobAboutRoleSectionProps {
   description: JobDescriptionDisplay;
 }
 
+function toPlainText(description: JobDescriptionDisplay): string {
+  if (description.mode === 'text') {
+    return description.content.replace(/\s+/g, ' ').trim();
+  }
+
+  return description.content
+    .replace(/<br\s*\/?>/gi, ' ')
+    .replace(/<\/(p|div|li|h[1-6]|tr)>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function DescriptionToggle({ expanded, onToggle }: { expanded: boolean; onToggle: () => void }) {
+  return (
+    <Box
+      aria-expanded={expanded}
+      component="button"
+      onClick={onToggle}
+      sx={jobDetailPageSx.descriptionToggle}
+      type="button"
+    >
+      {expanded ? 'View less' : 'View more'}
+    </Box>
+  );
+}
+
 export function JobAboutRoleSection({ description }: JobAboutRoleSectionProps) {
-  const contentRef = useRef<HTMLDivElement>(null);
   const [expanded, setExpanded] = useState(false);
-  const [canExpand, setCanExpand] = useState(false);
-  const isLongContent = description.content.length >= LONG_DESCRIPTION_CHARS;
-
-  const updateCanExpand = useCallback(() => {
-    const node = contentRef.current;
-    if (!node) {
-      setCanExpand(false);
-      return;
-    }
-
-    setCanExpand(node.scrollHeight > COLLAPSED_MAX_HEIGHT_PX + 1);
-  }, []);
-
-  useEffect(() => {
-    if (isLongContent) {
-      setCanExpand(true);
-      return;
-    }
-
-    updateCanExpand();
-  }, [description.content, description.mode, isLongContent, updateCanExpand]);
-
-  useEffect(() => {
-    const node = contentRef.current;
-    if (!node || typeof ResizeObserver === 'undefined') return;
-
-    const observer = new ResizeObserver(() => updateCanExpand());
-    observer.observe(node);
-    return () => observer.disconnect();
-  }, [updateCanExpand]);
-
-  const showToggle = expanded || canExpand || isLongContent;
+  const plainText = toPlainText(description);
+  const canExpand = plainText.length > COLLAPSED_CHAR_LIMIT;
+  const collapsedText = `${plainText.slice(0, COLLAPSED_CHAR_LIMIT).trimEnd()}...`;
+  const toggleExpanded = () => setExpanded((current) => !current);
 
   return (
     <Box component="section" sx={jobDetailPageSx.panel}>
       <JobDetailSectionHeader title="About this role" />
 
-      <Box
-        ref={contentRef}
-        sx={{
-          ...jobDetailPageSx.description,
-          ...(expanded
-            ? jobDetailPageSx.descriptionExpanded
-            : jobDetailPageSx.descriptionCollapsed),
-        }}
-      >
-        {description.mode === 'html' ? (
+      {canExpand && !expanded ? (
+        <Typography component="p" sx={jobDetailPageSx.descriptionInline}>
+          {collapsedText} <DescriptionToggle expanded={false} onToggle={toggleExpanded} />
+        </Typography>
+      ) : description.mode === 'html' ? (
+        <Box sx={jobDetailPageSx.description}>
           <Box
             dangerouslySetInnerHTML={{ __html: sanitizeJobHtml(description.content) }}
             sx={jobDetailPageSx.descriptionBody}
           />
-        ) : (
-          <Typography component="div" sx={jobDetailPageSx.descriptionBody} whiteSpace="pre-wrap">
-            {description.content}
-          </Typography>
-        )}
-      </Box>
-
-      {showToggle ? (
-        <Button
-          aria-expanded={expanded}
-          onClick={() => setExpanded((current) => !current)}
-          size="small"
-          variant="outline"
-        >
-          {expanded ? 'See less' : 'See more'}
-        </Button>
-      ) : null}
+          {canExpand ? (
+            <Box sx={jobDetailPageSx.descriptionToggleAfter}>
+              <DescriptionToggle expanded onToggle={toggleExpanded} />
+            </Box>
+          ) : null}
+        </Box>
+      ) : (
+        <Typography component="p" sx={jobDetailPageSx.descriptionInline}>
+          {description.content}
+          {canExpand ? (
+            <>
+              {' '}
+              <DescriptionToggle expanded onToggle={toggleExpanded} />
+            </>
+          ) : null}
+        </Typography>
+      )}
     </Box>
   );
 }

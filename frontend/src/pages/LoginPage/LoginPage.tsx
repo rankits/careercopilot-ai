@@ -1,5 +1,8 @@
+import { useState } from 'react';
+
 import { AuthForm } from '@/components/organisms/AuthForm';
 import { AuthPageLayout } from '@/components/organisms/AuthPageLayout';
+import { ForgotPasswordDialog } from '@/components/organisms/ForgotPasswordDialog';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { useGoogleLogin } from '@/features/auth/hooks/useGoogleLogin';
@@ -11,6 +14,7 @@ export function LoginPage() {
   const { goToRegister, isSubmitting, submit } = useLogin();
   const { isStarting, start } = useGoogleLogin();
   const { showToast } = useToast();
+  const [isForgotPasswordOpen, setIsForgotPasswordOpen] = useState(false);
 
   return (
     <AuthPageLayout mode="login">
@@ -19,6 +23,7 @@ export function LoginPage() {
         isSubmitting={isSubmitting || isStarting}
         mode="login"
         onAlternateActionClick={goToRegister}
+        onForgotPasswordClick={() => setIsForgotPasswordOpen(true)}
         onGoogleConnect={() => {
           void (async () => {
             const result = await start();
@@ -40,13 +45,20 @@ export function LoginPage() {
           const result = await submit(values);
 
           if (result.succeeded) {
-            showToast({ message: 'Signed in successfully', severity: 'success' });
+            showToast({ message: 'Logged in successfully', severity: 'success' });
           } else {
             showToast({
               message: result.errorMessage ?? 'Unable to log in. Please try again.',
               severity: 'error',
             });
           }
+        }}
+      />
+      <ForgotPasswordDialog
+        open={isForgotPasswordOpen}
+        onClose={() => setIsForgotPasswordOpen(false)}
+        onPasswordResetSuccess={(message) => {
+          showToast({ message, severity: 'success' });
         }}
       />
     </AuthPageLayout>

@@ -1,4 +1,6 @@
-import { Badge, IconButton, NotificationsOutlinedIcon } from '@/lib/material';
+import NotificationsOutlinedIcon from '@mui/icons-material/NotificationsOutlined';
+import Badge from '@mui/material/Badge';
+import IconButton from '@mui/material/IconButton';
 
 import { notificationButtonSx } from './styles';
 

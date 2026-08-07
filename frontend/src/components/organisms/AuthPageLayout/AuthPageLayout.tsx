@@ -1,11 +1,11 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import Box from '@mui/material/Box';
 import type { ReactNode } from 'react';
 
 import aiPlatformIllustration from '@/assets/illustrations/ai-platform-illustration.png';
 import careerBoyIllustration from '@/assets/illustrations/career-boy-illustration.png';
 import careerCopilotLogo from '@/assets/logo/career-copilot-logo.png';
-import { ROUTES } from '@/constants/routes';
-import { AUTH_PAGE_COPY, LOGIN_FEATURES, TRUST_ITEMS } from '@/constants/ui';
-import { AutoAwesomeOutlinedIcon, Box } from '@/lib/material';
+import { AUTH_PAGE_COPY, LOGIN_FEATURES } from '@/constants/ui';
 
 import type { AuthPageFeature } from './interfaces';
 import * as Styled from './styles';
@@ -84,24 +84,6 @@ function MobileLoginIntro() {
   );
 }
 
-function TrustPanel() {
-  return (
-    <Styled.TrustPanel aria-label={AUTH_PAGE_COPY.securityAria}>
-      {TRUST_ITEMS.map(({ description, icon: Icon, title, tone }) => (
-        <Styled.TrustItem key={title}>
-          <Styled.FeatureIcon size="small" tone={tone}>
-            <Icon fontSize="small" />
-          </Styled.FeatureIcon>
-          <Box>
-            <Styled.FeatureTitle>{title}</Styled.FeatureTitle>
-            <Styled.FeatureDescription>{description}</Styled.FeatureDescription>
-          </Box>
-        </Styled.TrustItem>
-      ))}
-    </Styled.TrustPanel>
-  );
-}
-
 function RegisterPanel() {
   return (
     <Styled.RegisterPanel as="aside">
@@ -135,14 +117,6 @@ export function AuthPageLayout({ children, mode }: AuthPageLayoutProps) {
     <Styled.AuthRoot as="main" mode={mode}>
       <Styled.AuthHeader mode={mode}>
         <Styled.LogoImage alt={AUTH_PAGE_COPY.logoAlt} mode={mode} src={careerCopilotLogo} />
-        {isRegister ? (
-          <Styled.HeaderLoginText>
-            {AUTH_PAGE_COPY.alreadyHaveAccount}{' '}
-            <Styled.HeaderLoginLink aria-label={AUTH_PAGE_COPY.loginAria} href={ROUTES.LOGIN}>
-              {AUTH_PAGE_COPY.loginLink}
-            </Styled.HeaderLoginLink>
-          </Styled.HeaderLoginText>
-        ) : null}
       </Styled.AuthHeader>
 
       <Styled.AuthContent data-testid="auth-page-content" mode={mode}>
@@ -151,7 +125,6 @@ export function AuthPageLayout({ children, mode }: AuthPageLayoutProps) {
           <Styled.FormStack mode={mode}>
             {!isRegister ? <MobileLoginIntro /> : null}
             {children}
-            {!isRegister ? <TrustPanel /> : null}
           </Styled.FormStack>
         </Styled.FormColumn>
       </Styled.AuthContent>

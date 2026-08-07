@@ -1,15 +1,13 @@
+import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import Typography from '@mui/material/Typography';
 import type { ReactNode } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 
 import { APP_ACTIONS, JOB_UI } from '@/constants/ui';
 import { DASHBOARD_JOB_ROW_COPY, DASHBOARD_JOB_ROW_LIMITS } from '@/constants/ui';
-import {
-  BookmarkBorderOutlinedIcon,
-  CheckCircleIcon,
-  LocationOnOutlinedIcon,
-  Typography,
-} from '@/lib/material';
 
 import type { JobCardData } from '../JobCard';
 

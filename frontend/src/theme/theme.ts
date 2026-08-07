@@ -1,11 +1,20 @@
-import { createTheme } from '@/lib/material';
-import { borderRadius, colorTokens, fontFamily, fontWeight, palette } from '@/tokens';
+import { createTheme } from '@mui/material/styles';
+
+import { borderRadius, colorTokens, fontFamily, fontSize, fontWeight, palette } from '@/tokens';
 
 const rootFontSize = 16;
 const remToPx = (value: string) => Number.parseFloat(value) * rootFontSize;
 
 export const appTheme = createTheme({
   components: {
+    MuiInputBase: {
+      styleOverrides: {
+        // Prevent iOS Safari auto-zoom on focus (triggers below 16px).
+        input: {
+          fontSize: fontSize.base,
+        },
+      },
+    },
     MuiMenu: {
       defaultProps: {
         anchorOrigin: {

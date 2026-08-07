@@ -1,4 +1,10 @@
-import { Box, Dialog, IconButton, MuiButton, Radio, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import MuiButton from '@mui/material/Button';
+import Dialog from '@mui/material/Dialog';
+import IconButton from '@mui/material/IconButton';
+import Radio from '@mui/material/Radio';
+import { styled } from '@mui/material/styles';
+
 import {
   borderRadius,
   colorTokens,
@@ -17,20 +23,36 @@ export const ApplicationDialog = styled(Dialog)({
     backdropFilter: 'blur(4px)',
     backgroundColor: 'rgba(15, 23, 42, 0.5)',
   },
+  '& .MuiDialog-container': {
+    alignItems: 'center',
+    padding: `max(${spacing[3]}, env(safe-area-inset-top, 0px)) ${spacing[3]} max(${spacing[3]}, env(safe-area-inset-bottom, 0px))`,
+
+    [mobileBreakpoint]: {
+      alignItems: 'flex-end',
+      padding: `max(${spacing[2]}, env(safe-area-inset-top, 0px)) ${spacing[2]} max(${spacing[2]}, env(safe-area-inset-bottom, 0px))`,
+    },
+  },
   '& .MuiDialog-paper': {
     border: `0.0625rem solid ${colorTokens.borderDefault}`,
     borderRadius: borderRadius['2xl'],
     boxShadow: '0 24px 80px rgba(33, 83, 166, 0.18)',
-    margin: spacing[4],
-    maxHeight: 'calc(100vh - 2rem)',
+    display: 'flex',
+    flexDirection: 'column',
+    margin: 0,
+    maxHeight:
+      'min(52rem, calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)))',
     maxWidth: '44rem',
     overflow: 'hidden',
     width: '100%',
 
     [mobileBreakpoint]: {
-      borderRadius: borderRadius.xl,
-      margin: spacing[3],
-      maxHeight: 'calc(100vh - 1.5rem)',
+      borderBottomLeftRadius: borderRadius.xl,
+      borderBottomRightRadius: borderRadius.xl,
+      borderTopLeftRadius: borderRadius['2xl'],
+      borderTopRightRadius: borderRadius['2xl'],
+      maxHeight:
+        'calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
+      width: '100%',
     },
   },
 });
@@ -138,9 +160,13 @@ export const CloseButton = styled(IconButton)({
 
 export const DialogBody = styled(Box)({
   display: 'grid',
+  flex: '1 1 auto',
   gap: spacing[5],
+  minHeight: 0,
   overflowY: 'auto',
+  overscrollBehavior: 'contain',
   padding: `${spacing[2]} ${spacing[6]} ${spacing[5]}`,
+  WebkitOverflowScrolling: 'touch',
 
   [mobileBreakpoint]: {
     gap: spacing[4],
@@ -318,6 +344,11 @@ export const FieldLabel = styled('label')({
   fontSize: fontSize.sm,
   fontWeight: fontWeight.semiBold,
   lineHeight: 1.3,
+});
+
+export const RequiredMark = styled('span')({
+  color: colorTokens.feedbackError,
+  marginLeft: '0.125rem',
 });
 
 export const FieldHint = styled('span')({
@@ -644,7 +675,7 @@ export const DialogFooter = styled(Box)({
   padding: `${spacing[4]} ${spacing[6]} ${spacing[5]}`,
 
   [mobileBreakpoint]: {
-    padding: `${spacing[4]}`,
+    padding: `${spacing[3]} ${spacing[4]} calc(${spacing[4]} + env(safe-area-inset-bottom, 0px))`,
   },
 });
 
@@ -652,11 +683,12 @@ export const DialogFooterNote = styled('p')({
   alignItems: 'center',
   color: colorTokens.textSecondary,
   display: 'flex',
+  flex: '1 1 auto',
   fontSize: fontSize.sm,
   gap: spacing[2],
   lineHeight: 1.4,
   margin: 0,
-  maxWidth: '18rem',
+  minWidth: 0,
 
   '& svg': {
     color: colorTokens.actionPrimary,
@@ -664,7 +696,6 @@ export const DialogFooterNote = styled('p')({
   },
 
   [mobileBreakpoint]: {
-    maxWidth: 'none',
     width: '100%',
   },
 });

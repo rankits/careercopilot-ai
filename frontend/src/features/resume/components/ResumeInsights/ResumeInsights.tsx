@@ -1,14 +1,13 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import CircularProgress from '@mui/material/CircularProgress';
+import Typography from '@mui/material/Typography';
+
 import type { ResumePresentation } from '@/features/resume/utils/resumePresentation';
-import {
-  Alert,
-  AutoAwesomeOutlinedIcon,
-  Box,
-  CheckCircleOutlineIcon,
-  Chip,
-  CircularProgress,
-  LightbulbOutlinedIcon,
-  Typography,
-} from '@/lib/material';
 import { borderRadius, borderWidth, colorTokens, spacing } from '@/tokens';
 
 import { InsightsCard } from './styles';

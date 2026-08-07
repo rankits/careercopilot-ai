@@ -1,8 +1,17 @@
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined';
+import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
+import Link from '@mui/material/Link';
+import MenuItem from '@mui/material/MenuItem';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
-import { FilterDropdown } from '@/components/molecules';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { useApplicationDetail } from '@/features/applications/hooks/useApplicationDetail';
@@ -38,17 +47,6 @@ import {
   formatDateTime,
   mapApiStatusToUi,
 } from '@/features/applications/utils/applicationMappers';
-import {
-  AccessTimeOutlinedIcon,
-  CheckCircleOutlineIcon,
-  CloseIcon,
-  DeleteOutlineIcon,
-  HistoryOutlinedIcon,
-  InsightsOutlinedIcon,
-  Link,
-  StickyNote2OutlinedIcon,
-  TaskAltOutlinedIcon,
-} from '@/lib/material';
 import { palette } from '@/tokens';
 
 import { LocationPinIcon, PriorityBadge, SourceBadge, StatusBadge } from '../../styles';
@@ -71,6 +69,7 @@ import {
   JobFeedEmpty,
   JobFeedEmptyText,
   JobFeedEmptyTitle,
+  RequiredMark,
   SectionCard,
 } from '../ApplicationDialog/styles';
 import { InterestRating } from '../InterestRating';
@@ -191,7 +190,9 @@ export function ApplicationDetailDialog({
 
   const [noteType, setNoteType] = useState<ApiNoteType>('GENERAL');
   const [noteContent, setNoteContent] = useState('');
+  const [noteContentError, setNoteContentError] = useState<string | undefined>();
   const [taskTitle, setTaskTitle] = useState('');
+  const [taskTitleError, setTaskTitleError] = useState<string | undefined>();
   const [taskType, setTaskType] = useState<ApiTaskType>('FOLLOW_UP');
   const [taskDescription, setTaskDescription] = useState('');
   const [taskDueAt, setTaskDueAt] = useState('');
@@ -201,7 +202,9 @@ export function ApplicationDetailDialog({
       setActiveTab('overview');
       setNoteType('GENERAL');
       setNoteContent('');
+      setNoteContentError(undefined);
       setTaskTitle('');
+      setTaskTitleError(undefined);
       setTaskType('FOLLOW_UP');
       setTaskDescription('');
       setTaskDueAt('');
@@ -357,12 +360,21 @@ export function ApplicationDetailDialog({
           </FieldGroup>
 
           <FieldGroup>
-            <FieldLabel>Write a note</FieldLabel>
+            <FieldLabel htmlFor="application-detail-note-content">
+              Write a note
+              <RequiredMark aria-hidden="true">*</RequiredMark>
+            </FieldLabel>
             <Input
+              errorMessage={noteContentError}
               fullWidth
+              id="application-detail-note-content"
               multiline
-              onChange={(event) => setNoteContent(event.target.value)}
+              onChange={(event) => {
+                setNoteContent(event.target.value);
+                if (noteContentError) setNoteContentError(undefined);
+              }}
               placeholder="Capture interview feedback, recruiter updates, or next steps..."
+              required
               rows={4}
               size="small"
               value={noteContent}
@@ -441,27 +453,39 @@ export function ApplicationDetailDialog({
         >
           <FormGrid>
             <Input
+              errorMessage={taskTitleError}
               fullWidth
               label="Task title"
-              onChange={(event) => setTaskTitle(event.target.value)}
+              onChange={(event) => {
+                setTaskTitle(event.target.value);
+                if (taskTitleError) setTaskTitleError(undefined);
+              }}
               placeholder="e.g. Send follow-up email"
+              required
               size="small"
               value={taskTitle}
             />
-            <FilterDropdown
+            <Input
               fullWidth
               label="Task type"
-              onChange={(value) => setTaskType(value as ApiTaskType)}
-              options={applicationTaskTypeOptions}
+              onChange={(event) => setTaskType(event.target.value as ApiTaskType)}
+              select
+              size="small"
               value={taskType}
-            />
+            >
+              {applicationTaskTypeOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </Input>
             <Input
               fullWidth
               label="Due date"
               onChange={(event) => setTaskDueAt(event.target.value)}
               size="small"
               slotProps={{ inputLabel: { shrink: true } }}
-              type="datetime-local"
+              type="date"
               value={taskDueAt}
             />
           </FormGrid>
@@ -589,6 +613,7 @@ export function ApplicationDetailDialog({
 
   const handleAddNote = async () => {
     if (!noteContent.trim()) {
+      setNoteContentError('Note content is required.');
       showToast({ message: 'Note content is required.', severity: 'error' });
       return;
     }
@@ -596,6 +621,7 @@ export function ApplicationDetailDialog({
     try {
       await addNote.mutateAsync({ content: noteContent.trim(), type: noteType });
       setNoteContent('');
+      setNoteContentError(undefined);
       showToast({ message: 'Note added', severity: 'success' });
     } catch (error) {
       showToast({
@@ -619,18 +645,19 @@ export function ApplicationDetailDialog({
 
   const handleAddTask = async () => {
     if (!taskTitle.trim()) {
-      showToast({ message: 'Task title is required.', severity: 'error' });
+      setTaskTitleError('Task title is required.');
       return;
     }
 
     try {
       await addTask.mutateAsync({
         description: taskDescription.trim() || undefined,
-        dueAt: taskDueAt ? new Date(taskDueAt).toISOString() : undefined,
+        dueAt: taskDueAt ? new Date(`${taskDueAt}T12:00:00`).toISOString() : undefined,
         title: taskTitle.trim(),
         type: taskType,
       });
       setTaskTitle('');
+      setTaskTitleError(undefined);
       setTaskDescription('');
       setTaskDueAt('');
       showToast({ message: 'Task added', severity: 'success' });

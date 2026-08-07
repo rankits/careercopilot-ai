@@ -1,15 +1,13 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import BookmarkOutlinedIcon from '@mui/icons-material/BookmarkOutlined';
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import SendOutlinedIcon from '@mui/icons-material/SendOutlined';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import type { JobCardData } from '@/components/molecules';
 
 import { jobDetailPath } from '@/constants/routes';
 import type { SavedJobCardModel } from '@/features/applications/utils/mapApplicationDtoToSavedJobCard';
-import {
-  AutoAwesomeOutlinedIcon,
-  BookmarkOutlinedIcon,
-  BusinessCenterOutlinedIcon,
-  SendOutlinedIcon,
-} from '@/lib/material';
 
 import { ApplicationPipelineCard } from './components/ApplicationPipelineCard';
 import { DashboardStatCard } from './components/DashboardStatCard';

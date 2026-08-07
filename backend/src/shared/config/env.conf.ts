@@ -98,8 +98,8 @@ const envSchema = z
     RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
     RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(300),
     AUTH_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
-    AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(10),
-    OTP_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(5),
+    AUTH_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(30),
+    OTP_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(15),
     JOB_LISTING_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(1),
     JOB_LISTING_RATE_LIMIT_MAX_REQUESTS: z.coerce.number().int().positive().default(60),
     RECOMMENDATION_RATE_LIMIT_WINDOW_MINUTES: z.coerce.number().int().positive().default(15),
@@ -202,6 +202,9 @@ const envSchema = z
     PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH: z.preprocess(emptyToUndefined, z.string().optional()),
     // Run database seeds automatically when the server starts (dev only)
     RUN_SEEDS_ON_STARTUP: booleanFromString(true),
+
+    // CORS — comma-separated origins. Empty → localhost defaults only outside production.
+    CORS_ORIGIN: z.preprocess(emptyToUndefined, z.string().optional()),
 
     // Default admin bootstrap (consumed by prisma/seed/admin.seed.ts)
     ADMIN_DEFAULT_EMAIL: z.preprocess(emptyToUndefined, z.string().email().optional()),
@@ -440,6 +443,14 @@ const envSchema = z
           });
         }
       }
+    }
+
+    if (!value.CORS_ORIGIN?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ['CORS_ORIGIN'],
+        message: 'CORS_ORIGIN must be set in production (comma-separated allowlist)',
+      });
     }
   });
 

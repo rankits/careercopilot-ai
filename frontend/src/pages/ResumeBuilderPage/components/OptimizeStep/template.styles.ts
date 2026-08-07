@@ -1,4 +1,6 @@
-import { Box, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 import { borderRadius, muted, t } from '../../styles/shared';
@@ -118,38 +120,40 @@ const pageSheetBase = {
     overflowWrap: 'anywhere' as const,
   },
   '& .skills-list': {
-    display: 'grid',
-    gap: '0.4rem 1.5rem',
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '0.4rem',
     listStyle: 'none',
-    margin: 0,
+    margin: `${spacing[1]} 0 0`,
     padding: 0,
-    '@media (max-width: 28rem)': {
-      gridTemplateColumns: '1fr',
-    },
   },
   '& .skill-item': {
-    color: '#1e293b',
-    fontSize: '0.875rem',
-    fontWeight: fontWeight.medium,
+    background: 'rgba(15, 23, 42, 0.04)',
+    border: '1px solid rgba(15, 23, 42, 0.12)',
+    borderRadius: '999px',
+    color: '#0f172a',
+    display: 'inline-flex',
+    fontSize: '0.78rem',
+    fontWeight: fontWeight.semiBold,
     letterSpacing: '0.01em',
-    lineHeight: 1.45,
+    lineHeight: 1.3,
+    listStyle: 'none',
+    maxWidth: '100%',
     overflowWrap: 'anywhere' as const,
-    paddingLeft: '0.95rem',
+    padding: '0.28rem 0.7rem',
     position: 'relative' as const,
     '&::before': {
-      color: t.primary,
-      content: '"•"',
-      fontWeight: fontWeight.bold,
-      left: 0,
-      position: 'absolute' as const,
-      top: 0,
+      content: 'none',
     },
   },
   '& .entry': {
     display: 'grid',
     gap: spacing[1],
     marginBottom: spacing[2],
+  },
+  '& .entry-project': {
+    marginBottom: spacing[3],
+    paddingBottom: spacing[1],
   },
   '& .entry-top': {
     alignItems: 'flex-start',
@@ -161,6 +165,12 @@ const pageSheetBase = {
     color: '#0f172a',
     fontSize: '0.9rem',
     fontWeight: fontWeight.bold,
+  },
+  '& .project-title': {
+    color: '#0f172a',
+    fontSize: '0.95rem',
+    fontWeight: fontWeight.extraBold,
+    letterSpacing: '-0.01em',
   },
   '& .entry-company': {
     color: '#475569',
@@ -184,7 +194,7 @@ const pageSheetBase = {
       fontSize: '0.84rem',
       lineHeight: 1.55,
       listStyle: 'none',
-      marginBottom: '0.4rem',
+      marginBottom: '0.45rem',
       overflowWrap: 'anywhere' as const,
       paddingLeft: '1rem',
       position: 'relative' as const,
@@ -246,11 +256,16 @@ export const OriginalPaper = styled(Box)({
     letterSpacing: '0.06em',
   },
   '& .skill-item': {
+    background: 'rgba(15, 23, 42, 0.05)',
+    borderColor: 'rgba(15, 23, 42, 0.14)',
     color: '#1e293b',
-    fontSize: '0.9rem',
+    fontSize: '0.8rem',
     '&::before': {
-      color: '#0f172a',
+      content: 'none',
     },
+  },
+  '& .project-title': {
+    fontSize: '1rem',
   },
   '& .original-fallback': {
     color: '#1e293b',
@@ -287,7 +302,10 @@ export const ClassicPaper = styled(Box)({
     fontFamily: '"Segoe UI", sans-serif',
   },
   '& .skills-list': {
-    justifyItems: 'start',
+    justifyContent: 'flex-start',
+  },
+  '& .project-title': {
+    fontFamily: '"Georgia", "Times New Roman", serif',
   },
 });
 
@@ -315,6 +333,15 @@ export const ModernPaper = styled(Box)({
     borderBottom: `2px solid ${t.primarySoft}`,
     color: t.primary,
   },
+  '& .skill-item': {
+    background: t.primarySoft,
+    borderColor: 'transparent',
+    color: t.primary,
+    '&::before': { content: 'none' },
+  },
+  '& .project-title': {
+    color: t.primary,
+  },
 });
 
 export const MinimalPaper = styled(Box)({
@@ -328,10 +355,10 @@ export const MinimalPaper = styled(Box)({
     color: '#111827',
   },
   '& .skill-item': {
+    background: '#f3f4f6',
+    borderColor: '#e5e7eb',
     color: '#111827',
-    '&::before': {
-      color: '#111827',
-    },
+    '&::before': { content: 'none' },
   },
 });
 
@@ -366,21 +393,26 @@ export const ExecutivePaper = styled(Box)({
   },
   '& .sidebar .body': { color: '#cbd5e1', fontSize: fontSize.xs },
   '& .sidebar .skills-list': {
-    gridTemplateColumns: '1fr',
+    display: 'flex',
+    flexWrap: 'wrap',
     gap: '0.35rem',
   },
   '& .sidebar .skill-item': {
+    background: 'rgba(147, 197, 253, 0.12)',
+    borderColor: 'rgba(147, 197, 253, 0.28)',
     color: '#e2e8f0',
     fontSize: fontSize.xs,
-    '&::before': {
-      color: '#93c5fd',
-    },
+    padding: '0.22rem 0.55rem',
+    '&::before': { content: 'none' },
   },
   '& .main': {
     alignContent: 'start',
     display: 'grid',
     gap: spacing[3],
     padding: spacing[4],
+  },
+  '& .main .project-title': {
+    fontSize: '0.95rem',
   },
   '& .main .heading': {
     borderBottom: '1px solid #e2e8f0',

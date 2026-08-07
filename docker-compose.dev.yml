@@ -93,14 +93,15 @@ services:
       AI_RESUME_PARSER_MODEL: '${AI_RESUME_PARSER_MODEL:-gemini-2.0-flash}'
       AI_RESUME_PARSER_TEMPERATURE: '${AI_RESUME_PARSER_TEMPERATURE:-0}'
       AI_RESUME_PARSER_MAX_RETRIES: '${AI_RESUME_PARSER_MAX_RETRIES:-2}'
-      AI_RESUME_ANALYSIS_PROVIDER: '${AI_RESUME_ANALYSIS_PROVIDER:-openrouter}'
+      AI_RESUME_ANALYSIS_PROVIDER: '${AI_RESUME_ANALYSIS_PROVIDER:-groq}'
       AI_RESUME_ANALYSIS_MODEL: '${AI_RESUME_ANALYSIS_MODEL:-google/gemini-2.5-flash}'
-      AI_RESUME_ANALYSIS_FALLBACK_MODELS: '${AI_RESUME_ANALYSIS_FALLBACK_MODELS:-google/gemini-2.0-flash-exp:free,google/gemma-3-27b-it:free,google/gemma-4-26b-a4b-it:free}'
+      AI_RESUME_ANALYSIS_FALLBACK_MODELS: '${AI_RESUME_ANALYSIS_FALLBACK_MODELS:-google/gemini-2.0-flash-exp:free}'
       AI_RESUME_ANALYSIS_MAX_TOKENS: '${AI_RESUME_ANALYSIS_MAX_TOKENS:-2800}'
       AI_RESUME_ANALYSIS_TIMEOUT_MS: '${AI_RESUME_ANALYSIS_TIMEOUT_MS:-90000}'
       AI_RESUME_ANALYSIS_FREE_TIMEOUT_MS: '${AI_RESUME_ANALYSIS_FREE_TIMEOUT_MS:-35000}'
-      AI_RESUME_ANALYSIS_FALLBACK_PROVIDERS: '${AI_RESUME_ANALYSIS_FALLBACK_PROVIDERS:-groq}'
+      AI_RESUME_ANALYSIS_FALLBACK_PROVIDERS: '${AI_RESUME_ANALYSIS_FALLBACK_PROVIDERS:-openrouter,openai,google}'
       AI_RESUME_ANALYSIS_GROQ_MODEL: '${AI_RESUME_ANALYSIS_GROQ_MODEL:-llama-3.1-8b-instant}'
+      RESUME_ANALYSIS_USE_OUTBOX: '${RESUME_ANALYSIS_USE_OUTBOX:-true}'
       AI_EMBEDDING_PROVIDER: '${AI_EMBEDDING_PROVIDER:-}'
       AI_EMBEDDING_MODEL: '${AI_EMBEDDING_MODEL:-}'
       AI_EMBEDDING_DIMENSIONS: '${AI_EMBEDDING_DIMENSIONS:-768}'
@@ -225,6 +226,37 @@ services:
       - /app/node_modules
     depends_on:
       backend:
+        condition: service_healthy
+    healthcheck:
+      disable: true
+
+  resume-analysis-worker:
+    build:
+      context: ./backend
+      dockerfile: docker/Dockerfile.dev
+    container_name: career_copilot_resume_analysis_worker_dev
+    restart: unless-stopped
+    command: npm run worker:resume-analysis
+    environment:
+      NODE_ENV: '${NODE_ENV:-development}'
+      DATABASE_URL: '${DATABASE_URL:-postgresql://postgres:postgres_password@postgres:5432/careercopilot_dev?schema=public}'
+      RABBITMQ_URL: '${RABBITMQ_URL:-amqp://guest:guest@rabbitmq:5672}'
+      RUN_MIGRATIONS: 'false'
+      OPENROUTER_API_KEY: '${OPENROUTER_API_KEY:-}'
+      OPENROUTER_BASE_URL: '${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}'
+      GOOGLE_API_KEY: '${GOOGLE_API_KEY:-}'
+      GEMINI_API_KEY: '${GEMINI_API_KEY:-}'
+      GROQ_API_KEY: '${GROQ_API_KEY:-}'
+      OPENAI_API_KEY: '${OPENAI_API_KEY:-}'
+      AI_RESUME_ANALYSIS_PROVIDER: '${AI_RESUME_ANALYSIS_PROVIDER:-openrouter}'
+      LOG_LEVEL: '${LOG_LEVEL:-info}'
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      backend:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       disable: true

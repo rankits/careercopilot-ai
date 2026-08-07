@@ -42,4 +42,16 @@ describe('envSchema job age policy validation', () => {
     expect(parsed.data.JOB_STORAGE_MAX_AGE_DAYS).toBe(90);
     expect(parsed.data.JOB_EMBEDDING_MAX_AGE_DAYS).toBe(5);
   });
+
+  it('requires CORS_ORIGIN in production', () => {
+    const parsed = envSchema.safeParse({
+      ...baseEnv,
+      NODE_ENV: 'production',
+      JWT_ACCESS_SECRET: 'a'.repeat(32) + '-access-secret-value',
+      JWT_REFRESH_SECRET: 'b'.repeat(32) + '-refresh-secret-value',
+    });
+    expect(parsed.success).toBe(false);
+    if (parsed.success) return;
+    expect(parsed.error.issues.some((issue) => issue.path.includes('CORS_ORIGIN'))).toBe(true);
+  });
 });

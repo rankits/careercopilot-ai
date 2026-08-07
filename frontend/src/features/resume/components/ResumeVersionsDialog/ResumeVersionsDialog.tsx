@@ -1,23 +1,33 @@
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Typography from '@mui/material/Typography';
+
 import { Button } from '@/components/atoms';
 
 import type { UploadedResumeVersion } from '@/features/resume/types/resume.types';
-import {
-  Box,
-  Chip,
-  DescriptionOutlinedIcon,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FileDownloadOutlinedIcon,
-  Typography,
-} from '@/lib/material';
 import { borderRadius, colorTokens, spacing } from '@/tokens';
 
-import { VersionMeta, VersionRow, VersionsEmpty, VersionsList } from './styles';
+import {
+  dialogActionsSx,
+  dialogContainerSx,
+  dialogContentSx,
+  dialogPaperSx,
+  dialogTitleSx,
+  VersionMeta,
+  VersionRow,
+  VersionsEmpty,
+  VersionsList,
+} from './styles';
 
 export interface ResumeVersionsDialogProps {
   downloadingId?: string | null;
+  isLoading?: boolean;
   onClose: () => void;
   onDownload: (resume: UploadedResumeVersion) => void;
   open: boolean;
@@ -43,6 +53,7 @@ const formatUploadedAt = (value: string) => {
 
 export function ResumeVersionsDialog({
   downloadingId = null,
+  isLoading = false,
   onClose,
   onDownload,
   open,
@@ -56,16 +67,28 @@ export function ResumeVersionsDialog({
       maxWidth="sm"
       onClose={onClose}
       open={open}
-      slotProps={{ paper: { sx: { borderRadius: borderRadius['2xl'], p: spacing[1] } } }}
+      scroll="paper"
+      slotProps={{
+        container: { sx: dialogContainerSx },
+        paper: { sx: dialogPaperSx },
+      }}
     >
-      <DialogTitle id="resume-versions-title">Uploaded resume versions</DialogTitle>
-      <DialogContent>
+      <DialogTitle id="resume-versions-title" sx={dialogTitleSx}>
+        Uploaded resume versions
+      </DialogTitle>
+      <DialogContent dividers={false} sx={dialogContentSx}>
         <Typography color="text.secondary" id="resume-versions-description" mb={spacing[3]}>
           Every resume you upload is kept as a version. Download any previous file without replacing
           newer ones.
         </Typography>
 
-        {resumes.length === 0 ? (
+        {isLoading ? (
+          <VersionsEmpty>
+            <Typography color="text.secondary" variant="body2">
+              Loading uploaded resumes…
+            </Typography>
+          </VersionsEmpty>
+        ) : resumes.length === 0 ? (
           <VersionsEmpty>
             <DescriptionOutlinedIcon color="disabled" />
             <Typography color="text.secondary" variant="body2">
@@ -129,7 +152,7 @@ export function ResumeVersionsDialog({
           </VersionsList>
         )}
       </DialogContent>
-      <DialogActions sx={{ px: spacing[3], pb: spacing[3] }}>
+      <DialogActions sx={dialogActionsSx}>
         <Button onClick={onClose} type="button" variant="ghost">
           Close
         </Button>

@@ -1,3 +1,29 @@
+import AddIcon from '@mui/icons-material/Add';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import BookmarkOutlinedIcon from '@mui/icons-material/BookmarkOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import RefreshIcon from '@mui/icons-material/Refresh';
+import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined';
+import SwapHorizOutlinedIcon from '@mui/icons-material/SwapHorizOutlined';
+import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
+import TravelExploreOutlinedIcon from '@mui/icons-material/TravelExploreOutlined';
+import VerifiedUserOutlinedIcon from '@mui/icons-material/VerifiedUserOutlined';
+import Autocomplete from '@mui/material/Autocomplete';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import MenuItem from '@mui/material/MenuItem';
+import TextField from '@mui/material/TextField';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useQuery } from '@tanstack/react-query';
 import {
   useCallback,
@@ -47,11 +73,11 @@ import { useAppSelector } from '@/hooks/redux';
 
 import { ANY_COUNTRY, findCountryOptionByName, getCountryOptions } from '@/constants/countries';
 import {
-  FOR_YOU_CAREER_PATHS,
-  FOR_YOU_COPY,
-  FOR_YOU_EXPERIENCE_OPTIONS,
-  FOR_YOU_WORK_MODE_OPTIONS,
-} from '@/constants/pages/forYou';
+  AI_MATCH_CAREER_PATHS,
+  AI_MATCH_COPY,
+  AI_MATCH_EXPERIENCE_OPTIONS,
+  AI_MATCH_WORK_MODE_OPTIONS,
+} from '@/constants/pages/aiMatch';
 import { jobDetailPath, ROUTES } from '@/constants/routes';
 import { JOB_FILTER_BAR_SCROLL } from '@/constants/ui';
 import { applicationsService } from '@/features/applications/services/applications.service';
@@ -68,34 +94,6 @@ import type {
 import { formatRecommendationCategoryLabel } from '@/features/recommendations/utils/formatRecommendationMatchLabel';
 import { mapCareerPreferences } from '@/features/recommendations/utils/mapCareerPreferences';
 import { resumeService } from '@/features/resume/services/resume.service';
-import {
-  Autocomplete,
-  AddIcon,
-  AutoAwesomeOutlinedIcon,
-  BookmarkOutlinedIcon,
-  Box,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  CircularProgress,
-  DeleteOutlineIcon,
-  DescriptionOutlinedIcon,
-  ErrorOutlineIcon,
-  InfoOutlinedIcon,
-  LockOutlinedIcon,
-  MenuItem,
-  PeopleOutlineIcon,
-  PersonOutlineIcon,
-  PictureAsPdfOutlinedIcon,
-  RefreshIcon,
-  StickyNote2OutlinedIcon,
-  SwapHorizOutlinedIcon,
-  TextField,
-  TrackChangesOutlinedIcon,
-  TravelExploreOutlinedIcon,
-  Typography,
-  VerifiedUserOutlinedIcon,
-  useMediaQuery,
-} from '@/lib/material';
 import { jobFeedPageSx } from '@/pages/JobFeedPage/styles';
 
 import { aiMatchPageSx } from './styles';
@@ -107,8 +105,8 @@ type SavedView = string;
 const TARGET_TEXT_MAX_LENGTH = 500;
 const COMPACT_MODE_TABS_QUERY = '(max-width: 47.5rem)';
 const MODE_TAB_SCROLL_STEP_RATIO = 0.75;
-const DEFAULT_CAREER_EXPERIENCE = FOR_YOU_EXPERIENCE_OPTIONS[0];
-const DEFAULT_CAREER_WORK_MODE = FOR_YOU_WORK_MODE_OPTIONS[0];
+const DEFAULT_CAREER_EXPERIENCE = AI_MATCH_EXPERIENCE_OPTIONS[0];
+const DEFAULT_CAREER_WORK_MODE = AI_MATCH_WORK_MODE_OPTIONS[0];
 const CAREER_COUNTRY_OPTIONS = getCountryOptions();
 const SIMILAR_SOURCE_CANDIDATES_QUERY_KEY = ['applications', 'similar-source-candidates'] as const;
 const SIMILAR_AUTO_OFF_PARAM = 'similarAutoOff';
@@ -658,7 +656,7 @@ export function AiMatchPage() {
       segments.push(`Experience level: ${careerExperience}`);
     }
     const preferences = mapCareerPreferences(
-      careerWorkMode as (typeof FOR_YOU_WORK_MODE_OPTIONS)[number],
+      careerWorkMode as (typeof AI_MATCH_WORK_MODE_OPTIONS)[number],
       careerCountry,
     );
     for (const segment of preferences.goalTextSegments) {
@@ -671,7 +669,7 @@ export function AiMatchPage() {
 
   const runGenerateCareerGoal = () => {
     const preferences = mapCareerPreferences(
-      careerWorkMode as (typeof FOR_YOU_WORK_MODE_OPTIONS)[number],
+      careerWorkMode as (typeof AI_MATCH_WORK_MODE_OPTIONS)[number],
       careerCountry,
     );
     setCareerGeneratedOnce(true);
@@ -920,16 +918,16 @@ export function AiMatchPage() {
         </Box>
         <Box sx={aiMatchPageSx.headerCopy}>
           <Typography component="h1" sx={aiMatchPageSx.title}>
-            {FOR_YOU_COPY.title}
+            {AI_MATCH_COPY.title}
           </Typography>
-          <Typography sx={aiMatchPageSx.subtitle}>{FOR_YOU_COPY.subtitle}</Typography>
+          <Typography sx={aiMatchPageSx.subtitle}>{AI_MATCH_COPY.subtitle}</Typography>
         </Box>
       </Box>
 
       <FilterShell>
         {isCompactModeTabs ? (
           <FilterScrollButton
-            aria-label={FOR_YOU_COPY.scrollModesLeftAria}
+            aria-label={AI_MATCH_COPY.scrollModesLeftAria}
             disabled={!modeTabScrollState.canScrollLeft}
             onClick={() => scrollModeTabsByDirection(-1)}
             type="button"
@@ -938,7 +936,7 @@ export function AiMatchPage() {
           </FilterScrollButton>
         ) : null}
 
-        <FilterTrack aria-label={FOR_YOU_COPY.modeTabsAria} ref={modeTrackRef} role="tablist">
+        <FilterTrack aria-label={AI_MATCH_COPY.modeTabsAria} ref={modeTrackRef} role="tablist">
           {recommendationModes.map((mode, index) => {
             const isActive = mode.id === activeMode;
 
@@ -983,7 +981,7 @@ export function AiMatchPage() {
 
         {isCompactModeTabs ? (
           <FilterScrollButton
-            aria-label={FOR_YOU_COPY.scrollModesRightAria}
+            aria-label={AI_MATCH_COPY.scrollModesRightAria}
             disabled={!modeTabScrollState.canScrollRight}
             onClick={() => scrollModeTabsByDirection(1)}
             type="button"
@@ -1001,7 +999,7 @@ export function AiMatchPage() {
           sx={aiMatchPageSx.panel}
         >
           {resumeProfile.isPending ? (
-            <JobFeedLoadingState label={FOR_YOU_COPY.loadingResume} />
+            <JobFeedLoadingState label={AI_MATCH_COPY.loadingResume} />
           ) : null}
 
           {resumeProfile.isError ? (
@@ -1012,7 +1010,7 @@ export function AiMatchPage() {
                   : 'Unable to load your resume profile.'
               }
               onRetry={resumeProfile.isFetching ? undefined : () => void resumeProfile.refetch()}
-              title={FOR_YOU_COPY.loadResumeErrorTitle}
+              title={AI_MATCH_COPY.loadResumeErrorTitle}
               tone="error"
             />
           ) : null}
@@ -1023,14 +1021,14 @@ export function AiMatchPage() {
                 <DescriptionOutlinedIcon fontSize="medium" />
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                {FOR_YOU_COPY.resumeEmptyTitle}
+                {AI_MATCH_COPY.resumeEmptyTitle}
               </Typography>
               <Typography sx={aiMatchPageSx.emptyDescription}>
-                {FOR_YOU_COPY.resumeEmptyDescription}
+                {AI_MATCH_COPY.resumeEmptyDescription}
               </Typography>
               <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
-                  {FOR_YOU_COPY.addResume}
+                  {AI_MATCH_COPY.addResume}
                 </Button>
               </Box>
             </Box>
@@ -1047,11 +1045,11 @@ export function AiMatchPage() {
                     size="small"
                     startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
                   >
-                    {FOR_YOU_COPY.generateMatches}
+                    {AI_MATCH_COPY.generateMatches}
                   </Button>
                 }
                 icon={<DescriptionOutlinedIcon fontSize="small" />}
-                message={FOR_YOU_COPY.resumeBanner}
+                message={AI_MATCH_COPY.resumeBanner}
               />
 
               {generateResumeError ? (
@@ -1061,7 +1059,7 @@ export function AiMatchPage() {
               ) : null}
 
               <Typography component="h2" sx={aiMatchPageSx.sectionTitle}>
-                {FOR_YOU_COPY.resumeSectionTitle}
+                {AI_MATCH_COPY.resumeSectionTitle}
               </Typography>
               <Box sx={aiMatchPageSx.resumeFileCard}>
                 <Box aria-hidden="true" sx={aiMatchPageSx.resumeFileIcon}>
@@ -1069,15 +1067,15 @@ export function AiMatchPage() {
                 </Box>
                 <Box sx={aiMatchPageSx.resumeFileCopy}>
                   <Typography sx={aiMatchPageSx.resumeFileName}>
-                    {selectedResumeFile?.originalName ?? FOR_YOU_COPY.confirmedResume}{' '}
+                    {selectedResumeFile?.originalName ?? AI_MATCH_COPY.confirmedResume}{' '}
                     <VerifiedUserOutlinedIcon
-                      aria-label={FOR_YOU_COPY.confirmedResume}
+                      aria-label={AI_MATCH_COPY.confirmedResume}
                       fontSize="inherit"
                     />
                   </Typography>
                   {selectedResumeFile ? (
                     <Typography sx={aiMatchPageSx.resumeFileMeta}>
-                      {FOR_YOU_COPY.resumeMeta(
+                      {AI_MATCH_COPY.resumeMeta(
                         formatUploadedDate(selectedResumeFile.uploadedAt),
                         formatFileSize(selectedResumeFile.sizeBytes),
                       )}
@@ -1086,7 +1084,7 @@ export function AiMatchPage() {
                 </Box>
                 <Box sx={aiMatchPageSx.resumeFileActions}>
                   <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
-                    {FOR_YOU_COPY.replaceResume}
+                    {AI_MATCH_COPY.replaceResume}
                   </Button>
                 </Box>
               </Box>
@@ -1097,7 +1095,7 @@ export function AiMatchPage() {
                     <DescriptionOutlinedIcon fontSize="inherit" />
                   </Box>
                   <Typography component="h2" sx={aiMatchPageSx.dashedEmptyTitle}>
-                    {FOR_YOU_COPY.resumeEmptyPending}
+                    {AI_MATCH_COPY.resumeEmptyPending}
                   </Typography>
                   <Button
                     disabled={generateResume.isPending}
@@ -1106,7 +1104,7 @@ export function AiMatchPage() {
                     size="small"
                     startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
                   >
-                    {FOR_YOU_COPY.generateMatches}
+                    {AI_MATCH_COPY.generateMatches}
                   </Button>
                 </Box>
               ) : null}
@@ -1120,10 +1118,10 @@ export function AiMatchPage() {
                     <DescriptionOutlinedIcon fontSize="medium" />
                   </Box>
                   <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                    {FOR_YOU_COPY.emptyAfterGenerateTitle}
+                    {AI_MATCH_COPY.emptyAfterGenerateTitle}
                   </Typography>
                   <Typography sx={aiMatchPageSx.emptyDescription}>
-                    {FOR_YOU_COPY.resumeEmptyAfterGenerate}
+                    {AI_MATCH_COPY.resumeEmptyAfterGenerate}
                   </Typography>
                   <Box sx={aiMatchPageSx.emptyActions}>
                     <Button
@@ -1132,7 +1130,7 @@ export function AiMatchPage() {
                       to={ROUTES.JOB_FEED}
                       variant="outline"
                     >
-                      {FOR_YOU_COPY.browseJobs}
+                      {AI_MATCH_COPY.browseJobs}
                     </Button>
                   </Box>
                 </Box>
@@ -1142,7 +1140,7 @@ export function AiMatchPage() {
                 <>
                   <Box sx={aiMatchPageSx.listHeader}>
                     <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
-                      {FOR_YOU_COPY.resumeResultCount(visibleResumeRecommendations.length)}
+                      {AI_MATCH_COPY.resumeResultCount(visibleResumeRecommendations.length)}
                     </Typography>
                   </Box>
                   <Box sx={jobFeedPageSx.list}>
@@ -1178,11 +1176,11 @@ export function AiMatchPage() {
                 startIcon={<RefreshIcon fontSize="small" />}
                 variant="outline"
               >
-                {FOR_YOU_COPY.refresh}
+                {AI_MATCH_COPY.refresh}
               </Button>
             }
             icon={<PeopleOutlineIcon fontSize="small" />}
-            message={FOR_YOU_COPY.similarBanner}
+            message={AI_MATCH_COPY.similarBanner}
           />
 
           {similarSourceJobId && sourceJobCard ? (
@@ -1190,7 +1188,7 @@ export function AiMatchPage() {
               <SourceJobLogo initial={sourceJobCard.logo} />
               <Box sx={aiMatchPageSx.sourceJobCopy}>
                 <Typography sx={aiMatchPageSx.sourceJobLabel}>
-                  {FOR_YOU_COPY.similarSourceLabel}
+                  {AI_MATCH_COPY.similarSourceLabel}
                 </Typography>
                 <Typography sx={aiMatchPageSx.sourceJobTitle}>{sourceJobCard.title}</Typography>
                 <Typography sx={aiMatchPageSx.sourceJobMeta}>
@@ -1199,13 +1197,13 @@ export function AiMatchPage() {
                 </Typography>
               </Box>
               <Button onClick={clearSimilarSource} size="small" variant="outline">
-                {FOR_YOU_COPY.similarChangeSource}
+                {AI_MATCH_COPY.similarChangeSource}
               </Button>
             </Box>
           ) : null}
 
           {!similarSourceJobId && resolvingSimilarSource ? (
-            <JobFeedLoadingState label={FOR_YOU_COPY.loadingSimilarSource} />
+            <JobFeedLoadingState label={AI_MATCH_COPY.loadingSimilarSource} />
           ) : null}
 
           {showSimilarPickSourceEmpty ? (
@@ -1214,21 +1212,21 @@ export function AiMatchPage() {
                 <SwapHorizOutlinedIcon fontSize="medium" />
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                {FOR_YOU_COPY.similarEmptyTitle}
+                {AI_MATCH_COPY.similarEmptyTitle}
               </Typography>
               <Typography sx={aiMatchPageSx.emptyDescription}>
-                {FOR_YOU_COPY.similarEmptyDescription}
+                {AI_MATCH_COPY.similarEmptyDescription}
               </Typography>
               <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
-                  {FOR_YOU_COPY.similarBrowse}
+                  {AI_MATCH_COPY.similarBrowse}
                 </Button>
               </Box>
             </Box>
           ) : null}
 
           {similarSourceJobId && similarJobs.isPending ? (
-            <JobFeedLoadingState label={FOR_YOU_COPY.loadingSimilar} />
+            <JobFeedLoadingState label={AI_MATCH_COPY.loadingSimilar} />
           ) : null}
 
           {similarSourceJobId && similarJobs.isError ? (
@@ -1239,7 +1237,7 @@ export function AiMatchPage() {
                   : 'Unable to load similar jobs.'
               }
               onRetry={similarJobs.isFetching ? undefined : () => void similarJobs.refetch()}
-              title={FOR_YOU_COPY.loadSimilarErrorTitle}
+              title={AI_MATCH_COPY.loadSimilarErrorTitle}
               tone="error"
             />
           ) : null}
@@ -1253,14 +1251,14 @@ export function AiMatchPage() {
                 <SwapHorizOutlinedIcon fontSize="medium" />
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                {FOR_YOU_COPY.emptyAfterGenerateTitle}
+                {AI_MATCH_COPY.emptyAfterGenerateTitle}
               </Typography>
               <Typography sx={aiMatchPageSx.emptyDescription}>
-                {FOR_YOU_COPY.similarEmpty}
+                {AI_MATCH_COPY.similarEmpty}
               </Typography>
               <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
-                  {FOR_YOU_COPY.browseJobs}
+                  {AI_MATCH_COPY.browseJobs}
                 </Button>
               </Box>
             </Box>
@@ -1270,7 +1268,7 @@ export function AiMatchPage() {
             <>
               <Box sx={aiMatchPageSx.listHeader}>
                 <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
-                  {FOR_YOU_COPY.similarResultCount(similarCards.length)}
+                  {AI_MATCH_COPY.similarResultCount(similarCards.length)}
                 </Typography>
               </Box>
               <Box sx={jobFeedPageSx.list}>
@@ -1309,37 +1307,37 @@ export function AiMatchPage() {
         >
           <AiMatchInfoBanner
             icon={<TrackChangesOutlinedIcon fontSize="small" />}
-            message={FOR_YOU_COPY.careerBanner}
+            message={AI_MATCH_COPY.careerBanner}
           />
 
           <Box sx={aiMatchPageSx.careerComposerCard}>
             <Box sx={aiMatchPageSx.careerFormGrid}>
               <TextField
                 fullWidth
-                label={FOR_YOU_COPY.careerTargetLabel}
+                label={AI_MATCH_COPY.careerTargetLabel}
                 onChange={(event) => setCareerTargetRole(event.target.value)}
-                placeholder={FOR_YOU_COPY.careerTargetPlaceholder}
+                placeholder={AI_MATCH_COPY.careerTargetPlaceholder}
                 size="small"
                 value={careerTargetRole}
               />
               <TextField
                 fullWidth
-                label={FOR_YOU_COPY.careerPathLabel}
+                label={AI_MATCH_COPY.careerPathLabel}
                 onChange={(event) => setCareerPath(event.target.value)}
-                placeholder={FOR_YOU_COPY.careerPathPlaceholder}
+                placeholder={AI_MATCH_COPY.careerPathPlaceholder}
                 size="small"
                 value={careerPath}
               />
               <Box sx={aiMatchPageSx.careerFormPreferences}>
                 <TextField
                   fullWidth
-                  label={FOR_YOU_COPY.careerExperienceLabel}
+                  label={AI_MATCH_COPY.careerExperienceLabel}
                   onChange={(event) => setCareerExperience(event.target.value)}
                   select
                   size="small"
                   value={careerExperience}
                 >
-                  {FOR_YOU_EXPERIENCE_OPTIONS.map((option) => (
+                  {AI_MATCH_EXPERIENCE_OPTIONS.map((option) => (
                     <MenuItem key={option} value={option}>
                       {option}
                     </MenuItem>
@@ -1347,13 +1345,13 @@ export function AiMatchPage() {
                 </TextField>
                 <TextField
                   fullWidth
-                  label={FOR_YOU_COPY.careerWorkModeLabel}
+                  label={AI_MATCH_COPY.careerWorkModeLabel}
                   onChange={(event) => setCareerWorkMode(event.target.value)}
                   select
                   size="small"
                   value={careerWorkMode}
                 >
-                  {FOR_YOU_WORK_MODE_OPTIONS.map((option) => (
+                  {AI_MATCH_WORK_MODE_OPTIONS.map((option) => (
                     <MenuItem key={option} value={option}>
                       {option}
                     </MenuItem>
@@ -1368,7 +1366,7 @@ export function AiMatchPage() {
                   onChange={(_event, value) => setCareerCountry(value ?? ANY_COUNTRY)}
                   options={[ANY_COUNTRY, ...CAREER_COUNTRY_OPTIONS.map((option) => option.name)]}
                   renderInput={(params) => (
-                    <TextField {...params} label={FOR_YOU_COPY.careerLocationLabel} size="small" />
+                    <TextField {...params} label={AI_MATCH_COPY.careerLocationLabel} size="small" />
                   )}
                   size="small"
                   value={careerCountry}
@@ -1378,14 +1376,14 @@ export function AiMatchPage() {
 
             <Box sx={aiMatchPageSx.careerPathsSection}>
               <Typography component="h3" sx={aiMatchPageSx.composerHint}>
-                {FOR_YOU_COPY.careerPopularTitle}
+                {AI_MATCH_COPY.careerPopularTitle}
               </Typography>
               <Box
-                aria-label={FOR_YOU_COPY.careerPopularTitle}
+                aria-label={AI_MATCH_COPY.careerPopularTitle}
                 role="group"
                 sx={aiMatchPageSx.careerPathChips}
               >
-                {FOR_YOU_CAREER_PATHS.map((path) => {
+                {AI_MATCH_CAREER_PATHS.map((path) => {
                   const isActive = careerPath === path;
 
                   return (
@@ -1420,7 +1418,7 @@ export function AiMatchPage() {
                 startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
                 variant="outline"
               >
-                {FOR_YOU_COPY.careerSuggestCta}
+                {AI_MATCH_COPY.careerSuggestCta}
               </Button>
               <Button
                 disabled={generateCareerGoal.isPending}
@@ -1429,14 +1427,14 @@ export function AiMatchPage() {
                 size="small"
                 startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
               >
-                {FOR_YOU_COPY.careerGenerate}
+                {AI_MATCH_COPY.careerGenerate}
               </Button>
             </Box>
           </Box>
 
           <Box sx={aiMatchPageSx.careerPrivacy}>
             <LockOutlinedIcon fontSize="inherit" />
-            {FOR_YOU_COPY.careerPrivacyNote}
+            {AI_MATCH_COPY.careerPrivacyNote}
           </Box>
 
           {!careerGeneratedOnce ? (
@@ -1445,7 +1443,7 @@ export function AiMatchPage() {
                 <TrackChangesOutlinedIcon fontSize="inherit" />
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.dashedEmptyTitle}>
-                {FOR_YOU_COPY.careerEmptyPending}
+                {AI_MATCH_COPY.careerEmptyPending}
               </Typography>
             </Box>
           ) : null}
@@ -1459,7 +1457,7 @@ export function AiMatchPage() {
                 <TrackChangesOutlinedIcon fontSize="medium" />
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                {FOR_YOU_COPY.emptyAfterGenerateTitle}
+                {AI_MATCH_COPY.emptyAfterGenerateTitle}
               </Typography>
               <Typography sx={aiMatchPageSx.emptyDescription}>
                 No matching jobs were found for this career search. Try adjusting your target role
@@ -1467,7 +1465,7 @@ export function AiMatchPage() {
               </Typography>
               <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
-                  {FOR_YOU_COPY.browseJobs}
+                  {AI_MATCH_COPY.browseJobs}
                 </Button>
               </Box>
             </Box>
@@ -1476,7 +1474,7 @@ export function AiMatchPage() {
           {visibleCareerRecommendations.length > 0 ? (
             <Box sx={aiMatchPageSx.listHeader}>
               <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
-                {FOR_YOU_COPY.careerResultCount(visibleCareerRecommendations.length)}
+                {AI_MATCH_COPY.careerResultCount(visibleCareerRecommendations.length)}
               </Typography>
             </Box>
           ) : null}
@@ -1488,7 +1486,7 @@ export function AiMatchPage() {
                   {careerCategoryCopy[category] ?? formatRecommendationCategoryLabel(category)}
                 </Typography>
                 <Typography sx={aiMatchPageSx.groupMeta}>
-                  {FOR_YOU_COPY.jobCount(items.length)}
+                  {AI_MATCH_COPY.jobCount(items.length)}
                 </Typography>
               </Box>
               <Box sx={jobFeedPageSx.list}>
@@ -1513,7 +1511,7 @@ export function AiMatchPage() {
         >
           <AiMatchInfoBanner
             icon={<StickyNote2OutlinedIcon fontSize="small" />}
-            message={FOR_YOU_COPY.textBanner}
+            message={AI_MATCH_COPY.textBanner}
           />
 
           <Box sx={aiMatchPageSx.textComposerCard}>
@@ -1521,13 +1519,13 @@ export function AiMatchPage() {
               error={targetTextTooLong}
               fullWidth
               helperText={
-                targetTextTooLong ? FOR_YOU_COPY.textTooLong(TARGET_TEXT_MAX_LENGTH) : undefined
+                targetTextTooLong ? AI_MATCH_COPY.textTooLong(TARGET_TEXT_MAX_LENGTH) : undefined
               }
-              label={FOR_YOU_COPY.textLabel}
+              label={AI_MATCH_COPY.textLabel}
               multiline
               minRows={4}
               onChange={(event) => setTargetText(event.target.value)}
-              placeholder={FOR_YOU_COPY.textPlaceholder}
+              placeholder={AI_MATCH_COPY.textPlaceholder}
               value={targetText}
             />
 
@@ -1549,7 +1547,7 @@ export function AiMatchPage() {
                   size="small"
                   variant="outline"
                 >
-                  {FOR_YOU_COPY.clear}
+                  {AI_MATCH_COPY.clear}
                 </Button>
                 <Button
                   disabled={!trimmedTargetText || targetTextTooLong || generateText.isPending}
@@ -1558,7 +1556,7 @@ export function AiMatchPage() {
                   size="small"
                   startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
                 >
-                  {FOR_YOU_COPY.textGenerate}
+                  {AI_MATCH_COPY.textGenerate}
                 </Button>
               </Box>
             </Box>
@@ -1570,7 +1568,7 @@ export function AiMatchPage() {
                 <TravelExploreOutlinedIcon fontSize="inherit" />
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.dashedEmptyTitle}>
-                {FOR_YOU_COPY.textEmptyPending}
+                {AI_MATCH_COPY.textEmptyPending}
               </Typography>
             </Box>
           ) : null}
@@ -1584,14 +1582,14 @@ export function AiMatchPage() {
                 <StickyNote2OutlinedIcon fontSize="medium" />
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                {FOR_YOU_COPY.emptyAfterGenerateTitle}
+                {AI_MATCH_COPY.emptyAfterGenerateTitle}
               </Typography>
               <Typography sx={aiMatchPageSx.emptyDescription}>
-                {FOR_YOU_COPY.textEmptyAfterGenerate}
+                {AI_MATCH_COPY.textEmptyAfterGenerate}
               </Typography>
               <Box sx={aiMatchPageSx.emptyActions}>
                 <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
-                  {FOR_YOU_COPY.browseJobs}
+                  {AI_MATCH_COPY.browseJobs}
                 </Button>
               </Box>
             </Box>
@@ -1601,7 +1599,7 @@ export function AiMatchPage() {
             <>
               <Box sx={aiMatchPageSx.listHeader}>
                 <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
-                  {FOR_YOU_COPY.textResultCount(visibleTextRecommendations.length)}
+                  {AI_MATCH_COPY.textResultCount(visibleTextRecommendations.length)}
                 </Typography>
               </Box>
               <Box sx={jobFeedPageSx.list}>
@@ -1635,11 +1633,11 @@ export function AiMatchPage() {
                 startIcon={<RefreshIcon fontSize="small" />}
                 variant="outline"
               >
-                {FOR_YOU_COPY.refresh}
+                {AI_MATCH_COPY.refresh}
               </Button>
             }
             icon={<BookmarkOutlinedIcon fontSize="small" />}
-            message={FOR_YOU_COPY.savedBanner}
+            message={AI_MATCH_COPY.savedBanner}
           />
 
           {savedSearches.isError ? (
@@ -1650,7 +1648,7 @@ export function AiMatchPage() {
                   : 'Unable to load saved searches.'
               }
               onRetry={savedSearches.isFetching ? undefined : () => void savedSearches.refetch()}
-              title={FOR_YOU_COPY.savedLoadErrorTitle}
+              title={AI_MATCH_COPY.savedLoadErrorTitle}
               tone="error"
             />
           ) : null}
@@ -1658,19 +1656,19 @@ export function AiMatchPage() {
           {savedSearchError && !savedSearches.isError ? (
             <JobFeedStatus
               message={savedSearchError}
-              title={FOR_YOU_COPY.savedActionErrorTitle}
+              title={AI_MATCH_COPY.savedActionErrorTitle}
               tone="error"
             />
           ) : null}
 
           <Box sx={aiMatchPageSx.savedChipsShell}>
             <Typography component="h2" sx={aiMatchPageSx.sectionTitle}>
-              {FOR_YOU_COPY.savedSearchesTitle}
+              {AI_MATCH_COPY.savedSearchesTitle}
             </Typography>
             <FilterShell>
               {isCompactModeTabs ? (
                 <FilterScrollButton
-                  aria-label={FOR_YOU_COPY.scrollSavedSearchesLeftAria}
+                  aria-label={AI_MATCH_COPY.scrollSavedSearchesLeftAria}
                   disabled={!savedChipsScrollState.canScrollLeft}
                   onClick={() => scrollSavedChipsByDirection(-1)}
                   type="button"
@@ -1680,7 +1678,7 @@ export function AiMatchPage() {
               ) : null}
 
               <FilterTrack
-                aria-label={FOR_YOU_COPY.savedSearchesTitle}
+                aria-label={AI_MATCH_COPY.savedSearchesTitle}
                 ref={savedChipsTrackRef}
                 role="group"
               >
@@ -1706,10 +1704,10 @@ export function AiMatchPage() {
                     <BookmarkOutlinedIcon fontSize="small" />
                   </Box>
                   <Typography sx={aiMatchPageSx.savedChipTitle}>
-                    {FOR_YOU_COPY.allSavedJobs}
+                    {AI_MATCH_COPY.allSavedJobs}
                   </Typography>
                   <Typography sx={aiMatchPageSx.savedChipMeta}>
-                    {FOR_YOU_COPY.jobCount(savedBookmarkCards.length)}
+                    {AI_MATCH_COPY.jobCount(savedBookmarkCards.length)}
                   </Typography>
                 </Box>
 
@@ -1744,8 +1742,8 @@ export function AiMatchPage() {
                     <Typography sx={aiMatchPageSx.savedChipTitle}>{search.name}</Typography>
                     <Typography sx={aiMatchPageSx.savedChipMeta}>
                       {savedSearchResultCounts[search.id] !== undefined
-                        ? FOR_YOU_COPY.jobCount(savedSearchResultCounts[search.id]!)
-                        : search.query?.trim() || FOR_YOU_COPY.savedNoQuery}
+                        ? AI_MATCH_COPY.jobCount(savedSearchResultCounts[search.id]!)
+                        : search.query?.trim() || AI_MATCH_COPY.savedNoQuery}
                     </Typography>
                   </Box>
                 ))}
@@ -1761,14 +1759,14 @@ export function AiMatchPage() {
                 >
                   <AddIcon fontSize="small" />
                   <Typography sx={aiMatchPageSx.savedChipTitle}>
-                    {FOR_YOU_COPY.newSavedSearch}
+                    {AI_MATCH_COPY.newSavedSearch}
                   </Typography>
                 </Box>
               </FilterTrack>
 
               {isCompactModeTabs ? (
                 <FilterScrollButton
-                  aria-label={FOR_YOU_COPY.scrollSavedSearchesRightAria}
+                  aria-label={AI_MATCH_COPY.scrollSavedSearchesRightAria}
                   disabled={!savedChipsScrollState.canScrollRight}
                   onClick={() => scrollSavedChipsByDirection(1)}
                   type="button"
@@ -1780,7 +1778,7 @@ export function AiMatchPage() {
 
             {savedSearchesList.length === 0 ? (
               <Typography sx={aiMatchPageSx.composerHint}>
-                {FOR_YOU_COPY.savedEmptyDescription}
+                {AI_MATCH_COPY.savedEmptyDescription}
               </Typography>
             ) : null}
           </Box>
@@ -1792,22 +1790,22 @@ export function AiMatchPage() {
                   {selectedSavedSearch.name}
                 </Typography>
                 <Typography sx={aiMatchPageSx.savedQueryChip}>
-                  {selectedSavedSearch.query || FOR_YOU_COPY.savedNoQuery}
+                  {selectedSavedSearch.query || AI_MATCH_COPY.savedNoQuery}
                 </Typography>
               </Box>
               <Box sx={aiMatchPageSx.savedSearchActionsButtons}>
                 <Button
-                  aria-label={FOR_YOU_COPY.rerunSavedSearchAria}
+                  aria-label={AI_MATCH_COPY.rerunSavedSearchAria}
                   disabled={generateSavedSearch.isPending}
                   isLoading={generateSavedSearch.isPending}
                   onClick={() => runGenerateSavedSearch(selectedSavedSearch.id)}
                   size="small"
                   startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
                 >
-                  {FOR_YOU_COPY.rerunSavedSearch}
+                  {AI_MATCH_COPY.rerunSavedSearch}
                 </Button>
                 <Button
-                  aria-label={FOR_YOU_COPY.deleteSavedSearchAria}
+                  aria-label={AI_MATCH_COPY.deleteSavedSearchAria}
                   disabled={deleteSavedSearch.isPending}
                   isLoading={deleteSavedSearch.isPending}
                   onClick={() => {
@@ -1819,7 +1817,7 @@ export function AiMatchPage() {
                         setSavedSearchRecommendations([]);
                         setSavedSearchGeneratedOnce(false);
                         showToast({
-                          message: FOR_YOU_COPY.savedDeleteToast,
+                          message: AI_MATCH_COPY.savedDeleteToast,
                           severity: 'success',
                         });
                       })
@@ -1829,7 +1827,7 @@ export function AiMatchPage() {
                   startIcon={<DeleteOutlineIcon fontSize="small" />}
                   variant="outline"
                 >
-                  {FOR_YOU_COPY.deleteSavedSearch}
+                  {AI_MATCH_COPY.deleteSavedSearch}
                 </Button>
               </Box>
             </Box>
@@ -1839,30 +1837,30 @@ export function AiMatchPage() {
             <Box sx={aiMatchPageSx.composer}>
               <Box sx={aiMatchPageSx.composerHeader}>
                 <Typography component="h2" sx={aiMatchPageSx.composerTitle}>
-                  {FOR_YOU_COPY.savedCreateTitle}
+                  {AI_MATCH_COPY.savedCreateTitle}
                 </Typography>
                 <Typography sx={aiMatchPageSx.composerDescription}>
-                  {FOR_YOU_COPY.savedCreateHint}
+                  {AI_MATCH_COPY.savedCreateHint}
                 </Typography>
               </Box>
 
               <Box sx={aiMatchPageSx.savedCreateRow}>
                 <TextField
-                  label={FOR_YOU_COPY.savedNameLabel}
+                  label={AI_MATCH_COPY.savedNameLabel}
                   onChange={(event) => setSavedSearchName(event.target.value)}
-                  placeholder={FOR_YOU_COPY.savedNamePlaceholder}
+                  placeholder={AI_MATCH_COPY.savedNamePlaceholder}
                   size="small"
                   value={savedSearchName}
                 />
                 <TextField
-                  label={FOR_YOU_COPY.savedQueryLabel}
+                  label={AI_MATCH_COPY.savedQueryLabel}
                   onChange={(event) => setSavedSearchQueryText(event.target.value)}
-                  placeholder={FOR_YOU_COPY.savedQueryPlaceholder}
+                  placeholder={AI_MATCH_COPY.savedQueryPlaceholder}
                   size="small"
                   value={savedSearchQueryText}
                 />
                 <Button
-                  aria-label={FOR_YOU_COPY.createSavedSearchAria}
+                  aria-label={AI_MATCH_COPY.createSavedSearchAria}
                   disabled={!trimmedSavedSearchName || createSavedSearch.isPending}
                   isLoading={createSavedSearch.isPending}
                   onClick={() => {
@@ -1880,7 +1878,7 @@ export function AiMatchPage() {
                         setSavedSearchGeneratedOnce(false);
                         setShowNewSavedSearchForm(false);
                         showToast({
-                          message: FOR_YOU_COPY.savedCreateToast,
+                          message: AI_MATCH_COPY.savedCreateToast,
                           severity: 'success',
                         });
                       })
@@ -1889,7 +1887,7 @@ export function AiMatchPage() {
                   size="small"
                   startIcon={<AddIcon fontSize="small" />}
                 >
-                  {FOR_YOU_COPY.createSavedSearch}
+                  {AI_MATCH_COPY.createSavedSearch}
                 </Button>
               </Box>
             </Box>
@@ -1918,7 +1916,7 @@ export function AiMatchPage() {
                     <DescriptionOutlinedIcon fontSize="medium" />
                   </Box>
                   <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                    {FOR_YOU_COPY.savedEmptyBookmarks}
+                    {AI_MATCH_COPY.savedEmptyBookmarks}
                   </Typography>
                   <Box sx={aiMatchPageSx.emptyActions}>
                     <Button
@@ -1927,7 +1925,7 @@ export function AiMatchPage() {
                       to={ROUTES.JOB_FEED}
                       variant="outline"
                     >
-                      {FOR_YOU_COPY.browseJobs}
+                      {AI_MATCH_COPY.browseJobs}
                     </Button>
                   </Box>
                 </Box>
@@ -1938,7 +1936,7 @@ export function AiMatchPage() {
                   <Box component="hr" sx={aiMatchPageSx.savedDivider} />
                   <Box sx={aiMatchPageSx.listHeader}>
                     <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
-                      {FOR_YOU_COPY.savedJobsCount(savedBookmarkCards.length)}
+                      {AI_MATCH_COPY.savedJobsCount(savedBookmarkCards.length)}
                     </Typography>
                     <Box sx={aiMatchPageSx.sortControl}>
                       <Typography
@@ -1946,7 +1944,7 @@ export function AiMatchPage() {
                         htmlFor="saved-jobs-sort"
                         sx={aiMatchPageSx.sortLabel}
                       >
-                        {FOR_YOU_COPY.sortByLabel}
+                        {AI_MATCH_COPY.sortByLabel}
                       </Typography>
                       <TextField
                         id="saved-jobs-sort"
@@ -1958,8 +1956,8 @@ export function AiMatchPage() {
                         sx={aiMatchPageSx.sortSelect}
                         value={savedSortOrder}
                       >
-                        <MenuItem value="newest">{FOR_YOU_COPY.savedSortNewest}</MenuItem>
-                        <MenuItem value="oldest">{FOR_YOU_COPY.savedSortOldest}</MenuItem>
+                        <MenuItem value="newest">{AI_MATCH_COPY.savedSortNewest}</MenuItem>
+                        <MenuItem value="oldest">{AI_MATCH_COPY.savedSortOldest}</MenuItem>
                       </TextField>
                     </Box>
                   </Box>
@@ -1985,10 +1983,10 @@ export function AiMatchPage() {
                     <InfoOutlinedIcon fontSize="medium" />
                   </Box>
                   <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                    {FOR_YOU_COPY.emptyAfterGenerateTitle}
+                    {AI_MATCH_COPY.emptyAfterGenerateTitle}
                   </Typography>
                   <Typography sx={aiMatchPageSx.emptyDescription}>
-                    {FOR_YOU_COPY.savedEmptyAfterGenerate}
+                    {AI_MATCH_COPY.savedEmptyAfterGenerate}
                   </Typography>
                   <Box sx={aiMatchPageSx.emptyActions}>
                     <Button
@@ -1997,7 +1995,7 @@ export function AiMatchPage() {
                       to={ROUTES.JOB_FEED}
                       variant="outline"
                     >
-                      {FOR_YOU_COPY.browseJobs}
+                      {AI_MATCH_COPY.browseJobs}
                     </Button>
                   </Box>
                 </Box>
@@ -2007,7 +2005,7 @@ export function AiMatchPage() {
                 <>
                   <Box sx={aiMatchPageSx.listHeader}>
                     <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
-                      {FOR_YOU_COPY.savedResultCount(visibleSavedSearchRecommendations.length)}
+                      {AI_MATCH_COPY.savedResultCount(visibleSavedSearchRecommendations.length)}
                     </Typography>
                   </Box>
                   <Box sx={jobFeedPageSx.list}>
@@ -2047,10 +2045,10 @@ export function AiMatchPage() {
               {activeModeMeta.panelLabel}
             </Typography>
             <Typography sx={aiMatchPageSx.emptyDescription}>
-              {FOR_YOU_COPY.modeComingSoon}
+              {AI_MATCH_COPY.modeComingSoon}
             </Typography>
             <Button onClick={() => selectMode('profile')} size="small" variant="outline">
-              {FOR_YOU_COPY.viewProfileMatches}
+              {AI_MATCH_COPY.viewProfileMatches}
             </Button>
           </Box>
         </Box>
@@ -2069,7 +2067,7 @@ export function AiMatchPage() {
                 <InfoOutlinedIcon fontSize="small" />
               </Box>
               <Typography sx={aiMatchPageSx.bannerMessage}>
-                {FOR_YOU_COPY.readinessWarning}
+                {AI_MATCH_COPY.readinessWarning}
               </Typography>
             </Box>
           ) : null}
@@ -2081,7 +2079,7 @@ export function AiMatchPage() {
               </Box>
               <Box sx={aiMatchPageSx.bannerCopy}>
                 <Typography sx={aiMatchPageSx.bannerMessage}>
-                  {FOR_YOU_COPY.staleDescription}
+                  {AI_MATCH_COPY.staleDescription}
                 </Typography>
               </Box>
               <Button
@@ -2095,7 +2093,7 @@ export function AiMatchPage() {
                 startIcon={<RefreshIcon fontSize="small" />}
                 variant="outline"
               >
-                {FOR_YOU_COPY.refreshMatches}
+                {AI_MATCH_COPY.refreshMatches}
               </Button>
             </Box>
           ) : null}
@@ -2105,8 +2103,8 @@ export function AiMatchPage() {
               <CircularProgress aria-label="Recommendations processing" size={22} />
               <Typography sx={aiMatchPageSx.bannerMessage}>
                 {lifecycleState === 'QUEUED'
-                  ? FOR_YOU_COPY.processingQueued
-                  : FOR_YOU_COPY.processingRunning}
+                  ? AI_MATCH_COPY.processingQueued
+                  : AI_MATCH_COPY.processingRunning}
               </Typography>
               <Button
                 disabled={readiness.isFetching}
@@ -2115,7 +2113,7 @@ export function AiMatchPage() {
                 startIcon={<RefreshIcon fontSize="small" />}
                 variant="outline"
               >
-                {FOR_YOU_COPY.refreshStatus}
+                {AI_MATCH_COPY.refreshStatus}
               </Button>
             </Box>
           ) : null}
@@ -2144,7 +2142,7 @@ export function AiMatchPage() {
                 size="small"
                 startIcon={<RefreshIcon fontSize="small" />}
               >
-                {FOR_YOU_COPY.retryRecommendations}
+                {AI_MATCH_COPY.retryRecommendations}
               </Button>
             </Box>
           ) : null}
@@ -2155,18 +2153,18 @@ export function AiMatchPage() {
                 <InfoOutlinedIcon fontSize="small" />
               </Box>
               <Typography sx={aiMatchPageSx.bannerMessage}>
-                {FOR_YOU_COPY.embeddingWarning}
+                {AI_MATCH_COPY.embeddingWarning}
               </Typography>
             </Box>
           ) : null}
 
-          {isPending ? <JobFeedLoadingState label={FOR_YOU_COPY.loading} /> : null}
+          {isPending ? <JobFeedLoadingState label={AI_MATCH_COPY.loading} /> : null}
 
           {isError ? (
             <JobFeedStatus
               message={error instanceof Error ? error.message : 'Unable to load recommendations.'}
               onRetry={isFetching ? undefined : () => void refetch()}
-              title={FOR_YOU_COPY.loadErrorTitle}
+              title={AI_MATCH_COPY.loadErrorTitle}
               tone="error"
             />
           ) : null}
@@ -2177,13 +2175,13 @@ export function AiMatchPage() {
                 <PersonOutlineIcon fontSize="medium" />
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                {FOR_YOU_COPY.completeProfileTitle}
+                {AI_MATCH_COPY.completeProfileTitle}
               </Typography>
               <Typography sx={aiMatchPageSx.emptyDescription}>
-                {FOR_YOU_COPY.completeProfileDescription}
+                {AI_MATCH_COPY.completeProfileDescription}
               </Typography>
               <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
-                {FOR_YOU_COPY.completeProfile}
+                {AI_MATCH_COPY.completeProfile}
               </Button>
             </Box>
           ) : null}
@@ -2194,13 +2192,13 @@ export function AiMatchPage() {
                 <PersonOutlineIcon fontSize="medium" />
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
-                {FOR_YOU_COPY.missingProfileTitle}
+                {AI_MATCH_COPY.missingProfileTitle}
               </Typography>
               <Typography sx={aiMatchPageSx.emptyDescription}>
-                {FOR_YOU_COPY.missingProfileDescription}
+                {AI_MATCH_COPY.missingProfileDescription}
               </Typography>
               <Button component={RouterLink} size="small" to={ROUTES.PROFILE} variant="outline">
-                {FOR_YOU_COPY.setUpProfile}
+                {AI_MATCH_COPY.setUpProfile}
               </Button>
             </Box>
           ) : null}
@@ -2219,13 +2217,13 @@ export function AiMatchPage() {
               </Box>
               <Typography component="h2" sx={aiMatchPageSx.emptyTitle}>
                 {generatedOnce
-                  ? FOR_YOU_COPY.emptyAfterGenerateTitle
-                  : FOR_YOU_COPY.emptyGenerateTitle}
+                  ? AI_MATCH_COPY.emptyAfterGenerateTitle
+                  : AI_MATCH_COPY.emptyGenerateTitle}
               </Typography>
               <Typography sx={aiMatchPageSx.emptyDescription}>
                 {generatedOnce
-                  ? FOR_YOU_COPY.emptyAfterGenerateDescription
-                  : FOR_YOU_COPY.emptyGenerateDescription}
+                  ? AI_MATCH_COPY.emptyAfterGenerateDescription
+                  : AI_MATCH_COPY.emptyGenerateDescription}
               </Typography>
               {generateError ? (
                 <Typography role="alert" sx={{ color: 'error.main' }}>
@@ -2243,10 +2241,10 @@ export function AiMatchPage() {
                   size="small"
                   startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
                 >
-                  {FOR_YOU_COPY.generate}
+                  {AI_MATCH_COPY.generate}
                 </Button>
                 <Button component={RouterLink} size="small" to={ROUTES.JOB_FEED} variant="outline">
-                  {FOR_YOU_COPY.browseJobs}
+                  {AI_MATCH_COPY.browseJobs}
                 </Button>
               </Box>
             </Box>
@@ -2256,7 +2254,7 @@ export function AiMatchPage() {
             <>
               <Box sx={aiMatchPageSx.listHeader}>
                 <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
-                  {FOR_YOU_COPY.resultCount(data?.total ?? 0)}
+                  {AI_MATCH_COPY.resultCount(data?.total ?? 0)}
                 </Typography>
                 <Button
                   disabled={profileActionPending || isProcessingLifecycle}
@@ -2269,7 +2267,7 @@ export function AiMatchPage() {
                   startIcon={<RefreshIcon fontSize="small" />}
                   variant="outline"
                 >
-                  {FOR_YOU_COPY.refreshMatches}
+                  {AI_MATCH_COPY.refreshMatches}
                 </Button>
               </Box>
               {generateError || refreshError ? (
@@ -2293,7 +2291,7 @@ export function AiMatchPage() {
                     size="small"
                     variant="outline"
                   >
-                    {FOR_YOU_COPY.paginationPrevious}
+                    {AI_MATCH_COPY.paginationPrevious}
                   </Button>
                   <Typography sx={aiMatchPageSx.pageLabel}>
                     Page {data?.page ?? page}
@@ -2305,7 +2303,7 @@ export function AiMatchPage() {
                     size="small"
                     variant="outline"
                   >
-                    {FOR_YOU_COPY.paginationNext}
+                    {AI_MATCH_COPY.paginationNext}
                   </Button>
                 </Box>
               ) : null}

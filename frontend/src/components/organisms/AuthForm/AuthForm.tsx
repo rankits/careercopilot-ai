@@ -1,5 +1,25 @@
-import { useMemo, useState } from 'react';
-import { useForm, type FieldValues, type Path, type Resolver } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import EmailOutlinedIcon from '@mui/icons-material/EmailOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import PhoneOutlinedIcon from '@mui/icons-material/PhoneOutlined';
+import VisibilityOffOutlinedIcon from '@mui/icons-material/VisibilityOffOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import Box from '@mui/material/Box';
+import Checkbox from '@mui/material/Checkbox';
+import FormControlLabel from '@mui/material/FormControlLabel';
+import Link from '@mui/material/Link';
+import Typography from '@mui/material/Typography';
+import { useMemo, useState, type MouseEvent } from 'react';
+import {
+  Controller,
+  useForm,
+  type DefaultValues,
+  type FieldValues,
+  type Path,
+  type Resolver,
+} from 'react-hook-form';
 
 import { Button } from '@/components/atoms/Button';
 import { Input } from '@/components/atoms/Input';
@@ -12,23 +32,18 @@ import {
   AUTH_FORM_VALIDATION_SCHEMAS,
 } from '@/constants/ui';
 import {
-  ArrowForwardIcon,
-  Box,
-  Checkbox,
-  EmailOutlinedIcon,
-  FormControlLabel,
-  Link,
-  LockOutlinedIcon,
-  PersonOutlineIcon,
-  PhoneOutlinedIcon,
-  Typography,
-  VisibilityOffOutlinedIcon,
-  VisibilityOutlinedIcon,
-  yupResolver,
-} from '@/lib/material';
+  composePhoneWithDialCode,
+  getDefaultCountryDialCode,
+  NATIONAL_PHONE_MAX_LENGTH,
+  PHONE_MAX_LENGTH,
+  sanitizeNationalPhoneInput,
+  sanitizePhoneInput,
+  type CountryDialCode,
+} from '@/utils/phone';
 
 import { SocialConnectButton } from '../SocialConnectButton';
 
+import { CountryDialCodeSelect } from './CountryDialCodeSelect';
 import type { AuthFieldIcon, AuthFieldIconMap, AuthFormField, AuthFormProps } from './interfaces';
 import { authFormSx } from './styles';
 
@@ -41,6 +56,14 @@ const fieldIcons: AuthFieldIconMap = {
 };
 
 const PASSWORD_FIELDS = new Set(['password', 'confirmPassword']);
+const FIELD_MAX_LENGTHS: Record<string, number> = {
+  firstName: 80,
+  lastName: 80,
+  email: 300,
+  phone: PHONE_MAX_LENGTH,
+  password: 128,
+  confirmPassword: 128,
+};
 
 function renderIcon(icon?: AuthFieldIcon) {
   if (!icon) {
@@ -50,10 +73,6 @@ function renderIcon(icon?: AuthFieldIcon) {
   const Icon = fieldIcons[icon];
 
   return <Icon fontSize="small" />;
-}
-
-function sanitizePhoneNumber(value: string) {
-  return value.replace(/\D/g, '');
 }
 
 function limitFieldValue(value: string, maxLength?: number) {
@@ -77,25 +96,48 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
 }: AuthFormProps<TFormValues>) {
   const content = AUTH_FORM_CONTENT[mode];
   const [visibleFields, setVisibleFields] = useState<Record<string, boolean>>({});
+  const [countryDialCode, setCountryDialCode] =
+    useState<CountryDialCode>(getDefaultCountryDialCode);
   const fields = useMemo<AuthFormField[]>(
     () => [...AUTH_FORM_FIELDS[mode], ...extraFields],
     [extraFields, mode],
   );
   const schema = validationSchema ?? AUTH_FORM_VALIDATION_SCHEMAS[mode];
   const {
+    control,
     formState: { errors },
     handleSubmit,
     register,
     trigger,
   } = useForm<TFormValues>({
+    defaultValues: (mode === 'login' ? { rememberMe: true } : undefined) as
+      DefaultValues<TFormValues> | undefined,
     mode: 'onTouched',
     reValidateMode: 'onChange',
     resolver: yupResolver(schema) as Resolver<TFormValues>,
   });
-  const submitHandler = onValidSubmit ? handleSubmit(onValidSubmit) : onSubmit;
+
+  const submitHandler = onValidSubmit
+    ? handleSubmit((values) => {
+        if (mode === 'register' && 'phone' in values) {
+          const national = sanitizeNationalPhoneInput(String(values.phone ?? ''));
+          return onValidSubmit({
+            ...values,
+            phone: composePhoneWithDialCode(countryDialCode, national),
+          });
+        }
+        return onValidSubmit(values);
+      })
+    : onSubmit;
+
+  const handleNavClick = (handler?: () => void) => (event: MouseEvent<HTMLAnchorElement>) => {
+    event.preventDefault();
+    handler?.();
+  };
 
   return (
     <Box
+      autoComplete="on"
       component="form"
       onSubmit={submitHandler}
       sx={mode === 'register' ? [authFormSx.card, authFormSx.registerCard] : authFormSx.card}
@@ -108,7 +150,9 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
         <Typography component="h1" sx={authFormSx.title}>
           {content.title}
         </Typography>
-        <Typography sx={authFormSx.subtitle}>{content.subtitle}</Typography>
+        {content.subtitle ? (
+          <Typography sx={authFormSx.subtitle}>{content.subtitle}</Typography>
+        ) : null}
       </Box>
 
       {showSocialLogin ? (
@@ -120,8 +164,13 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
                 : authFormSx.stack
             }
           >
-            <SocialConnectButton onClick={onGoogleConnect} provider="google" />
-            <SocialConnectButton onClick={onLinkedInConnect} provider="linkedin" />
+            <SocialConnectButton comingSoon disabled onClick={onGoogleConnect} provider="google" />
+            <SocialConnectButton
+              comingSoon
+              disabled
+              onClick={onLinkedInConnect}
+              provider="linkedin"
+            />
           </Box>
 
           <Box aria-hidden="true" sx={authFormSx.divider}>
@@ -137,12 +186,18 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           const fieldError = errors[field.name]?.message;
           const isPasswordField = PASSWORD_FIELDS.has(field.name);
           const isPhoneField = field.type === 'tel';
+          const isRegisterPhone = mode === 'register' && isPhoneField;
           const inputMode = isPhoneField ? 'tel' : undefined;
           const isVisible = Boolean(visibleFields[field.name]);
           const resolvedType = isPasswordField && isVisible ? 'text' : (field.type ?? 'text');
-          const registeredField = register(field.name as Path<TFormValues>);
+          const maxLength = isRegisterPhone
+            ? NATIONAL_PHONE_MAX_LENGTH
+            : (FIELD_MAX_LENGTHS[field.name] ?? field.maxLength);
+          const registration = register(field.name as Path<TFormValues>);
+          const fullWidthPasswordField =
+            mode === 'register' && (field.name === 'password' || field.name === 'confirmPassword');
 
-          return (
+          const input = (
             <Input
               autoComplete={field.autoComplete}
               errorMessage={typeof fieldError === 'string' ? fieldError : undefined}
@@ -150,29 +205,40 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               inputMode={inputMode}
               key={field.name}
               label={field.label}
-              {...registeredField}
-              onBlur={(event) => {
-                void registeredField.onBlur(event);
+              name={registration.name}
+              onBlur={(e) => {
+                void registration.onBlur(e);
                 void trigger(field.name as Path<TFormValues>);
+              }}
+              onChange={(event) => {
+                void registration.onChange(event);
               }}
               onInput={
                 isPhoneField || field.maxLength
                   ? (event) => {
-                      const input = event.target as HTMLInputElement;
-                      const sanitizedValue = isPhoneField
-                        ? sanitizePhoneNumber(input.value)
-                        : input.value;
+                      const inputEl = event.target as HTMLInputElement;
+                      const sanitizedValue = isRegisterPhone
+                        ? sanitizeNationalPhoneInput(inputEl.value)
+                        : isPhoneField
+                          ? sanitizePhoneInput(inputEl.value)
+                          : inputEl.value;
 
-                      input.value = limitFieldValue(sanitizedValue, field.maxLength);
+                      inputEl.value = limitFieldValue(sanitizedValue, maxLength);
                     }
                   : undefined
               }
               placeholder={field.placeholder}
-              size={mode === 'register' ? 'small' : 'medium'}
-              slotProps={
-                field.maxLength ? { htmlInput: { maxLength: field.maxLength } } : undefined
-              }
-              startAdornment={renderIcon(field.startIcon)}
+              ref={registration.ref}
+              size="medium"
+              slotProps={{
+                htmlInput: {
+                  autoComplete: field.autoComplete,
+                  maxLength,
+                  name: field.name,
+                },
+              }}
+              stabilizeHelper
+              startAdornment={isRegisterPhone ? undefined : renderIcon(field.startIcon)}
               type={resolvedType}
               endAdornment={
                 isPasswordField ? (
@@ -206,15 +272,51 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
               }
             />
           );
+
+          if (isRegisterPhone) {
+            return (
+              <Box key={field.name} sx={authFormSx.phoneRow}>
+                <CountryDialCodeSelect onChange={setCountryDialCode} value={countryDialCode} />
+                {input}
+              </Box>
+            );
+          }
+
+          if (fullWidthPasswordField) {
+            return (
+              <Box key={field.name} sx={{ gridColumn: '1 / -1', width: '100%' }}>
+                {input}
+              </Box>
+            );
+          }
+
+          return input;
         })}
 
         {mode === 'login' ? (
           <Box sx={authFormSx.actions}>
             <FormControlLabel
-              control={<Checkbox defaultChecked {...register('rememberMe' as Path<TFormValues>)} />}
+              control={
+                <Controller
+                  control={control}
+                  name={'rememberMe' as Path<TFormValues>}
+                  render={({ field }) => (
+                    <Checkbox
+                      checked={Boolean(field.value)}
+                      inputRef={field.ref}
+                      onBlur={field.onBlur}
+                      onChange={(_event, checked) => field.onChange(checked)}
+                    />
+                  )}
+                />
+              }
               label={AUTH_FORM_STATIC_COPY.rememberMeLabel}
             />
-            <Link href={forgotPasswordHref} onClick={onForgotPasswordClick} sx={authFormSx.link}>
+            <Link
+              href={forgotPasswordHref}
+              onClick={handleNavClick(onForgotPasswordClick)}
+              sx={authFormSx.link}
+            >
               {AUTH_FORM_STATIC_COPY.forgotPasswordLabel}
             </Link>
           </Box>
@@ -225,6 +327,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           fullWidth
           isLoading={isSubmitting}
           size={mode === 'register' ? 'large' : 'extraLarge'}
+          sx={{ gridColumn: '1 / -1', boxShadow: 'none', '&:hover': { boxShadow: 'none' } }}
           type="submit"
         >
           {content.submitLabel}
@@ -233,7 +336,11 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
 
       <Typography sx={authFormSx.footer}>
         {content.footerText}{' '}
-        <Link href={alternateActionHref} onClick={onAlternateActionClick} sx={authFormSx.link}>
+        <Link
+          href={alternateActionHref}
+          onClick={handleNavClick(onAlternateActionClick)}
+          sx={authFormSx.link}
+        >
           {content.footerActionLabel}
         </Link>
       </Typography>

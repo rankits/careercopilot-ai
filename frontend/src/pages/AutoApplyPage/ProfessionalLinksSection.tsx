@@ -8,10 +8,11 @@ import {
   useUpsertCandidateProfile,
 } from '@/features/auto-apply/hooks/useCandidateProfile';
 
-import { Box, CircularProgress, Paper, TextField } from '@/lib/material';
+import { Box, CircularProgress, Paper, TextField, Typography } from '@/lib/material';
 
 import { useSetupDirty } from './SetupDirtyContext';
 import { isValidHttpUrl } from './setupFormUtils';
+import { setupPageSx } from './setupPageStyles';
 import { SetupSectionHeading } from './SetupSectionHeading';
 
 type LinkField = 'linkedin' | 'github' | 'portfolio' | 'behance' | 'stackoverflow' | 'medium';
@@ -39,7 +40,14 @@ export function ProfessionalLinksSection() {
       stackoverflow: profile?.links.stackoverflow ?? '',
       medium: profile?.links.medium ?? '',
     }),
-    [profile?.links.behance, profile?.links.github, profile?.links.linkedin, profile?.links.medium, profile?.links.portfolio, profile?.links.stackoverflow],
+    [
+      profile?.links.behance,
+      profile?.links.github,
+      profile?.links.linkedin,
+      profile?.links.medium,
+      profile?.links.portfolio,
+      profile?.links.stackoverflow,
+    ],
   );
 
   useEffect(() => {
@@ -73,9 +81,12 @@ export function ProfessionalLinksSection() {
     if (!isValidHttpUrl(portfolio)) {
       next.portfolio = 'Enter a valid URL starting with http:// or https://.';
     }
-    if (!isValidHttpUrl(behance)) next.behance = 'Enter a valid URL starting with http:// or https://.';
-    if (!isValidHttpUrl(stackoverflow)) next.stackoverflow = 'Enter a valid URL starting with http:// or https://.';
-    if (!isValidHttpUrl(medium)) next.medium = 'Enter a valid URL starting with http:// or https://.';
+    if (!isValidHttpUrl(behance))
+      next.behance = 'Enter a valid URL starting with http:// or https://.';
+    if (!isValidHttpUrl(stackoverflow))
+      next.stackoverflow = 'Enter a valid URL starting with http:// or https://.';
+    if (!isValidHttpUrl(medium))
+      next.medium = 'Enter a valid URL starting with http:// or https://.';
     return next;
   };
 
@@ -98,7 +109,8 @@ export function ProfessionalLinksSection() {
       showToast({ message: 'Links saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't save your details. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't save your details. Try again.",
         severity: 'error',
       });
     }
@@ -113,7 +125,10 @@ export function ProfessionalLinksSection() {
   }
 
   return (
-    <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 640 }} variant="outlined">
+    <Paper
+      sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 640 }}
+      variant="outlined"
+    >
       <SetupSectionHeading
         helperText="Optional. Used to prefill application forms in later phases."
         required={false}
@@ -147,16 +162,55 @@ export function ProfessionalLinksSection() {
         placeholder="https://..."
         value={portfolio}
       />
-      <TextField error={Boolean(errors.behance)} fullWidth helperText={errors.behance} label="Behance / Dribbble" onChange={(event) => setBehance(event.target.value)} placeholder="https://behance.net/..." value={behance} />
-      <TextField error={Boolean(errors.stackoverflow)} fullWidth helperText={errors.stackoverflow} label="Stack Overflow" onChange={(event) => setStackoverflow(event.target.value)} placeholder="https://stackoverflow.com/users/..." value={stackoverflow} />
-      <TextField error={Boolean(errors.medium)} fullWidth helperText={errors.medium} label="Medium / Blog" onChange={(event) => setMedium(event.target.value)} placeholder="https://medium.com/@..." value={medium} />
-      <Box sx={{ bgcolor: 'primary.50', borderRadius: 1.5, display: 'grid', gap: 1.5, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' }, p: 2 }}>
+      <TextField
+        error={Boolean(errors.behance)}
+        fullWidth
+        helperText={errors.behance}
+        label="Behance / Dribbble"
+        onChange={(event) => setBehance(event.target.value)}
+        placeholder="https://behance.net/..."
+        value={behance}
+      />
+      <TextField
+        error={Boolean(errors.stackoverflow)}
+        fullWidth
+        helperText={errors.stackoverflow}
+        label="Stack Overflow"
+        onChange={(event) => setStackoverflow(event.target.value)}
+        placeholder="https://stackoverflow.com/users/..."
+        value={stackoverflow}
+      />
+      <TextField
+        error={Boolean(errors.medium)}
+        fullWidth
+        helperText={errors.medium}
+        label="Medium / Blog"
+        onChange={(event) => setMedium(event.target.value)}
+        placeholder="https://medium.com/@..."
+        value={medium}
+      />
+      <Box
+        sx={{
+          bgcolor: 'primary.50',
+          borderRadius: 1.5,
+          display: 'grid',
+          gap: 1.5,
+          gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' },
+          p: 2,
+        }}
+      >
         {['Increase match score', 'Build credibility', 'Stand out from others'].map((tip) => (
-          <Typography key={tip} sx={{ fontSize: 12, fontWeight: 600 }}>{tip}</Typography>
+          <Typography key={tip} sx={setupPageSx.tipText}>
+            {tip}
+          </Typography>
         ))}
       </Box>
       <Box>
-        <Button disabled={!isDirty} isLoading={upsertProfile.isPending} onClick={() => void handleSave()}>
+        <Button
+          disabled={!isDirty}
+          isLoading={upsertProfile.isPending}
+          onClick={() => void handleSave()}
+        >
           Save
         </Button>
       </Box>

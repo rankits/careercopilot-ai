@@ -57,7 +57,7 @@ class MemoryTransaction implements JobPersistenceTransaction {
       companySlug: input.companySlug,
       companyName: this.companyName ?? '',
       title: input.title,
-      employmentType: null,
+      employmentType: input.employmentType,
       remoteType: input.remoteType,
       descriptionText: input.descriptionText,
       skills: input.skills,

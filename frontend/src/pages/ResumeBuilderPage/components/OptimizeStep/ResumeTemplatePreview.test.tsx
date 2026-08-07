@@ -160,10 +160,25 @@ describe('ResumeTemplatePreview', () => {
     };
 
     render(<ResumeTemplatePreview draft={withProjects} template="classic" targetRole="Engineer" />);
+    expect(screen.getAllByText('Career Copilot').length).toBeGreaterThan(0);
+    expect(screen.getAllByText(/Built resume preview/i).length).toBeGreaterThan(0);
     const headings = screen.getAllByText(/^Projects$/i);
     const pageLabel = screen.getByText(/\d+ pages? · A4/i).textContent ?? '';
     const pages = Number(pageLabel.match(/(\d+)\s+page/)?.[1] ?? 1);
     // 1 off-screen measure copy + 1 copy per visible page frame
     expect(headings.length).toBe(pages + 1);
+  });
+
+  it('renders skills as individual chips', () => {
+    render(
+      <ResumeTemplatePreview
+        draft={{ ...draft, skillsList: ['React', 'TypeScript', 'Node.js'] }}
+        template="classic"
+        targetRole="Engineer"
+      />,
+    );
+    expect(screen.getAllByText('React').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('TypeScript').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/React, TypeScript, Node\.js/)).toBeNull();
   });
 });

@@ -1,3 +1,5 @@
+import type { NavigateFunction } from 'react-router-dom';
+
 import { ROUTES } from '@/constants/routes';
 
 /**
@@ -40,6 +42,23 @@ export function resolveSafeReturnTo(
   fallback: string,
 ): string {
   return isSafeAssistedApplyReturnTo(raw) ? decodeURIComponent(raw!) : fallback;
+}
+
+/** Returns true when navigation to a safe assisted-apply return path occurred. */
+export function navigateAfterAssistedApplyExit(
+  navigate: NavigateFunction,
+  rawReturnTo: string | null | undefined,
+  saved: boolean,
+): boolean {
+  if (!isSafeAssistedApplyReturnTo(rawReturnTo)) return false;
+  let target = decodeURIComponent(rawReturnTo!);
+  if (saved) {
+    const url = new URL(target, window.location.origin);
+    url.searchParams.set('resumeReturned', 'saved');
+    target = `${url.pathname}${url.search}`;
+  }
+  void navigate(target);
+  return true;
 }
 
 /** Extract jobApplicationId from a safe Assisted Apply returnTo path. */

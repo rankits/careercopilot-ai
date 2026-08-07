@@ -33,7 +33,7 @@ describe('estimateImprovedAtsScore', () => {
     expect(score).toBeLessThanOrEqual(94);
   });
 
-  it('varies with live JD skill coverage instead of sticking at baseline', () => {
+  it('stays at baseline when no suggestions were applied even if content covers JD skills', () => {
     const low = estimateImprovedAtsScore({
       baseline: 45,
       content: 'React CSS HTML designer',
@@ -41,16 +41,40 @@ describe('estimateImprovedAtsScore', () => {
       missingSkills: ['Java', 'Spring Boot', 'Hibernate', 'Kafka'],
       appliedCount: 0,
     });
-    const high = estimateImprovedAtsScore({
+    const highWithoutApply = estimateImprovedAtsScore({
       baseline: 45,
       content: 'Java Spring Boot Hibernate Kafka React',
       matchedSkills: ['Java', 'Spring Boot'],
       missingSkills: ['Hibernate', 'Kafka'],
       appliedCount: 0,
     });
+    const highWithApply = estimateImprovedAtsScore({
+      baseline: 45,
+      content: 'Java Spring Boot Hibernate Kafka React',
+      matchedSkills: ['Java', 'Spring Boot'],
+      missingSkills: ['Hibernate', 'Kafka'],
+      appliedCount: 2,
+    });
 
-    expect(high).toBeGreaterThan(low);
-    expect(high).toBeGreaterThan(45);
+    expect(low).toBe(45);
+    expect(highWithoutApply).toBe(45);
+    expect(highWithApply).toBeGreaterThan(45);
+  });
+
+  it('floors near Export when optimize succeeds from applied fixes + skill recovery', () => {
+    const score = estimateImprovedAtsScore({
+      baseline: 35,
+      content:
+        'PROFESSIONAL SUMMARY\nJava Spring Boot engineer.\nSKILLS\nJava, Spring Boot, Hibernate, Kafka, React\nWORK EXPERIENCE\n- Built Java APIs with Spring Boot and Kafka',
+      missingSkills: ['Java', 'Spring Boot', 'Hibernate', 'Kafka'],
+      matchedSkills: ['React'],
+      missingKeywords: ['Java', 'Spring Boot', 'Hibernate'],
+      appliedCount: 3,
+      highAppliedCount: 2,
+    });
+
+    expect(score).toBeGreaterThanOrEqual(74);
+    expect(score).toBeLessThanOrEqual(94);
   });
 });
 

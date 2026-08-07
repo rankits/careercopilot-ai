@@ -1,4 +1,12 @@
-import { useMemo, useState } from 'react';
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
+import Box from '@mui/material/Box';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
@@ -8,6 +16,7 @@ import {
   JobFeedStatus,
   VirtualizedJobList,
 } from '@/components/molecules';
+import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { useTrackAndOpenApply } from '@/features/auto-apply/hooks/useTrackAndOpenApply';
 import { useJobDetail } from '@/features/jobs/hooks/useJobDetail';
@@ -15,25 +24,17 @@ import { useSimilarJobs } from '@/features/recommendations/hooks/useRecommendati
 
 import { jobDetailPath, ROUTES } from '@/constants/routes';
 import { JobNotFoundError } from '@/features/jobs/services/jobs.service';
-import type { JobDetailDto } from '@/features/jobs/types/job.types';
 import { extractJobDetailSections } from '@/features/jobs/utils/extractJobDetailSections';
+import { formatJobSalary } from '@/features/jobs/utils/formatJobSalary';
 import { formatPostedAt } from '@/features/jobs/utils/formatPostedAt';
 import { openExternalApply, toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
 import { resolveJobDescriptionDisplay } from '@/features/jobs/utils/resolveJobDescriptionDisplay';
-import {
-  Box,
-  BusinessCenterOutlinedIcon,
-  HistoryOutlinedIcon,
-  LocationOnOutlinedIcon,
-  Tooltip,
-  Typography,
-  WorkOutlineOutlinedIcon,
-} from '@/lib/material';
 
 import { JobAboutRoleSection } from './JobAboutRoleSection';
 import { JobDetailSectionHeader } from './JobDetailSectionHeader';
 import { jobDetailPageSx } from './styles';
 
+const SIMILAR_JOBS_ERROR_TOAST = 'Unable to load similar jobs. Please try again.';
 const ASSISTED_APPLY_TOOLTIP_ENABLED =
   "We'll help you prepare and track this application. You still submit it on the employer's site.";
 const ASSISTED_APPLY_TOOLTIP_DISABLED = "This listing can't be tracked yet.";
@@ -71,20 +72,6 @@ function formatEnumLabel(value: string | null | undefined): string | null {
     .join(' ');
 }
 
-function formatSalary(salary: JobDetailDto['salary']): string {
-  const { minimum, maximum, currency } = salary;
-  if (minimum == null && maximum == null) return 'Not disclosed';
-  const code = currency?.toUpperCase() ?? '';
-  const unit = code === 'INR' ? 'LPA' : code;
-  if (minimum != null && maximum != null) {
-    return unit
-      ? `${unit} ${minimum.toLocaleString()} - ${maximum.toLocaleString()}`
-      : `${minimum.toLocaleString()} - ${maximum.toLocaleString()}`;
-  }
-  const value = (minimum ?? maximum) as number;
-  return unit ? `${unit} ${value.toLocaleString()}` : value.toLocaleString();
-}
-
 function companyInitial(name: string): string {
   const trimmed = name.trim();
   return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
@@ -94,16 +81,33 @@ export function JobDetailPage() {
   const { jobId } = useParams<{ jobId: string }>();
   const navigate = useNavigate();
   const location = useLocation();
+  const { showToast } = useToast();
   const [showSimilarJobs, setShowSimilarJobs] = useState(false);
+  const lastSimilarErrorToastAt = useRef(0);
   const { trackAndOpenApply, isPending: isTrackingApply } = useTrackAndOpenApply();
   const feedReturnTo =
     (location.state as { fromFeed?: string } | null)?.fromFeed ?? ROUTES.JOB_FEED;
 
   const { data: job, isPending, isError, error, refetch, isFetching } = useJobDetail(jobId);
-  const similarJobs = useSimilarJobs(jobId, {
-    enabled: showSimilarJobs && Boolean(jobId),
-    limit: 6,
-  });
+  const similarJobs = useSimilarJobs(jobId, { enabled: false });
+
+  useEffect(() => {
+    setShowSimilarJobs(false);
+    lastSimilarErrorToastAt.current = 0;
+  }, [jobId]);
+
+  useEffect(() => {
+    if (!showSimilarJobs) return;
+    if (!similarJobs.isError || similarJobs.failureCount < 1) return;
+    if (lastSimilarErrorToastAt.current === similarJobs.failureCount) return;
+    lastSimilarErrorToastAt.current = similarJobs.failureCount;
+    showToast({ message: SIMILAR_JOBS_ERROR_TOAST, severity: 'error' });
+  }, [showSimilarJobs, showToast, similarJobs.failureCount, similarJobs.isError]);
+
+  const handleFindSimilar = () => {
+    setShowSimilarJobs(true);
+    void similarJobs.refetch();
+  };
 
   const notFound = error instanceof JobNotFoundError;
   const applyUrl = toSafeApplyUrl(job?.applyUrl);
@@ -143,7 +147,12 @@ export function JobDetailPage() {
   return (
     <Box component="section" sx={jobDetailPageSx.root}>
       <Box sx={jobDetailPageSx.backButton}>
-        <Button onClick={() => void navigate(feedReturnTo)} size="small" variant="outline">
+        <Button
+          onClick={() => void navigate(feedReturnTo)}
+          size="small"
+          startIcon={<ChevronLeftIcon fontSize="small" />}
+          variant="outline"
+        >
           Back to job feed
         </Button>
       </Box>
@@ -201,7 +210,7 @@ export function JobDetailPage() {
             <Box sx={jobDetailPageSx.facts}>
               <span>
                 <BusinessCenterOutlinedIcon fontSize="small" />
-                {formatSalary(job.salary)}
+                {formatJobSalary(job.salary)}
               </span>
               <span>
                 <WorkOutlineOutlinedIcon fontSize="small" />
@@ -247,8 +256,8 @@ export function JobDetailPage() {
                 </Box>
               </Tooltip>
               <Button
-                disabled={!jobId}
-                onClick={() => setShowSimilarJobs(true)}
+                disabled={!jobId || similarJobs.isFetching}
+                onClick={handleFindSimilar}
                 size="small"
                 variant="outline"
               >
@@ -266,6 +275,12 @@ export function JobDetailPage() {
               </Box>
             ) : null}
           </Box>
+
+          <DetailSection items={sections.responsibilities} title="Responsibilities" />
+          <DetailSection items={sections.requirements} title="Requirements" />
+          <DetailSection items={sections.benefits} title="Benefits" />
+
+          {showDescriptionPanel ? <JobAboutRoleSection description={descriptionDisplay} /> : null}
 
           {showSimilarJobs ? (
             <Box component="section" sx={jobDetailPageSx.similarSection}>
@@ -287,9 +302,12 @@ export function JobDetailPage() {
               ) : null}
 
               {!similarJobs.isPending && !similarJobs.isError && similarCards.length === 0 ? (
-                <Typography role="status" sx={jobDetailPageSx.muted}>
-                  No similar jobs found for this job.
-                </Typography>
+                <JobFeedStatus
+                  message="We couldn’t find similar jobs for this listing. Please try again."
+                  onRetry={similarJobs.isFetching ? undefined : () => void similarJobs.refetch()}
+                  title="No similar jobs found"
+                  tone="info"
+                />
               ) : null}
 
               {similarCards.length > 0 ? (
@@ -317,12 +335,6 @@ export function JobDetailPage() {
               ) : null}
             </Box>
           ) : null}
-
-          <DetailSection items={sections.responsibilities} title="Responsibilities" />
-          <DetailSection items={sections.requirements} title="Requirements" />
-          <DetailSection items={sections.benefits} title="Benefits" />
-
-          {showDescriptionPanel ? <JobAboutRoleSection description={descriptionDisplay} /> : null}
         </Box>
       ) : null}
     </Box>

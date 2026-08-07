@@ -9,13 +9,13 @@ describe('jobSearchQuerySchema', () => {
     expect(result.success).toBe(false);
   });
 
-  it('rejects unknown currency query param via strip/fail — currency not in schema', () => {
+  it('accepts and normalizes a currency query param', () => {
     const result = jobSearchQuerySchema.safeParse({
-      query: { currency: 'USD', sortBy: 'newest' },
+      query: { currency: 'usd', sortBy: 'newest' },
     });
     expect(result.success).toBe(true);
     if (result.success) {
-      expect(result.data.query).not.toHaveProperty('currency');
+      expect(result.data.query.currency).toBe('USD');
     }
   });
 

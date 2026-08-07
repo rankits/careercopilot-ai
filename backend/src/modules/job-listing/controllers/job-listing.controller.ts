@@ -19,6 +19,7 @@ const hasActiveFilters = (filters: JobSearchFilters, sortBy: JobSortBy): boolean
     filters.skills?.length ||
     filters.minSalary !== undefined ||
     filters.maxSalary !== undefined ||
+    filters.currency ||
     (sortBy && sortBy !== 'newest'),
   );
 
@@ -51,6 +52,7 @@ export const searchJobsController = async (req: Request, res: Response, next: Ne
         : undefined,
       minSalary: query.minSalary ? Number(query.minSalary) : undefined,
       maxSalary: query.maxSalary ? Number(query.maxSalary) : undefined,
+      currency: typeof query.currency === 'string' ? query.currency : undefined,
     };
 
     const pagination: JobSearchPagination = {
@@ -66,7 +68,9 @@ export const searchJobsController = async (req: Request, res: Response, next: Ne
       sortBy,
     };
 
-    const result = await jobListingService.searchJobs(options);
+    const userId = req.user?.principalType === 'USER' ? String(req.user.principalId) : undefined;
+
+    const result = await jobListingService.searchJobs(options, userId);
     const resultCount = result.pagination.totalItems;
     const empty = resultCount === 0;
 
@@ -99,7 +103,8 @@ export const searchJobsController = async (req: Request, res: Response, next: Ne
 export const getJobByIdController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { jobId } = req.params;
-    const job = await jobListingService.getJobDetails(jobId as string);
+    const userId = req.user?.principalType === 'USER' ? String(req.user.principalId) : undefined;
+    const job = await jobListingService.getJobDetails(jobId as string, userId);
 
     if (!job) {
       return res.status(404).json({

@@ -29,7 +29,10 @@ const nameSchema = z.string().trim().min(1, 'This field is required').max(80, 'T
 const phoneSchema = z
   .string()
   .trim()
-  .regex(/^\+?[1-9]\d{7,14}$/, 'Phone must be a valid E.164 number, e.g. +14155552671');
+  .regex(
+    /^(\d{10}|\+?[1-9]\d{7,14})$/,
+    'Enter a valid phone number, e.g. 9876543210 or +919876543210',
+  );
 
 const otpCodeSchema = z
   .string()
@@ -81,6 +84,13 @@ export const loginOtpVerifySchema = withEnvelope(
 export const forgotPasswordSchema = withEnvelope(
   z.object({
     email: emailSchema,
+  }),
+);
+
+export const verifyForgotPasswordOtpSchema = withEnvelope(
+  z.object({
+    email: emailSchema,
+    code: otpCodeSchema,
   }),
 );
 
@@ -145,6 +155,7 @@ export type LoginInput = z.infer<typeof loginSchema>['body'];
 export type LoginOtpRequestInput = z.infer<typeof loginOtpRequestSchema>['body'];
 export type LoginOtpVerifyInput = z.infer<typeof loginOtpVerifySchema>['body'];
 export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>['body'];
+export type VerifyForgotPasswordOtpInput = z.infer<typeof verifyForgotPasswordOtpSchema>['body'];
 export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>['body'];

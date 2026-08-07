@@ -1,11 +1,10 @@
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
+import CircularProgress from '@mui/material/CircularProgress';
+import Skeleton from '@mui/material/Skeleton';
+
 import { DASHBOARD_COPY } from '@/constants/pages/dashboard';
 import { ROUTES } from '@/constants/routes';
-import {
-  CheckCircleIcon,
-  CircularProgress,
-  Skeleton,
-  WarningAmberOutlinedIcon,
-} from '@/lib/material';
 
 import type { DashboardResumeCheckModel } from '../hooks/useDashboardOverview';
 import {

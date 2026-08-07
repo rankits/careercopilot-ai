@@ -27,6 +27,7 @@ const baseFilters: ApplicationListFilters = {
   pageSize: '10',
   searchQuery: '',
   sortBy: 'recently-updated',
+  sourceFilter: 'all',
   statusFilter: 'all',
 };
 
@@ -106,41 +107,41 @@ describe('useApplications', () => {
     expect(listMock).toHaveBeenLastCalledWith(expect.objectContaining({ search: 'Stripe' }));
   });
 
-  it('sorts records by priority when requested', async () => {
+  it('requests priority sort from the API when selected', async () => {
     listMock.mockResolvedValue({
       items: [
         {
-          id: 'a1',
-          companyName: 'LowCo',
-          currentStatus: 'SAVED',
-          jobTitle: 'X',
-          priority: 'LOW',
-          location: 'Remote',
-          primarySourceType: 'PLATFORM_APPLY',
-        },
-        {
           id: 'a2',
           companyName: 'HighCo',
-          currentStatus: 'SAVED',
+          currentStatus: 'PREPARING',
           jobTitle: 'Y',
           priority: 'HIGH',
           location: 'Remote',
           primarySourceType: 'PLATFORM_APPLY',
-        },
-        {
-          id: 'a3',
-          companyName: 'MedCo',
-          currentStatus: 'SAVED',
-          jobTitle: 'Z',
-          priority: 'MEDIUM',
-          location: 'Remote',
-          primarySourceType: 'PLATFORM_APPLY',
+          appliedAt: null,
+          archivedAt: null,
+          closedAt: null,
+          companyId: null,
+          companyLogoUrl: null,
+          createdAt: '2026-01-01T00:00:00.000Z',
+          employmentType: null,
+          firstResponseAt: null,
+          interestLevel: null,
+          jobId: null,
+          originalJobUrl: null,
+          remoteType: null,
+          salaryCurrency: null,
+          salaryMax: null,
+          salaryMin: null,
+          salaryPeriod: null,
+          updatedAt: '2026-01-01T00:00:00.000Z',
+          userId: 'u1',
         },
       ],
-      pagination: { page: 1, totalItems: 3, totalPages: 1 },
+      pagination: { page: 1, totalItems: 1, totalPages: 1 },
     });
 
-    const { result } = renderHook(({ filters }) => useApplications(filters), {
+    renderHook(({ filters }) => useApplications(filters), {
       initialProps: { filters: { ...baseFilters, sortBy: 'priority' } },
       wrapper: createWrapper(),
     });
@@ -149,11 +150,7 @@ describe('useApplications', () => {
       await vi.advanceTimersByTimeAsync(300);
     });
 
-    expect(result.current.data?.records.map((record) => record.company)).toEqual([
-      'HighCo',
-      'MedCo',
-      'LowCo',
-    ]);
+    expect(listMock).toHaveBeenCalledWith(expect.objectContaining({ sortBy: 'priority:desc' }));
   });
 
   it('does not fetch when the auth session is missing', async () => {

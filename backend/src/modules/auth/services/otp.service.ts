@@ -89,7 +89,12 @@ export const OtpService = {
     return code;
   },
 
-  async verify(
+  /**
+   * Check a code without consuming it (`lastCodeVerified` stays false).
+   * Used by multi-step flows (forgot-password OTP step) before the final
+   * consuming {@link verify} on password reset.
+   */
+  async validate(
     purpose: OtpPurpose,
     target: string,
     submittedCode: string,
@@ -124,7 +129,22 @@ export const OtpService = {
       return false;
     }
 
-    await prisma.otp.update({ where: { id: record.id }, data: { lastCodeVerified: true } });
+    return true;
+  },
+
+  async verify(
+    purpose: OtpPurpose,
+    target: string,
+    submittedCode: string,
+    transport: OtpTransport = OtpTransport.Email,
+  ): Promise<boolean> {
+    const isValid = await this.validate(purpose, target, submittedCode, transport);
+    if (!isValid) return false;
+
+    await prisma.otp.updateMany({
+      where: { transport, target, purpose, lastCodeVerified: false },
+      data: { lastCodeVerified: true },
+    });
     return true;
   },
 };

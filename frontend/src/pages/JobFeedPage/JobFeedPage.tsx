@@ -1,5 +1,8 @@
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Typography from '@mui/material/Typography';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
@@ -13,7 +16,7 @@ import {
   VirtualizedJobList,
 } from '@/components/molecules';
 
-import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
+import { useSaveJob, useOptimisticSavedJobIds } from '@/features/applications/hooks/useSaveJob';
 import { useJobFeed } from '@/features/jobs/hooks/useJobFeed';
 import {
   type JobFeedWorkMode,
@@ -28,13 +31,12 @@ import {
   sortOptions,
 } from '@/constants/pages/jobFeed';
 import { jobDetailPath } from '@/constants/routes';
-import { applicationsService } from '@/features/applications/services/applications.service';
+import type { ListJobsParams } from '@/features/jobs/types/job.types';
 import { openExternalApply } from '@/features/jobs/utils/openExternalApply';
-import { Box, Chip, Typography, useMediaQuery } from '@/lib/material';
 
 import { jobFeedPageSx } from './styles';
 
-const SEARCH_DEBOUNCE_MS = 300;
+const SEARCH_DEBOUNCE_MS = 400;
 const COMPACT_FILTERS_QUERY = '(max-width: 47.5rem)';
 
 function salaryStateFromUrl(min?: number, max?: number): string {
@@ -54,20 +56,35 @@ export function JobFeedPage() {
   const isCompactFilters = useMediaQuery(COMPACT_FILTERS_QUERY);
   const { state, listParams, patch, clearAll } = useJobFeedSearchParams();
   const [searchDraft, setSearchDraft] = useState(state.query);
-  const debouncedSearch = useDebouncedValue(searchDraft, SEARCH_DEBOUNCE_MS);
+  const debouncedSearch = useDebouncedValue(searchDraft.trim(), SEARCH_DEBOUNCE_MS);
+  const skipNextUrlSyncRef = useRef(false);
   const isSearchPending = searchDraft.trim() !== state.query;
 
+  // Keep the URL shareable, but don't let our own commits overwrite in-progress typing.
   useEffect(() => {
+    // Wait until the draft has settled on this value (avoids re-applying a stale query after clear).
+    if (debouncedSearch !== searchDraft.trim()) return;
+    if (debouncedSearch === state.query) return;
+    skipNextUrlSyncRef.current = true;
+    patch({ query: debouncedSearch }, { resetPage: true });
+  }, [debouncedSearch, patch, searchDraft, state.query]);
+
+  useEffect(() => {
+    if (skipNextUrlSyncRef.current) {
+      skipNextUrlSyncRef.current = false;
+      return;
+    }
     setSearchDraft(state.query);
   }, [state.query]);
 
-  useEffect(() => {
-    const nextQuery = debouncedSearch.trim();
-    // Ignore stale debounce ticks after the draft was cleared/changed again.
-    if (nextQuery !== searchDraft.trim()) return;
-    if (nextQuery === state.query) return;
-    patch({ query: nextQuery }, { resetPage: true });
-  }, [debouncedSearch, patch, searchDraft, state.query]);
+  // Drive the API from the debounced draft so keystrokes never hit the network.
+  const feedParams = useMemo<ListJobsParams>(() => {
+    const params: ListJobsParams = { ...listParams };
+    delete params.query;
+    const query = searchDraft.trim() === state.query ? state.query : debouncedSearch;
+    if (query) params.query = query;
+    return params;
+  }, [debouncedSearch, listParams, searchDraft, state.query]);
 
   const {
     data,
@@ -79,24 +96,13 @@ export function JobFeedPage() {
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
-  } = useJobFeed(listParams);
+  } = useJobFeed(feedParams);
   const { saveJob, unsaveJob } = useSaveJob();
-  const savedQuery = useQuery({
-    queryKey: savedJobsQueryKey,
-    queryFn: () => applicationsService.listSavedJobs(),
-  });
-  const [optimisticSaved, setOptimisticSaved] = useState<Record<string, boolean>>({});
-
-  const savedIdSet = useMemo(() => {
-    const ids = new Set(
-      (savedQuery.data ?? []).map((app) => app.jobId).filter((id): id is string => Boolean(id)),
-    );
-    for (const [jobId, isSaved] of Object.entries(optimisticSaved)) {
-      if (isSaved) ids.add(jobId);
-      else ids.delete(jobId);
-    }
-    return ids;
-  }, [optimisticSaved, savedQuery.data]);
+  const baseSavedIds = useMemo(
+    () => (data?.cards ?? []).filter((job) => job.isSaved && job.id).map((job) => job.id as string),
+    [data?.cards],
+  );
+  const { savedIdSet, setOptimisticSaved } = useOptimisticSavedJobIds(baseSavedIds);
 
   const activeFilters = jobFilters.map((filter) => ({
     ...filter,
@@ -176,11 +182,15 @@ export function JobFeedPage() {
             fullWidth
             onChange={(event) => setSearchDraft(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === 'Enter') {
-                patch({ query: searchDraft.trim() }, { resetPage: true });
-              }
+              if (event.key !== 'Enter') return;
+              event.preventDefault();
+              const nextQuery = searchDraft.trim();
+              setSearchDraft(nextQuery);
+              if (nextQuery === state.query) return;
+              skipNextUrlSyncRef.current = true;
+              patch({ query: nextQuery }, { resetPage: true });
             }}
-            placeholder="Search title, company..."
+            placeholder="Search jobs, companies, or keywords..."
             size="small"
             value={searchDraft}
           />
@@ -200,7 +210,12 @@ export function JobFeedPage() {
             onChange={(value) => {
               const range = salaryBandToApiRange(value);
               patch(
-                { minSalary: range.minSalary, maxSalary: range.maxSalary },
+                {
+                  minSalary: range.minSalary,
+                  maxSalary: range.maxSalary,
+                  // Leave currency unset so the API converts the USD band across currencies.
+                  currency: undefined,
+                },
                 { resetPage: true },
               );
             }}
@@ -281,6 +296,7 @@ export function JobFeedPage() {
             <VirtualizedJobList
               ariaLabel="Job feed results"
               getKey={(job) => job.id ?? `${job.company}-${job.title}`}
+              isLoadingMore={isFetchingNextPage}
               items={data?.cards ?? []}
               onEndReached={() => {
                 if (!hasNextPage || isFetchingNextPage) return;
@@ -305,6 +321,7 @@ export function JobFeedPage() {
                     const jobId = selected.id;
                     const wasSaved = savedIdSet.has(jobId);
                     setOptimisticSaved((prev) => ({ ...prev, [jobId]: !wasSaved }));
+
                     void (wasSaved ? unsaveJob(jobId) : saveJob(jobId)).catch(() => {
                       setOptimisticSaved((prev) => ({ ...prev, [jobId]: wasSaved }));
                     });

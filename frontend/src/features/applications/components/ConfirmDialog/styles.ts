@@ -1,4 +1,6 @@
-import { Box, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, palette, spacing } from '@/tokens';
 
 import { ApplicationDialog, CloseButton } from '../ApplicationDialog/styles';

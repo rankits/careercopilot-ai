@@ -1,13 +1,11 @@
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { JOB_FILTER_BAR_COPY, JOB_FILTER_BAR_SCROLL } from '@/constants/ui';
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  KeyboardArrowDownIcon,
-  SmartToyOutlinedIcon,
-  useMediaQuery,
-} from '@/lib/material';
 
 import { FilterButton, FilterScrollButton, FilterShell, FilterTrack } from './styles';
 

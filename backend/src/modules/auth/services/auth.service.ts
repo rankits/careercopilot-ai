@@ -28,6 +28,7 @@ import type {
   RegisterInput,
   ResendOtpInput,
   ResetPasswordInput,
+  VerifyForgotPasswordOtpInput,
 } from '@/modules/auth/validations/auth.schema.js';
 import type {
   AuthSession,
@@ -36,6 +37,7 @@ import type {
   SafeUser,
 } from '@/modules/auth/types/auth.types.js';
 import { isDevelopment } from '@/shared/config/env.conf.js';
+import { logger } from '@/shared/logger/logger.js';
 
 const assertLoginable = (user: UserWithRole): void => {
   if (!user.isEmailVerified || user.status === Status.PendingVerification) {
@@ -125,7 +127,10 @@ const publishAuthUpdated = async (
       timestamp: new Date().toISOString(),
     })
     .catch((err: unknown) =>
-      console.error('[AuthService] Failed to publish auth.updated event:', err),
+      logger.warn(
+        { err, event: 'auth.publish_failed', reason: 'auth.updated' },
+        'Failed to publish auth.updated event',
+      ),
     );
 };
 
@@ -136,7 +141,7 @@ export const register = async (
   const existing = await authRepository.findUserByEmail(input.email);
 
   if (existing?.isEmailVerified) {
-    throw new AppError('An account with this email already exists', 409, 'CONFLICT');
+    throw new AppError('This email already exists', 409, 'CONFLICT');
   }
 
   const credentials = await PasswordUtil.hash(input.password);
@@ -238,7 +243,12 @@ export const login = async (input: LoginInput, context: RequestContext): Promise
       email: user.email,
       timestamp: new Date().toISOString(),
     })
-    .catch((err: unknown) => console.error('[AuthService] Failed to publish signin event:', err));
+    .catch((err: unknown) =>
+      logger.warn(
+        { err, event: 'auth.publish_failed', reason: 'auth.signin' },
+        'Failed to publish signin event',
+      ),
+    );
 
   return { user: safeUser, tokens };
 };
@@ -299,6 +309,36 @@ export const forgotPassword = async (
   });
 
   return { message: GENERIC_OTP_SENT_MESSAGE };
+};
+
+export const verifyForgotPasswordOtp = async (
+  input: VerifyForgotPasswordOtpInput,
+  context: RequestContext,
+): Promise<{ message: string }> => {
+  const user = await authRepository.findUserByEmail(input.email);
+  if (!user) {
+    throw new AppError('Invalid or expired code', 400, 'OTP_INVALID');
+  }
+
+  const isValid = await OtpService.validate(OtpPurpose.PasswordReset, user.email, input.code);
+  if (!isValid) {
+    await AuditService.write({
+      userId: user.id,
+      action: AuditAction.OtpFailed,
+      context,
+      metadata: { purpose: OtpPurpose.PasswordReset, phase: 'validate' },
+    });
+    throw new AppError('Invalid or expired code', 400, 'OTP_INVALID');
+  }
+
+  await AuditService.write({
+    userId: user.id,
+    action: AuditAction.OtpVerified,
+    context,
+    metadata: { purpose: OtpPurpose.PasswordReset, phase: 'validate' },
+  });
+
+  return { message: 'Verification code confirmed' };
 };
 
 export const resetPassword = async (

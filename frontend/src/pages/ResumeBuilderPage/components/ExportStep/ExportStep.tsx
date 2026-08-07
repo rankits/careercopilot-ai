@@ -1,14 +1,11 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import { useMemo, useRef } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import {
-  ArticleOutlinedIcon,
-  AutoAwesomeOutlinedIcon,
-  Box,
-  PictureAsPdfOutlinedIcon,
-  Typography,
-} from '@/lib/material';
 import type { AnalysisResult, RecheckResult } from '@/services/resumeBuilder.service';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
@@ -20,23 +17,32 @@ import {
 } from '../../utils';
 import { TemplateOption, TemplatePicker } from '../OptimizeStep/editor.styles';
 import { ResumeTemplatePreview } from '../OptimizeStep/ResumeTemplatePreview';
-import { ActionsRow, CardSubtitle, CardTitle, Panel } from '../ResumeBuilderStepPanels/styles';
+import { CardSubtitle, CardTitle, Panel } from '../ResumeBuilderStepPanels/styles';
 
-import { CongratsBanner, ExportLayout, ExportPreviewCard, ScoreGrid } from './styles';
+import {
+  CongratsBanner,
+  ExportActions,
+  ExportLayout,
+  ExportPreviewCard,
+  ScoreGrid,
+} from './styles';
 
 interface ExportStepProps {
   analysis: AnalysisResult | null;
   editedContent: string;
   exportingFormat: 'pdf' | 'docx' | null;
   jobDescription: string;
+  /** ATS score shown on Optimize — Export New ATS must match this. */
+  optimizedAtsScore?: number | null;
   preferredSkills: string[];
   recheckResult: RecheckResult | null;
   rechecking: boolean;
   savingVersion: boolean;
   targetRole: string;
   template: ResumeTemplateId;
-  onBack: () => void;
+  onBack?: () => void;
   onDone: () => void;
+  onCreateNewResume?: () => void;
   onExport: (format: 'pdf' | 'docx', previewRoot?: HTMLElement | null) => void;
   onTemplateChange: (template: ResumeTemplateId) => void;
 }
@@ -46,20 +52,21 @@ export function ExportStep({
   editedContent,
   exportingFormat,
   jobDescription,
-  preferredSkills,
+  optimizedAtsScore = null,
+  preferredSkills: _preferredSkills,
   recheckResult,
   rechecking,
   savingVersion,
   targetRole,
   template,
-  onBack,
   onDone,
+  onCreateNewResume,
   onExport,
   onTemplateChange,
 }: ExportStepProps) {
+  void _preferredSkills;
   const previewRef = useRef<HTMLDivElement>(null);
   const pdfLoading = exportingFormat === 'pdf';
-  const docxLoading = exportingFormat === 'docx';
   const anyExporting = exportingFormat !== null;
 
   const draft = useMemo(() => {
@@ -67,34 +74,27 @@ export function ExportStep({
       editedContent || analysis?.editedContent || '',
       targetRole || analysis?.targetRole || '',
     );
+    // Do not inject optimizedSummary / preferred skills — Apply owns those changes.
     return alignDraftToJob(parsed, {
-      preferredSkills,
       jobDescription,
       matchedSkills: analysis?.skillAnalysis?.matchedSkills,
-      recommendedSkills: [
-        ...(analysis?.skillAnalysis?.recommendedSkills ?? []),
-        ...(analysis?.skillAnalysis?.missingSkills ?? []),
-      ],
-      optimizedSummary: analysis?.optimizedSummary,
+      targetRole: targetRole || analysis?.targetRole || '',
     });
   }, [
     analysis?.editedContent,
-    analysis?.optimizedSummary,
     analysis?.skillAnalysis?.matchedSkills,
-    analysis?.skillAnalysis?.missingSkills,
-    analysis?.skillAnalysis?.recommendedSkills,
     analysis?.targetRole,
     editedContent,
     jobDescription,
-    preferredSkills,
     targetRole,
   ]);
 
   const previousScore =
     recheckResult?.previousAtsScore ?? analysis?.baselineAtsScore ?? analysis?.atsScore ?? 0;
-  // Prefer real recheck; otherwise keep the improved ATS already synced from Optimize.
-  const finalScore = recheckResult?.atsScore ?? analysis?.atsScore ?? previousScore;
-  const improvement = recheckResult?.improvement ?? Math.max(0, finalScore - previousScore);
+  // Same number the Optimize strip showed — never jump on a higher server floor.
+  const finalScore =
+    optimizedAtsScore ?? recheckResult?.atsScore ?? analysis?.atsScore ?? previousScore;
+  const improvement = Math.max(0, finalScore - previousScore);
   const scoreColor = (score: number) =>
     score >= 80
       ? colorTokens.feedbackSuccess
@@ -185,7 +185,7 @@ export function ExportStep({
           ))}
         </TemplatePicker>
 
-        <Box sx={{ display: 'flex', gap: spacing[4], flexWrap: 'wrap', mb: spacing[5] }}>
+        <ExportActions>
           <Button
             disabled={pdfLoading || rechecking}
             isLoading={pdfLoading}
@@ -195,21 +195,15 @@ export function ExportStep({
           >
             {pdfLoading ? 'Generating…' : 'Download PDF'}
           </Button>
-          <Button
-            disabled={docxLoading || rechecking}
-            isLoading={docxLoading}
-            startIcon={<ArticleOutlinedIcon fontSize="small" />}
-            variant="outline"
-            onClick={() => void onExport('docx', previewRef.current)}
-          >
-            {docxLoading ? 'Generating…' : 'Download Word Document'}
-          </Button>
-        </Box>
-
-        <ActionsRow sx={{ justifyContent: 'space-between' }}>
-          <Button variant="outline" onClick={onBack}>
-            ← Back
-          </Button>
+          {onCreateNewResume ? (
+            <Button
+              disabled={savingVersion || anyExporting || rechecking}
+              variant="outline"
+              onClick={() => onCreateNewResume()}
+            >
+              Create New Resume
+            </Button>
+          ) : null}
           <Button
             disabled={savingVersion || anyExporting || rechecking}
             isLoading={savingVersion}
@@ -217,7 +211,7 @@ export function ExportStep({
           >
             {savingVersion ? 'Saving…' : 'Save Resume'}
           </Button>
-        </ActionsRow>
+        </ExportActions>
       </Panel>
 
       <ExportPreviewCard>

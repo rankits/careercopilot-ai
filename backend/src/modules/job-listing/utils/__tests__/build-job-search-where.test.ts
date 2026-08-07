@@ -29,17 +29,15 @@ describe('buildJobSearchWhere', () => {
     );
   });
 
-  it('does not accept a currency filter key (removed from contract)', () => {
-    const where = buildJobSearchWhere({
-      // @ts-expect-error currency intentionally removed from JobSearchFilters
-      currency: 'USD',
-      minSalary: 100,
-    });
-    expect(where).toMatchObject({
+  it('scopes salary filters to the requested currency', () => {
+    expect(buildJobSearchWhere({ currency: 'usd', minSalary: 100 })).toEqual({
       status: 'ACTIVE',
-      salaryMax: { gte: 100 },
+      currency: 'USD',
+      OR: [
+        { salaryMax: { gte: 100 } },
+        { AND: [{ salaryMax: null }, { salaryMin: { gte: 100 } }] },
+      ],
     });
-    expect(JSON.stringify(where)).not.toMatch(/currency/i);
   });
 
   it('applies postedSince against effectivePostedAt', () => {
@@ -48,5 +46,142 @@ describe('buildJobSearchWhere', () => {
       status: 'ACTIVE',
       effectivePostedAt: { gte: postedSince },
     });
+  });
+
+  it('infers hybrid and onsite remote types from a location query', () => {
+    expect(buildJobSearchWhere({ location: 'Hybrid' }).OR).toEqual(
+      expect.arrayContaining([{ remoteType: { in: ['HYBRID'] } }]),
+    );
+    expect(buildJobSearchWhere({ location: 'on-site London' }).OR).toEqual(
+      expect.arrayContaining([{ remoteType: { in: ['ONSITE'] } }]),
+    );
+    expect(buildJobSearchWhere({ location: 'onsite' }).OR).toEqual(
+      expect.arrayContaining([{ remoteType: { in: ['ONSITE'] } }]),
+    );
+  });
+
+  it('omits a remote-type clause when the location has no remote keyword', () => {
+    const where = buildJobSearchWhere({ location: 'London' });
+    expect(where.OR).toEqual(
+      expect.not.arrayContaining([expect.objectContaining({ remoteType: expect.anything() })]),
+    );
+  });
+
+  it('trims the location before matching', () => {
+    const where = buildJobSearchWhere({ location: '  remote  ' });
+    expect(where.OR).toEqual(
+      expect.arrayContaining([
+        {
+          providerMetadata: {
+            path: ['locationRaw'],
+            string_contains: 'remote',
+          },
+        },
+      ]),
+    );
+  });
+
+  it('applies remoteTypes and employmentTypes filters', () => {
+    const where = buildJobSearchWhere({
+      remoteTypes: ['REMOTE'],
+      employmentTypes: ['FULL_TIME', ' CONTRACT '],
+    });
+    expect(where.remoteType).toEqual({ in: ['REMOTE'] });
+    expect(where.employmentType).toEqual({ in: ['FULL_TIME', 'CONTRACT'] });
+  });
+
+  it('accepts a single-string filter value and normalizes it', () => {
+    const where = buildJobSearchWhere({ skills: '  Go ', remoteTypes: 'REMOTE' as never });
+    expect(where.AND).toEqual([{ skills: { array_contains: ['Go'] } }]);
+    expect(where.remoteType).toEqual({ in: ['REMOTE'] });
+  });
+
+  it('applies companySlug and a query OR block', () => {
+    const where = buildJobSearchWhere({ companySlug: 'acme', query: 'engineer' });
+    expect(where.companySlug).toBe('acme');
+    expect(where.OR).toEqual([
+      { title: { contains: 'engineer', mode: 'insensitive' } },
+      { descriptionText: { contains: 'engineer', mode: 'insensitive' } },
+      { company: { name: { contains: 'engineer', mode: 'insensitive' } } },
+    ]);
+  });
+
+  it('applies maxSalary across currencies using USD-band conversion', () => {
+    const where = buildJobSearchWhere({ maxSalary: 100000 });
+    expect(where.status).toBe('ACTIVE');
+    expect(where.AND).toEqual([
+      {
+        OR: expect.arrayContaining([
+          {
+            currency: 'USD',
+            OR: [
+              { salaryMax: { lte: 100000 } },
+              { AND: [{ salaryMax: null }, { salaryMin: { lte: 100000 } }] },
+            ],
+          },
+          {
+            currency: 'EUR',
+            OR: [
+              { salaryMax: { lte: 92000 } },
+              { AND: [{ salaryMax: null }, { salaryMin: { lte: 92000 } }] },
+            ],
+          },
+          {
+            currency: 'INR',
+            OR: [
+              { salaryMax: { lte: 83 } },
+              { AND: [{ salaryMax: null }, { salaryMin: { lte: 83 } }] },
+            ],
+          },
+        ]),
+      },
+    ]);
+  });
+
+  it('expands USD salary bands across currencies when currency is omitted', () => {
+    const where = buildJobSearchWhere({ minSalary: 50000, maxSalary: 100000 });
+    expect(where.AND).toEqual([
+      {
+        OR: expect.arrayContaining([
+          {
+            currency: 'USD',
+            OR: [
+              { salaryMax: { gte: 50000, lte: 100000 } },
+              {
+                AND: [{ salaryMax: null }, { salaryMin: { gte: 50000, lte: 100000 } }],
+              },
+            ],
+          },
+          {
+            currency: 'EUR',
+            OR: [
+              { salaryMax: { gte: 46000, lte: 92000 } },
+              {
+                AND: [{ salaryMax: null }, { salaryMin: { gte: 46000, lte: 92000 } }],
+              },
+            ],
+          },
+          {
+            currency: 'INR',
+            OR: [
+              { salaryMax: { gte: 41.5, lte: 83 } },
+              {
+                AND: [{ salaryMax: null }, { salaryMin: { gte: 41.5, lte: 83 } }],
+              },
+            ],
+          },
+        ]),
+      },
+    ]);
+  });
+
+  it('drops blank filter values entirely', () => {
+    const where = buildJobSearchWhere({
+      skills: ['  '],
+      remoteTypes: [],
+      employmentTypes: [''],
+      location: '   ',
+    });
+    expect(where).toEqual({ status: 'ACTIVE' });
   });
 });

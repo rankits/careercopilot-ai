@@ -43,6 +43,12 @@ function buildListParams(params: ApplicationListParams): Record<string, string |
     query.status = Array.isArray(params.status) ? params.status.join(',') : params.status;
   }
 
+  if (params.sourceType) {
+    query.sourceType = Array.isArray(params.sourceType)
+      ? params.sourceType.join(',')
+      : params.sourceType;
+  }
+
   return query;
 }
 

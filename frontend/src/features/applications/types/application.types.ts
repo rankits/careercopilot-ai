@@ -28,7 +28,15 @@ export type ApiApplicationSourceType =
 export type ApiApplicationPriority = 'LOW' | 'MEDIUM' | 'HIGH';
 
 export type ApplicationSortBy =
-  'updatedAt:desc' | 'updatedAt:asc' | 'createdAt:desc' | 'createdAt:asc' | 'companyName:asc';
+  | 'updatedAt:desc'
+  | 'updatedAt:asc'
+  | 'createdAt:desc'
+  | 'createdAt:asc'
+  | 'appliedAt:desc'
+  | 'appliedAt:asc'
+  | 'companyName:asc'
+  | 'priority:asc'
+  | 'priority:desc';
 
 export interface ApplicationDto {
   appliedAt: string | null;
@@ -78,6 +86,7 @@ export interface ApplicationListParams {
   page?: number;
   search?: string;
   sortBy?: ApplicationSortBy;
+  sourceType?: ApiApplicationSourceType | ApiApplicationSourceType[];
   status?: ApiApplicationStatus | ApiApplicationStatus[];
 }
 

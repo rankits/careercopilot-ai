@@ -1,4 +1,7 @@
-import { Box, IconButton, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, palette, spacing } from '@/tokens';
 
 import { ApplicationDialog } from '../ApplicationDialog/styles';
@@ -7,13 +10,12 @@ const mobileBreakpoint = '@media (max-width: 47.5rem)';
 
 export const DetailApplicationDialog = styled(ApplicationDialog)({
   '& .MuiDialog-paper': {
-    display: 'flex',
-    flexDirection: 'column',
-    maxHeight: 'calc(100vh - 2rem)',
-    overflow: 'hidden',
+    maxHeight:
+      'min(52rem, calc(100dvh - 2rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)))',
 
     [mobileBreakpoint]: {
-      maxHeight: 'calc(100vh - 1.5rem)',
+      maxHeight:
+        'calc(100dvh - 1rem - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))',
     },
   },
 });
@@ -65,10 +67,6 @@ export const DetailTabBar = styled(Box)({
   flexShrink: 0,
   gap: 0,
   gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-
-  [mobileBreakpoint]: {
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  },
 });
 
 export const DetailTab = styled('button', {
@@ -106,9 +104,13 @@ export const DetailTab = styled('button', {
   },
 
   [mobileBreakpoint]: {
+    flexDirection: 'column',
     fontSize: fontSize.xs,
-    minHeight: spacing[10],
+    gap: spacing[1],
+    minHeight: spacing[12],
+    minWidth: 0,
     padding: `${spacing[2]} ${spacing[1]}`,
+    whiteSpace: 'nowrap',
   },
 }));
 

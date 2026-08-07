@@ -1,5 +1,6 @@
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import type { EmbeddingHttpClient } from '@/modules/ai-embeddings/providers/embedding-http.client.js';
+import { logger } from '@/shared/logger/logger.js';
 
 export interface OpenRouterClientOptions {
   readonly apiKey: string;
@@ -131,8 +132,12 @@ export class OpenRouterEmbeddingClient {
         return response.data.some((item) => item.id === modelId);
       }
       return true;
-    } catch {
+    } catch (error) {
       // Fallback: if models endpoint is unavailable, assume true and let actual requests validate
+      logger.warn(
+        { err: error, modelId, event: 'embedding.models_probe_failed' },
+        'OpenRouter models probe failed; assuming model available',
+      );
       return true;
     }
   }

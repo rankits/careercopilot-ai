@@ -1,5 +1,9 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import Box from '@mui/material/Box';
+import LinearProgress from '@mui/material/LinearProgress';
+import Typography from '@mui/material/Typography';
+
 import type { ResumePresentation } from '@/features/resume/utils/resumePresentation';
-import { AutoAwesomeOutlinedIcon, Box, LinearProgress, Typography } from '@/lib/material';
 import { colorTokens, spacing } from '@/tokens';
 
 interface ResumeSummaryProps {

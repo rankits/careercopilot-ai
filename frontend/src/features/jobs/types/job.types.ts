@@ -20,6 +20,8 @@ export interface JobListDto {
   skills: string[];
   publishedAt: string | null;
   applyUrl: string | null;
+  /** Present when the user is authenticated and has bookmarked this job. */
+  isSaved?: boolean;
 }
 
 export interface JobListPagination {
@@ -56,4 +58,5 @@ export interface ListJobsParams {
   skills?: string | string[];
   minSalary?: number;
   maxSalary?: number;
+  currency?: string;
 }

@@ -1,4 +1,7 @@
-import { Box, LinearProgress, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import LinearProgress from '@mui/material/LinearProgress';
+import { styled } from '@mui/material/styles';
+
 import { colorTokens } from '@/tokens';
 
 import {
