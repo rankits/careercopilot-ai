@@ -683,9 +683,7 @@ describe('AiMatchPage', () => {
 
     renderPage(true, '/ai-match?mode=resume');
 
-    expect(
-      await screen.findByRole('status', { name: /upload and confirm/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('status', { name: /upload and confirm/i })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /add resume/i })).toHaveAttribute('href', '/profile');
     expect(generateResumeMock).not.toHaveBeenCalled();
   });

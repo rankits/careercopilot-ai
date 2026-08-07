@@ -11,13 +11,7 @@ describe('MessageBubble', () => {
       minute: '2-digit',
     });
 
-    render(
-      <MessageBubble
-        role="user"
-        text="Hello, how can you help me?"
-        timestamp={timestamp}
-      />,
-    );
+    render(<MessageBubble role="user" text="Hello, how can you help me?" timestamp={timestamp} />);
 
     expect(screen.getByText('Hello, how can you help me?')).toBeInTheDocument();
 
@@ -43,13 +37,7 @@ describe('MessageBubble', () => {
   });
 
   it('handles invalid timestamp gracefully by rendering empty time string', () => {
-    render(
-      <MessageBubble
-        role="assistant"
-        text="Sample message"
-        timestamp="invalid-timestamp"
-      />,
-    );
+    render(<MessageBubble role="assistant" text="Sample message" timestamp="invalid-timestamp" />);
 
     expect(screen.getByText('Sample message')).toBeInTheDocument();
     const timeElement = screen.getByText((content, element) => {

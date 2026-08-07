@@ -4,11 +4,7 @@ import { useAppDispatch, useAppSelector } from '@/hooks/redux';
 
 import { establishSession, logout, setSessionResolved } from '@/features/auth/authSlice';
 import { authService } from '@/features/auth/services/auth.service';
-import {
-  allowAuthSession,
-  getStoredUser,
-  setAccessToken,
-} from '@/features/auth/utils/authSession';
+import { allowAuthSession, getStoredUser, setAccessToken } from '@/features/auth/utils/authSession';
 
 const BOOTSTRAP_TIMEOUT_MS = 8_000;
 
@@ -63,7 +59,8 @@ export function useAuthBootstrap() {
         setAccessToken(accessToken);
 
         const cachedUser = getStoredUser();
-        const user = cachedUser ?? (await withTimeout(authService.getCurrentUser(), BOOTSTRAP_TIMEOUT_MS));
+        const user =
+          cachedUser ?? (await withTimeout(authService.getCurrentUser(), BOOTSTRAP_TIMEOUT_MS));
         if (cancelled) return;
 
         dispatch(
