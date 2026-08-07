@@ -18,6 +18,7 @@ import { ProfessionalLinksSection } from './ProfessionalLinksSection';
 import { ResumeVersionsTab } from './ResumeVersionsTab';
 import { SetupChecklist } from './SetupChecklist';
 import { SetupDirtyProvider, useSetupDirtyNavigation } from './SetupDirtyContext';
+import { setupPageSx } from './setupPageStyles';
 import { SetupSummary } from './SetupSummary';
 import { WorkAuthorizationSection } from './WorkAuthorizationSection';
 
@@ -159,15 +160,21 @@ function AutoApplyPageContent() {
         }}
       >
         <Box>
-          <Typography component="h1" sx={{ fontWeight: 700, letterSpacing: '-0.03em', mb: 0.5 }} variant="h4">
+          <Typography component="h1" sx={setupPageSx.pageTitle}>
             Application Setup
           </Typography>
-          <Typography color="text.secondary" sx={{ maxWidth: 740 }} variant="body2">
+          <Typography sx={setupPageSx.pageSubtitle} variant="body2">
             Tell us about your preferences. We&apos;ll use this to prepare better applications and
             streamline your review.
           </Typography>
         </Box>
-        <Box sx={{ alignSelf: { xs: 'stretch', sm: 'flex-start', lg: 'auto' }, display: 'flex', gap: 1 }}>
+        <Box
+          sx={{
+            alignSelf: { xs: 'stretch', sm: 'flex-start', lg: 'auto' },
+            display: 'flex',
+            gap: 1,
+          }}
+        >
           <MuiButton
             onClick={() => {
               const buttons = document.querySelectorAll<HTMLButtonElement>(
@@ -202,9 +209,7 @@ function AutoApplyPageContent() {
           px: { xs: 0, md: 1 },
         }}
       >
-        <Typography color="text.secondary" sx={{ flexShrink: 0, fontSize: 12, fontWeight: 600 }}>
-          Overall setup progress
-        </Typography>
+        <Typography sx={setupPageSx.progressLabel}>Overall setup progress</Typography>
         <Box sx={{ bgcolor: 'grey.200', borderRadius: 99, flex: 1, height: 6, overflow: 'hidden' }}>
           <Box
             sx={{
@@ -216,7 +221,7 @@ function AutoApplyPageContent() {
             }}
           />
         </Box>
-        <Typography color="text.secondary" sx={{ flexShrink: 0, fontSize: 12 }}>
+        <Typography sx={setupPageSx.progressValue}>
           {setupStatusQuery.data?.percent ?? 0}% complete
         </Typography>
       </Box>
@@ -225,8 +230,11 @@ function AutoApplyPageContent() {
         sx={{
           alignItems: 'start',
           display: 'grid',
-          gap: { xs: 2, xl: 3 },
-          gridTemplateColumns: { xs: 'minmax(0, 1fr)', lg: '230px minmax(0, 1fr)', xl: '260px minmax(0, 1fr) 260px' },
+          gap: { xs: 2, lg: 3 },
+          gridTemplateColumns: {
+            xs: 'minmax(0, 1fr)',
+            lg: '230px minmax(0, 1fr) 260px',
+          },
         }}
       >
         <Box sx={{ minWidth: 0 }}>
@@ -262,7 +270,7 @@ function AutoApplyPageContent() {
           </Box>
         </Box>
 
-        <Box sx={{ display: { xs: 'none', xl: 'block' } }}>
+        <Box sx={{ display: { xs: 'none', lg: 'block' } }}>
           <SetupSummary onBrowseJobs={browseJobs} status={setupStatusQuery.data} />
         </Box>
       </Box>

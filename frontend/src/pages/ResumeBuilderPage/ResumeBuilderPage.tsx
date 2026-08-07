@@ -1,8 +1,8 @@
+import Alert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
-import Alert from '@mui/material/Alert';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
@@ -162,7 +162,8 @@ export function ResumeBuilderPage() {
             sx={{ mx: 2, mb: 1 }}
             onClose={() => assistedApply.setAssistedApplyContextNotice(false)}
           >
-            Job details were loaded from your Assisted Apply workspace. Review them before continuing.
+            Job details were loaded from your Assisted Apply workspace. Review them before
+            continuing.
           </Alert>
         ) : null}
       </StickyChrome>

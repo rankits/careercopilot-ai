@@ -1,12 +1,7 @@
 import type { SetupStatusDto } from '@/features/auto-apply/types/autoApply.types';
-import {
-  CheckIcon,
-  HelpOutlineIcon,
-  MuiButton,
-  Paper,
-  Typography,
-  Box,
-} from '@/lib/material';
+import { CheckIcon, HelpOutlineIcon, MuiButton, Paper, Typography, Box } from '@/lib/material';
+
+import { setupPageSx } from './setupPageStyles';
 
 interface SetupSummaryProps {
   status: SetupStatusDto | undefined;
@@ -29,7 +24,7 @@ export function SetupSummary({ status, onBrowseJobs }: SetupSummaryProps) {
         }}
         variant="outlined"
       >
-        <Typography sx={{ fontSize: 13, fontWeight: 700, mb: 1.5 }}>Setup overview</Typography>
+        <Typography sx={setupPageSx.summaryTitle}>Setup overview</Typography>
         <Box sx={{ alignItems: 'center', display: 'flex', gap: 1.5, mb: 2 }}>
           <Box
             sx={{
@@ -44,29 +39,29 @@ export function SetupSummary({ status, onBrowseJobs }: SetupSummaryProps) {
               width: 68,
             }}
           >
-            <Typography sx={{ fontSize: 13, fontWeight: 700 }}>
+            <Typography sx={setupPageSx.summaryStat}>
               {complete}/{total}
             </Typography>
           </Box>
           <Box>
-            <Typography sx={{ fontSize: 12, fontWeight: 700 }}>Sections completed</Typography>
-            <Typography color="text.secondary" sx={{ fontSize: 11 }}>
+            <Typography sx={setupPageSx.summaryBody}>Sections completed</Typography>
+            <Typography color="text.secondary" sx={setupPageSx.summaryCaption}>
               Keep your details current for accurate applications.
             </Typography>
           </Box>
         </Box>
         <Box sx={{ bgcolor: 'primary.50', borderRadius: 1.5, p: 1.25 }}>
-          <Typography sx={{ color: 'primary.main', fontSize: 11, fontWeight: 700, mb: 0.75 }}>
-            Why complete your setup?
-          </Typography>
-          {['Higher match quality', 'Faster application review', 'Better interview opportunities'].map(
-            (benefit) => (
-              <Box key={benefit} sx={{ alignItems: 'center', display: 'flex', gap: 0.75, mb: 0.4 }}>
-                <CheckIcon color="success" sx={{ fontSize: 14 }} />
-                <Typography sx={{ fontSize: 10 }}>{benefit}</Typography>
-              </Box>
-            ),
-          )}
+          <Typography sx={setupPageSx.summaryHighlight}>Why complete your setup?</Typography>
+          {[
+            'Higher match quality',
+            'Faster application review',
+            'Better interview opportunities',
+          ].map((benefit) => (
+            <Box key={benefit} sx={{ alignItems: 'center', display: 'flex', gap: 0.75, mb: 0.4 }}>
+              <CheckIcon color="success" sx={{ fontSize: 14 }} />
+              <Typography sx={setupPageSx.summaryListItem}>{benefit}</Typography>
+            </Box>
+          ))}
         </Box>
       </Paper>
 
@@ -79,8 +74,8 @@ export function SetupSummary({ status, onBrowseJobs }: SetupSummaryProps) {
       <Box sx={{ alignItems: 'flex-start', display: 'flex', gap: 1, px: 1 }}>
         <HelpOutlineIcon color="primary" sx={{ fontSize: 20 }} />
         <Box>
-          <Typography sx={{ fontSize: 11, fontWeight: 700 }}>Need help?</Typography>
-          <Typography color="text.secondary" sx={{ fontSize: 10 }}>
+          <Typography sx={setupPageSx.summaryBody}>Need help?</Typography>
+          <Typography color="text.secondary" sx={setupPageSx.summaryCaption}>
             Our support team is here to help you finish your setup.
           </Typography>
         </Box>

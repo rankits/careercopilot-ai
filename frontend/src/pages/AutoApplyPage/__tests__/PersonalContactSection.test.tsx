@@ -96,9 +96,22 @@ describe('PersonalContactSection AA-021', () => {
     renderSection();
 
     await user.clear(screen.getByLabelText(/Full name/i));
-    await user.click(screen.getByRole('button', { name: /^Save$/i }));
+    await user.click(screen.getByRole('button', { name: /^Save changes$/i }));
 
     expect(screen.getByText('Enter your full name.')).toBeInTheDocument();
+    expect(mockUpdateUser).not.toHaveBeenCalled();
+    expect(mockUpsertProfile).not.toHaveBeenCalled();
+  });
+
+  it('requires both first and last name before calling the API', async () => {
+    const user = userEvent.setup();
+    renderSection();
+
+    await user.clear(screen.getByLabelText(/Full name/i));
+    await user.type(screen.getByLabelText(/Full name/i), 'Madonna');
+    await user.click(screen.getByRole('button', { name: /^Save changes$/i }));
+
+    expect(screen.getByText('Please enter both your first and last name.')).toBeInTheDocument();
     expect(mockUpdateUser).not.toHaveBeenCalled();
     expect(mockUpsertProfile).not.toHaveBeenCalled();
   });
@@ -109,7 +122,7 @@ describe('PersonalContactSection AA-021', () => {
 
     await user.clear(screen.getByLabelText(/Full name/i));
     await user.type(screen.getByLabelText(/Full name/i), 'Janet Doe');
-    await user.click(screen.getByRole('button', { name: /^Save$/i }));
+    await user.click(screen.getByRole('button', { name: /^Save changes$/i }));
 
     await waitFor(() => expect(mockUpdateUser).toHaveBeenCalled());
     expect(mockUpdateUser).toHaveBeenCalledWith({
@@ -126,7 +139,7 @@ describe('PersonalContactSection AA-021', () => {
 
     await user.clear(screen.getByLabelText(/Current city or region/i));
     await user.type(screen.getByLabelText(/Current city or region/i), 'Denver, CO');
-    await user.click(screen.getByRole('button', { name: /^Save$/i }));
+    await user.click(screen.getByRole('button', { name: /^Save changes$/i }));
 
     await waitFor(() =>
       expect(

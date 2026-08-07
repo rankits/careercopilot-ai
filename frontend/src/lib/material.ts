@@ -147,4 +147,3 @@ export type { SystemStyleObject } from '@mui/system';
 export { default as RateReviewOutlinedIcon } from '@mui/icons-material/RateReviewOutlined';
 export { default as SendOutlinedIcon } from '@mui/icons-material/SendOutlined';
 export { default as WarningAmberOutlinedIcon } from '@mui/icons-material/WarningAmberOutlined';
-export { default as Skeleton } from '@mui/material/Skeleton';
