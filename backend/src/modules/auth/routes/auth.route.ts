@@ -2,6 +2,8 @@ import express from 'express';
 import {
   changePasswordController,
   forgotPasswordController,
+  googleLoginCallbackController,
+  googleLoginStartController,
   loginController,
   logoutAllController,
   logoutController,
@@ -19,6 +21,8 @@ import { authRateLimiter, otpRateLimiter } from '@/shared/middlewares/rateLimite
 import {
   changePasswordSchema,
   forgotPasswordSchema,
+  googleLoginCallbackSchema,
+  googleLoginStartSchema,
   loginOtpRequestSchema,
   loginOtpVerifySchema,
   loginSchema,
@@ -48,6 +52,20 @@ router.post(
   authRateLimiter,
   validateResource(loginOtpVerifySchema),
   verifyLoginOtpController,
+);
+
+// --- Sign-in with Google (identity login; separate from Connected Accounts) ---
+router.post(
+  '/google/start',
+  authRateLimiter,
+  validateResource(googleLoginStartSchema),
+  googleLoginStartController,
+);
+router.post(
+  '/google/callback',
+  authRateLimiter,
+  validateResource(googleLoginCallbackSchema),
+  googleLoginCallbackController,
 );
 
 // --- Forgot / reset password ---
