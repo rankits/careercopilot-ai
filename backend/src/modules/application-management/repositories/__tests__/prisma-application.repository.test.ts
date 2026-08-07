@@ -156,6 +156,39 @@ describe('PrismaApplicationRepository', () => {
     });
   });
 
+  describe('findSavedJobIds', () => {
+    it('returns job ids with SAVED status for the user', async () => {
+      fakeDb.seedApplication({
+        userId: USER,
+        jobId: 'job-saved-1',
+        currentStatus: 'SAVED',
+        salaryMin: 10,
+        salaryMax: 20,
+      });
+      fakeDb.seedApplication({
+        userId: USER,
+        jobId: 'job-applied',
+        currentStatus: 'APPLIED',
+        salaryMin: 10,
+        salaryMax: 20,
+      });
+      fakeDb.seedApplication({
+        userId: 'other-user',
+        jobId: 'job-saved-1',
+        currentStatus: 'SAVED',
+        salaryMin: 10,
+        salaryMax: 20,
+      });
+
+      const ids = await repo.findSavedJobIds(USER, ['job-saved-1', 'job-applied', 'job-missing']);
+      expect(ids).toEqual(['job-saved-1']);
+    });
+
+    it('returns an empty array when jobIds is empty', async () => {
+      await expect(repo.findSavedJobIds(USER, [])).resolves.toEqual([]);
+    });
+  });
+
   describe('findByNormalisedUrl', () => {
     it('returns a matching application for the normalised URL', async () => {
       const app = fakeDb.seedApplication({

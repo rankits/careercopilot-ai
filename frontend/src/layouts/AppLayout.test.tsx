@@ -1,6 +1,6 @@
 import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
@@ -313,13 +313,23 @@ describe('AppLayout', () => {
       version: 1,
     };
 
-    it('fetches uploaded resumes and handles fetch errors silently', async () => {
+    it('loads uploaded resumes on layout mount for the sidebar card', async () => {
+      renderLayout();
+
+      expect(await screen.findByRole('heading', { name: /dashboard/i })).toBeInTheDocument();
+      await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
+    });
+
+    it('loads uploaded resumes when opening resume versions', async () => {
+      const user = userEvent.setup();
       listResumesMock.mockRejectedValueOnce(new Error('Failed to load resumes'));
 
       renderLayout();
 
-      await waitFor(() => expect(listResumesMock).toHaveBeenCalled());
-      expect(screen.queryByText('My_Resume.pdf')).not.toBeInTheDocument();
+      await user.click(screen.getByRole('button', { name: /view all versions/i }));
+
+      await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
+      expect(await screen.findByText(/no uploaded resumes yet/i)).toBeInTheDocument();
     });
 
     it('renders mobile layout when screen is mobile width', () => {
@@ -330,14 +340,14 @@ describe('AppLayout', () => {
       expect(screen.getByRole('navigation', { name: /mobile navigation/i })).toBeInTheDocument();
     });
 
-    it('does nothing when downloading latest resume if no resume exists', async () => {
+    it('shows disabled download when no resumes exist after preload', async () => {
+      listResumesMock.mockResolvedValueOnce([]);
       renderLayout();
-      await waitFor(() => expect(listResumesMock).toHaveBeenCalled());
+
+      await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
 
       const downloadButton = screen.getByRole('button', { name: /download latest/i });
       expect(downloadButton).toBeDisabled();
-      fireEvent.click(downloadButton);
-
       expect(downloadResumeMock).not.toHaveBeenCalled();
     });
 
@@ -348,9 +358,9 @@ describe('AppLayout', () => {
       renderLayout();
 
       const downloadButton = screen.getByRole('button', { name: /download latest/i });
-      await waitFor(() => expect(downloadButton).not.toBeDisabled());
       await user.click(downloadButton);
 
+      await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
       expect(downloadResumeMock).toHaveBeenCalledWith('resume-1', 'My_Resume.pdf');
     });
 
@@ -388,9 +398,9 @@ describe('AppLayout', () => {
       renderLayout();
 
       const downloadButton = screen.getByRole('button', { name: /download latest/i });
-      await waitFor(() => expect(downloadButton).not.toBeDisabled());
       await user.click(downloadButton);
 
+      await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
       expect(await screen.findByText('File server unavailable')).toBeInTheDocument();
     });
 
@@ -402,9 +412,9 @@ describe('AppLayout', () => {
       renderLayout();
 
       const downloadButton = screen.getByRole('button', { name: /download latest/i });
-      await waitFor(() => expect(downloadButton).not.toBeDisabled());
       await user.click(downloadButton);
 
+      await waitFor(() => expect(listResumesMock).toHaveBeenCalledTimes(1));
       expect(await screen.findByText('Unable to download this resume.')).toBeInTheDocument();
     });
   });

@@ -13,6 +13,7 @@ export interface ApplicationListFilters {
   status?: ApplicationStatus | ApplicationStatus[];
   archived?: 'true' | 'false' | 'all';
   search?: string;
+  sourceType?: ApplicationSourceType | ApplicationSourceType[];
 }
 
 export interface ApplicationListPagination {
@@ -21,7 +22,15 @@ export interface ApplicationListPagination {
 }
 
 export type ApplicationSortBy =
-  'updatedAt:desc' | 'updatedAt:asc' | 'createdAt:desc' | 'createdAt:asc' | 'companyName:asc';
+  | 'updatedAt:desc'
+  | 'updatedAt:asc'
+  | 'createdAt:desc'
+  | 'createdAt:asc'
+  | 'appliedAt:desc'
+  | 'appliedAt:asc'
+  | 'companyName:asc'
+  | 'priority:asc'
+  | 'priority:desc';
 
 export interface ApplicationListOptions {
   userId: string;

@@ -1,10 +1,14 @@
+import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
+import { authReducer } from '@/features/auth/authSlice';
 
 import { RegisterPage } from './RegisterPage';
 
@@ -17,23 +21,27 @@ vi.mock('@/features/auth/services/auth.service', () => ({
 }));
 
 function renderPage() {
+  const testStore = configureStore({ reducer: { auth: authReducer } });
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
 
   return {
     queryClient,
+    store: testStore,
     ...render(
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <MemoryRouter initialEntries={['/register']}>
-            <Routes>
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/profile" element={<h1>Profile destination</h1>} />
-              <Route path="/login" element={<h1>Login destination</h1>} />
-            </Routes>
-          </MemoryRouter>
-        </ToastProvider>
+        <Provider store={testStore}>
+          <ToastProvider>
+            <MemoryRouter initialEntries={['/register']}>
+              <Routes>
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/profile" element={<h1>Profile destination</h1>} />
+                <Route path="/login" element={<h1>Login destination</h1>} />
+              </Routes>
+            </MemoryRouter>
+          </ToastProvider>
+        </Provider>
       </QueryClientProvider>,
     ),
   };
@@ -68,10 +76,7 @@ describe('RegisterPage', () => {
     expect(screen.getByRole('heading', { name: /create account/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /careercopilot/i })).toBeInTheDocument();
     expect(screen.getByRole('img', { name: /career journey illustration/i })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /login from header/i })).toHaveAttribute(
-      'href',
-      '/login',
-    );
+    expect(screen.getByRole('link', { name: /^login$/i })).toHaveAttribute('href', '/login');
     expect(
       screen.getByRole('heading', { name: /start your smarter career journey/i }),
     ).toBeInTheDocument();
@@ -161,10 +166,12 @@ describe('RegisterPage', () => {
         firstName: 'Ada',
         lastName: 'Lovelace',
         password: 'Str0ng!Passw0rd',
-        phone: '9876543210',
+        phone: '+919876543210',
       }),
     );
-    expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
     expect(
       queryClient.getMutationCache().find({ mutationKey: ['auth', 'register'] })?.state.status,
     ).toBe('success');
@@ -217,7 +224,9 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(registerMock).toHaveBeenCalledTimes(2);
-    expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /profile destination/i }),
+    ).toBeInTheDocument();
   }, 15_000);
 
   it('shows the backend registration error message when the API provides one', async () => {

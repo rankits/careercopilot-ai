@@ -1,9 +1,12 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
+import { ROUTES } from '@/constants/routes';
 import { JobNotFoundError } from '@/features/jobs/services/jobs.service';
 
 import { JobDetailPage } from './JobDetailPage';
@@ -30,6 +33,15 @@ vi.mock('@/features/recommendations/services/recommendations.service', () => ({
   },
 }));
 
+function JobFeedReturnLink({ jobId }: { jobId: string }) {
+  return (
+    <div>
+      <p>Job feed</p>
+      <Link to={`/jobs/${jobId}`}>Reopen job</Link>
+    </div>
+  );
+}
+
 function renderDetail(jobId = 'job-1') {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
@@ -37,11 +49,14 @@ function renderDetail(jobId = 'job-1') {
 
   return render(
     <QueryClientProvider client={queryClient}>
-      <MemoryRouter initialEntries={[`/jobs/${jobId}`]}>
-        <Routes>
-          <Route path="/jobs/:jobId" element={<JobDetailPage />} />
-        </Routes>
-      </MemoryRouter>
+      <ToastProvider>
+        <MemoryRouter initialEntries={[`/jobs/${jobId}`]}>
+          <Routes>
+            <Route path={ROUTES.JOB_FEED} element={<JobFeedReturnLink jobId={jobId} />} />
+            <Route path="/jobs/:jobId" element={<JobDetailPage />} />
+          </Routes>
+        </MemoryRouter>
+      </ToastProvider>
     </QueryClientProvider>,
   );
 }
@@ -248,7 +263,74 @@ describe('JobDetailPage', () => {
     expect(await screen.findByText(/platform engineer/i)).toBeInTheDocument();
     expect(screen.getByText(/74% Match/i)).toBeInTheDocument();
     expect(screen.queryByText(/source duplicate/i)).not.toBeInTheDocument();
-    expect(similarMock).toHaveBeenCalledWith('job-1', { limit: 6 }, expect.anything());
+    expect(similarMock).toHaveBeenCalledWith('job-1', {}, expect.anything());
+  });
+
+  it('shows an empty similar-jobs card when none are returned', async () => {
+    const user = userEvent.setup();
+    getJobMock.mockResolvedValue(baseJob);
+    similarMock.mockResolvedValue([]);
+
+    renderDetail();
+    await screen.findByRole('heading', { name: /backend engineer/i });
+    await user.click(screen.getByRole('button', { name: /find similar/i }));
+
+    expect(await screen.findByRole('heading', { name: /^similar jobs$/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /no similar jobs found/i }),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      /we couldn’t find similar jobs for this listing/i,
+    );
+    expect(screen.getByRole('button', { name: /retry/i })).toBeInTheDocument();
+  });
+
+  it('toasts when the similar-jobs API fails', async () => {
+    const user = userEvent.setup();
+    getJobMock.mockResolvedValue(baseJob);
+    similarMock.mockRejectedValue(new Error('Similar service down'));
+
+    renderDetail();
+    await screen.findByRole('heading', { name: /backend engineer/i });
+    await user.click(screen.getByRole('button', { name: /find similar/i }));
+
+    expect(
+      await screen.findByText(/unable to load similar jobs\. please try again/i),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /unable to load similar jobs/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('does not refetch similar jobs after leaving and returning to the page', async () => {
+    const user = userEvent.setup();
+    getJobMock.mockResolvedValue(baseJob);
+    similarMock.mockRejectedValue(new Error('Similar service down'));
+
+    renderDetail();
+
+    await screen.findByRole('heading', { name: /backend engineer/i });
+    await user.click(screen.getByRole('button', { name: /find similar/i }));
+
+    await waitFor(() => {
+      expect(similarMock).toHaveBeenCalledTimes(1);
+    });
+
+    await user.click(screen.getByRole('button', { name: /back to job feed/i }));
+    expect(await screen.findByText(/^job feed$/i)).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: /^similar jobs$/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: /reopen job/i }));
+    await screen.findByRole('heading', { name: /backend engineer/i });
+
+    expect(similarMock).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('heading', { name: /^similar jobs$/i })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: /find similar/i }));
+
+    await waitFor(() => {
+      expect(similarMock).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('shows not-found UI when the API returns 404', async () => {
