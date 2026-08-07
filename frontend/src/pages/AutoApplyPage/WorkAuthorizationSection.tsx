@@ -30,6 +30,7 @@ import {
   WORK_AUTHORIZATION_OPTIONS,
   type SponsorshipChoice,
 } from './setupFormUtils';
+import { setupPageSx } from './setupPageStyles';
 import { SetupSectionHeading } from './SetupSectionHeading';
 
 export function WorkAuthorizationSection() {
@@ -102,7 +103,8 @@ export function WorkAuthorizationSection() {
       showToast({ message: 'Work authorization details saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't save your details. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't save your details. Try again.",
         severity: 'error',
       });
     }
@@ -117,7 +119,10 @@ export function WorkAuthorizationSection() {
   }
 
   return (
-    <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }} variant="outlined">
+    <Paper
+      sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
+      variant="outlined"
+    >
       <SetupSectionHeading
         helperText="This helps us flag jobs where sponsorship or authorization is a hard requirement. It never appears on any application without your review."
         required
@@ -125,8 +130,10 @@ export function WorkAuthorizationSection() {
         title="Work authorization & sponsorship"
       />
 
-      <FormControl error={Boolean(workAuthError)} required>
-        <FormLabel id="work-authorization-label">Work authorization</FormLabel>
+      <FormControl error={Boolean(workAuthError)} required sx={setupPageSx.radioLabel}>
+        <FormLabel id="work-authorization-label" sx={setupPageSx.formLabel}>
+          Work authorization
+        </FormLabel>
         <RadioGroup
           aria-labelledby="work-authorization-label"
           onChange={(event) => setWorkAuthorization(event.target.value)}
@@ -136,48 +143,42 @@ export function WorkAuthorizationSection() {
             <FormControlLabel
               control={<Radio />}
               key={option.value}
-              label={
-                typeof option.label === 'function'
-                  ? option.label(countryLabel)
-                  : option.label
-              }
+              label={typeof option.label === 'function' ? option.label(countryLabel) : option.label}
               value={option.value}
             />
           ))}
         </RadioGroup>
         {workAuthError ? (
-          <Box component="p" sx={{ color: 'error.main', fontSize: '0.75rem', m: 0, mt: 0.5 }}>
+          <Box component="p" sx={setupPageSx.errorText}>
             {workAuthError}
           </Box>
         ) : null}
       </FormControl>
 
-      <FormControl>
-        <FormLabel id="sponsorship-label">Sponsorship</FormLabel>
+      <FormControl sx={setupPageSx.radioLabel}>
+        <FormLabel id="sponsorship-label" sx={setupPageSx.formLabel}>
+          Sponsorship
+        </FormLabel>
         <RadioGroup
           aria-labelledby="sponsorship-label"
           onChange={(event) => setSponsorshipChoice(event.target.value as SponsorshipChoice)}
           value={sponsorshipChoice}
         >
-          <FormControlLabel
-            control={<Radio />}
-            label="Yes, I'll need sponsorship"
-            value="yes"
-          />
-          <FormControlLabel
-            control={<Radio />}
-            label="No, I don't need sponsorship"
-            value="no"
-          />
+          <FormControlLabel control={<Radio />} label="Yes, I'll need sponsorship" value="yes" />
+          <FormControlLabel control={<Radio />} label="No, I don't need sponsorship" value="no" />
           <FormControlLabel control={<Radio />} label="Not sure yet" value="unknown" />
         </RadioGroup>
-        <Box component="p" sx={{ color: 'text.secondary', fontSize: '0.875rem', m: 0, mt: 0.5 }}>
+        <Box component="p" sx={{ ...setupPageSx.bodySecondary, m: 0, mt: 0.5 }}>
           Optional, but helps us avoid showing you jobs that explicitly can&apos;t sponsor.
         </Box>
       </FormControl>
 
       <Box>
-        <Button disabled={!isDirty} isLoading={upsertAnswer.isPending || upsertProfile.isPending} onClick={() => void handleSave()}>
+        <Button
+          disabled={!isDirty}
+          isLoading={upsertAnswer.isPending || upsertProfile.isPending}
+          onClick={() => void handleSave()}
+        >
           Save
         </Button>
       </Box>

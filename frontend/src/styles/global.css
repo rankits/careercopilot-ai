@@ -25,6 +25,17 @@ body {
   background:
     radial-gradient(circle at top left, rgba(99, 91, 255, 0.08), transparent 28rem), #f8fafc;
 }
+
+/* App layout: lock document scroll so only .main-content scrolls (sidebar stays fixed). */
+html:has(.app-shell),
+body:has(.app-shell) {
+  height: 100%;
+  overflow: hidden;
+}
+
+#root:has(.app-shell) {
+  height: 100%;
+}
 a {
   color: inherit;
 }
@@ -80,9 +91,14 @@ h1 {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);
   height: 100dvh;
+  max-height: 100dvh;
   min-height: 0;
   overflow: hidden;
   width: 100%;
+}
+
+.app-shell > * {
+  min-height: 0;
 }
 .content-shell {
   display: grid;

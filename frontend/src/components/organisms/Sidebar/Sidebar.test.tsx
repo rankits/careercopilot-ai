@@ -97,12 +97,14 @@ describe('Sidebar', () => {
 
   it('renders bottom navigation with a More drawer for overflow destinations', async () => {
     const user = userEvent.setup();
+    const handleConnectedAccounts = vi.fn();
     const handleLogout = vi.fn();
     const handleSettings = vi.fn();
 
     renderSidebar(
       <Sidebar
         mobileMode="bottomNav"
+        onConnectedAccountsClick={handleConnectedAccounts}
         onLogoutClick={handleLogout}
         onSettingsClick={handleSettings}
         userName="Ada Lovelace"
@@ -134,7 +136,12 @@ describe('Sidebar', () => {
     expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: /download latest/i })).toBeEnabled();
     expect(screen.getByRole('button', { name: /edit profile/i })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /connected accounts/i })).toBeInTheDocument();
 
+    await user.click(screen.getByRole('button', { name: /connected accounts/i }));
+    expect(handleConnectedAccounts).toHaveBeenCalledTimes(1);
+
+    await user.click(screen.getByRole('button', { name: /open more menu/i }));
     await user.click(screen.getByRole('button', { name: /^logout$/i }));
     expect(handleLogout).toHaveBeenCalledTimes(1);
   });

@@ -31,6 +31,7 @@ import {
   Typography,
 } from '@/lib/material';
 
+import { setupPageSx } from './setupPageStyles';
 import { SetupSectionHeading } from './SetupSectionHeading';
 
 const CONSENT_TYPES: {
@@ -145,7 +146,7 @@ export function ConsentsTab() {
           sectionId="consents"
           title="Consent & privacy"
         />
-        <Typography color="text.secondary" variant="body2">
+        <Typography sx={setupPageSx.bodySecondary}>
           Grant only the permissions you understand. You can revoke resume usage at any time — doing
           so blocks Assisted Apply until you grant it again.
         </Typography>
@@ -168,9 +169,7 @@ export function ConsentsTab() {
             >
               <Box id={`setup-field-${item.fieldId}`} sx={{ flex: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                  <Typography fontWeight={600} variant="body2">
-                    {item.label}
-                  </Typography>
+                  <Typography sx={setupPageSx.labelStrong}>{item.label}</Typography>
                   <Chip
                     color={item.requiredForSetup ? 'warning' : 'default'}
                     label={item.requiredForSetup ? 'Required' : 'Optional'}
@@ -178,9 +177,7 @@ export function ConsentsTab() {
                     variant="outlined"
                   />
                 </Box>
-                <Typography color="text.secondary" variant="body2">
-                  {item.description}
-                </Typography>
+                <Typography sx={setupPageSx.bodySecondary}>{item.description}</Typography>
               </Box>
               <Chip
                 aria-label={`${item.label} ${active ? 'on' : 'off'}`}
@@ -224,11 +221,11 @@ export function ConsentsTab() {
       </Paper>
 
       <Paper sx={{ p: 2 }} variant="outlined">
-        <Typography component="h3" sx={{ mb: 1 }} variant="subtitle1">
+        <Typography component="h3" sx={{ ...setupPageSx.subsectionTitle, mb: 1 }}>
           Privacy acknowledgement
         </Typography>
         {privacyAck ? (
-          <Typography id="setup-field-privacy-acknowledgement" variant="body2">
+          <Typography id="setup-field-privacy-acknowledgement" sx={setupPageSx.bodySecondary}>
             Acknowledged on {formatAcknowledgedDate(privacyAck.acknowledgedAt)}
           </Typography>
         ) : (
@@ -249,6 +246,7 @@ export function ConsentsTab() {
                   </Link>
                 </>
               }
+              sx={setupPageSx.radioLabel}
             />
             <Box sx={{ mt: 1 }}>
               <Button
@@ -274,7 +272,7 @@ export function ConsentsTab() {
       >
         <DialogTitle id="revoke-resume-title">Revoke resume usage?</DialogTitle>
         <DialogContent>
-          <Typography id="revoke-resume-description" variant="body2">
+          <Typography id="revoke-resume-description" sx={setupPageSx.bodySecondary}>
             You won&apos;t be able to use Assisted Apply until you grant this again.
           </Typography>
         </DialogContent>

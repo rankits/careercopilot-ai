@@ -8,11 +8,12 @@ import {
   useUpsertApplicationAnswer,
 } from '@/features/auto-apply/hooks/useApplicationAnswers';
 
-import { Box, CircularProgress, Paper, TextField } from '@/lib/material';
+import { Box, CircularProgress, Paper } from '@/lib/material';
 
 import { useSetupDirty } from './SetupDirtyContext';
 import { BASELINE_ANSWER_FIELDS } from './setupFormUtils';
 import { SetupSectionHeading } from './SetupSectionHeading';
+import { SetupTextField } from './SetupTextField';
 
 export function BaselineAnswersSection() {
   const { data: answers, isLoading } = useApplicationAnswers();
@@ -36,7 +37,9 @@ export function BaselineAnswersSection() {
     setErrors({});
   }, [savedSnapshot]);
 
-  const isDirty = BASELINE_ANSWER_FIELDS.some((field) => values[field.key] !== savedSnapshot[field.key]);
+  const isDirty = BASELINE_ANSWER_FIELDS.some(
+    (field) => values[field.key] !== savedSnapshot[field.key],
+  );
 
   useSetupDirty('answers', isDirty);
 
@@ -62,7 +65,8 @@ export function BaselineAnswersSection() {
       showToast({ message: 'Common answers saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't save your details. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't save your details. Try again.",
         severity: 'error',
       });
     }
@@ -77,16 +81,18 @@ export function BaselineAnswersSection() {
   }
 
   return (
-    <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }} variant="outlined">
+    <Paper
+      sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
+      variant="outlined"
+    >
       <SetupSectionHeading
         helperText="These are the questions almost every application asks. Answer them once here."
-        required
         sectionId="answers"
         title="Common answers"
       />
 
       {BASELINE_ANSWER_FIELDS.map((field) => (
-        <TextField
+        <SetupTextField
           error={Boolean(errors[field.key])}
           fullWidth
           helperText={errors[field.key]}
@@ -99,13 +105,18 @@ export function BaselineAnswersSection() {
             }))
           }
           placeholder={field.placeholder}
+          required={'required' in field && field.required === true}
           type={field.inputType}
           value={values[field.key] ?? ''}
         />
       ))}
 
       <Box>
-        <Button disabled={!isDirty} isLoading={upsertAnswer.isPending} onClick={() => void handleSave()}>
+        <Button
+          disabled={!isDirty}
+          isLoading={upsertAnswer.isPending}
+          onClick={() => void handleSave()}
+        >
           Save
         </Button>
       </Box>

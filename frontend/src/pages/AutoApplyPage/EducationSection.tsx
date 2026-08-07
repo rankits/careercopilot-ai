@@ -5,9 +5,10 @@ import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { resumeService } from '@/features/resume/services/resume.service';
-import { AddIcon, Box, Chip, CircularProgress, Paper, TextField, Typography } from '@/lib/material';
+import { AddIcon, Box, CircularProgress, Paper } from '@/lib/material';
 
 import { SetupSectionHeading } from './SetupSectionHeading';
+import { SetupTextField } from './SetupTextField';
 
 interface EducationItem {
   institution: string;
@@ -146,35 +147,35 @@ export function EducationSection() {
               p: 2,
             }}
           >
-            <TextField
+            <SetupTextField
               label="School / University"
               onChange={(e) => updateEducation(index, 'institution', e.target.value)}
               sx={{ gridColumn: { sm: 'span 2' } }}
               value={item.institution}
             />
-            <TextField
+            <SetupTextField
               label="Degree"
               onChange={(e) => updateEducation(index, 'degree', e.target.value)}
               sx={{ gridColumn: { sm: 'span 2' } }}
               value={item.degree}
             />
-            <TextField
+            <SetupTextField
               label="Field of study"
               onChange={(e) => updateEducation(index, 'field', e.target.value)}
               sx={{ gridColumn: { sm: 'span 2' } }}
               value={item.field}
             />
-            <TextField
+            <SetupTextField
               label="Start year"
               onChange={(e) => updateEducation(index, 'startYear', e.target.value)}
               value={item.startYear}
             />
-            <TextField
+            <SetupTextField
               label="End year"
               onChange={(e) => updateEducation(index, 'endYear', e.target.value)}
               value={item.endYear}
             />
-            <TextField
+            <SetupTextField
               label="Location"
               onChange={(e) => updateEducation(index, 'location', e.target.value)}
               sx={{ gridColumn: '1 / -1' }}
@@ -185,18 +186,14 @@ export function EducationSection() {
       </Paper>
 
       <Paper sx={{ p: { xs: 2, sm: 3 } }} variant="outlined">
-        <Box sx={{ alignItems: 'flex-start', display: 'flex', justifyContent: 'space-between' }}>
-          <Box>
-            <Box sx={{ alignItems: 'center', display: 'flex', gap: 1 }}>
-              <Typography component="h2" sx={{ fontSize: 18, fontWeight: 700 }}>
-                Certifications & courses
-              </Typography>
-              <Chip label="Optional" size="small" />
-            </Box>
-            <Typography color="text.secondary" variant="body2">
-              Add relevant certifications, licenses, or professional courses.
-            </Typography>
-          </Box>
+        <SetupSectionHeading
+          headingId="setup-section-heading-certifications"
+          helperText="Add relevant certifications, licenses, or professional courses."
+          required={false}
+          sectionId="education"
+          title="Certifications & courses"
+        />
+        <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 2 }}>
           <Button
             onClick={() => setCertifications((items) => [...items, emptyCertification()])}
             size="small"
@@ -218,27 +215,27 @@ export function EducationSection() {
               p: 2,
             }}
           >
-            <TextField
+            <SetupTextField
               label="Certificate name"
               onChange={(e) => updateCertification(index, 'name', e.target.value)}
               value={item.name}
             />
-            <TextField
+            <SetupTextField
               label="Issuing organization"
               onChange={(e) => updateCertification(index, 'issuer', e.target.value)}
               value={item.issuer}
             />
-            <TextField
+            <SetupTextField
               label="Issue date"
               onChange={(e) => updateCertification(index, 'issueDate', e.target.value)}
               value={item.issueDate}
             />
-            <TextField
+            <SetupTextField
               label="Expiry date"
               onChange={(e) => updateCertification(index, 'expiryDate', e.target.value)}
               value={item.expiryDate}
             />
-            <TextField
+            <SetupTextField
               label="Credential URL"
               onChange={(e) => updateCertification(index, 'credentialUrl', e.target.value)}
               sx={{ gridColumn: '1 / -1' }}

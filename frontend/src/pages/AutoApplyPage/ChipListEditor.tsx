@@ -3,15 +3,10 @@ import { useState, type KeyboardEvent } from 'react';
 import { Button } from '@/components/atoms/Button';
 
 import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
-import {
-  Box,
-  Chip,
-  FormHelperText,
-  Stack,
-  TextField,
-  Typography,
-} from '@/lib/material';
+import { Box, Chip, FormHelperText, Stack, Typography } from '@/lib/material';
 
+import { setupPageSx } from './setupPageStyles';
+import { SetupTextField } from './SetupTextField';
 
 export interface ChipListEditorProps {
   id: string;
@@ -61,7 +56,7 @@ export function ChipListEditor({
   return (
     <Box component="fieldset" sx={{ border: 0, p: 0, m: 0 }}>
       <Stack alignItems="flex-start" direction={{ xs: 'column', sm: 'row' }} spacing={1}>
-        <TextField
+        <SetupTextField
           aria-describedby={duplicateError ? errorId : undefined}
           aria-invalid={duplicateError ? true : undefined}
           fullWidth
@@ -82,15 +77,16 @@ export function ChipListEditor({
         </Button>
       </Stack>
       {duplicateError ? (
-        <FormHelperText error id={errorId} role="alert" sx={{ mt: 0.5, mx: 1.75 }}>
+        <FormHelperText error id={errorId} role="alert" sx={{ ...setupPageSx.errorText, mx: 1.75 }}>
           {duplicateError}
         </FormHelperText>
       ) : null}
-      <Box aria-live="polite" sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5, minHeight: 32 }}>
+      <Box
+        aria-live="polite"
+        sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5, minHeight: 32 }}
+      >
         {values.length === 0 ? (
-          <Typography color="text.secondary" variant="body2">
-            {emptyMessage}
-          </Typography>
+          <Typography sx={setupPageSx.bodySecondary}>{emptyMessage}</Typography>
         ) : (
           values.map((value) => (
             <Chip
