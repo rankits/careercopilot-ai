@@ -1,17 +1,23 @@
-import { Box, CircularProgress } from '@/lib/material';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
 
-export function RouteLoading() {
+interface RouteLoadingProps {
+  /** Accessible label for the loading state. */
+  label?: string;
+}
+
+export function RouteLoading({ label = 'Loading page' }: RouteLoadingProps) {
   return (
     <Box
       aria-busy="true"
-      aria-label="Loading session"
+      aria-label={label}
       alignItems="center"
       display="flex"
       justifyContent="center"
       minHeight="100vh"
       role="status"
     >
-      <CircularProgress />
+      <CircularProgress aria-hidden="true" />
     </Box>
   );
 }

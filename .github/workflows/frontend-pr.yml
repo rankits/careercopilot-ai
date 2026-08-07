@@ -124,6 +124,8 @@ jobs:
         run: npm ci
       - name: Validate production build
         run: npm run build
+      - name: Enforce bundle size budget
+        run: npm run bundle:budget
       - name: Upload build artifact for analysis
         uses: actions/upload-artifact@v4
         with:
