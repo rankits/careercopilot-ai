@@ -8,6 +8,7 @@ import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
 import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import MailOutlineOutlinedIcon from '@mui/icons-material/MailOutlineOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
 import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
@@ -533,6 +534,7 @@ export const SIDEBAR_NAV_LABELS = {
   browserExtension: 'Browser Extension',
   applications: 'Applications',
   assistedApplications: 'Assisted Applications',
+  aiMail: 'AI Mail',
   aiMatch: 'AI Match',
   dashboard: 'Dashboard',
   jobsFeed: 'Jobs Feed',
@@ -570,6 +572,12 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     id: 'ai-match',
     label: SIDEBAR_NAV_LABELS.aiMatch,
     shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.aiMatch,
+  },
+  {
+    href: ROUTES.AI_MAIL,
+    icon: MailOutlineOutlinedIcon,
+    id: 'ai-mail',
+    label: SIDEBAR_NAV_LABELS.aiMail,
   },
   {
     href: ROUTES.APPLICATIONS,
@@ -631,7 +639,7 @@ export const DEFAULT_SIDEBAR_SECTIONS = [
   },
   {
     id: 'tools',
-    itemIds: ['browser-extension'],
+    itemIds: ['ai-mail', 'browser-extension'],
     label: 'TOOLS',
   },
   {
@@ -658,6 +666,7 @@ export const DEFAULT_BOTTOM_NAV_IDS = [
 export const DEFAULT_MOBILE_DRAWER_NAV_IDS = [
   'saved-jobs',
   'assisted-applications',
+  'ai-mail',
   'browser-extension',
   'resume-builder',
   'saved-resumes',

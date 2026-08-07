@@ -33,6 +33,7 @@ import {
   RefreshIcon,
   Stack,
   Typography,
+  useMediaQuery,
 } from '@/lib/material';
 import { trackEvent } from '@/shared/analytics/trackEvent';
 
@@ -45,6 +46,7 @@ import { FitStep } from './FitStep';
 import { OpenApplicationStep } from './OpenApplicationStep';
 import { ResumeAnalysisStep } from './ResumeAnalysisStep';
 import { ResumeSelectionStep } from './ResumeSelectionStep';
+import { assistedApplyWorkspaceSx } from './styles';
 import { WorkspaceStepProgress } from './WorkspaceStepProgress';
 import { assistedApplyTouchTargetSx } from './WorkspaceStickyActions';
 
@@ -71,6 +73,7 @@ export function AssistedApplyWorkspacePage() {
     isPending: boolean;
     reanalyze: () => void;
   } | null>(null);
+  const isCompactHeader = useMediaQuery('(max-width:899px)');
 
   const entrySignals = useMemo(
     () => (jobApplicationId ? readWorkspaceEntrySignals(jobApplicationId) : null),
@@ -126,7 +129,7 @@ export function AssistedApplyWorkspacePage() {
 
   if (workspaceQuery.isLoading) {
     return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Box sx={assistedApplyWorkspaceSx.root}>
         <LinearProgress aria-label="Loading Assisted Apply workspace" />
       </Box>
     );
@@ -134,7 +137,7 @@ export function AssistedApplyWorkspacePage() {
 
   if (workspaceQuery.isError || !workspaceQuery.data) {
     return (
-      <Box sx={{ p: { xs: 2, md: 4 } }}>
+      <Box sx={assistedApplyWorkspaceSx.root}>
         <Typography sx={{ mb: 1 }} variant="h5">
           This application isn&apos;t available.
         </Typography>
@@ -258,20 +261,12 @@ export function AssistedApplyWorkspacePage() {
   };
 
   return (
-    <Box
-      sx={{
-        p: { xs: 2, md: 4 },
-        maxWidth: 1500,
-        mx: 'auto',
-        overflowX: 'hidden',
-        pb: { xs: 10, md: 4 },
-      }}
-    >
+    <Box sx={assistedApplyWorkspaceSx.root}>
       {jobId ? (
         <MuiButton
           component={RouterLink}
           startIcon={<ChevronLeftIcon />}
-          sx={{ ...assistedApplyTouchTargetSx, mb: 1, px: 0, alignSelf: 'flex-start' }}
+          sx={{ ...assistedApplyTouchTargetSx, ...assistedApplyWorkspaceSx.backLink }}
           to={`/jobs/${jobId}`}
           variant="text"
         >
@@ -280,24 +275,35 @@ export function AssistedApplyWorkspacePage() {
       ) : null}
 
       <Stack
-        alignItems={{ xs: 'flex-start', sm: 'center' }}
+        alignItems={{ xs: 'stretch', sm: 'flex-start' }}
         direction={{ xs: 'column', sm: 'row' }}
         justifyContent="space-between"
-        spacing={1}
-        sx={{ mb: 2 }}
+        spacing={1.5}
+        sx={assistedApplyWorkspaceSx.pageHeader}
       >
         <Box sx={{ minWidth: 0 }}>
-          <Stack alignItems="center" direction="row" flexWrap="wrap" spacing={1} sx={{ mb: 0.5 }}>
-            <Typography sx={{ fontWeight: 700, letterSpacing: '-0.03em' }} variant="h4">
+          <Stack
+            alignItems="center"
+            direction="row"
+            flexWrap="wrap"
+            spacing={1}
+            sx={assistedApplyWorkspaceSx.pageTitleRow}
+          >
+            <Typography component="h1" sx={assistedApplyWorkspaceSx.pageTitle} variant="h4">
               Assisted Apply
             </Typography>
             <Chip
               label={`Application mode: ${applicationModeLabel}`}
               size="small"
+              sx={{ maxWidth: '100%' }}
               variant="outlined"
             />
           </Stack>
-          <Typography color="text.secondary" variant="subtitle1">
+          <Typography
+            color="text.secondary"
+            sx={assistedApplyWorkspaceSx.pageSubtitle}
+            variant="subtitle1"
+          >
             {data.application.jobTitle ?? 'Job'}
             {(data.application.companyName ?? data.application.company)
               ? ` · ${data.application.companyName ?? data.application.company}`
@@ -307,7 +313,7 @@ export function AssistedApplyWorkspacePage() {
             {data.viewLabel}
           </Typography>
         </Box>
-        <Stack direction="row" spacing={1}>
+        <Stack direction="row" spacing={1} sx={assistedApplyWorkspaceSx.headerActions}>
           {activeStep === 'analysis' ? (
             <MuiButton
               disabled={!analysisReanalyze || analysisReanalyze.isPending}
@@ -328,17 +334,48 @@ export function AssistedApplyWorkspacePage() {
           </IconButton>
           <Menu
             anchorEl={menuAnchor}
+            anchorOrigin={{
+              horizontal: 'right',
+              vertical: isCompactHeader ? 'top' : 'bottom',
+            }}
+            id="assisted-workspace-actions-menu"
             onClose={() => setMenuAnchor(null)}
             open={Boolean(menuAnchor)}
+            slotProps={{
+              paper: {
+                sx: assistedApplyWorkspaceSx.workspaceActionsMenuPaper,
+              },
+            }}
+            transformOrigin={{
+              horizontal: 'right',
+              vertical: isCompactHeader ? 'bottom' : 'top',
+            }}
           >
+            {activeStep === 'analysis' ? (
+              <MenuItem
+                disabled={!analysisReanalyze || analysisReanalyze.isPending}
+                onClick={() => {
+                  setMenuAnchor(null);
+                  analysisReanalyze?.reanalyze();
+                }}
+                sx={{ display: { xs: 'flex', md: 'none' }, py: 1.25 }}
+              >
+                {analysisReanalyze?.isPending ? 'Reanalyzing…' : 'Reanalyze'}
+              </MenuItem>
+            ) : null}
             <MenuItem
               disabled={data.viewState === 'APPLIED' || data.viewState === 'ABANDONED'}
               onClick={() => {
                 setMenuAnchor(null);
                 setAbandonOpen(true);
               }}
+              sx={{
+                color: 'error.main',
+                py: 1.25,
+                whiteSpace: 'normal',
+              }}
             >
-              Abandon
+              Stop tracking application
             </MenuItem>
           </Menu>
         </Stack>
@@ -378,25 +415,16 @@ export function AssistedApplyWorkspacePage() {
           {renderStepBody()}
         </Box>
       ) : (
-        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} sx={{ alignItems: 'stretch' }}>
-          <Box
-            aria-live="polite"
-            sx={{
-              border: 1,
-              borderColor: 'divider',
-              borderRadius: 1,
-              p: { xs: 2, sm: 3 },
-              minHeight: 200,
-              flex: 1,
-              minWidth: 0,
-              maxWidth: '100%',
-              overflowX: 'hidden',
-            }}
-          >
+        <Stack
+          direction={{ xs: 'column', lg: 'row' }}
+          spacing={2}
+          sx={assistedApplyWorkspaceSx.stepLayout}
+        >
+          <Box aria-live="polite" sx={assistedApplyWorkspaceSx.stepContentShell}>
             {renderStepBody()}
           </Box>
           {jobApplicationId ? (
-            <Box sx={{ display: { xs: 'none', lg: 'block' }, width: { lg: 300 }, flexShrink: 0 }}>
+            <Box sx={assistedApplyWorkspaceSx.timelineAside}>
               <ActivityTimelinePanel jobApplicationId={jobApplicationId} />
             </Box>
           ) : null}

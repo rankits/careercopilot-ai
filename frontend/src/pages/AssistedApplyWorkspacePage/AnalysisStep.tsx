@@ -51,6 +51,7 @@ import {
   type RequirementIconId,
   type RequirementViewModel,
 } from './analysisRequirementViewModel';
+import { assistedApplyWorkspaceSx } from './styles';
 import { assistedApplyTouchTargetSx, WorkspaceStickyActions } from './WorkspaceStickyActions';
 
 const VISIBLE_REQUIREMENT_LIMIT = 3;
@@ -157,10 +158,18 @@ function RequirementRow({ view }: { view: RequirementViewModel }) {
             <RequirementIcon id={view.iconId} />
           </Box>
           <Box sx={{ minWidth: 0, flex: 1 }}>
-            <Typography fontWeight={700} variant="subtitle2">
+            <Typography
+              fontWeight={700}
+              sx={assistedApplyWorkspaceSx.overflowWrap}
+              variant="subtitle2"
+            >
               {view.title} — {view.operatorLabel}
             </Typography>
-            <Typography color="text.secondary" sx={{ mt: 0.75 }} variant="body2">
+            <Typography
+              color="text.secondary"
+              sx={{ mt: 0.75, overflowWrap: 'anywhere' }}
+              variant="body2"
+            >
               According to the posting: &ldquo;{view.evidence}&rdquo;
             </Typography>
             <Stack
@@ -422,18 +431,21 @@ export function AnalysisStep({
       ? analyzeMutation.error.statusCode
       : undefined;
     return (
-      <Stack spacing={2}>
+      <Stack spacing={2} sx={assistedApplyWorkspaceSx.stepRoot}>
         <Alert
           action={
             <MuiButton
               disabled={analyzeMutation.isPending}
+              fullWidth
               onClick={() => analyzeMutation.mutate({})}
               size="small"
+              sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
             >
               Retry
             </MuiButton>
           }
           severity="error"
+          sx={assistedApplyWorkspaceSx.alertWithAction}
         >
           {status === 429
             ? "You've made a lot of requests. Try again in a moment."
@@ -445,9 +457,14 @@ export function AnalysisStep({
 
   if (!analysis) {
     return (
-      <Stack spacing={1.5}>
+      <Stack spacing={1.5} sx={assistedApplyWorkspaceSx.stepRoot}>
         <Alert severity="info">No analysis available yet.</Alert>
-        <MuiButton onClick={() => analyzeMutation.mutate({})} variant="outlined">
+        <MuiButton
+          fullWidth
+          onClick={() => analyzeMutation.mutate({})}
+          sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
+          variant="outlined"
+        >
           Retry
         </MuiButton>
       </Stack>
@@ -468,7 +485,7 @@ export function AnalysisStep({
     : null;
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={assistedApplyWorkspaceSx.stepRoot}>
       <Stack
         alignItems={{ xs: 'stretch', sm: 'center' }}
         direction={{ xs: 'column', sm: 'row' }}
@@ -531,10 +548,14 @@ export function AnalysisStep({
               {(company ?? jobTitle ?? 'J').slice(0, 1).toUpperCase()}
             </Box>
             <Box sx={{ minWidth: 0 }}>
-              <Typography fontWeight={700} variant="subtitle1">
+              <Typography fontWeight={700} sx={{ overflowWrap: 'anywhere' }} variant="subtitle1">
                 {jobTitle ?? 'Job'}
               </Typography>
-              <Typography color="text.secondary" variant="body2">
+              <Typography
+                color="text.secondary"
+                sx={assistedApplyWorkspaceSx.overflowWrap}
+                variant="body2"
+              >
                 {[company, workplaceLabel].filter(Boolean).join(' · ')}
               </Typography>
               <Stack alignItems="center" direction="row" flexWrap="wrap" spacing={1} sx={{ mt: 1 }}>
@@ -716,7 +737,12 @@ export function AnalysisStep({
                   Content hash
                 </Typography>
                 <Stack alignItems="center" direction="row" spacing={0.5}>
-                  <Typography fontFamily="monospace" fontWeight={700} variant="body2">
+                  <Typography
+                    fontFamily="monospace"
+                    fontWeight={700}
+                    sx={{ overflowWrap: 'anywhere' }}
+                    variant="body2"
+                  >
                     {shortHash}
                   </Typography>
                   {contentHash ? (
@@ -871,7 +897,7 @@ function InfoTile({
         {tone === 'warning' ? (
           <WarningAmberOutlinedIcon color="warning" sx={{ fontSize: 16 }} />
         ) : null}
-        <Typography fontWeight={700} sx={{ color }} variant="body2">
+        <Typography fontWeight={700} sx={{ color, overflowWrap: 'anywhere' }} variant="body2">
           {value}
         </Typography>
       </Stack>
@@ -889,13 +915,23 @@ function SummaryRow({
   valueTone?: 'default' | 'success';
 }) {
   return (
-    <Stack alignItems="center" direction="row" justifyContent="space-between" spacing={1}>
-      <Typography color="text.secondary" variant="body2">
+    <Stack
+      alignItems={{ xs: 'flex-start', sm: 'center' }}
+      direction="row"
+      flexWrap="wrap"
+      justifyContent="space-between"
+      spacing={1}
+    >
+      <Typography color="text.secondary" sx={assistedApplyWorkspaceSx.overflowWrap} variant="body2">
         {label}
       </Typography>
       <Typography
         fontWeight={700}
-        sx={{ color: valueTone === 'success' ? 'success.main' : 'text.primary' }}
+        sx={{
+          color: valueTone === 'success' ? 'success.main' : 'text.primary',
+          overflowWrap: 'anywhere',
+          textAlign: { xs: 'left', sm: 'right' },
+        }}
         variant="body2"
       >
         {value}

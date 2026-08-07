@@ -5,7 +5,6 @@ import { Button } from '@/components/atoms/Button';
 import { ConnectedDevicesList, ConnectExtensionModal } from '@/features/extension';
 import { Box, Paper, Typography } from '@/lib/material';
 
-import { setupPageSx } from './setupPageStyles';
 import { SetupSectionHeading } from './SetupSectionHeading';
 
 export function ExtensionSection() {

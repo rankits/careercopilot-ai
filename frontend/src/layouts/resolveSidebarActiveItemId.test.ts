@@ -10,6 +10,7 @@ describe('resolveSidebarActiveItemId', () => {
     [ROUTES.JOB_FEED, 'jobs-feed'],
     ['/jobs/job-123', 'jobs-feed'],
     [ROUTES.AI_MATCH, 'ai-match'],
+    [ROUTES.AI_MAIL, 'ai-mail'],
     [ROUTES.SAVED_JOBS, 'saved-jobs'],
     [ROUTES.APPLICATIONS, 'applications'],
     [ROUTES.AUTO_APPLY, 'auto-apply'],

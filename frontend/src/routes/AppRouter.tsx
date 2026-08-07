@@ -1,6 +1,6 @@
 /* eslint-disable react-refresh/only-export-components -- router config and component share this module */
 import { Suspense, type ReactNode } from 'react';
-import { createBrowserRouter, Navigate, useRoutes, type RouteObject } from 'react-router-dom';
+import { createBrowserRouter, useRoutes, type RouteObject } from 'react-router-dom';
 
 import { RouteErrorBoundary } from '@/routes/components/RouteErrorBoundary';
 import { RouteLoading } from '@/routes/components/RouteLoading';
@@ -18,6 +18,7 @@ import {
   ProtectedRoute,
 } from '@/routes/guards/AuthGuards';
 import {
+  LazyAiMailPage,
   LazyAiMatchPage,
   LazyApplicationDetailPage,
   LazyApplicationsPage,
@@ -164,7 +165,11 @@ export const appRouteObjects: RouteObject[] = [
           },
           {
             path: ROUTES.AI_MAIL,
-            element: <Navigate replace to={ROUTES.DASHBOARD} />,
+            element: (
+              <LazyRoute>
+                <LazyAiMailPage />
+              </LazyRoute>
+            ),
           },
           {
             path: ROUTES.BROWSER_EXTENSION,
