@@ -1,10 +1,14 @@
+import { configureStore } from '@reduxjs/toolkit';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { Provider } from 'react-redux';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
+
+import { authReducer } from '@/features/auth/authSlice';
 
 import { RegisterPage } from './RegisterPage';
 
@@ -17,23 +21,27 @@ vi.mock('@/features/auth/services/auth.service', () => ({
 }));
 
 function renderPage() {
+  const testStore = configureStore({ reducer: { auth: authReducer } });
   const queryClient = new QueryClient({
     defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
   });
 
   return {
     queryClient,
+    store: testStore,
     ...render(
       <QueryClientProvider client={queryClient}>
-        <ToastProvider>
-          <MemoryRouter initialEntries={['/register']}>
-            <Routes>
-              <Route path="/register" element={<RegisterPage />} />
-              <Route path="/profile" element={<h1>Profile destination</h1>} />
-              <Route path="/login" element={<h1>Login destination</h1>} />
-            </Routes>
-          </MemoryRouter>
-        </ToastProvider>
+        <Provider store={testStore}>
+          <ToastProvider>
+            <MemoryRouter initialEntries={['/register']}>
+              <Routes>
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/profile" element={<h1>Profile destination</h1>} />
+                <Route path="/login" element={<h1>Login destination</h1>} />
+              </Routes>
+            </MemoryRouter>
+          </ToastProvider>
+        </Provider>
       </QueryClientProvider>,
     ),
   };
