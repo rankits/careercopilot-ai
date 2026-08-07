@@ -1,13 +1,15 @@
+import { Suspense } from 'react';
 import { Navigate, Outlet } from 'react-router-dom';
 
 import { RouteLoading } from '@/routes/components/RouteLoading';
+
 
 import { useAuthBootstrap } from '@/features/auth/hooks/useAuthBootstrap';
 import { useAppSelector } from '@/hooks/redux';
 
 import { ROUTES } from '@/constants/routes';
 import { getPostAuthRoute } from '@/features/auth/utils/getPostAuthRoute';
-import { LandingPage } from '@/pages/LandingPage';
+import { LazyLandingPage } from '@/routes/lazyPages';
 
 export function ProtectedRoute() {
   const { isSessionResolved } = useAuthBootstrap();
@@ -15,7 +17,7 @@ export function ProtectedRoute() {
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
 
   if (!isSessionResolved) {
-    return <RouteLoading />;
+    return <RouteLoading label="Loading session" />;
   }
 
   if (!isAuthenticated) {
@@ -34,7 +36,7 @@ export function GuestRoute() {
   const { isSessionResolved } = useAuthBootstrap();
 
   if (!isSessionResolved) {
-    return <RouteLoading />;
+    return <RouteLoading label="Loading session" />;
   }
 
   return <Outlet />;
@@ -52,7 +54,7 @@ export function OnboardingRoute() {
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
 
   if (!isSessionResolved) {
-    return <RouteLoading />;
+    return <RouteLoading label="Loading session" />;
   }
 
   if (!isAuthenticated) {
@@ -69,14 +71,18 @@ export function LandingRoute() {
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
 
   if (!isSessionResolved) {
-    return <RouteLoading />;
+    return <RouteLoading label="Loading session" />;
   }
 
   if (isAuthenticated) {
     return <Navigate replace to={getPostAuthRoute(isProfileComplete)} />;
   }
 
-  return <LandingPage />;
+  return (
+    <Suspense fallback={<RouteLoading />}>
+      <LazyLandingPage />
+    </Suspense>
+  );
 }
 
 export function RootRedirect() {
@@ -85,7 +91,7 @@ export function RootRedirect() {
   const isProfileComplete = useAppSelector((state) => state.auth.isProfileComplete);
 
   if (!isSessionResolved) {
-    return <RouteLoading />;
+    return <RouteLoading label="Loading session" />;
   }
 
   if (!isAuthenticated) {
