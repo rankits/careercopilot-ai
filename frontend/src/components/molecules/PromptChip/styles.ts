@@ -1,4 +1,6 @@
-import { Chip, styled } from '@/lib/material';
+import Chip from '@mui/material/Chip';
+import { styled } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const PromptChipButton = styled(Chip)({

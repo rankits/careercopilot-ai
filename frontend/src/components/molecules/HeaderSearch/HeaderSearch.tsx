@@ -1,9 +1,9 @@
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import type { ChangeEventHandler } from 'react';
 
 import { Input } from '@/components/atoms/Input';
 
 import { HEADER_SEARCH_COPY } from '@/constants/ui';
-import { SearchOutlinedIcon } from '@/lib/material';
 
 import { headerSearchSx } from './styles';
 

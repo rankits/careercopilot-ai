@@ -1,4 +1,6 @@
-import type { SxProps, SystemStyleObject, Theme } from '@/lib/material';
+import type { SxProps, Theme } from '@mui/material/styles';
+import type { SystemStyleObject } from '@mui/system';
+
 import { borderRadius, colorTokens, fontSize, spacing } from '@/tokens';
 
 export type InputTone = 'default' | 'success' | 'error' | 'warning';

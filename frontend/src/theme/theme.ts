@@ -1,4 +1,5 @@
-import { createTheme } from '@/lib/material';
+import { createTheme } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontFamily, fontSize, fontWeight, palette } from '@/tokens';
 
 const rootFontSize = 16;

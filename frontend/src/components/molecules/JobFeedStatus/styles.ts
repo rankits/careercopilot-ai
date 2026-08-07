@@ -1,4 +1,5 @@
-import type { SxProps, Theme } from '@/lib/material';
+import type { SxProps, Theme } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, shadows, spacing } from '@/tokens';
 
 export const jobFeedStatusSx = {
@@ -27,6 +28,34 @@ export const jobFeedStatusSx = {
     justifyItems: 'center',
     minHeight: '12rem',
     padding: spacing[6],
+  } satisfies SxProps<Theme>,
+
+  skeletonRoot: {
+    display: 'grid',
+    gap: spacing[3],
+    width: '100%',
+  } satisfies SxProps<Theme>,
+
+  skeletonCard: {
+    background: colorTokens.backgroundCard,
+    border: `0.0625rem solid ${colorTokens.borderDefault}`,
+    borderRadius: borderRadius.xl,
+    boxShadow: shadows.card,
+    display: 'grid',
+    gap: spacing[2],
+    padding: spacing[4],
+  } satisfies SxProps<Theme>,
+
+  visuallyHidden: {
+    border: 0,
+    clip: 'rect(0 0 0 0)',
+    height: '1px',
+    margin: '-1px',
+    overflow: 'hidden',
+    padding: 0,
+    position: 'absolute',
+    whiteSpace: 'nowrap',
+    width: '1px',
   } satisfies SxProps<Theme>,
 
   loadingLabel: {

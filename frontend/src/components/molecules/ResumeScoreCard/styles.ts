@@ -1,8 +1,13 @@
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import type { ElementType } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 
-import { Box, Typography, styled } from '@/lib/material';
+
+
+
 import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const ResumeScoreRoot = styled(Box)({
