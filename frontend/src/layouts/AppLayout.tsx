@@ -1,4 +1,5 @@
-import { useCallback, useState } from 'react';
+import useMediaQuery from '@mui/material/useMediaQuery';
+import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
 import type { SidebarVariant } from '@/components/organisms/Sidebar/interfaces';
@@ -10,39 +11,34 @@ import { useAppSelector } from '@/hooks/redux';
 
 import { AppHeader, CareerCopilot, Sidebar } from '@/components';
 import { ROUTES } from '@/constants/routes';
-import { CopilotSessionProvider } from '@/features/copilot';
+import { CopilotSessionProvider, useCopilotSession } from '@/features/copilot';
 import { resumeService } from '@/features/resume/services/resume.service';
 import type { UploadedResumeVersion } from '@/features/resume/types/resume.types';
-import { useMediaQuery } from '@/lib/material';
 import { toTitleCase } from '@/lib/toTitleCase';
 
+import { resolveSidebarActiveItemId } from './resolveSidebarActiveItemId';
+
 export function AppLayout() {
+  return (
+    <CopilotSessionProvider>
+      <AppLayoutShell />
+    </CopilotSessionProvider>
+  );
+}
+
+function AppLayoutShell() {
   const isMobile = useMediaQuery('(max-width: 760px)');
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { showToast } = useToast();
+  const { toggleOpen } = useCopilotSession();
   const [sidebarVariant, setSidebarVariant] = useState<SidebarVariant>('open');
   const [uploadedResumes, setUploadedResumes] = useState<UploadedResumeVersion[]>([]);
   const [resumesLoaded, setResumesLoaded] = useState(false);
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
-  const activeItemId =
-    pathname === ROUTES.PROFILE_EDIT || pathname.startsWith(`${ROUTES.PROFILE}/`)
-      ? 'settings'
-      : pathname === ROUTES.SAVED_JOBS
-        ? 'saved-jobs'
-        : pathname === ROUTES.AI_MATCH
-          ? 'ai-match'
-          : pathname === ROUTES.APPLICATIONS
-            ? 'applications'
-            : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
-              ? 'jobs-feed'
-              : pathname === ROUTES.SAVED_RESUMES || pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
-                ? 'saved-resumes'
-                : pathname.startsWith(ROUTES.RESUME_BUILDER)
-                  ? 'resume-builder'
-                  : 'dashboard';
+  const activeItemId = resolveSidebarActiveItemId(pathname);
 
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);
@@ -73,6 +69,10 @@ export function AppLayout() {
 
     return refreshUploadedResumes();
   }, [refreshUploadedResumes, resumesLoaded, uploadedResumes]);
+
+  useEffect(() => {
+    void ensureUploadedResumesLoaded();
+  }, [ensureUploadedResumesLoaded]);
 
   const handleDownload = async (resume: UploadedResumeVersion) => {
     setDownloadingId(resume.id);
@@ -111,12 +111,16 @@ export function AppLayout() {
   };
 
   return (
-    <CopilotSessionProvider>
+    <>
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <div className="app-shell">
         <Sidebar
           activeItemId={activeItemId}
           isDownloadingLatestResume={Boolean(latestResume && downloadingId === latestResume.id)}
           latestResumeName={resumesLoaded ? (latestResume?.originalName ?? null) : null}
+          latestResumeUploadedAt={latestResume?.uploadedAt ?? null}
           mobileMode={isMobile ? 'bottomNav' : undefined}
           onDownloadLatestResume={handleDownloadLatestResume}
           onLogoutClick={() => {
@@ -124,6 +128,7 @@ export function AppLayout() {
               void logout();
             }
           }}
+          onOpenAiAssistant={toggleOpen}
           onOpenResumeVersions={handleOpenResumeVersions}
           onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
           onVariantChange={setSidebarVariant}
@@ -143,12 +148,12 @@ export function AppLayout() {
             userName={userName}
             userRoleLabel={userRoleLabel}
           />
-          <main className="main-content">
+          <main className="main-content" id="main-content" tabIndex={-1}>
             <Outlet />
           </main>
         </div>
-        <CareerCopilot />
       </div>
+      <CareerCopilot />
 
       <ResumeVersionsDialog
         downloadingId={downloadingId}
@@ -158,6 +163,6 @@ export function AppLayout() {
         open={isVersionsOpen}
         resumes={uploadedResumes}
       />
-    </CopilotSessionProvider>
+    </>
   );
 }

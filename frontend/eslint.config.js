@@ -7,7 +7,9 @@ import globals from 'globals';
 import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
-  { ignores: ['dist', 'node_modules', 'coverage', 'e2e/**', 'playwright.config.ts'] },
+  {
+    ignores: ['dist', 'node_modules', 'coverage', 'e2e/**', 'playwright.config.ts', 'scripts/**'],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked.map((config) => ({
     ...config,
@@ -36,8 +38,8 @@ export default tseslint.config(
         {
           groups: ['builtin', 'external', 'internal', 'parent', 'sibling', 'index'],
           pathGroups: [
-            { pattern: '@core/**', group: 'internal', position: 'before' },
             { pattern: '@lib/**', group: 'internal', position: 'before' },
+
             { pattern: '@components/**', group: 'internal', position: 'before' },
             { pattern: '@/**/components/**', group: 'internal', position: 'before' },
             { pattern: '@hooks/**', group: 'internal', position: 'before' },

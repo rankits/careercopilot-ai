@@ -1,7 +1,11 @@
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import StarIcon from '@mui/icons-material/Star';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
 import { useState } from 'react';
 
 import { LANDING_COPY, LANDING_SECTION_IDS, LANDING_TESTIMONIALS } from '@/constants/pages/landing';
-import { ChevronLeftIcon, ChevronRightIcon, IconButton, StarIcon, styled } from '@/lib/material';
 import {
   borderRadius,
   borderWidth,

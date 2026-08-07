@@ -1,10 +1,10 @@
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
 
 import { DASHBOARD_COPY } from '@/constants/pages/dashboard';
 import { ROUTES } from '@/constants/routes';
-import { ArrowForwardIcon } from '@/lib/material';
 
 import { CtaBody, CtaCopy, CtaRoot, CtaSubtitle, CtaTitle } from '../styles';
 

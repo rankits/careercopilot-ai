@@ -1,3 +1,4 @@
+import CloseIcon from '@mui/icons-material/Close';
 import { useEffect, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
@@ -9,7 +10,6 @@ import { useTransitionApplicationStatus } from '@/features/applications/hooks/us
 
 import { applicationDetailStatusOptions } from '@/constants/pages/applicationDetail';
 import type { ApiApplicationStatus } from '@/features/applications/types/application.types';
-import { CloseIcon } from '@/lib/material';
 
 import {
   ApplicationDialog,

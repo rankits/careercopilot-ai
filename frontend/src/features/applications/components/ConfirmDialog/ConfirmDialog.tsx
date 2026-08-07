@@ -1,11 +1,9 @@
-import { Button } from '@/components/atoms/Button';
+import ArchiveOutlinedIcon from '@mui/icons-material/ArchiveOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import UnarchiveOutlinedIcon from '@mui/icons-material/UnarchiveOutlined';
 
-import {
-  ArchiveOutlinedIcon,
-  CloseIcon,
-  DeleteOutlineIcon,
-  UnarchiveOutlinedIcon,
-} from '@/lib/material';
+import { Button } from '@/components/atoms/Button';
 
 import {
   ConfirmApplicationDialog,

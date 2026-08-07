@@ -1,3 +1,6 @@
+import { Box, TextField, Typography } from '@mui/material';
+import type { ChangeEvent } from 'react';
+
 import { Button } from '@/components/atoms/Button';
 import type { JobCardData } from '@/components/molecules';
 
@@ -8,7 +11,6 @@ import type {
   RecommendationFeedbackAction,
 } from '@/features/recommendations/types/recommendation.types';
 import { formatRecommendationCategoryLabel } from '@/features/recommendations/utils/formatRecommendationMatchLabel';
-import { Box, TextField, Typography } from '@/lib/material';
 
 import { CAREER_GOAL_MAX_LENGTH, careerCategoryCopy, getPanelId, getTabId } from '../../utils';
 import { RecommendationJobList } from '../RecommendationJobList';
@@ -85,7 +87,7 @@ export function CareerGoalPanel({
           label="Career goal"
           multiline
           minRows={5}
-          onChange={(event) => setCareerGoalText(event.target.value)}
+          onChange={(event: ChangeEvent<HTMLInputElement>) => setCareerGoalText(event.target.value)}
           placeholder="Describe the role, transition, or direction you want to pursue."
           value={careerGoalText}
         />

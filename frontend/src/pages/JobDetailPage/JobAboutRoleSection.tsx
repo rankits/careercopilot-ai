@@ -1,8 +1,9 @@
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 
 import type { JobDescriptionDisplay } from '@/features/jobs/utils/resolveJobDescriptionDisplay';
 import { sanitizeJobHtml } from '@/features/jobs/utils/sanitizeJobHtml';
-import { Box, Typography } from '@/lib/material';
 
 import { JobDetailSectionHeader } from './JobDetailSectionHeader';
 import { jobDetailPageSx } from './styles';

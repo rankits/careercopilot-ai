@@ -1,4 +1,5 @@
-import type { SvgIconComponent } from '@/lib/material';
+import type { SvgIconComponent } from '@mui/icons-material';
+
 import type { IconTone } from '@/tokens';
 
 export interface AuthPageFeature {

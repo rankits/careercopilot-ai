@@ -1,6 +1,6 @@
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react';
-
-import { ChevronLeftIcon, ChevronRightIcon } from '@/lib/material';
 
 import {
   StatusTabsFade,

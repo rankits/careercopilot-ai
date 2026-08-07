@@ -1,19 +1,18 @@
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import BookmarkOutlinedIcon from '@mui/icons-material/BookmarkOutlined';
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
+import Tooltip from '@mui/material/Tooltip';
+import Typography from '@mui/material/Typography';
+
 import { Button } from '@/components/atoms/Button';
 
 import { APP_ACTIONS, JOB_CARD_ARIA, JOB_CARD_COPY, JOB_UI } from '@/constants/ui';
 import type { SavedJobCardModel } from '@/features/applications/utils/mapApplicationDtoToSavedJobCard';
-import {
-  ArrowForwardIcon,
-  BookmarkOutlinedIcon,
-  BusinessCenterOutlinedIcon,
-  CheckCircleIcon,
-  LocationOnOutlinedIcon,
-  PersonOutlineIcon,
-  SmartToyOutlinedIcon,
-  Tooltip,
-  Typography,
-  WorkOutlineOutlinedIcon,
-} from '@/lib/material';
 
 import {
   AccentBar,

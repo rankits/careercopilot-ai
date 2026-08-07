@@ -257,7 +257,13 @@ const appWhereMatches = (app: FakeApplication, where?: Record<string, unknown>):
   if (!where) return true;
   if (where.id !== undefined && app.id !== (where.id as string)) return false;
   if (where.userId !== undefined && app.userId !== (where.userId as string)) return false;
-  if (where.jobId !== undefined && app.jobId !== (where.jobId as string)) return false;
+  if (where.jobId !== undefined) {
+    if (typeof where.jobId === 'string' && app.jobId !== where.jobId) return false;
+    if (typeof where.jobId === 'object' && where.jobId !== null && 'in' in where.jobId) {
+      const inArray = (where.jobId as { in: string[] }).in;
+      if (app.jobId === null || !inArray.includes(app.jobId)) return false;
+    }
+  }
   if (
     where.normalisedJobUrl !== undefined &&
     app.normalisedJobUrl !== (where.normalisedJobUrl as string)
@@ -1113,6 +1119,36 @@ export class FakeDb {
           }
           db.otps[index] = { ...db.otps[index], ...update, updatedAt: now };
           return { ...db.otps[index] };
+        },
+        updateMany: async ({
+          where,
+          data,
+        }: {
+          where: { target: string; purpose: OtpPurpose };
+          data: Partial<FakeOtp>;
+        }) => {
+          let count = 0;
+          const now = new Date();
+          for (let i = 0; i < db.otps.length; i++) {
+            if (db.otps[i].target === where.target && db.otps[i].purpose === where.purpose) {
+              db.otps[i] = { ...db.otps[i], ...data, updatedAt: now };
+              count++;
+            }
+          }
+          return { count };
+        },
+        deleteMany: async ({
+          where,
+        }: {
+          where: { target: string; purpose: OtpPurpose };
+        }) => {
+          let count = 0;
+          db.otps = db.otps.filter((o) => {
+            const matches = o.target === where.target && o.purpose === where.purpose;
+            if (matches) count++;
+            return !matches;
+          });
+          return { count };
         },
         update: async ({ where, data }: { where: { id: number }; data: Partial<FakeOtp> }) => {
           const index = db.otps.findIndex((o) => o.id === where.id);

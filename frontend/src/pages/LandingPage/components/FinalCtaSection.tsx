@@ -1,3 +1,5 @@
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { Button } from '@/components/atoms/Button';
@@ -5,7 +7,6 @@ import { Button } from '@/components/atoms/Button';
 import ctaPenguinUrl from '@/assets/logo/career-copilot-penguin.png';
 import { LANDING_COPY, LANDING_SECTION_IDS } from '@/constants/pages/landing';
 import { ROUTES } from '@/constants/routes';
-import { Box, styled } from '@/lib/material';
 import { borderRadius, colorTokens, fontSize, fontWeight, shadows, spacing } from '@/tokens';
 
 import { useInView } from '../hooks/useInView';

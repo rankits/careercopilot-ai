@@ -1,5 +1,6 @@
+import { styled } from '@mui/material/styles';
+
 import { LANDING_COPY, LANDING_SECTION_IDS, LANDING_STEPS } from '@/constants/pages/landing';
-import { styled } from '@/lib/material';
 import {
   borderRadius,
   borderWidth,

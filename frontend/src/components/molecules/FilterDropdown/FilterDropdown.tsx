@@ -1,6 +1,7 @@
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
 import { useId, useState, type MouseEvent } from 'react';
-
-import { KeyboardArrowDownIcon, Menu, MenuItem } from '@/lib/material';
 
 import {
   DropdownButton,

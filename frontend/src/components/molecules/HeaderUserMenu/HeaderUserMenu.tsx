@@ -1,14 +1,14 @@
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import LogoutIcon from '@mui/icons-material/Logout';
+import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
 import { useState, type MouseEvent } from 'react';
 
+import { ROUTES } from '@/constants/routes';
 import { HEADER_USER_MENU_COPY, USER_INITIALS_FALLBACK } from '@/constants/ui';
-import {
-  KeyboardArrowDownIcon,
-  LogoutIcon,
-  Menu,
-  MenuItem,
-  SettingsOutlinedIcon,
-  Typography,
-} from '@/lib/material';
+import { prefetchRoute } from '@/routes/lazyPages';
 
 import { menuItemSx, UserAvatar, UserMenuButton, UserMenuText } from './styles';
 
@@ -70,7 +70,12 @@ export function HeaderUserMenu({
       </UserMenuButton>
 
       <Menu anchorEl={anchorElement} onClose={handleClose} open={open}>
-        <MenuItem onClick={handleSettingsClick} sx={menuItemSx}>
+        <MenuItem
+          onClick={handleSettingsClick}
+          onFocus={() => prefetchRoute(ROUTES.PROFILE_EDIT)}
+          onMouseEnter={() => prefetchRoute(ROUTES.PROFILE_EDIT)}
+          sx={menuItemSx}
+        >
           <SettingsOutlinedIcon fontSize="small" />
           {HEADER_USER_MENU_COPY.editProfile}
         </MenuItem>

@@ -1,8 +1,11 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import { useMemo, useRef } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import { AutoAwesomeOutlinedIcon, Box, PictureAsPdfOutlinedIcon, Typography } from '@/lib/material';
 import type { AnalysisResult, RecheckResult } from '@/services/resumeBuilder.service';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 

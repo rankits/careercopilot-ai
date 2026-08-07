@@ -1,15 +1,13 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import NavigateNextIcon from '@mui/icons-material/NavigateNext';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 import { Button } from '@/components/atoms';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
-import {
-  AutoAwesomeOutlinedIcon,
-  Box,
-  LightbulbOutlinedIcon,
-  NavigateNextIcon,
-  Typography,
-} from '@/lib/material';
 import type {
   AnalysisResult,
   RecheckResult,

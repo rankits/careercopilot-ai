@@ -1,4 +1,7 @@
-import { ArticleOutlinedIcon, Box, CheckIcon, Typography } from '@/lib/material';
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
+import CheckIcon from '@mui/icons-material/Check';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 
 import { SUPPORTED_RESUME_TYPES } from '../../constants';
 

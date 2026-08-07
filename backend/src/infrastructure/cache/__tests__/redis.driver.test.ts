@@ -27,6 +27,7 @@ const makeClient = (overrides: Record<string, unknown> = {}) => {
     exists: vi.fn(),
     incr: vi.fn(),
     expire: vi.fn(),
+    ttl: vi.fn().mockResolvedValue(-1),
     ping: vi.fn(),
     disconnect: vi.fn(),
     ...overrides,

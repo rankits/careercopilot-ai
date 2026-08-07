@@ -1,3 +1,21 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import AutoGraphOutlinedIcon from '@mui/icons-material/AutoGraphOutlined';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import SchoolOutlinedIcon from '@mui/icons-material/SchoolOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
+import WorkspacePremiumOutlinedIcon from '@mui/icons-material/WorkspacePremiumOutlined';
+import Alert from '@mui/material/Alert';
+import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import LinearProgress from '@mui/material/LinearProgress';
+import Snackbar from '@mui/material/Snackbar';
+import Typography from '@mui/material/Typography';
 import { useMutation } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
@@ -35,26 +53,6 @@ import {
   getProfileCompletion,
   getResumePresentation,
 } from '@/features/resume/utils/resumePresentation';
-import {
-  Alert,
-  AutoAwesomeOutlinedIcon,
-  AutoGraphOutlinedIcon,
-  Box,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  FolderOutlinedIcon,
-  LinearProgress,
-  PersonOutlineIcon,
-  SchoolOutlinedIcon,
-  SecurityOutlinedIcon,
-  Snackbar,
-  Typography,
-  WorkOutlineOutlinedIcon,
-  WorkspacePremiumOutlinedIcon,
-} from '@/lib/material';
 import { borderRadius, spacing } from '@/tokens';
 
 const DEFAULT_VALUES: ResumeProfileFormValues = {

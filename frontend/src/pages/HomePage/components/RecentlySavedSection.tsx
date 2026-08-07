@@ -1,7 +1,9 @@
+import BookmarkOutlinedIcon from '@mui/icons-material/BookmarkOutlined';
+import Skeleton from '@mui/material/Skeleton';
+
 import { DASHBOARD_COPY } from '@/constants/pages/dashboard';
 import { ROUTES } from '@/constants/routes';
 import type { SavedJobCardModel } from '@/features/applications/utils/mapApplicationDtoToSavedJobCard';
-import { BookmarkOutlinedIcon, Skeleton } from '@/lib/material';
 
 import {
   EmptyText,
