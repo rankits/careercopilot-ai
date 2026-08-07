@@ -49,6 +49,7 @@ describe('AppHeader', () => {
 
   it('opens user menu actions and calls handlers', async () => {
     const user = userEvent.setup();
+    const handleConnectedAccountsClick = vi.fn();
     const handleLogoutClick = vi.fn();
     const handleNotificationClick = vi.fn();
     const handleSettingsClick = vi.fn();
@@ -56,6 +57,7 @@ describe('AppHeader', () => {
 
     render(
       <AppHeader
+        onConnectedAccountsClick={handleConnectedAccountsClick}
         onLogoutClick={handleLogoutClick}
         onNotificationClick={handleNotificationClick}
         onSettingsClick={handleSettingsClick}
@@ -67,11 +69,14 @@ describe('AppHeader', () => {
     await user.click(screen.getByRole('button', { name: /user menu/i }));
     await user.click(screen.getByRole('menuitem', { name: /edit profile/i }));
     await user.click(screen.getByRole('button', { name: /user menu/i }));
+    await user.click(screen.getByRole('menuitem', { name: /connected accounts/i }));
+    await user.click(screen.getByRole('button', { name: /user menu/i }));
     await user.click(screen.getByRole('menuitem', { name: /logout/i }));
 
     expect(handleNotificationClick).toHaveBeenCalledTimes(1);
-    expect(handleUserMenuClick).toHaveBeenCalledTimes(2);
+    expect(handleUserMenuClick).toHaveBeenCalledTimes(3);
     expect(handleSettingsClick).toHaveBeenCalledTimes(1);
+    expect(handleConnectedAccountsClick).toHaveBeenCalledTimes(1);
     expect(handleLogoutClick).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('menuitem', { name: /upload resume/i })).not.toBeInTheDocument();
   });

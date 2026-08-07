@@ -14,6 +14,7 @@ import {
   BusinessCenterOutlinedIcon,
   CheckCircleOutlineIcon,
   DescriptionOutlinedIcon,
+  EmailOutlinedIcon,
   HomeOutlinedIcon,
   InsightsOutlinedIcon,
   LockOutlinedIcon,
@@ -85,6 +86,7 @@ export const HEADER_SEARCH_COPY = {
 
 export const HEADER_USER_MENU_COPY = {
   ariaLabel: 'User menu',
+  connectedAccounts: 'Connected Accounts',
   editProfile: 'Edit Profile',
   logout: 'Logout',
   roleLabel: 'Frontend Developer',
@@ -505,6 +507,7 @@ export const CAREER_COPILOT_COPY = {
  * -------------------------------------------------------------------------- */
 
 export const SIDEBAR_NAV_LABELS = {
+  aiMailComposer: 'AI Mail Composer',
   autoApply: 'Auto Apply',
   browserExtension: 'Browser Extension',
   applications: 'Applications',
@@ -554,6 +557,12 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     icon: AutoAwesomeOutlinedIcon,
     id: 'auto-apply',
     label: SIDEBAR_NAV_LABELS.autoApply,
+  },
+  {
+    href: ROUTES.AI_MAIL,
+    icon: EmailOutlinedIcon,
+    id: 'ai-mail',
+    label: SIDEBAR_NAV_LABELS.aiMailComposer,
   },
   {
     href: ROUTES.ASSISTED_APPLICATIONS,

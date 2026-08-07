@@ -25,28 +25,32 @@ export function AppLayout() {
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
   const activeItemId =
-    pathname === ROUTES.PROFILE_EDIT || pathname.startsWith(`${ROUTES.PROFILE}/`)
+    pathname === ROUTES.PROFILE_EDIT ||
+    pathname.startsWith(`${ROUTES.PROFILE}/`) ||
+    pathname.startsWith('/settings/')
       ? 'settings'
       : pathname === ROUTES.SAVED_JOBS
         ? 'saved-jobs'
         : pathname === ROUTES.AI_MATCH
           ? 'ai-match'
-          : pathname === ROUTES.AUTO_APPLY
-            ? 'auto-apply'
-            : pathname === ROUTES.ASSISTED_APPLICATIONS ||
-                pathname.startsWith('/assisted-apply/')
-              ? 'assisted-applications'
-            : pathname === ROUTES.BROWSER_EXTENSION
-              ? 'browser-extension'
-          : pathname === ROUTES.APPLICATIONS
-            ? 'applications'
-            : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
-              ? 'jobs-feed'
-              : pathname === ROUTES.SAVED_RESUMES || pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
-                ? 'saved-resumes'
-                : pathname.startsWith(ROUTES.RESUME_BUILDER)
-                  ? 'resume-builder'
-                  : 'dashboard';
+          : pathname === ROUTES.AI_MAIL
+            ? 'ai-mail'
+            : pathname === ROUTES.AUTO_APPLY
+              ? 'auto-apply'
+              : pathname === ROUTES.ASSISTED_APPLICATIONS || pathname.startsWith('/assisted-apply/')
+                ? 'assisted-applications'
+                : pathname === ROUTES.BROWSER_EXTENSION
+                  ? 'browser-extension'
+                  : pathname === ROUTES.APPLICATIONS
+                    ? 'applications'
+                    : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
+                      ? 'jobs-feed'
+                      : pathname === ROUTES.SAVED_RESUMES ||
+                          pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
+                        ? 'saved-resumes'
+                        : pathname.startsWith(ROUTES.RESUME_BUILDER)
+                          ? 'resume-builder'
+                          : 'dashboard';
 
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);
@@ -98,6 +102,7 @@ export function AppLayout() {
         />
         <div className="content-shell">
           <AppHeader
+            onConnectedAccountsClick={() => void navigate(ROUTES.CONNECTED_ACCOUNTS)}
             onLogoutClick={() => {
               if (!isLoggingOut) {
                 void logout();

@@ -3,6 +3,7 @@ import { useState, type MouseEvent } from 'react';
 import { HEADER_USER_MENU_COPY, USER_INITIALS_FALLBACK } from '@/constants/ui';
 import {
   KeyboardArrowDownIcon,
+  LinkOutlinedIcon,
   LogoutIcon,
   Menu,
   MenuItem,
@@ -15,6 +16,7 @@ import { menuItemSx, UserAvatar, UserMenuButton, UserMenuText } from './styles';
 export interface HeaderUserMenuProps {
   avatarUrl?: string;
   name: string;
+  onConnectedAccountsClick?: () => void;
   onLogoutClick?: () => void;
   onMenuClick?: () => void;
   onSettingsClick?: () => void;
@@ -24,6 +26,7 @@ export interface HeaderUserMenuProps {
 export function HeaderUserMenu({
   avatarUrl,
   name,
+  onConnectedAccountsClick,
   onLogoutClick,
   onMenuClick,
   onSettingsClick,
@@ -44,6 +47,11 @@ export function HeaderUserMenu({
 
   function handleSettingsClick() {
     onSettingsClick?.();
+    handleClose();
+  }
+
+  function handleConnectedAccountsClick() {
+    onConnectedAccountsClick?.();
     handleClose();
   }
 
@@ -73,6 +81,10 @@ export function HeaderUserMenu({
         <MenuItem onClick={handleSettingsClick} sx={menuItemSx}>
           <SettingsOutlinedIcon fontSize="small" />
           {HEADER_USER_MENU_COPY.editProfile}
+        </MenuItem>
+        <MenuItem onClick={handleConnectedAccountsClick} sx={menuItemSx}>
+          <LinkOutlinedIcon fontSize="small" />
+          {HEADER_USER_MENU_COPY.connectedAccounts}
         </MenuItem>
         <MenuItem onClick={handleLogoutClick} sx={menuItemSx}>
           <LogoutIcon fontSize="small" />

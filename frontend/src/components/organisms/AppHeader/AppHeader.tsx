@@ -7,6 +7,7 @@ import { HeaderActions, HeaderRoot, MobileLogo, SearchWrap } from './styles';
 
 export interface AppHeaderProps {
   notificationCount?: number;
+  onConnectedAccountsClick?: () => void;
   onLogoutClick?: () => void;
   onNotificationClick?: () => void;
   onSettingsClick?: () => void;
@@ -19,6 +20,7 @@ export interface AppHeaderProps {
 
 export function AppHeader({
   notificationCount = APP_HEADER_DEFAULTS.notificationCount,
+  onConnectedAccountsClick,
   onLogoutClick,
   onNotificationClick,
   onSettingsClick,
@@ -41,6 +43,7 @@ export function AppHeader({
         <HeaderUserMenu
           avatarUrl={userAvatarUrl}
           name={userName}
+          onConnectedAccountsClick={onConnectedAccountsClick}
           onLogoutClick={onLogoutClick}
           onMenuClick={onUserMenuClick}
           onSettingsClick={onSettingsClick}
