@@ -7,6 +7,7 @@ import type {
   ResumeParseProgress,
   ResumeParseStatus,
   ResumeProcessingStatus,
+  ResumeProfileFormValues,
   UpdateCandidateProfilePayload,
   UploadedResumeVersion,
 } from '@/features/resume/types/resume.types';
@@ -248,6 +249,40 @@ export const resumeService = {
             ? response.data.message
             : 'Profile updated successfully',
         profile: toCandidateProfileData(data),
+      };
+    } catch (error) {
+      throw normalizeError(error);
+    }
+  },
+
+  async suggestProfileFields(values: ResumeProfileFormValues): Promise<{
+    certifications: string;
+    designation: string;
+    education: string;
+    projects: string;
+    skills: string;
+    summary: string;
+    totalExperience: string;
+    workExperience: string;
+  }> {
+    try {
+      const response = await httpClient.post('/resumes/profile/ai-suggest', values);
+      const data = responseData(response);
+      if (!data) throw new Error('AI suggestion returned an invalid response.');
+
+      const skills = Array.isArray(data.skills)
+        ? data.skills.filter((skill): skill is string => typeof skill === 'string')
+        : [];
+
+      return {
+        certifications: typeof data.certifications === 'string' ? data.certifications : '',
+        designation: typeof data.designation === 'string' ? data.designation : '',
+        education: typeof data.education === 'string' ? data.education : '',
+        projects: typeof data.projects === 'string' ? data.projects : '',
+        skills: skills.join(', '),
+        summary: typeof data.summary === 'string' ? data.summary : '',
+        totalExperience: typeof data.totalExperience === 'string' ? data.totalExperience : '',
+        workExperience: typeof data.workExperience === 'string' ? data.workExperience : '',
       };
     } catch (error) {
       throw normalizeError(error);

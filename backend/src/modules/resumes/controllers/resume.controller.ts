@@ -1,6 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import multer from 'multer';
 import { resumeConfig } from '@/modules/resumes/config/resume.config.js';
+import { suggestProfileFields } from '@/modules/resumes/services/profile-ai-suggest.service.js';
 import { resumeService } from '@/modules/resumes/services/resume.service.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import { successResponse } from '@/shared/utils/response.js';
@@ -224,6 +225,20 @@ export const updateMyCandidateProfileController = async (
     const userId = requirePrincipalId(req);
     const profile = await resumeService.updateCandidateProfile(userId, req.body);
     return res.status(200).json(successResponse('Candidate profile updated', profile));
+  } catch (error) {
+    return next(error);
+  }
+};
+
+export const suggestProfileFieldsController = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+) => {
+  try {
+    requirePrincipalId(req);
+    const suggestion = await suggestProfileFields(req.body);
+    return res.status(200).json(successResponse('AI profile suggestions ready', suggestion));
   } catch (error) {
     return next(error);
   }

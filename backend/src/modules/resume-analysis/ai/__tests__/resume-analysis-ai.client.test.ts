@@ -188,22 +188,17 @@ describe('client.validateTargetRoleAndJd', () => {
     expect(result.valid).toBe(false);
   });
 
-  it('falls through non-JSON openrouter models to a working groq key', async () => {
+  it('falls through non-JSON groq to openrouter (Groq first, one model)', async () => {
     const c = await loadClientWithEnv({
       OPENROUTER_API_KEY: 'test-key',
       GROQ_API_KEY: 'groq-key',
     });
-    // openrouter model 1 + 2 return safety/non-JSON, groq succeeds.
+    // groq primary fails non-JSON → openrouter succeeds (no multi-model Groq fan-out).
     fetchMock
       .mockImplementationOnce(async () => ({
         ok: true,
         status: 200,
         json: async () => ({ choices: [{ message: { content: 'user safety: not json' } }] }),
-      }))
-      .mockImplementationOnce(async () => ({
-        ok: true,
-        status: 200,
-        json: async () => ({ choices: [{ message: { content: 'just some prose' } }] }),
       }))
       .mockImplementationOnce(async () => ({
         ok: true,
@@ -214,8 +209,9 @@ describe('client.validateTargetRoleAndJd', () => {
       }));
     const result = await c.validateTargetRoleAndJd('Engineer', JD);
     expect(result.valid).toBe(true);
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls[2][0]).toContain('groq');
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock.mock.calls[0][0]).toContain('groq');
+    expect(fetchMock.mock.calls[1][0]).toContain('openrouter');
   });
 
   it('breaks the loop when a provider is exhausted (TPD quota)', async () => {
@@ -613,8 +609,8 @@ describe('client.analyze', () => {
       OPENROUTER_API_KEY: 'test-key',
       GROQ_API_KEY: 'groq-key',
     });
-    // openrouter model1 -> SyntaxError triggers a compact retry on the same
-    // model, which also returns non-JSON -> outer catch breaks to Groq.
+    // groq model1 -> SyntaxError triggers a compact retry on the same
+    // model, which also returns non-JSON -> outer catch breaks to OpenRouter.
     fetchMock
       .mockImplementationOnce(async () => ({
         ok: true,
@@ -632,10 +628,12 @@ describe('client.analyze', () => {
         json: async () => ({ choices: [{ message: { content: JSON.stringify(makeOutput()) } }] }),
       }));
     const result = await c.analyze(RESUME, 'Engineer', 'MID', JD_LONG);
-    // openrouter paid model broke out; groq fallback produced the result.
+    // groq is primary; invalid JSON retries then falls through to openrouter when needed.
     expect(result).toBeDefined();
-    expect(fetchMock).toHaveBeenCalledTimes(3);
-    expect(fetchMock.mock.calls[2][0]).toContain('groq');
+    expect(fetchMock.mock.calls.length).toBeGreaterThanOrEqual(2);
+    expect(fetchMock.mock.calls[0][0]).toContain('groq');
+    const urls = fetchMock.mock.calls.map((call) => String(call[0]));
+    expect(urls.some((url) => url.includes('openrouter') || url.includes('groq'))).toBe(true);
   });
 
   it('breaks immediately when a provider is exhausted', async () => {

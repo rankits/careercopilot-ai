@@ -29,6 +29,7 @@
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-virtual": "^3.14.9",
     "axios": "^1.10.0",
+    "country-flag-icons": "^1.6.20",
     "dompurify": "^3.4.12",
     "html2canvas": "^1.4.1",
     "jspdf": "^4.2.1",

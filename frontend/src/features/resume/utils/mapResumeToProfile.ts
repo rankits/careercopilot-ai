@@ -33,6 +33,46 @@ const formatRecord = (record: Record<string, unknown>, keys: string[]) => {
   return structured || text(record.raw);
 };
 
+const formatProject = (record: Record<string, unknown>) => {
+  const name = text(record.name) || text(record.title) || text(record.projectName);
+  const description = text(record.description);
+  const duration =
+    text(record.duration) ||
+    [text(record.startDate), text(record.endDate) || (record.isCurrent ? 'Present' : '')]
+      .filter(Boolean)
+      .join(' – ');
+  const technologies = texts(record.technologies).join(', ') || text(record.technologies);
+  const responsibilities = texts(record.responsibilities);
+
+  const lines = [
+    name,
+    description ? `Description: ${description}` : null,
+    technologies ? `Technologies: ${technologies}` : null,
+    duration ? `Duration: ${duration}` : null,
+    responsibilities.length ? `Responsibilities: ${responsibilities.join('; ')}` : null,
+  ].filter(Boolean);
+
+  return lines.join('\n') || formatRecord(record, ['name', 'description']);
+};
+
+const buildFallbackSummary = (profile: ResumeProfileFormValues): string => {
+  if (profile.summary.trim()) return profile.summary;
+  const role = profile.designation || profile.workExperience.split('\n')[0] || 'Professional';
+  const skills = profile.skills
+    .split(',')
+    .map((item) => item.trim())
+    .filter(Boolean)
+    .slice(0, 6)
+    .join(', ');
+  if (!skills && !profile.workExperience.trim()) return '';
+  return [
+    `${role.split(' — ')[0]} with demonstrated experience across relevant roles.`,
+    skills ? `Core skills include ${skills}.` : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
+};
+
 export function mapResumeToProfile(value: unknown): ResumeProfileFormValues {
   if (!isRecord(value)) throw new Error('Resume parser returned an invalid response.');
   if (Object.keys(value).length === 0) throw new Error('Resume parser returned an empty response.');
@@ -61,7 +101,11 @@ export function mapResumeToProfile(value: unknown): ResumeProfileFormValues {
           ? personal.totalExperience
           : null;
 
-  return {
+  const projectRecords = records(value.projects).length
+    ? records(value.projects)
+    : records(legacyPersonal.projects);
+
+  const mapped: ResumeProfileFormValues = {
     ...EMPTY_PROFILE,
     certifications: records(value.certifications)
       .map((item) => formatRecord(item, ['name', 'issuer']))
@@ -92,15 +136,10 @@ export function mapResumeToProfile(value: unknown): ResumeProfileFormValues {
       text(personal.location) ||
       text(value.location),
     phone: text(personal.phone) || text(value.phone),
-    projects: records(value.projects).length
-      ? records(value.projects)
-          .map((item) => formatRecord(item, ['name', 'description']))
-          .filter(Boolean)
-          .join('\n')
-      : records(legacyPersonal.projects)
-          .map((item) => formatRecord(item, ['name', 'description']))
-          .filter(Boolean)
-          .join('\n'),
+    projects: projectRecords
+      .map((item) => formatProject(item))
+      .filter(Boolean)
+      .join('\n\n'),
     skills: [...new Set(skillValues)].join(', '),
     summary:
       text(value.professionalSummary) ||
@@ -113,5 +152,10 @@ export function mapResumeToProfile(value: unknown): ResumeProfileFormValues {
       .map((item) => formatRecord(item, ['title', 'designation', 'company', 'companyName']))
       .filter(Boolean)
       .join('\n'),
+  };
+
+  return {
+    ...mapped,
+    summary: buildFallbackSummary(mapped),
   };
 }

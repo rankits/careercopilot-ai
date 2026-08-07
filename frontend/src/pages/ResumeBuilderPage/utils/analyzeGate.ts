@@ -4,11 +4,11 @@ export const INVALID_TARGET_OOPS_MESSAGE =
   'Oops! You added a wrong Target Role and Job Description. Please check them and try again.';
 
 export const MIN_ATS_TO_CONTINUE = 35;
-/** Skills are the primary gate — even ATS 40 with skill 0 still blocks. */
+/** Skills are the primary signal for the low-match warning banner. */
 export const MIN_SKILL_MATCH_TO_CONTINUE = 25;
 
 export const LOW_JD_MATCH_MESSAGE =
-  'Sorry, your resume is not 50% match with the JD. Please upload another resume or use a resume from a related field.';
+  'Your resume is a low match for this JD. You can still continue to rebuild and optimize it.';
 
 function isCompleted(analysis: AnalysisResult | null | undefined): boolean {
   return Boolean(analysis && String(analysis.status || '').toUpperCase() === 'COMPLETED');
@@ -36,8 +36,8 @@ export function getInvalidTargetMessage(analysis: AnalysisResult | null | undefi
 }
 
 /**
- * Block Optimize unless BOTH pass: skill ≥ 25 (primary) and ATS ≥ 35.
- * Skill 0 + ATS 35–40 still blocks — skills matter more than ATS alone.
+ * Low JD match warning (skill < 25 or ATS < 35).
+ * Does NOT hard-block Optimize — user can continue and rebuild.
  */
 export function isLowJdMatch(analysis: AnalysisResult | null | undefined): boolean {
   if (!isCompleted(analysis) || isInvalidTargetAnalysis(analysis)) return false;
@@ -48,9 +48,9 @@ export function isLowJdMatch(analysis: AnalysisResult | null | undefined): boole
   return !(skillOk && atsOk);
 }
 
-/** Analyze step must not advance to Optimize. */
+/** Analyze step must not advance only when the target role/JD is invalid. */
 export function shouldBlockAnalyzeContinue(analysis: AnalysisResult | null | undefined): boolean {
-  return isInvalidTargetAnalysis(analysis) || isLowJdMatch(analysis);
+  return isInvalidTargetAnalysis(analysis);
 }
 
 export type AnalyzeGateKind = 'invalid_target' | 'low_match' | null;

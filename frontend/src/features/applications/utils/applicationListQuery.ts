@@ -1,7 +1,11 @@
 import type { ApplicationListParams, ApiApplicationStatus } from '../types/application.types';
-import type { ApplicationRecord } from '../types/application.view.types';
 
-import { mapUiArchiveToApi, mapUiSortToApi, mapUiStatusToApi } from './applicationMappers';
+import {
+  mapUiArchiveToApi,
+  mapUiSortToApi,
+  mapUiSourceToApi,
+  mapUiStatusTabToApiStatuses,
+} from './applicationMappers';
 
 /** Pipeline statuses shown in Application Management (excludes bookmark-only SAVED). */
 export const APPLICATION_MANAGEMENT_STATUSES: ApiApplicationStatus[] = [
@@ -24,6 +28,7 @@ export interface ApplicationListQueryInput {
   archiveFilter: string;
   searchQuery: string;
   sortBy: string;
+  sourceFilter?: string;
   statusFilter: string;
 }
 
@@ -32,11 +37,11 @@ export function resolveApplicationStatusFilter(
   statusFilter: string,
 ): ApiApplicationStatus | ApiApplicationStatus[] | undefined {
   if (statusFilter !== 'all') {
-    return mapUiStatusToApi(statusFilter as ApplicationRecord['status']);
+    return mapUiStatusTabToApiStatuses(statusFilter);
   }
 
   if (activeTab !== 'all') {
-    return mapUiStatusToApi(activeTab as ApplicationRecord['status']);
+    return mapUiStatusTabToApiStatuses(activeTab);
   }
 
   // Default "All" on Applications excludes SAVED bookmarks (those belong on Saved Jobs).
@@ -47,12 +52,15 @@ export function buildApplicationListParams(
   input: ApplicationListQueryInput,
   options: { limit?: number; page?: number; search?: string } = {},
 ): ApplicationListParams {
+  const sourceType = mapUiSourceToApi(input.sourceFilter ?? 'all');
+
   return {
     archived: mapUiArchiveToApi(input.archiveFilter),
     limit: options.limit,
     page: options.page,
     search: options.search,
     sortBy: mapUiSortToApi(input.sortBy) ?? 'updatedAt:desc',
+    ...(sourceType ? { sourceType } : {}),
     status: resolveApplicationStatusFilter(input.activeTab, input.statusFilter),
   };
 }

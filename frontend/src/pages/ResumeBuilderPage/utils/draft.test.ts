@@ -111,11 +111,11 @@ describe('draft utils', () => {
     expect(
       applyTextReplaceToDraft(draft, 'experience', 'Built UI components', 'Built REST APIs')
         .experiences[0]?.details,
-    ).toBe('Built REST APIs');
+    ).toBe('- Built REST APIs');
     expect(
       applyTextReplaceToDraft(draft, 'projects', 'Used React', 'Used React and TypeScript')
         .projectsList[0]?.details,
-    ).toBe('Used React and TypeScript');
+    ).toBe('- Used React and TypeScript');
   });
 
   it('applies experience suggestions despite bullet/whitespace drift', () => {
@@ -167,6 +167,129 @@ describe('draft utils', () => {
 
     const next = applyTextReplaceToDraft(draft, 'skills', 'Java', 'Java');
     expect(next.skillsList).toEqual(['React', 'Java']);
+  });
+
+  it('replaces a full skills list rewrite without duplicating on re-apply', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      skillsList: ['React', 'CSS', 'HTML'],
+    };
+    const original = 'React, CSS, HTML';
+    const suggested = 'Java, Spring Boot, Hibernate, Kafka';
+    const once = applyTextReplaceToDraft(draft, 'skills', original, suggested);
+    expect(once.skillsList).toEqual(
+      expect.arrayContaining(['Java', 'Spring Boot', 'Hibernate', 'Kafka']),
+    );
+    expect(once.skillsList).not.toEqual(expect.arrayContaining(['React', 'CSS', 'HTML']));
+    const twice = applyTextReplaceToDraft(once, 'skills', original, suggested);
+    expect(twice.skillsList).toEqual(once.skillsList);
+  });
+
+  it('replaces summary instead of appending when original is empty', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      summary: 'Old summary about React work.',
+    };
+    const next = applyTextReplaceToDraft(
+      draft,
+      'summary',
+      '',
+      'New summary targeting Java Spring Boot roles.',
+    );
+    expect(next.summary).toBe('New summary targeting Java Spring Boot roles.');
+    expect(next.summary).not.toContain('Old summary');
+  });
+
+  it('replaces experience bullets instead of appending duplicates', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      experiences: [
+        {
+          id: 'e1',
+          company: 'Acme',
+          title: 'Dev',
+          startDate: '',
+          endDate: '',
+          details: '- Built UI components\n- Shipped features',
+        },
+      ],
+    };
+
+    const next = applyTextReplaceToDraft(
+      draft,
+      'experience',
+      'Built UI comps',
+      'Built accessible UI components with React and TypeScript',
+    );
+    const details = next.experiences[0]?.details ?? '';
+    expect(details).toContain('Built accessible UI components with React and TypeScript');
+    expect(details).toContain('Shipped features');
+    expect(details.match(/Built/gi)?.length ?? 0).toBe(1);
+  });
+
+  it('does not duplicate when applying the same experience suggestion twice', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      experiences: [
+        {
+          id: 'e1',
+          company: 'Acme',
+          title: 'Dev',
+          startDate: '',
+          endDate: '',
+          details: '- Built REST APIs',
+        },
+      ],
+    };
+
+    const once = applyTextReplaceToDraft(
+      draft,
+      'experience',
+      'Built REST APIs',
+      'Built scalable REST APIs with Node.js',
+    );
+    const twice = applyTextReplaceToDraft(
+      once,
+      'experience',
+      'Built REST APIs',
+      'Built scalable REST APIs with Node.js',
+    );
+    expect(twice.experiences[0]?.details.match(/scalable REST APIs/gi)?.length ?? 0).toBe(1);
+  });
+
+  it('does not treat short substrings as already-applied prose', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      summary: 'Backend engineer with Java, Spring Boot, and cloud delivery experience.',
+    };
+    const next = applyTextReplaceToDraft(
+      draft,
+      'summary',
+      'Backend engineer with Java, Spring Boot, and cloud delivery experience.',
+      'Java backend engineer focused on Spring Boot microservices and cloud delivery.',
+    );
+    expect(next.summary).toBe(
+      'Java backend engineer focused on Spring Boot microservices and cloud delivery.',
+    );
+  });
+
+  it('updates project titles when the suggestion targets the title', () => {
+    const draft = {
+      ...createEmptyDraft(),
+      projectsList: [
+        {
+          id: 'p1',
+          title: 'App',
+          company: '',
+          startDate: '',
+          endDate: '',
+          details: '- Built features',
+        },
+      ],
+    };
+    const next = applyTextReplaceToDraft(draft, 'projects', 'App', 'ATS Resume Optimizer');
+    expect(next.projectsList[0]?.title).toBe('ATS Resume Optimizer');
+    expect(next.projectsList[0]?.details).toContain('Built features');
   });
 
   it('normalizes suggestion categories', () => {

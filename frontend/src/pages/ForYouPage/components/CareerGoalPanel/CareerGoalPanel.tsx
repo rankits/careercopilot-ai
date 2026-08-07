@@ -27,7 +27,10 @@ type CareerGoalPanelProps = {
   generateCareerGoal: {
     isPending: boolean;
     isError: boolean;
-    mutateAsync: (variables: { goalText: string; structured?: Record<string, unknown> }) => Promise<RecommendationDto[]>;
+    mutateAsync: (variables: {
+      goalText: string;
+      structured?: Record<string, unknown>;
+    }) => Promise<RecommendationDto[]>;
   };
   setCareerGeneratedOnce: (value: boolean) => void;
   setCareerRecommendations: (items: RecommendationDto[]) => void;

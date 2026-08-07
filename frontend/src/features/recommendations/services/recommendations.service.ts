@@ -276,7 +276,7 @@ export const recommendationsService = {
   ): Promise<SimilarJobDto[]> {
     const response = await httpClient.get(`/job-recommendations/similar/${jobId}`, {
       params: {
-        limit: params.limit ?? 10,
+        ...(params.limit !== undefined ? { limit: params.limit } : {}),
       },
       signal: options.signal,
     });

@@ -1,5 +1,5 @@
 import { useQueryClient } from '@tanstack/react-query';
-import { useMemo, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
 
 import { Button } from '@/components/atoms/Button';
@@ -8,15 +8,15 @@ import { FilterDropdown } from '@/components/molecules';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { useCreateApplication } from '@/features/applications/hooks/useCreateApplication';
+import { useRecommendations } from '@/features/recommendations/hooks/useRecommendations';
 
-import type { defaultAddApplicationForm } from '@/constants/pages/addApplication';
+import type { defaultAddApplicationForm, JobFeedPickerJob } from '@/constants/pages/addApplication';
 import {
   addApplicationPriorityOptions,
   addApplicationStatusOptions,
   createDefaultAddApplicationForm,
   getTodayDateInputValue,
   jobFeedPickerFilters,
-  jobFeedPickerJobs,
   MAX_APPLICATION_NOTE_LENGTH,
   visibleAddApplicationEntryModes,
   type AddApplicationEntryMode,
@@ -30,6 +30,7 @@ import type {
 } from '@/features/applications/utils/addApplicationValidation';
 import { validateAddApplicationForm } from '@/features/applications/utils/addApplicationValidation';
 import { buildCreateApplicationPayload } from '@/features/applications/utils/createApplicationPayload';
+import { mapRecommendationToPickerJob } from '@/features/applications/utils/mapRecommendationToPickerJob';
 import {
   AccessTimeOutlinedIcon,
   AutoAwesomeOutlinedIcon,
@@ -401,10 +402,16 @@ function ApplicationFormFields({
 
 function JobFeedPicker({
   fieldError,
+  isError,
+  isLoading,
+  jobs,
   onSelect,
   selectedJobId,
 }: {
   fieldError: (field: AddApplicationFormField) => string | undefined;
+  isError: boolean;
+  isLoading: boolean;
+  jobs: JobFeedPickerJob[];
   onSelect: (jobId: string) => void;
   selectedJobId: string;
 }) {
@@ -417,7 +424,7 @@ function JobFeedPicker({
   const filteredJobs = useMemo(() => {
     const query = searchQuery.trim().toLowerCase();
 
-    return jobFeedPickerJobs
+    return jobs
       .filter((job) => {
         const matchesSearch =
           !query ||
@@ -425,8 +432,11 @@ function JobFeedPicker({
           job.company.toLowerCase().includes(query);
         const matchesLocation =
           locationFilter === 'all' ||
-          (locationFilter === 'remote' && job.location.toLowerCase().includes('remote')) ||
-          (locationFilter === 'hybrid' && job.type.toLowerCase().includes('hybrid'));
+          (locationFilter === 'remote' &&
+            (job.location.toLowerCase().includes('remote') ||
+              job.type.toLowerCase().includes('remote'))) ||
+          (locationFilter === 'hybrid' && job.type.toLowerCase().includes('hybrid')) ||
+          (locationFilter === 'on-site' && job.type.toLowerCase().includes('on-site'));
         const matchesType =
           jobTypeFilter === 'all' ||
           job.type.toLowerCase().includes(jobTypeFilter.replace('-', ' '));
@@ -438,9 +448,16 @@ function JobFeedPicker({
           return right.match - left.match;
         }
 
+        if (recommendedFilter === 'recent') {
+          const leftTime = left.publishedAt ? Date.parse(left.publishedAt) : 0;
+          const rightTime = right.publishedAt ? Date.parse(right.publishedAt) : 0;
+
+          return rightTime - leftTime;
+        }
+
         return 0;
       });
-  }, [jobTypeFilter, locationFilter, recommendedFilter, searchQuery]);
+  }, [jobTypeFilter, jobs, locationFilter, recommendedFilter, searchQuery]);
 
   return (
     <DialogSection
@@ -476,7 +493,7 @@ function JobFeedPicker({
         />
         <FilterDropdown
           fullWidth
-          label="Recommended for you"
+          label="Recommended"
           onChange={setRecommendedFilter}
           options={jobFeedPickerFilters.recommended}
           value={recommendedFilter}
@@ -486,12 +503,30 @@ function JobFeedPicker({
       {selectionError ? <FieldErrorBanner role="alert">{selectionError}</FieldErrorBanner> : null}
 
       <JobFeedList aria-label="Jobs from feed" aria-invalid={Boolean(selectionError)}>
-        {filteredJobs.length === 0 ? (
+        {isLoading ? (
+          <JobFeedEmpty>
+            <AutoAwesomeOutlinedIcon fontSize="small" />
+            <JobFeedEmptyTitle>Loading recommended jobs...</JobFeedEmptyTitle>
+            <JobFeedEmptyText>Pulling your latest AI Match results.</JobFeedEmptyText>
+          </JobFeedEmpty>
+        ) : isError ? (
           <JobFeedEmpty>
             <SearchOutlinedIcon fontSize="small" />
-            <JobFeedEmptyTitle>No matching jobs found</JobFeedEmptyTitle>
+            <JobFeedEmptyTitle>Unable to load recommended jobs</JobFeedEmptyTitle>
             <JobFeedEmptyText>
-              Try adjusting your search or filters to discover more opportunities.
+              Try again in a moment, or generate matches from AI Match first.
+            </JobFeedEmptyText>
+          </JobFeedEmpty>
+        ) : filteredJobs.length === 0 ? (
+          <JobFeedEmpty>
+            <SearchOutlinedIcon fontSize="small" />
+            <JobFeedEmptyTitle>
+              {jobs.length === 0 ? 'No recommended jobs yet' : 'No matching jobs found'}
+            </JobFeedEmptyTitle>
+            <JobFeedEmptyText>
+              {jobs.length === 0
+                ? 'Generate matches on AI Match, then return here to track a role.'
+                : 'Try adjusting your search or filters to discover more opportunities.'}
             </JobFeedEmptyText>
           </JobFeedEmpty>
         ) : (
@@ -530,15 +565,36 @@ export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProp
   const createApplication = useCreateApplication();
   const [entryMode, setEntryMode] = useState<AddApplicationEntryMode>('manual');
   const [form, setForm] = useState(createDefaultAddApplicationForm);
-  const [selectedJobId, setSelectedJobId] = useState(jobFeedPickerJobs[0]?.id ?? '');
+  const [selectedJobId, setSelectedJobId] = useState('');
   const [errors, setErrors] = useState<AddApplicationFormErrors>({});
   const [touched, setTouched] = useState<Partial<Record<AddApplicationFormField, boolean>>>({});
   const [submitAttempted, setSubmitAttempted] = useState(false);
 
-  const selectedJob = useMemo(
-    () => jobFeedPickerJobs.find((job) => job.id === selectedJobId),
-    [selectedJobId],
+  // Live AI Match recommendations power the job-feed picker (match % + real job ids).
+  const recommendationsQuery = useRecommendations(
+    { latestOnly: true, limit: 20 },
+    { enabled: open && entryMode === 'job-feed' },
   );
+
+  const pickerJobs = useMemo(
+    () => (recommendationsQuery.data?.items ?? []).map(mapRecommendationToPickerJob),
+    [recommendationsQuery.data?.items],
+  );
+
+  const selectedJob = useMemo(
+    () => pickerJobs.find((job) => job.id === selectedJobId),
+    [pickerJobs, selectedJobId],
+  );
+
+  useEffect(() => {
+    if (entryMode !== 'job-feed' || pickerJobs.length === 0) {
+      return;
+    }
+
+    if (!selectedJobId || !pickerJobs.some((job) => job.id === selectedJobId)) {
+      setSelectedJobId(pickerJobs[0].id);
+    }
+  }, [entryMode, pickerJobs, selectedJobId]);
 
   const validationContext: FormValidationContext = {
     entryMode,
@@ -594,7 +650,7 @@ export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProp
   const resetDialog = () => {
     setEntryMode('manual');
     setForm(createDefaultAddApplicationForm());
-    setSelectedJobId(jobFeedPickerJobs[0]?.id ?? '');
+    setSelectedJobId('');
     clearValidationState();
   };
 
@@ -646,6 +702,12 @@ export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProp
 
   const submitLabel = entryMode === 'job-feed' ? 'Track selected job' : 'Add application';
   const maxAppliedDate = getTodayDateInputValue();
+  const isJobFeedSubmitDisabled =
+    entryMode === 'job-feed' &&
+    (recommendationsQuery.isPending ||
+      recommendationsQuery.isError ||
+      pickerJobs.length === 0 ||
+      !selectedJobId);
 
   return (
     <ApplicationDialog
@@ -715,6 +777,9 @@ export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProp
         {entryMode === 'job-feed' ? (
           <JobFeedPicker
             fieldError={fieldError}
+            isError={recommendationsQuery.isError}
+            isLoading={recommendationsQuery.isPending}
+            jobs={pickerJobs}
             onSelect={handleJobSelect}
             selectedJobId={selectedJobId}
           />
@@ -754,7 +819,10 @@ export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProp
           <Button disabled={createApplication.isPending} onClick={handleClose} variant="outline">
             Cancel
           </Button>
-          <Button disabled={createApplication.isPending} onClick={() => void handleSubmit()}>
+          <Button
+            disabled={createApplication.isPending || isJobFeedSubmitDisabled}
+            onClick={() => void handleSubmit()}
+          >
             {createApplication.isPending ? 'Saving...' : submitLabel}
           </Button>
         </DialogFooterActions>
