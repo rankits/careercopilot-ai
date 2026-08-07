@@ -302,8 +302,9 @@ export const autoApplyService = {
   },
 
   async getSetupStatus(): Promise<SetupStatusDto> {
-    const { data } =
-      await httpClient.get<BackendSuccessResponse<SetupStatusDto>>('/auto-apply/setup-status');
+    const { data } = await httpClient.get<BackendSuccessResponse<SetupStatusDto>>(
+      '/auto-apply/setup-status',
+    );
     return unwrapData(data, 'Missing setup-status data in API response');
   },
 
@@ -324,9 +325,7 @@ export const autoApplyService = {
     return unwrapData(data, 'Missing privacy acknowledgement data in API response');
   },
 
-  async getAssistedApplyWorkspace(
-    jobApplicationId: string,
-  ): Promise<AssistedApplyWorkspaceDto> {
+  async getAssistedApplyWorkspace(jobApplicationId: string): Promise<AssistedApplyWorkspaceDto> {
     const { data } = await httpClient.get<BackendSuccessResponse<AssistedApplyWorkspaceDto>>(
       `/auto-apply/submissions/${jobApplicationId}/workspace`,
     );

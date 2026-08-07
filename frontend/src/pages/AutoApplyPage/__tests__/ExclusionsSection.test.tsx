@@ -5,7 +5,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
-import { useApplicationRule, useUpsertApplicationRule } from '@/features/auto-apply/hooks/useApplicationRule';
+import {
+  useApplicationRule,
+  useUpsertApplicationRule,
+} from '@/features/auto-apply/hooks/useApplicationRule';
 
 import { RulesTab } from '../RulesTab';
 

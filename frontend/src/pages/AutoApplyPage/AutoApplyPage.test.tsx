@@ -164,7 +164,9 @@ describe('AutoApplyPage', () => {
     renderPage();
 
     expect(screen.getByRole('heading', { name: /^Application Setup$/i })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: /Personal & contact details/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Personal & contact details/i }),
+    ).toBeInTheDocument();
     expect(screen.queryByRole('tab')).not.toBeInTheDocument();
   });
 
@@ -181,14 +183,18 @@ describe('AutoApplyPage', () => {
 
   it('opens work authorization directly from its section deep link', () => {
     renderPage('/auto-apply?section=work-auth');
-    expect(screen.getByRole('heading', { name: /Work authorization & sponsorship/i })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /Work authorization & sponsorship/i }),
+    ).toBeInTheDocument();
   });
 
   it('switches sections from the checklist', async () => {
     const user = userEvent.setup();
     renderPage();
 
-    await user.click(screen.getByRole('button', { name: /Job preferences, incomplete, required/i }));
+    await user.click(
+      screen.getByRole('button', { name: /Job preferences, incomplete, required/i }),
+    );
     expect(screen.getByRole('heading', { name: /Job preferences/i })).toBeInTheDocument();
   });
 

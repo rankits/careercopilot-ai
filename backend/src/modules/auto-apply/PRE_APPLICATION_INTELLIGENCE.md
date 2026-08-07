@@ -2,7 +2,7 @@
 
 **Status:** Partially implemented — Job Posting Analyzer, prepare/match, and planner integration exist in-repo; Application Form Inspector is not implemented yet.  
 **Live backlog:** [`docs/assisted-apply/README.md`](../../../../docs/assisted-apply/README.md)  
-**Goal:** Before Assisted Apply starts, understand what the *job* (and later the *application form*) require, then feed that into the existing Application Readiness Gate.  
+**Goal:** Before Assisted Apply starts, understand what the _job_ (and later the _application form_) require, then feed that into the existing Application Readiness Gate.  
 **Golden fixture:** Linear — Mobile Product Designer  
 `https://jobs.ashbyhq.com/linear/eac7f181-d658-4943-9430-51bae2bcd110`
 
@@ -42,15 +42,15 @@ Progressive information collection → application package → channel-specific 
 
 **Existing code to extend (do not fork):**
 
-| Piece | Location | Notes |
-| ----- | -------- | ----- |
-| Readiness gate | `services/application-readiness.service.ts` | Add analysis-backed rules; keep fail-closed |
-| Match score lookup | `IMatchScoreLookup` / `PrismaMatchScoreLookup` | Today reads `JobRecommendation.overallScore` |
-| Reason codes | `constants/readiness-reason-codes.ts` | Add job-requirement codes |
-| Channel detection | `services/channel-detection.service.ts` | Ashby URL ≠ ATS_API auth; stay `EXTERNAL_MANUAL` |
-| Planner | `services/application-planner.service.ts` | Consume analysis + match for gaps + package |
-| Consents | `RESUME_USAGE` (+ later match-specific if needed) | Gate matching before scoring |
-| Assisted Apply entry | FE `useTrackAndOpenApply` + Job Detail | Later: “Prepare Application” CTA |
+| Piece                | Location                                          | Notes                                            |
+| -------------------- | ------------------------------------------------- | ------------------------------------------------ |
+| Readiness gate       | `services/application-readiness.service.ts`       | Add analysis-backed rules; keep fail-closed      |
+| Match score lookup   | `IMatchScoreLookup` / `PrismaMatchScoreLookup`    | Today reads `JobRecommendation.overallScore`     |
+| Reason codes         | `constants/readiness-reason-codes.ts`             | Add job-requirement codes                        |
+| Channel detection    | `services/channel-detection.service.ts`           | Ashby URL ≠ ATS_API auth; stay `EXTERNAL_MANUAL` |
+| Planner              | `services/application-planner.service.ts`         | Consume analysis + match for gaps + package      |
+| Consents             | `RESUME_USAGE` (+ later match-specific if needed) | Gate matching before scoring                     |
+| Assisted Apply entry | FE `useTrackAndOpenApply` + Job Detail            | Later: “Prepare Application” CTA                 |
 
 ---
 
@@ -107,17 +107,12 @@ Suggested persistence enums:
 
 ```ts
 type JobPageStatus = 'PENDING' | 'COMPLETE' | 'PARTIAL' | 'FAILED';
-type FormStatus =
-  | 'NOT_INSPECTED'
-  | 'PARTIAL'
-  | 'COMPLETE'
-  | 'BROWSER_REQUIRED'
-  | 'UNSUPPORTED';
+type FormStatus = 'NOT_INSPECTED' | 'PARTIAL' | 'COMPLETE' | 'BROWSER_REQUIRED' | 'UNSUPPORTED';
 type SubmissionCapability =
-  | 'AUTHORIZED_API'      // only with real partner credentials
+  | 'AUTHORIZED_API' // only with real partner credentials
   | 'EMAIL'
-  | 'BROWSER_ASSISTED'    // future extension package
-  | 'EXTERNAL_MANUAL'     // current Ashby default
+  | 'BROWSER_ASSISTED' // future extension package
+  | 'EXTERNAL_MANUAL' // current Ashby default
   | 'UNSUPPORTED';
 ```
 
@@ -149,18 +144,9 @@ export interface ApplicationPageAnalysis {
   applicationUrl?: string;
 
   jobPageStatus: 'PENDING' | 'COMPLETE' | 'PARTIAL' | 'FAILED';
-  formStatus:
-    | 'NOT_INSPECTED'
-    | 'PARTIAL'
-    | 'COMPLETE'
-    | 'BROWSER_REQUIRED'
-    | 'UNSUPPORTED';
+  formStatus: 'NOT_INSPECTED' | 'PARTIAL' | 'COMPLETE' | 'BROWSER_REQUIRED' | 'UNSUPPORTED';
   submissionCapability:
-    | 'AUTHORIZED_API'
-    | 'EMAIL'
-    | 'BROWSER_ASSISTED'
-    | 'EXTERNAL_MANUAL'
-    | 'UNSUPPORTED';
+    'AUTHORIZED_API' | 'EMAIL' | 'BROWSER_ASSISTED' | 'EXTERNAL_MANUAL' | 'UNSUPPORTED';
 
   requirements: ExtractedRequirement[];
   fields: ExtractedApplicationField[];
@@ -177,27 +163,20 @@ export interface ExtractedRequirement {
 
   confidence: number; // 0..1
   extractionMethod:
-    | 'STRUCTURED_DATA'
-    | 'PROVIDER_API'
-    | 'DOM_RULE'
-    | 'AI_EXTRACTION'
-    | 'USER_CONFIRMED';
+    'STRUCTURED_DATA' | 'PROVIDER_API' | 'DOM_RULE' | 'AI_EXTRACTION' | 'USER_CONFIRMED';
 
   sourceText?: string;
   sourceUrl: string;
   sourceSelector?: string;
 
-  reviewStatus:
-    | 'AUTO_ACCEPTED'
-    | 'REVIEW_REQUIRED'
-    | 'USER_CONFIRMED'
-    | 'REJECTED';
+  reviewStatus: 'AUTO_ACCEPTED' | 'REVIEW_REQUIRED' | 'USER_CONFIRMED' | 'REJECTED';
 }
 
 export interface ExtractedApplicationField {
   externalKey: string;
   label: string;
-  type: 'TEXT' | 'LONG_TEXT' | 'URL' | 'FILE' | 'SELECT' | 'BOOLEAN' | 'NUMBER' | 'DATE' | 'UNKNOWN';
+  type:
+    'TEXT' | 'LONG_TEXT' | 'URL' | 'FILE' | 'SELECT' | 'BOOLEAN' | 'NUMBER' | 'DATE' | 'UNKNOWN';
   required: boolean;
   options?: string[];
   mapping?: string | null; // e.g. user.fullName | approvedResume | profile.links.portfolio
@@ -211,12 +190,12 @@ export interface ExtractedApplicationField {
 
 ## Confidence policy (readiness consumption)
 
-| Confidence / source | Gate behavior |
-| ------------------- | ------------- |
-| Structured field or exact quoted statement | May hard-block |
-| High confidence AI + quoted evidence | May block; always show evidence in UI |
-| Medium confidence | `INFORMATION_REQUIRED` / user review — do not auto-fail eligibility |
-| Low confidence | Warning only — never hard-block |
+| Confidence / source                        | Gate behavior                                                       |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| Structured field or exact quoted statement | May hard-block                                                      |
+| High confidence AI + quoted evidence       | May block; always show evidence in UI                               |
+| Medium confidence                          | `INFORMATION_REQUIRED` / user review — do not auto-fail eligibility |
+| Low confidence                             | Warning only — never hard-block                                     |
 
 Wire into readiness via optional:
 
@@ -281,11 +260,11 @@ Candidate allowed resume matching?   (consent: RESUME_USAGE)
 
 Analysis improves matching (optional input), it does not replace it:
 
-| From page analysis | Into match (as `MatchJobHints`, optional) |
-| ------------------ | ---------------------------------------- |
-| Extracted skills / requirements | Prefer these over raw HTML scrape alone |
-| Job title / company | Context for scoring |
-| JD snapshot text | Fallback corpus if job row is thin |
+| From page analysis                | Into match (as `MatchJobHints`, optional)         |
+| --------------------------------- | ------------------------------------------------- |
+| Extracted skills / requirements   | Prefer these over raw HTML scrape alone           |
+| Job title / company               | Context for scoring                               |
+| JD snapshot text                  | Fallback corpus if job row is thin                |
 | Hard requirements (region, years) | **Not** scored as soft keywords — readiness rules |
 
 ### Stable port (insulate from matcher churn)
@@ -295,11 +274,7 @@ Own these types under auto-apply (`types/application-match.types.ts`). Adapters 
 ```ts
 /** Caller identity — same port used by every apply channel. */
 export type ApplicationMatchTrigger =
-  | 'PREPARE_APPLICATION'
-  | 'ASSISTED_APPLY'
-  | 'AUTOPILOT'
-  | 'EXTENSION'
-  | 'PLAN_REFRESH';
+  'PREPARE_APPLICATION' | 'ASSISTED_APPLY' | 'AUTOPILOT' | 'EXTENSION' | 'PLAN_REFRESH';
 
 export type ApplicationMatchStatus =
   | 'READY'
@@ -386,12 +361,12 @@ Rules that keep churn from breaking apply:
 
 ### Consent and “if candidate allows”
 
-| Condition | Behavior |
-| --------- | -------- |
+| Condition                                               | Behavior                                                          |
+| ------------------------------------------------------- | ----------------------------------------------------------------- |
 | No `RESUME_USAGE` (or future `RESUME_MATCHING`) consent | `SKIPPED_NO_CONSENT` — do not call matcher; do not invent a score |
-| Consent revoked mid-flow | Treat as skip; clear pending compute |
-| Autopilot without consent | Fail closed for match-dependent thresholds; do not silent-score |
-| User opts out of AI match but allows heuristic | Adapter decision — port still returns a snapshot with `source` |
+| Consent revoked mid-flow                                | Treat as skip; clear pending compute                              |
+| Autopilot without consent                               | Fail closed for match-dependent thresholds; do not silent-score   |
+| User opts out of AI match but allows heuristic          | Adapter decision — port still returns a snapshot with `source`    |
 
 UI copy: “Match this job to your resume” toggle / consent already granted in Auto Apply settings.
 
@@ -415,22 +390,22 @@ async prepare(input): Promise<PrepareApplicationResult> {
 
 Same `prepare()` (or thinner wrappers) for:
 
-| Channel | Trigger | Match behavior | Submit |
-| ------- | ------- | -------------- | ------ |
-| Prepare Application (UI) | `PREPARE_APPLICATION` | Compute if stale + consented | None yet |
-| Assisted Apply | `ASSISTED_APPLY` | Prefer cache; compute if missing | EXTERNAL_MANUAL + user |
-| Full Autopilot | `AUTOPILOT` | Require READY score ≥ min (or configured policy) | Queue / adapter |
-| Browser extension | `EXTENSION` | Cache preferred; on-demand if JD updated | Prefill package only |
-| Plan refresh | `PLAN_REFRESH` | `allowCompute: false` unless analysis changed | N/A |
+| Channel                  | Trigger               | Match behavior                                   | Submit                 |
+| ------------------------ | --------------------- | ------------------------------------------------ | ---------------------- |
+| Prepare Application (UI) | `PREPARE_APPLICATION` | Compute if stale + consented                     | None yet               |
+| Assisted Apply           | `ASSISTED_APPLY`      | Prefer cache; compute if missing                 | EXTERNAL_MANUAL + user |
+| Full Autopilot           | `AUTOPILOT`           | Require READY score ≥ min (or configured policy) | Queue / adapter        |
+| Browser extension        | `EXTENSION`           | Cache preferred; on-demand if JD updated         | Prefill package only   |
+| Plan refresh             | `PLAN_REFRESH`        | `allowCompute: false` unless analysis changed    | N/A                    |
 
-### What matching does *after* analysis (product behavior)
+### What matching does _after_ analysis (product behavior)
 
 When match runs successfully, apply flows should:
 
-1. **Stamp** `JobApplication.matchScore` (already supported) from snapshot  
-2. **Surface** matched / missing skills next to extracted requirements  
-3. **Feed** missing skills into progressive questions / draft answers (not as hard eligibility unless policy says so)  
-4. **Prefer** resume version that scores best among approved versions (optional Phase 4+; MVP uses user-selected / single approved)  
+1. **Stamp** `JobApplication.matchScore` (already supported) from snapshot
+2. **Surface** matched / missing skills next to extracted requirements
+3. **Feed** missing skills into progressive questions / draft answers (not as hard eligibility unless policy says so)
+4. **Prefer** resume version that scores best among approved versions (optional Phase 4+; MVP uses user-selected / single approved)
 5. **Enrich** application package:
 
 ```json
@@ -455,30 +430,30 @@ When match runs successfully, apply flows should:
 
 ### Readiness interaction (today vs after)
 
-| Today | After this feature |
-| ----- | ------------------ |
-| `IMatchScoreLookup` reads latest `JobRecommendation` | Prefer `IApplicationMatchPort.getLatest` / stamped application score |
-| Missing score = WARNING at PLAN | Unchanged unless Autopilot policy requires score |
-| Below `minMatchScore` = block | Unchanged; score still from port |
-| No explicit consent check on lookup | `ensureMatch` enforces consent before compute; cached read may still return prior score with disclosure |
+| Today                                                | After this feature                                                                                      |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `IMatchScoreLookup` reads latest `JobRecommendation` | Prefer `IApplicationMatchPort.getLatest` / stamped application score                                    |
+| Missing score = WARNING at PLAN                      | Unchanged unless Autopilot policy requires score                                                        |
+| Below `minMatchScore` = block                        | Unchanged; score still from port                                                                        |
+| No explicit consent check on lookup                  | `ensureMatch` enforces consent before compute; cached read may still return prior score with disclosure |
 
 Do **not** block PLAN solely because match was skipped for consent — ask for consent or continue with warning. Autopilot may require consent + score by policy.
 
 ### Failure / skip behavior
 
-| Case | Snapshot status | Apply impact |
-| ---- | --------------- | ------------ |
-| No consent | `SKIPPED_NO_CONSENT` | Warning; progressive “Allow resume matching” |
-| No resume | `SKIPPED_NO_RESUME` | INFORMATION_REQUIRED resume |
-| Matcher down / timeout | `FAILED` | Warning at PLAN; Autopilot may defer job |
-| Stale analysis + fresh match | Re-run match when `allowCompute` and analysisId changed | Keep scores tied to analysis when possible |
+| Case                         | Snapshot status                                         | Apply impact                                 |
+| ---------------------------- | ------------------------------------------------------- | -------------------------------------------- |
+| No consent                   | `SKIPPED_NO_CONSENT`                                    | Warning; progressive “Allow resume matching” |
+| No resume                    | `SKIPPED_NO_RESUME`                                     | INFORMATION_REQUIRED resume                  |
+| Matcher down / timeout       | `FAILED`                                                | Warning at PLAN; Autopilot may defer job     |
+| Stale analysis + fresh match | Re-run match when `allowCompute` and analysisId changed | Keep scores tied to analysis when possible   |
 
 ### Linear fixture + match
 
 After page analysis extracts mobile / iOS / Android / prototyping:
 
-- Match should use JD + hints, not keywords alone  
-- Missing mobile evidence → match may still produce a score, but readiness / progressive collection still asks for portfolio / years (analysis rules win for hard requirements)  
+- Match should use JD + hints, not keywords alone
+- Missing mobile evidence → match may still produce a score, but readiness / progressive collection still asks for portfolio / years (analysis rules win for hard requirements)
 - High matchScore with failed `WORK_REGION` → still `NOT_ELIGIBLE`
 
 ---
@@ -535,11 +510,11 @@ Browser extension (later) consumes this package: fill safe verified fields, high
 
 ## Caching / freshness
 
-| Kind | Cache | Refresh |
-| ---- | ----- | ------- |
-| Skills, JD text, company | Longer | On ingest + stale Prepare |
-| Job active, apply URL, form availability, channel | Shorter | Prepare Application + before submit |
-| Form schema | Until browser/API inspect | On open apply page |
+| Kind                                              | Cache                     | Refresh                             |
+| ------------------------------------------------- | ------------------------- | ----------------------------------- |
+| Skills, JD text, company                          | Longer                    | On ingest + stale Prepare           |
+| Job active, apply URL, form availability, channel | Shorter                   | Prepare Application + before submit |
+| Form schema                                       | Until browser/API inspect | On open apply page                  |
 
 Always store `analyzedAt` / `expiresAt`. If page changed after approval → reanalyze before submit (`ANALYSIS_STALE`).
 
@@ -547,14 +522,14 @@ Always store `analyzedAt` / `expiresAt`. If page changed after approval → rean
 
 ## Failure behavior (safe defaults)
 
-| Failure | Behavior |
-| ------- | -------- |
-| Cannot fetch job page | Do not claim job-side eligibility; warn / information required |
-| Cannot inspect form | `EXTERNAL_MANUAL` + `BROWSER_INSPECTION_REQUIRED` |
-| CAPTCHA | Stop automation; user completes |
-| Auth wall | Ask user to sign in on employer site; never collect credentials |
-| Unknown required question | `INFORMATION_REQUIRED` |
-| Page changed post-approval | Reanalyze before submit |
+| Failure                    | Behavior                                                        |
+| -------------------------- | --------------------------------------------------------------- |
+| Cannot fetch job page      | Do not claim job-side eligibility; warn / information required  |
+| Cannot inspect form        | `EXTERNAL_MANUAL` + `BROWSER_INSPECTION_REQUIRED`               |
+| CAPTCHA                    | Stop automation; user completes                                 |
+| Auth wall                  | Ask user to sign in on employer site; never collect credentials |
+| Unknown required question  | `INFORMATION_REQUIRED`                                          |
+| Page changed post-approval | Reanalyze before submit                                         |
 
 ---
 
@@ -673,14 +648,14 @@ Confidence: High
 
 ### Hard eligibility (must extract)
 
-| Requirement | Gate |
-| ----------- | ---- |
-| Based in North America | Block if verified region outside; INFORMATION_REQUIRED if unknown |
-| 5+ years designing software | Block below 5; ask if unknown |
-| Mobile-specific design experience | Evidence or INFORMATION_REQUIRED |
-| iOS + Android product design | Strong — require resume/portfolio evidence |
-| Prototyping | Strong/hard — skill or portfolio |
-| Written / async remote fit | Fit signal, not strict block |
+| Requirement                       | Gate                                                              |
+| --------------------------------- | ----------------------------------------------------------------- |
+| Based in North America            | Block if verified region outside; INFORMATION_REQUIRED if unknown |
+| 5+ years designing software       | Block below 5; ask if unknown                                     |
+| Mobile-specific design experience | Evidence or INFORMATION_REQUIRED                                  |
+| iOS + Android product design      | Strong — require resume/portfolio evidence                        |
+| Prototyping                       | Strong/hard — skill or portfolio                                  |
+| Written / async remote fit        | Fit signal, not strict block                                      |
 
 **Critical test:** `isRemote: true` must **not** imply global eligibility.
 
@@ -719,12 +694,12 @@ Ashby apply UI is JS-rendered. Backend job-page analysis must set `formStatus: N
 
 ### Suggested acceptance tests (when building)
 
-1. Snapshot/fixture of Linear JD text → extracts `WORK_REGION=NORTH_AMERICA` with quoted evidence and high confidence  
-2. Candidate region India + verified → `NOT_ELIGIBLE`  
-3. Candidate region unknown → `INFORMATION_REQUIRED` (not READY)  
-4. Provider ASHBY → channel remains `EXTERNAL_MANUAL`  
-5. Analysis without form inspect → `formStatus !== COMPLETE`  
-6. Low-confidence skill guess → warning only  
+1. Snapshot/fixture of Linear JD text → extracts `WORK_REGION=NORTH_AMERICA` with quoted evidence and high confidence
+2. Candidate region India + verified → `NOT_ELIGIBLE`
+3. Candidate region unknown → `INFORMATION_REQUIRED` (not READY)
+4. Provider ASHBY → channel remains `EXTERNAL_MANUAL`
+5. Analysis without form inspect → `formStatus !== COMPLETE`
+6. Low-confidence skill guess → warning only
 
 ---
 
@@ -754,12 +729,12 @@ backend/src/modules/auto-apply/
 
 ## Non-goals (explicit)
 
-- Do not call Ashby `applicationForm.submit` without authorized partner access  
-- Do not start generic headless “apply for me” automation in MVP  
-- Do not overwrite canonical job eligibility fields from unconfirmed AI  
-- Do not treat physical IP/geo as verified work region — use user-verified profile/answer only  
-- Do not import recommendation scoring engines or resume-analysis AI from planner/readiness  
-- Do not require For You UI to run before Assisted Apply — `ensureMatch` is the on-demand path  
+- Do not call Ashby `applicationForm.submit` without authorized partner access
+- Do not start generic headless “apply for me” automation in MVP
+- Do not overwrite canonical job eligibility fields from unconfirmed AI
+- Do not treat physical IP/geo as verified work region — use user-verified profile/answer only
+- Do not import recommendation scoring engines or resume-analysis AI from planner/readiness
+- Do not require For You UI to run before Assisted Apply — `ensureMatch` is the on-demand path
 
 ---
 
@@ -767,9 +742,9 @@ backend/src/modules/auto-apply/
 
 Before Assisted Apply / tracking / approve:
 
-1. Profile: multi-select roles, locations, workplace modes; salary currency (+ optional range or flexible); notice days or Immediate joiner  
-2. At least one approved resume (with optional tags for resume selection)  
-3. Consent: “Use my resume on applications” (`RESUME_USAGE`) with plain-language copy  
+1. Profile: multi-select roles, locations, workplace modes; salary currency (+ optional range or flexible); notice days or Immediate joiner
+2. At least one approved resume (with optional tags for resume selection)
+3. Consent: “Use my resume on applications” (`RESUME_USAGE`) with plain-language copy
 
 **Generate plan is removed from the UI** — `createPlan` runs automatically after track / Assisted Apply and when a submission row loads.
 

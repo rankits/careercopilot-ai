@@ -80,9 +80,10 @@ describe('AssistedApplyCompletionService (AA-072/073/074)', () => {
 
   describe('abandon', () => {
     it('rejects invalid reason', async () => {
-      await expect(
-        service.abandon(userId, appId, { reasonCode: 'NOPE' }),
-      ).rejects.toMatchObject({ code: 'INVALID_ABANDON_REASON', statusCode: 400 });
+      await expect(service.abandon(userId, appId, { reasonCode: 'NOPE' })).rejects.toMatchObject({
+        code: 'INVALID_ABANDON_REASON',
+        statusCode: 400,
+      });
     });
 
     it('blocks abandon from SUBMITTED', async () => {

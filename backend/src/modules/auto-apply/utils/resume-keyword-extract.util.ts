@@ -127,7 +127,20 @@ const STOPWORDS = new Set([
 ]);
 
 /** Short tech tokens that must not be dropped by length filters. */
-const SHORT_TECH = new Set(['r', 'c', 'go', 'ai', 'ml', 'bi', 'qa', 'ui', 'ux', 'aws', 'gcp', 'sql']);
+const SHORT_TECH = new Set([
+  'r',
+  'c',
+  'go',
+  'ai',
+  'ml',
+  'bi',
+  'qa',
+  'ui',
+  'ux',
+  'aws',
+  'gcp',
+  'sql',
+]);
 
 const MULTIWORD_PHRASES = [
   'machine learning',

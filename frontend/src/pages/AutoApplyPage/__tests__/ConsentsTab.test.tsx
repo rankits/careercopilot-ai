@@ -62,7 +62,9 @@ describe('ConsentsTab AA-002', () => {
     expect(screen.getByText('Draft cover letters and answers for me')).toBeInTheDocument();
     expect(screen.getAllByRole('button', { name: /^Turn on$/i })).toHaveLength(2);
 
-    expect(screen.queryByText(/Send applications from my connected email/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Send applications from my connected email/i),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/Apply automatically under my rules/i)).not.toBeInTheDocument();
     expect(screen.queryByText(/Not available yet/i)).not.toBeInTheDocument();
   });

@@ -66,10 +66,7 @@ async function mockAssistedApplyApis(page: Page, options?: { setupReady?: boolea
       // list vs create — create is POST /submissions
     }
 
-    if (
-      method === 'POST' &&
-      /\/auto-apply\/submissions\/?(\?|$)/.test(new URL(url).pathname)
-    ) {
+    if (method === 'POST' && /\/auto-apply\/submissions\/?(\?|$)/.test(new URL(url).pathname)) {
       await route.fulfill({
         status: 201,
         json: ok({
@@ -203,7 +200,9 @@ test.describe('AA-090 Phase 1 Assisted Apply E2E', () => {
     await page.goto(`/assisted-apply/${APP_ID}?step=open`);
     const reopen = page.getByRole('button', { name: /Reopen application page|Open application/i });
     await reopen.first().click();
-    await expect(page.getByRole('heading', { name: /Your browser blocked the new tab/i })).toBeVisible({
+    await expect(
+      page.getByRole('heading', { name: /Your browser blocked the new tab/i }),
+    ).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -216,7 +215,9 @@ test.describe('AA-081 mobile viewport smoke', () => {
     await seedOnboardedSession(page);
     await mockAssistedApplyApis(page);
     await page.goto(`/assisted-apply/${APP_ID}?step=open`);
-    const overflow = await page.evaluate(() => document.documentElement.scrollWidth > window.innerWidth + 1);
+    const overflow = await page.evaluate(
+      () => document.documentElement.scrollWidth > window.innerWidth + 1,
+    );
     expect(overflow).toBe(false);
   });
 });

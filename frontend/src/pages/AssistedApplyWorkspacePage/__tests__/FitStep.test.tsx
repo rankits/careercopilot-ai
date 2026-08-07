@@ -155,9 +155,7 @@ function renderFit(
 describe('FitStep', () => {
   it('renders profile match as the primary score and recommendation as context', () => {
     renderFit();
-    expect(
-      screen.getByText(/meets the confirmed eligibility requirements/i),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/meets the confirmed eligibility requirements/i)).toBeInTheDocument();
     expect(screen.getAllByText('78%').length).toBeGreaterThanOrEqual(1);
     expect(
       screen.getByText(/Previous recommendation score \(context only\):/i),
@@ -270,8 +268,8 @@ describe('FitStep', () => {
     renderFit({ applicationStatus: 'SUBMITTED', viewState: 'APPLIED' });
     expect(screen.getByText(/Application submitted manually/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Next: Resume' })).not.toBeInTheDocument();
-    expect(screen.getAllByRole('link', { name: /View application details/i }).length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      screen.getAllByRole('link', { name: /View application details/i }).length,
+    ).toBeGreaterThan(0);
   });
 });

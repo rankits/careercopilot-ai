@@ -12,10 +12,7 @@ import {
 import type { ApplicationPageAnalysisSummary } from '@/modules/auto-apply/types/application-page-analysis-summary.types.js';
 
 export type ApplicationPlanDecision =
-  | 'NOT_ELIGIBLE'
-  | 'UNSUPPORTED_CHANNEL'
-  | 'INFORMATION_REQUIRED'
-  | 'READY_FOR_REVIEW';
+  'NOT_ELIGIBLE' | 'UNSUPPORTED_CHANNEL' | 'INFORMATION_REQUIRED' | 'READY_FOR_REVIEW';
 
 export interface ApplicationPlanResult {
   application: JobApplicationDto;

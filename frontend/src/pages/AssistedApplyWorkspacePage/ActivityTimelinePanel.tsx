@@ -1,13 +1,6 @@
 import { useAssistedApplyEvents } from '@/features/auto-apply/hooks/useAssistedApplyEvents';
 
-import {
-  AccessTimeOutlinedIcon,
-  Box,
-  Skeleton,
-  Stack,
-  Tooltip,
-  Typography,
-} from '@/lib/material';
+import { AccessTimeOutlinedIcon, Box, Skeleton, Stack, Tooltip, Typography } from '@/lib/material';
 
 import { activityEventCategory, activityEventLabel, formatRelativeTime } from './activityLabels';
 

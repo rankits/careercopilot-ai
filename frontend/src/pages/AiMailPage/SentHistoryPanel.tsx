@@ -92,7 +92,10 @@ export function SentHistoryPanel({ enabled, onOpenDraft }: SentHistoryPanelProps
       });
       setFollowUpOpen(false);
       if (result.warnings.length > 0) {
-        showToast({ message: result.warnings[0] ?? 'Follow-up created with warnings.', severity: 'warning' });
+        showToast({
+          message: result.warnings[0] ?? 'Follow-up created with warnings.',
+          severity: 'warning',
+        });
       } else {
         showToast({ message: 'Follow-up draft created.', severity: 'success' });
       }

@@ -19,14 +19,16 @@ const defaultState: ReviewPanelState = {
   snapState: 'custom',
   selectedFieldIds: [],
   draftValues: {},
-  isOpen: false
+  isOpen: false,
 };
 
 export class SessionStateStore {
   static async load(): Promise<ReviewPanelState> {
     try {
       const result = await chrome.storage.session.get([STORAGE_KEY]);
-      return result[STORAGE_KEY] ? { ...defaultState, ...result[STORAGE_KEY] } : { ...defaultState };
+      return result[STORAGE_KEY]
+        ? { ...defaultState, ...result[STORAGE_KEY] }
+        : { ...defaultState };
     } catch (err) {
       console.warn('Could not load session state', err);
       return { ...defaultState };
@@ -48,4 +50,3 @@ export class SessionStateStore {
     } catch (err) {}
   }
 }
-

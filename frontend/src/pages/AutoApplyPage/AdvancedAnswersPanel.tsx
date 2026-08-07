@@ -98,7 +98,7 @@ export function AdvancedAnswersPanel({
       </AccordionSummary>
       <AccordionDetails>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Typography sx={setupPageSx.bodySecondary}>
+          <Typography color="text.secondary" variant="body2">
             Manage custom answer keys beyond the common questions above. Demographic, disability,
             and veteran-status questions are always rejected — never stored, per platform policy.
           </Typography>

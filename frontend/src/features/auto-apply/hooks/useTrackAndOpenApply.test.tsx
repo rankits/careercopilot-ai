@@ -17,23 +17,27 @@ const {
   showToastMock,
   navigateMock,
   setupStatusMock,
-} = vi.hoisted(() => ({
-  initiateMock: vi.fn(),
-  createPlanMock: vi.fn(),
-  prepareMock: vi.fn(),
-  openExternalApplyMock: vi.fn(),
-  showToastMock: vi.fn(),
-  navigateMock: vi.fn(),
-  setupStatusMock: {
+} = vi.hoisted(() => {
+  const setupStatusMock: { data: SetupStatusDto } = {
     data: {
       readyForAssistedApply: true,
       gaps: [],
       complete: true,
       percent: 100,
       sections: [],
-    } as SetupStatusDto,
-  },
-}));
+    },
+  };
+
+  return {
+    initiateMock: vi.fn(),
+    createPlanMock: vi.fn(),
+    prepareMock: vi.fn(),
+    openExternalApplyMock: vi.fn(),
+    showToastMock: vi.fn(),
+    navigateMock: vi.fn(),
+    setupStatusMock,
+  };
+});
 
 vi.mock('./useSubmissions', () => ({
   useInitiateSubmission: () => ({
