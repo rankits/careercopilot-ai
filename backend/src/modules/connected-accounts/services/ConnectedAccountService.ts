@@ -141,7 +141,7 @@ export class ConnectedAccountService {
       encryptedAccessToken = JSON.stringify(encryptedAccess);
     }
 
-    let status = ConnectedAccountStatus.ACTIVE;
+    let status: ConnectedAccountStatus = ConnectedAccountStatus.ACTIVE;
     if (!encryptedRefreshToken) {
       status = ConnectedAccountStatus.REAUTHORIZATION_REQUIRED;
     }

@@ -36,6 +36,8 @@
     "axios": "^1.10.0",
     "country-flag-icons": "^1.6.20",
     "dompurify": "^3.4.12",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-hook-form": "^7.60.0",

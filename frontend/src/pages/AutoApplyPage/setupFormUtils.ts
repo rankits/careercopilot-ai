@@ -102,7 +102,7 @@ export const WORK_AUTHORIZATION_OPTIONS = [
 export type SponsorshipChoice = 'yes' | 'no' | 'unknown';
 
 export function sponsorshipChoiceFromProfile(
-  requiresSponsorship: boolean | undefined,
+  requiresSponsorship: boolean | null | undefined,
 ): SponsorshipChoice {
   if (requiresSponsorship === true) return 'yes';
   if (requiresSponsorship === false) return 'no';

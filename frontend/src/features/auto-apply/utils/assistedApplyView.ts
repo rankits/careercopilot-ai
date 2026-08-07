@@ -28,6 +28,8 @@ export function toAssistedApplyView(status: JobApplicationDto['status']): Assist
     case 'CONFIRMATION_RECEIVED':
       return 'APPLIED';
     case 'WITHDRAWN':
+    case 'COULD_NOT_APPLY':
+    case 'JOB_CLOSED':
       return 'ABANDONED';
     case 'APPROVED':
     case 'QUEUED':

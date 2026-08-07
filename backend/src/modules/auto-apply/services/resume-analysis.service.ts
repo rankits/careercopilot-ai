@@ -1,5 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
+import type { Prisma } from '@prisma/client';
+
 import { prisma } from '@/shared/config/db.conf.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import { logger } from '@/shared/logger/logger.js';
@@ -148,7 +150,7 @@ export class ResumeAnalysisService {
           },
         });
         if (cached) {
-          const result = cached.result as ResumeAnalysisResult;
+          const result = cached.result as unknown as ResumeAnalysisResult;
           const staleSchema =
             result.schemaVersion == null ||
             result.schemaVersion < RESUME_JOB_ANALYZER_SCHEMA_VERSION ||
@@ -176,11 +178,14 @@ export class ResumeAnalysisService {
         },
       });
 
+      const pageOutcome = String(pageAnalysis?.outcomeStatus ?? '');
+      const pageStatus = String((pageAnalysis as { status?: string } | null)?.status ?? '');
       const jobAnalysisLimited =
-        pageAnalysis?.outcomeStatus === 'LIMITED' ||
-        pageAnalysis?.outcomeStatus === 'FAILED' ||
-        (pageAnalysis as { status?: string } | null)?.status === 'LIMITED' ||
-        (pageAnalysis as { status?: string } | null)?.status === 'FAILED';
+        pageOutcome === 'LIMITED' ||
+        pageOutcome === 'FAILED' ||
+        pageOutcome === 'FETCH_FAILED' ||
+        pageStatus === 'LIMITED' ||
+        pageStatus === 'FAILED';
 
       const analysis = this.analyzer.analyze({
         resumeText: resolved.text,
@@ -237,11 +242,11 @@ export class ResumeAnalysisService {
           jobId: application.jobId,
           resumeVersionId: application.resumeVersionId,
           contentHash: hash,
-          result,
+          result: result as unknown as Prisma.InputJsonValue,
           analyzedAt: new Date(result.analyzedAt),
         },
         update: {
-          result,
+          result: result as unknown as Prisma.InputJsonValue,
           analyzedAt: new Date(result.analyzedAt),
           jobApplicationId,
         },
