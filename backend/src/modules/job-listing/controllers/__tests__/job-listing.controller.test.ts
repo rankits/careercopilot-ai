@@ -77,6 +77,7 @@ describe('searchJobsController', () => {
         pagination: { page: 2, limit: 10 },
         sortBy: 'salaryHighToLow',
       }),
+      undefined,
     );
     expect(next).not.toHaveBeenCalled();
   });
@@ -104,6 +105,7 @@ describe('searchJobsController', () => {
           skills: ['Go'],
         }),
       }),
+      undefined,
     );
   });
 
@@ -120,6 +122,7 @@ describe('searchJobsController', () => {
         pagination: { page: 1, limit: 20 },
         sortBy: 'newest',
       }),
+      undefined,
     );
     expect(res.status).toHaveBeenCalledWith(200);
   });

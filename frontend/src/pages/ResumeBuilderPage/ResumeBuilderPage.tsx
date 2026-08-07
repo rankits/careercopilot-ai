@@ -1,3 +1,8 @@
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 
@@ -5,7 +10,6 @@ import { Button } from '@/components/atoms';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { ROUTES } from '@/constants/routes';
-import { Dialog, DialogActions, DialogContent, DialogTitle, Typography } from '@/lib/material';
 import type { SuggestionItem } from '@/services/resumeBuilder.service';
 
 import { PageHeader } from './components/PageHeader';

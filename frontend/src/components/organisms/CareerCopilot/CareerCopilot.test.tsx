@@ -1,3 +1,4 @@
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -8,7 +9,6 @@ import { useCopilotSession } from '@/features/copilot/hooks/useCopilotSession';
 
 import { BRAND_NAME, CAREER_COPILOT_COPY, CHAT_INPUT_COPY } from '@/constants/ui';
 import { COPILOT_SUGGESTED_PROMPTS } from '@/features/copilot/types/copilot.types';
-import * as material from '@/lib/material';
 
 import { CareerCopilot } from './CareerCopilot';
 
@@ -16,14 +16,9 @@ import { CareerCopilot } from './CareerCopilot';
 vi.mock('@/features/copilot/hooks/useCopilotSession');
 vi.mock('@/features/copilot/hooks/useCopilotPageContext');
 vi.mock('@/features/copilot/hooks/useCopilotChatMutation');
-
-vi.mock('@/lib/material', async () => {
-  const actual = await vi.importActual<typeof material>('@/lib/material');
-  return {
-    ...actual,
-    useMediaQuery: vi.fn(),
-  };
-});
+vi.mock('@mui/material/useMediaQuery', () => ({
+  default: vi.fn(),
+}));
 
 describe('CareerCopilot', () => {
   const mockAddMessage = vi.fn();
@@ -33,7 +28,7 @@ describe('CareerCopilot', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(material.useMediaQuery).mockReturnValue(false); // Desktop mode by default
+    vi.mocked(useMediaQuery).mockReturnValue(false); // Desktop mode by default
 
     vi.mocked(useCopilotSession).mockReturnValue({
       addMessage: mockAddMessage,
@@ -232,7 +227,7 @@ describe('CareerCopilot', () => {
   });
 
   it('renders Dialog in mobile view when screen width is compact', () => {
-    vi.mocked(material.useMediaQuery).mockReturnValue(true);
+    vi.mocked(useMediaQuery).mockReturnValue(true);
 
     render(<CareerCopilot />);
 

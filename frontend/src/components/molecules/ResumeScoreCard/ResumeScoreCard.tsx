@@ -1,7 +1,8 @@
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
 import { useEffect, useState, type CSSProperties } from 'react';
 
 import { RESUME_SCORE_ANIMATION, RESUME_SCORE_COPY } from '@/constants/ui';
-import { ArrowForwardIcon, AutoAwesomeOutlinedIcon } from '@/lib/material';
 
 import {
   AiBadge,

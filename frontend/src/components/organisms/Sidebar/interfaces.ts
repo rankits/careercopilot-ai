@@ -1,5 +1,4 @@
-import type { SvgIconComponent } from '@/lib/material';
-
+import type { SvgIconComponent } from '@mui/icons-material';
 export type SidebarVariant = 'open' | 'collapsed' | 'compact';
 export type SidebarTone = 'light' | 'dark' | 'gradient';
 export type MobileSidebarMode = 'bottomNav';
@@ -13,13 +12,22 @@ export interface SidebarNavItem {
   shortLabel?: string;
 }
 
+export interface SidebarNavSection {
+  id: string;
+  itemIds: readonly string[];
+  label: string;
+}
+
 export interface SidebarProps {
   activeItemId?: string;
   className?: string;
   isDownloadingLatestResume?: boolean;
   items?: SidebarNavItem[];
   latestResumeName?: string | null;
+  latestResumeScore?: number | null;
+  latestResumeUploadedAt?: string | null;
   mobileMode?: MobileSidebarMode;
+  onOpenAiAssistant?: () => void;
   onDownloadLatestResume?: () => void;
   onItemSelect?: (item: SidebarNavItem) => void;
   onLogoutClick?: () => void;
@@ -27,6 +35,7 @@ export interface SidebarProps {
   onSettingsClick?: () => void;
   onVariantChange?: (variant: SidebarVariant) => void;
   resumeListLoaded?: boolean;
+  sections?: readonly SidebarNavSection[];
   tone?: SidebarTone;
   userName?: string;
   variant?: SidebarVariant;

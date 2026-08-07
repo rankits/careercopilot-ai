@@ -1,7 +1,6 @@
 import { expect, test, type Page } from '@playwright/test';
 
 const STORAGE_KEYS = {
-  ACCESS_TOKEN: 'careercopilot_access_token',
   PROFILE_COMPLETE: 'careercopilot_profile_complete',
   USER: 'careercopilot_user',
 } as const;
@@ -93,8 +92,7 @@ function completedAnalysis(overrides: Record<string, unknown> = {}) {
 
 async function seedOnboardedSession(page: Page) {
   await page.addInitScript(
-    ({ tokenKey, profileKey, userKey }) => {
-      localStorage.setItem(tokenKey, JSON.stringify('e2e-access-token'));
+    ({ profileKey, userKey }) => {
       localStorage.setItem(profileKey, JSON.stringify(true));
       localStorage.setItem(
         userKey,
@@ -103,15 +101,23 @@ async function seedOnboardedSession(page: Page) {
           id: 'user-1',
           name: 'Ada',
           role: 'user',
+          isProfileCreated: true,
         }),
       );
     },
     {
-      tokenKey: STORAGE_KEYS.ACCESS_TOKEN,
       profileKey: STORAGE_KEYS.PROFILE_COMPLETE,
       userKey: STORAGE_KEYS.USER,
     },
   );
+
+  await page.route('**/api/v1/auth/refresh-token', async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: 'application/json',
+      body: JSON.stringify({ accessToken: 'e2e-access-token' }),
+    });
+  });
 }
 
 async function mockResumeBuilderApis(page: Page) {
@@ -134,6 +140,14 @@ async function mockResumeBuilderApis(page: Page) {
       });
 
     try {
+      if (method === 'POST' && path.endsWith('/auth/refresh-token')) {
+        return route.fulfill({
+          status: 200,
+          contentType: 'application/json',
+          body: JSON.stringify({ accessToken: 'e2e-access-token' }),
+        });
+      }
+
       if (method === 'GET' && path.endsWith('/resumes')) {
         return json(200, ok([]));
       }

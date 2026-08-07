@@ -1,21 +1,19 @@
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogContentText from '@mui/material/DialogContentText';
+import DialogTitle from '@mui/material/DialogTitle';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 
 import { Button } from '@/components/atoms';
 
-import {
-  Box,
-  DeleteOutlineIcon,
-  DescriptionOutlinedIcon,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogContentText,
-  DialogTitle,
-  IconButton,
-  InsightsOutlinedIcon,
-  SecurityOutlinedIcon,
-  Typography,
-} from '@/lib/material';
 import type { UploadedResume } from '@/services/resumeBuilder.service';
 
 import {

@@ -1,4 +1,5 @@
-import type { SxProps, Theme } from '@/lib/material';
+import type { SxProps, Theme } from '@mui/material/styles';
+
 import { colorTokens, spacing } from '@/tokens';
 
 export const notificationButtonSx: SxProps<Theme> = {

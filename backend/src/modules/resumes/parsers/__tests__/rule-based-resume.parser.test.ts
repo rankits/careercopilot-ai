@@ -18,7 +18,7 @@ describe('RuleBasedResumeParser', () => {
 
     const result = await parser.parseResume({ extractedText: text });
 
-    expect(result.parserVersion).toBe('rule-based-v1');
+    expect(result.parserVersion).toBe('rule-based-v2');
     expect(result.confidenceScore).toBe(0.45);
     expect(result.data.personalDetails.fullName).toBe('Jane Doe');
     expect(result.data.personalDetails.email).toBe('jane@example.com');

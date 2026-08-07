@@ -49,6 +49,7 @@ describe('JOB-QA-001 GET /jobs filters and pagination', () => {
           skills: expect.anything(),
         }),
       }),
+      undefined,
     );
   });
 

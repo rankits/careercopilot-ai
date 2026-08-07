@@ -1,3 +1,8 @@
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
+import BookmarkOutlinedIcon from '@mui/icons-material/BookmarkOutlined';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useMemo, useState } from 'react';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
@@ -26,13 +31,6 @@ import {
   mapApplicationDtoToSavedJobCard,
   type SavedJobCardModel,
 } from '@/features/applications/utils/mapApplicationDtoToSavedJobCard';
-import {
-  ArrowForwardIcon,
-  BookmarkBorderOutlinedIcon,
-  BookmarkOutlinedIcon,
-  Box,
-  Typography,
-} from '@/lib/material';
 
 import { savedJobsPageSx } from './styles';
 

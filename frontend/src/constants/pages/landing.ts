@@ -1,21 +1,20 @@
+import type { SvgIconComponent } from '@mui/icons-material';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import CloudUploadOutlinedIcon from '@mui/icons-material/CloudUploadOutlined';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
+import HomeOutlinedIcon from '@mui/icons-material/HomeOutlined';
+import PeopleOutlineIcon from '@mui/icons-material/PeopleOutline';
+import PersonOutlineIcon from '@mui/icons-material/PersonOutline';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
+import TrackChangesOutlinedIcon from '@mui/icons-material/TrackChangesOutlined';
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
+
 import { ROUTES } from '@/constants/routes';
-import type { SvgIconComponent } from '@/lib/material';
-import {
-  AutoAwesomeOutlinedIcon,
-  BookmarkBorderOutlinedIcon,
-  BusinessCenterOutlinedIcon,
-  CloudUploadOutlinedIcon,
-  DescriptionOutlinedIcon,
-  EventOutlinedIcon,
-  HomeOutlinedIcon,
-  PeopleOutlineIcon,
-  PersonOutlineIcon,
-  SearchOutlinedIcon,
-  TaskAltOutlinedIcon,
-  TrackChangesOutlinedIcon,
-  TuneOutlinedIcon,
-  WorkOutlineOutlinedIcon,
-} from '@/lib/material';
 import type { IconTone } from '@/tokens';
 
 export const LANDING_COPY = {

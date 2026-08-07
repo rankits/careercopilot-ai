@@ -1,4 +1,7 @@
-import { Box, CircularProgress, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import CircularProgress from '@mui/material/CircularProgress';
+import { styled } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const Root = styled(Box)({

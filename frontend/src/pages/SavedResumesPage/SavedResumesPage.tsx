@@ -1,3 +1,22 @@
+import AddIcon from '@mui/icons-material/Add';
+import ArticleOutlinedIcon from '@mui/icons-material/ArticleOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import PictureAsPdfOutlinedIcon from '@mui/icons-material/PictureAsPdfOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
+import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Menu from '@mui/material/Menu';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
 import { useCallback, useEffect, useMemo, useState, type MouseEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
 
@@ -6,27 +25,6 @@ import { useToast } from '@/components/organisms/Toast/ToastContext';
 import { ResumeTemplatePreview } from '@/pages/ResumeBuilderPage/components/OptimizeStep/ResumeTemplatePreview';
 
 import { ROUTES } from '@/constants/routes';
-import {
-  AddIcon,
-  ArticleOutlinedIcon,
-  Box,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  DeleteOutlineIcon,
-  DescriptionOutlinedIcon,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  KeyboardArrowDownIcon,
-  Menu,
-  MenuItem,
-  MoreVertIcon,
-  PictureAsPdfOutlinedIcon,
-  SearchOutlinedIcon,
-  Typography,
-  VisibilityOutlinedIcon,
-} from '@/lib/material';
 import { parseResumeContent } from '@/pages/ResumeBuilderPage/utils';
 import { resumeBuilderService, type SavedResumeVersion } from '@/services/resumeBuilder.service';
 import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';

@@ -1,7 +1,12 @@
+import Box from '@mui/material/Box';
+import ClickAwayListener from '@mui/material/ClickAwayListener';
+import MenuItem from '@mui/material/MenuItem';
+import Paper from '@mui/material/Paper';
+import Popper from '@mui/material/Popper';
+import Typography from '@mui/material/Typography';
 import * as FlagIcons from 'country-flag-icons/react/3x2';
 import { useMemo, useState, type ReactElement, type SVGProps } from 'react';
 
-import { Box, ClickAwayListener, MenuItem, Paper, Popper, Typography } from '@/lib/material';
 import { borderRadius, colorTokens, fontSize, spacing } from '@/tokens';
 import { COUNTRY_DIAL_CODES, type CountryDialCode } from '@/utils/phone';
 

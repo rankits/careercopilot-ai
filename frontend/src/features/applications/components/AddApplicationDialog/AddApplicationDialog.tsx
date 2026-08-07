@@ -1,3 +1,17 @@
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import CloseIcon from '@mui/icons-material/Close';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
+import EventOutlinedIcon from '@mui/icons-material/EventOutlined';
+import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
+import LightbulbOutlinedIcon from '@mui/icons-material/LightbulbOutlined';
+import LinkOutlinedIcon from '@mui/icons-material/LinkOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import TuneOutlinedIcon from '@mui/icons-material/TuneOutlined';
+import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
 import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { flushSync } from 'react-dom';
@@ -31,22 +45,6 @@ import type {
 import { validateAddApplicationForm } from '@/features/applications/utils/addApplicationValidation';
 import { buildCreateApplicationPayload } from '@/features/applications/utils/createApplicationPayload';
 import { mapRecommendationToPickerJob } from '@/features/applications/utils/mapRecommendationToPickerJob';
-import {
-  AccessTimeOutlinedIcon,
-  AutoAwesomeOutlinedIcon,
-  BusinessCenterOutlinedIcon,
-  CloseIcon,
-  EditOutlinedIcon,
-  EventOutlinedIcon,
-  LanguageOutlinedIcon,
-  LightbulbOutlinedIcon,
-  LinkOutlinedIcon,
-  LocationOnOutlinedIcon,
-  SearchOutlinedIcon,
-  TuneOutlinedIcon,
-  ViewListOutlinedIcon,
-  WorkOutlineOutlinedIcon,
-} from '@/lib/material';
 
 import {
   ApplicationDialog,
@@ -592,8 +590,9 @@ export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProp
     }
 
     if (!selectedJobId || !pickerJobs.some((job) => job.id === selectedJobId)) {
-      if (pickerJobs[0]) {
-        setSelectedJobId(pickerJobs[0].id);
+      const firstJob = pickerJobs[0];
+      if (firstJob) {
+        setSelectedJobId(firstJob.id);
       }
     }
   }, [entryMode, pickerJobs, selectedJobId]);
