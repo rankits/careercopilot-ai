@@ -1,6 +1,7 @@
-import { Button } from '@/components/atoms';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 
-import { Box, Typography } from '@/lib/material';
+import { Button } from '@/components/atoms';
 
 type GateAction = {
   label: string;

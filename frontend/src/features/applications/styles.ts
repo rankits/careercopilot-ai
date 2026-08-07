@@ -1,4 +1,9 @@
-import { Box, IconButton, LocationOnOutlinedIcon, MuiButton, styled } from '@/lib/material';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import Box from '@mui/material/Box';
+import MuiButton from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
+
 import {
   borderRadius,
   colorTokens,

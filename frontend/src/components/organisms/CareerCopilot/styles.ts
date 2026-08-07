@@ -1,15 +1,13 @@
+import CloseIcon from '@mui/icons-material/Close';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import Box from '@mui/material/Box';
+import Dialog from '@mui/material/Dialog';
+import Drawer from '@mui/material/Drawer';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import type { ElementType } from 'react';
 
-import {
-  Box,
-  CloseIcon,
-  Dialog,
-  Drawer,
-  IconButton,
-  SmartToyOutlinedIcon,
-  Typography,
-  styled,
-} from '@/lib/material';
 import {
   borderRadius,
   colorTokens,

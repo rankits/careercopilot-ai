@@ -1,4 +1,7 @@
-import { Box, IconButton, styled } from '@/lib/material';
+import Box from '@mui/material/Box';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
+
 import { borderRadius, colorTokens, fontSize, fontWeight, palette, spacing } from '@/tokens';
 
 import { ApplicationDialog } from '../ApplicationDialog/styles';

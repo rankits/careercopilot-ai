@@ -1,10 +1,11 @@
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import Box from '@mui/material/Box';
 import type { ReactNode } from 'react';
 
 import aiPlatformIllustration from '@/assets/illustrations/ai-platform-illustration.png';
 import careerBoyIllustration from '@/assets/illustrations/career-boy-illustration.png';
 import careerCopilotLogo from '@/assets/logo/career-copilot-logo.png';
 import { AUTH_PAGE_COPY, LOGIN_FEATURES } from '@/constants/ui';
-import { AutoAwesomeOutlinedIcon, Box } from '@/lib/material';
 
 import type { AuthPageFeature } from './interfaces';
 import * as Styled from './styles';

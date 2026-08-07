@@ -1,15 +1,13 @@
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import Accordion from '@mui/material/Accordion';
+import AccordionDetails from '@mui/material/AccordionDetails';
+import AccordionSummary from '@mui/material/AccordionSummary';
+import { styled } from '@mui/material/styles';
+import Typography from '@mui/material/Typography';
 import { useState } from 'react';
 
 import faqPenguinUrl from '@/assets/illustrations/penguine-faq.png';
 import { LANDING_COPY, LANDING_FAQ_ITEMS, LANDING_SECTION_IDS } from '@/constants/pages/landing';
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  ExpandMoreIcon,
-  styled,
-  Typography,
-} from '@/lib/material';
 import { borderRadius, borderWidth, colorTokens, spacing } from '@/tokens';
 
 import { useInView } from '../hooks/useInView';

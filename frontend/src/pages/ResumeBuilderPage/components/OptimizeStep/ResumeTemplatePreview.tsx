@@ -1,6 +1,6 @@
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import { forwardRef, useLayoutEffect, useMemo, useRef, useState } from 'react';
-
-import { Box, Typography } from '@/lib/material';
 
 import {
   formatDateRange,

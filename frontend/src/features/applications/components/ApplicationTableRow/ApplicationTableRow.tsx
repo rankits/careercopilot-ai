@@ -1,4 +1,5 @@
-import { MoreVertIcon, VisibilityOutlinedIcon } from '@/lib/material';
+import MoreVertIcon from '@mui/icons-material/MoreVert';
+import VisibilityOutlinedIcon from '@mui/icons-material/VisibilityOutlined';
 
 import {
   ApplicationCell,

@@ -1,6 +1,9 @@
+import Box from '@mui/material/Box';
+import MuiButton from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import { styled } from '@mui/material/styles';
 import { Link as RouterLink } from 'react-router-dom';
 
-import { Box, IconButton, MuiButton, styled } from '@/lib/material';
 import {
   borderRadius,
   colorTokens,

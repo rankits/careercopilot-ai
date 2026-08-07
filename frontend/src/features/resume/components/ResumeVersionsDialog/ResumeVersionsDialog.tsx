@@ -1,17 +1,16 @@
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import Dialog from '@mui/material/Dialog';
+import DialogActions from '@mui/material/DialogActions';
+import DialogContent from '@mui/material/DialogContent';
+import DialogTitle from '@mui/material/DialogTitle';
+import Typography from '@mui/material/Typography';
+
 import { Button } from '@/components/atoms';
 
 import type { UploadedResumeVersion } from '@/features/resume/types/resume.types';
-import {
-  Box,
-  Chip,
-  DescriptionOutlinedIcon,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  FileDownloadOutlinedIcon,
-  Typography,
-} from '@/lib/material';
 import { borderRadius, colorTokens, spacing } from '@/tokens';
 
 import {
