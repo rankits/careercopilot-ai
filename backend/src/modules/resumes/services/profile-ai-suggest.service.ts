@@ -143,7 +143,7 @@ export async function suggestProfileFields(
   }
 
   try {
-    const aiResult = await providers.gemini.extract({
+    const aiResult = await providers.gemini.extract<ProfileAiSuggestResult>({
       systemPrompt: SYSTEM_PROMPT,
       documentText: buildDocumentText(input),
       schema: profileAiSuggestResultSchema,
@@ -165,7 +165,7 @@ export async function suggestProfileFields(
   } catch (primaryError) {
     logger.warn({ err: primaryError }, 'Profile AI suggest primary provider failed');
     try {
-      const aiResult = await providers.openrouter.extract({
+      const aiResult = await providers.openrouter.extract<ProfileAiSuggestResult>({
         systemPrompt: SYSTEM_PROMPT,
         documentText: buildDocumentText(input),
         schema: profileAiSuggestResultSchema,

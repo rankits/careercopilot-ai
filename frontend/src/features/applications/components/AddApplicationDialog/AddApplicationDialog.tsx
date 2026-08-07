@@ -592,7 +592,9 @@ export function AddApplicationDialog({ onClose, open }: AddApplicationDialogProp
     }
 
     if (!selectedJobId || !pickerJobs.some((job) => job.id === selectedJobId)) {
-      setSelectedJobId(pickerJobs[0].id);
+      if (pickerJobs[0]) {
+        setSelectedJobId(pickerJobs[0].id);
+      }
     }
   }, [entryMode, pickerJobs, selectedJobId]);
 

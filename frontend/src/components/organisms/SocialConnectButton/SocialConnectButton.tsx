@@ -48,16 +48,18 @@ export function SocialConnectButton({
       type="button"
       sx={[
         socialConnectButtonSx,
-        isDisabled
-          ? {
-              '&.Mui-disabled': {
-                bgcolor: colorTokens.backgroundApp,
-                borderColor: colorTokens.borderDefault,
-                color: colorTokens.textSecondary,
-                opacity: 0.72,
+        ...(isDisabled
+          ? [
+              {
+                '&.Mui-disabled': {
+                  bgcolor: colorTokens.backgroundApp,
+                  borderColor: colorTokens.borderDefault,
+                  color: colorTokens.textSecondary,
+                  opacity: 0.72,
+                },
               },
-            }
-          : null,
+            ]
+          : []),
       ]}
     >
       {providerIcons[provider]}
