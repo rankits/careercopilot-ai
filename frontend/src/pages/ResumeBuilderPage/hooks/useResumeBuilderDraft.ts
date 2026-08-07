@@ -2,6 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useBlocker } from 'react-router-dom';
 
 import {
+  DEFAULT_EMPLOYMENT_TYPE,
+  DEFAULT_EXPERIENCE_LEVEL,
+  DEFAULT_INDUSTRY,
   isResumeBuilderWorkspacePath,
   skillsKeyOf,
   type CleanSnapshot,
@@ -9,11 +12,11 @@ import {
 
 export function useResumeBuilderDraft(resumeId: string) {
   const [targetRole, setTargetRole] = useState('');
-  const [industry, setIndustry] = useState('');
+  const [industry, setIndustry] = useState(DEFAULT_INDUSTRY);
   const [experienceLevel, setExperienceLevel] = useState<
     'entry' | 'mid' | 'senior' | 'lead' | 'executive'
-  >('mid');
-  const [employmentType, setEmploymentType] = useState('');
+  >(DEFAULT_EXPERIENCE_LEVEL);
+  const [employmentType, setEmploymentType] = useState(DEFAULT_EMPLOYMENT_TYPE);
   const [skills, setSkills] = useState<string[]>([]);
   const [jobDescription, setJobDescription] = useState('');
   const [editedContent, setEditedContent] = useState('');
@@ -94,9 +97,9 @@ export function useResumeBuilderDraft(resumeId: string) {
     setTargetRole(snap.targetRole);
     setJobDescription(snap.jobDescription);
     setSkills([...snap.skills]);
-    setIndustry('');
-    setEmploymentType('');
-    setExperienceLevel('mid');
+    setIndustry(DEFAULT_INDUSTRY);
+    setEmploymentType(DEFAULT_EMPLOYMENT_TYPE);
+    setExperienceLevel(DEFAULT_EXPERIENCE_LEVEL);
   }, []);
 
   const closeLeaveDialog = () => {

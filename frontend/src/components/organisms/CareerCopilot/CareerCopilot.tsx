@@ -162,14 +162,16 @@ export function CareerCopilot() {
 
   return (
     <>
-      <CopilotFab
-        aria-expanded={isOpen}
-        aria-label={isOpen ? CAREER_COPILOT_COPY.closeAria : CAREER_COPILOT_COPY.openAria}
-        onClick={toggleOpen}
-        type="button"
-      >
-        <SmartToyOutlinedIcon />
-      </CopilotFab>
+      {!isOpen ? (
+        <CopilotFab
+          aria-expanded={false}
+          aria-label={CAREER_COPILOT_COPY.openAria}
+          onClick={toggleOpen}
+          type="button"
+        >
+          <SmartToyOutlinedIcon />
+        </CopilotFab>
+      ) : null}
 
       {isMobile ? (
         <Dialog

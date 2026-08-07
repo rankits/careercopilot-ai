@@ -11,13 +11,13 @@ function renderHeader(ui: ReactElement = <AppHeader />) {
 }
 
 describe('AppHeader', () => {
-  it('renders notifications and default user account summary without search', () => {
+  it('renders default user account summary without search', () => {
     renderHeader();
 
     expect(screen.queryByRole('textbox', { name: /search/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /upgrade to pro/i })).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/notifications/i)).not.toBeInTheDocument();
     expect(screen.getByLabelText(/career copilot/i)).toHaveAttribute('href', '/app');
-    expect(screen.getByLabelText(/notifications/i)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /user menu/i })).toHaveTextContent('User');
     expect(screen.getByText('U')).toBeInTheDocument();
     expect(screen.getByText(/frontend developer/i)).toBeInTheDocument();
@@ -49,7 +49,6 @@ describe('AppHeader', () => {
     const user = userEvent.setup();
     const handleConnectedAccountsClick = vi.fn();
     const handleLogoutClick = vi.fn();
-    const handleNotificationClick = vi.fn();
     const handleSettingsClick = vi.fn();
     const handleUserMenuClick = vi.fn();
 
@@ -57,13 +56,11 @@ describe('AppHeader', () => {
       <AppHeader
         onConnectedAccountsClick={handleConnectedAccountsClick}
         onLogoutClick={handleLogoutClick}
-        onNotificationClick={handleNotificationClick}
         onSettingsClick={handleSettingsClick}
         onUserMenuClick={handleUserMenuClick}
       />,
     );
 
-    await user.click(screen.getByLabelText(/notifications/i));
     await user.click(screen.getByRole('button', { name: /user menu/i }));
     await user.click(screen.getByRole('menuitem', { name: /edit profile/i }));
     await user.click(screen.getByRole('button', { name: /user menu/i }));
@@ -71,7 +68,6 @@ describe('AppHeader', () => {
     await user.click(screen.getByRole('button', { name: /user menu/i }));
     await user.click(screen.getByRole('menuitem', { name: /logout/i }));
 
-    expect(handleNotificationClick).toHaveBeenCalledTimes(1);
     expect(handleUserMenuClick).toHaveBeenCalledTimes(3);
     expect(handleSettingsClick).toHaveBeenCalledTimes(1);
     expect(handleConnectedAccountsClick).toHaveBeenCalledTimes(1);

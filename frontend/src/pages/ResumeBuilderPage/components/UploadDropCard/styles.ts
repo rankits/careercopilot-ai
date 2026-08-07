@@ -25,20 +25,22 @@ export const UploadCard = styled(Box)({
 });
 
 export const DropZone = styled(Box, {
-  shouldForwardProp: (prop) => prop !== 'dragging',
-})<{ dragging?: boolean }>(({ dragging = false }) => ({
+  shouldForwardProp: (prop) => prop !== 'dragging' && prop !== 'uploading',
+})<{ dragging?: boolean; uploading?: boolean }>(({ dragging = false, uploading = false }) => ({
   alignItems: 'center',
   background: `linear-gradient(135deg, ${dragging ? t.primarySoft : t.primarySofter}, ${t.background})`,
   border: `1.5px dashed ${dragging ? t.primary : `color-mix(in srgb, ${t.primary} 28%, transparent)`}`,
   borderRadius: borderRadius['2xl'],
   boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.8)',
-  cursor: 'pointer',
+  cursor: uploading ? 'default' : 'pointer',
   display: 'flex',
   flex: 1,
   gap: spacing[3],
+  justifyContent: uploading ? 'center' : undefined,
   minHeight: '7.25rem',
   padding: `${spacing[4]} ${spacing[5]}`,
-  textAlign: 'left',
+  pointerEvents: uploading ? 'none' : undefined,
+  textAlign: uploading ? 'center' : 'left',
   transition: 'border-color 150ms ease, background 150ms ease, box-shadow 150ms ease',
   '&:hover': {
     background: `linear-gradient(135deg, ${t.primarySoft}, ${t.background})`,

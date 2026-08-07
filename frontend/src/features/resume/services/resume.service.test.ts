@@ -25,7 +25,16 @@ describe('resumeService', () => {
     const onMetadata = vi.fn();
     postMock.mockResolvedValueOnce({ data: { data: { id: 'resume-1', status: 'UPLOADED' } } });
     getMock
-      .mockResolvedValueOnce({ data: { data: { id: 'resume-1', status: 'PROCESSED' } } })
+      .mockResolvedValueOnce({
+        data: {
+          data: {
+            currentStep: 'COMPLETED',
+            progress: 100,
+            resumeStatus: 'PROCESSED',
+            status: 'COMPLETED',
+          },
+        },
+      })
       .mockResolvedValueOnce({
         data: {
           data: {
@@ -49,7 +58,7 @@ describe('resumeService', () => {
     expect(postMock).toHaveBeenCalledWith('/resumes/upload', payload, {
       headers: { 'Content-Type': 'multipart/form-data' },
     });
-    expect(getMock).toHaveBeenNthCalledWith(1, '/resumes/resume-1/status');
+    expect(getMock).toHaveBeenNthCalledWith(1, '/resumes/resume-1/parse-status');
     expect(getMock).toHaveBeenNthCalledWith(2, '/resumes/resume-1/parsed-data');
   });
 
@@ -59,7 +68,15 @@ describe('resumeService', () => {
 
     postMock.mockResolvedValueOnce({ data: { data: { id: 'resume-1', status: 'UPLOADED' } } });
     getMock.mockResolvedValueOnce({
-      data: { data: { failureReason: 'Unreadable document', status: 'FAILED' } },
+      data: {
+        data: {
+          failureReason: 'Unreadable document',
+          resumeStatus: 'FAILED',
+          status: 'FAILED',
+          currentStep: 'FAILED',
+          progress: 100,
+        },
+      },
     });
     await expect(resumeService.parse(file)).rejects.toThrow('Unreadable document');
   });
@@ -70,7 +87,16 @@ describe('resumeService', () => {
 
     postMock.mockResolvedValueOnce({ data: { data: { id: 'resume-1', status: 'UPLOADED' } } });
     getMock
-      .mockResolvedValueOnce({ data: { data: { status: 'PROCESSED' } } })
+      .mockResolvedValueOnce({
+        data: {
+          data: {
+            currentStep: 'COMPLETED',
+            progress: 100,
+            resumeStatus: 'PROCESSED',
+            status: 'COMPLETED',
+          },
+        },
+      })
       .mockResolvedValueOnce({ data: { data: { extractedData: null } } });
     await expect(resumeService.parse(file)).rejects.toThrow('empty response');
   });
@@ -210,7 +236,16 @@ describe('resumeService', () => {
       },
     );
     getMock
-      .mockResolvedValueOnce({ data: { data: { id: 'resume-1', status: 'PROCESSED' } } })
+      .mockResolvedValueOnce({
+        data: {
+          data: {
+            currentStep: 'COMPLETED',
+            progress: 100,
+            resumeStatus: 'PROCESSED',
+            status: 'COMPLETED',
+          },
+        },
+      })
       .mockResolvedValueOnce({
         data: { data: { confidenceScore: null, extractedData: { fullName: 'Ada' } } },
       });
@@ -226,12 +261,22 @@ describe('resumeService', () => {
   it('follows the parse-status endpoint for processing uploads', async () => {
     postMock.mockResolvedValueOnce({ data: { data: { id: 'resume-1', status: 'UPLOADED' } } });
     getMock
-      .mockResolvedValueOnce({ data: { data: { status: 'PROCESSING' } } })
+      .mockResolvedValueOnce({
+        data: {
+          data: {
+            currentStep: 'EXTRACTING_TEXT',
+            progress: 20,
+            resumeStatus: 'PROCESSING',
+            status: 'EXTRACTING_TEXT',
+          },
+        },
+      })
       .mockResolvedValueOnce({
         data: {
           data: {
             currentStep: 'NEEDS_REVIEW',
             progress: 80,
+            resumeStatus: 'PROCESSED',
             status: 'NEEDS_REVIEW',
             warnings: ['x'],
           },
@@ -242,6 +287,7 @@ describe('resumeService', () => {
       });
 
     await expect(resumeService.parse(file)).resolves.toEqual({ fullName: 'Ada' });
+    expect(getMock).toHaveBeenNthCalledWith(1, '/resumes/resume-1/parse-status');
     expect(getMock).toHaveBeenNthCalledWith(2, '/resumes/resume-1/parse-status');
   });
 });

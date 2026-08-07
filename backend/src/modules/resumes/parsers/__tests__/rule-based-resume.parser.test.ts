@@ -2,6 +2,53 @@ import { describe, expect, it } from 'vitest';
 import { RuleBasedResumeParser } from '@/modules/resumes/parsers/rule-based-resume.parser.js';
 
 describe('RuleBasedResumeParser', () => {
+  it('extracts a non-technical core skills section from a sample resume layout', async () => {
+    const parser = new RuleBasedResumeParser();
+    const text = [
+      'Priya Sharma',
+      'Core Skills',
+      '• Customer Relationship Management',
+      '• Communication Skills',
+      '• MS Excel, Word & PowerPoint',
+      '• Data Entry & Documentation',
+      '• Email & Calendar Management',
+      'Professional Experience',
+      'Customer Support Executive – ABC Solutions Pvt. Ltd.',
+    ].join('\n');
+
+    const result = await parser.parseResume({ extractedText: text });
+
+    expect(result.data.skills).toEqual(
+      expect.arrayContaining([
+        'Customer Relationship Management',
+        'Communication Skills',
+        'MS Excel',
+        'Word & PowerPoint',
+        'Data Entry & Documentation',
+        'Email & Calendar Management',
+      ]),
+    );
+    expect(result.data.skills).not.toEqual(expect.arrayContaining(['Professional Experience']));
+  });
+
+  it('extracts skills listed under a Core Skills section', async () => {
+    const parser = new RuleBasedResumeParser();
+    const text = [
+      'Jane Doe',
+      'jane@example.com',
+      'Core Skills',
+      'React, TypeScript, Node.js, PostgreSQL, Docker',
+      'Experience',
+      'Senior React Developer at Acme',
+    ].join('\n');
+
+    const result = await parser.parseResume({ extractedText: text });
+
+    expect(result.data.skills).toEqual(
+      expect.arrayContaining(['React', 'TypeScript', 'Node.js', 'PostgreSQL', 'Docker']),
+    );
+  });
+
   it('extracts contact details, skills and section lines from raw text', async () => {
     const parser = new RuleBasedResumeParser();
     const text = [
@@ -18,7 +65,7 @@ describe('RuleBasedResumeParser', () => {
 
     const result = await parser.parseResume({ extractedText: text });
 
-    expect(result.parserVersion).toBe('rule-based-v1');
+    expect(result.parserVersion).toBe('rule-based-v2');
     expect(result.confidenceScore).toBe(0.45);
     expect(result.data.personalDetails.fullName).toBe('Jane Doe');
     expect(result.data.personalDetails.email).toBe('jane@example.com');

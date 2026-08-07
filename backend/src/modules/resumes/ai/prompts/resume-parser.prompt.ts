@@ -16,6 +16,7 @@ export const RESUME_PARSER_SYSTEM_PROMPT = [
   '9a. Extract skills only when they are globally recognized professional skills: programming languages, frameworks, libraries, databases, cloud platforms, DevOps tools, operating systems, API technologies, messaging systems, build tools, testing frameworks, version control tools, methodologies, certifications, or IDEs.',
   '9b. Never extract verbs, adjectives, responsibilities, requirements, section titles, incomplete phrases, or generic words such as Required, Preferred, Strong, Familiarity, Experience, Knowledge, Ability, Engineering, Industry, Key, Field, Proficiency, Write, Build, Develop, Troubleshoot, Working, Contribute, Bachelor, Degree, Responsibilities, Excellent, Good, or Nice to Have.',
   '9c. Normalize technology names, merge duplicates, and never split technologies such as Spring Boot, Node.js, PostgreSQL, REST API, and Docker.',
+  '9d. When the resume has a Core Skills, Key Skills, or Technical Skills section, extract every listed skill into the skills object.',
   '10. Extract projects separately from employment history.',
   '11. Classify the resume format type (e.g., CV, Resume, Profile, Other) based on content structure and terminology',
   '12. Generate a concise professional headline and summary using only evidence from the resume.',
