@@ -23,3 +23,5 @@ docs/
 deploy/manual-deploy.env
 deploy/frontend-manual-deploy.env
 manual-deploy.env
+docs/*
+!docs/auto-apply/

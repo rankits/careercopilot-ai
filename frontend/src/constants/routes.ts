@@ -1,5 +1,6 @@
 export const ROUTES = {
   APPLICATIONS: '/applications',
+  APPLICATION_DETAIL: '/applications/:applicationId',
   HOME: '/',
   DASHBOARD: '/app',
   JOB_FEED: '/jobs-feed',
@@ -13,6 +14,13 @@ export const ROUTES = {
   UNAUTHORIZED: '/unauthorized',
   RESUME_BUILDER: '/resume-builder',
   SAVED_RESUMES: '/resume-builder/saved',
+  AUTO_APPLY: '/auto-apply',
+  BROWSER_EXTENSION: '/browser-extension',
+  ASSISTED_APPLY_WORKSPACE: '/assisted-apply/:jobApplicationId',
+  ASSISTED_APPLICATIONS: '/assisted-applications',
 } as const;
 
 export const jobDetailPath = (jobId: string) => `/jobs/${jobId}`;
+export const applicationDetailPath = (applicationId: string) => `/applications/${applicationId}`;
+export const assistedApplyWorkspacePath = (jobApplicationId: string) =>
+  `/assisted-apply/${jobApplicationId}`;

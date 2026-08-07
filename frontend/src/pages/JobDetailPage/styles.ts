@@ -173,6 +173,25 @@ export const jobDetailPageSx = {
     },
   } satisfies SxProps<Theme>,
 
+  /** Wrapper so Tooltip works on a disabled Assisted Apply button and stays full-width on compact. */
+  assistedApplyTooltipWrap: {
+    display: 'inline-flex',
+    maxWidth: '100%',
+
+    '& > button': {
+      minHeight: 44,
+      minWidth: 44,
+    },
+
+    [compactBreakpoint]: {
+      width: '100%',
+
+      '& > button': {
+        width: '100%',
+      },
+    },
+  } satisfies SxProps<Theme>,
+
   muted: {
     color: colorTokens.textSecondary,
   } satisfies SxProps<Theme>,

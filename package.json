@@ -12,19 +12,25 @@
     "backend:dev": "npm --prefix backend run dev",
     "backend:build": "npm --prefix backend run build",
     "backend:lint": "npm --prefix backend run lint",
-    "backend:lint:fix": "npm --prefix backend run lint:fix",
+    "backend:lint:fix": "npm --prefix backend run lint:fix:all",
     "backend:typecheck": "npm --prefix backend run typecheck",
+    "extension:dev": "npm --prefix extension run dev",
+    "extension:build": "npm --prefix extension run build",
+    "extension:lint": "npm --prefix extension run lint",
+    "extension:lint:fix": "npm --prefix extension run lint:fix",
+    "extension:typecheck": "npm --prefix extension run typecheck",
+    "extension:test": "npm --prefix extension run test",
     "test": "npm --prefix frontend run test",
     "test:coverage": "npm --prefix frontend run test:coverage",
     "test:watch": "npm --prefix frontend run test:watch",
     "test:e2e": "npm --prefix frontend run test:e2e",
     "lint": "npm --prefix frontend run lint",
-    "lint:fix": "npm --prefix frontend run lint:fix",
+    "lint:fix": "npm --prefix frontend run lint:fix:all",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "npm --prefix frontend run typecheck",
     "prepare": "husky",
-    "validate": "npm run typecheck && npm run lint && npm run test && npm run format:check && npm run build && npm run backend:typecheck && npm run backend:lint && npm run backend:build"
+    "validate": "npm run typecheck && npm run lint && npm run test && npm run format:check && npm run build && npm run backend:typecheck && npm run backend:lint && npm run backend:build && npm run extension:typecheck && npm run extension:lint && npm run extension:build && npm run extension:test"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.8.1",
@@ -51,6 +57,13 @@
       "prettier --write"
     ],
     "backend/**/*.{json,css,scss,md,yml,yaml}": [
+      "prettier --write"
+    ],
+    "extension/**/*.{ts,tsx,js,jsx}": [
+      "npm --prefix extension run lint:fix --",
+      "prettier --write"
+    ],
+    "extension/**/*.{json,css,scss,md,yml,yaml}": [
       "prettier --write"
     ]
   }

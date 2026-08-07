@@ -6,9 +6,12 @@ import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
 import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
 import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
 import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
 import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
 import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
 import * as yup from 'yup';
 
 import type {
@@ -526,7 +529,10 @@ export const CAREER_COPILOT_COPY = {
  * -------------------------------------------------------------------------- */
 
 export const SIDEBAR_NAV_LABELS = {
+  applicationSetup: 'Application Setup',
+  browserExtension: 'Browser Extension',
   applications: 'Applications',
+  assistedApplications: 'Assisted Applications',
   aiMatch: 'AI Match',
   dashboard: 'Dashboard',
   jobsFeed: 'Jobs Feed',
@@ -579,6 +585,24 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     label: SIDEBAR_NAV_LABELS.savedJobs,
   },
   {
+    href: ROUTES.AUTO_APPLY,
+    icon: SmartToyOutlinedIcon,
+    id: 'auto-apply',
+    label: SIDEBAR_NAV_LABELS.applicationSetup,
+  },
+  {
+    href: ROUTES.ASSISTED_APPLICATIONS,
+    icon: TaskAltOutlinedIcon,
+    id: 'assisted-applications',
+    label: SIDEBAR_NAV_LABELS.assistedApplications,
+  },
+  {
+    href: ROUTES.BROWSER_EXTENSION,
+    icon: LanguageOutlinedIcon,
+    id: 'browser-extension',
+    label: SIDEBAR_NAV_LABELS.browserExtension,
+  },
+  {
     href: ROUTES.RESUME_BUILDER,
     icon: EditNoteOutlinedIcon,
     id: 'resume-builder',
@@ -595,7 +619,16 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
 export const DEFAULT_SIDEBAR_SECTIONS = [
   {
     id: 'career',
-    itemIds: ['dashboard', 'jobs-feed', 'ai-match', 'applications', 'saved-jobs'],
+    itemIds: [
+      'dashboard',
+      'jobs-feed',
+      'ai-match',
+      'applications',
+      'saved-jobs',
+      'auto-apply',
+      'assisted-applications',
+      'browser-extension',
+    ],
     label: 'CAREER',
   },
   {
@@ -616,6 +649,9 @@ export const DEFAULT_BOTTOM_NAV_IDS = [
 /** Sidebar destinations that live in the mobile More drawer instead of the bottom bar. */
 export const DEFAULT_MOBILE_DRAWER_NAV_IDS = [
   'saved-jobs',
+  'auto-apply',
+  'assisted-applications',
+  'browser-extension',
   'resume-builder',
   'saved-resumes',
 ] as const;
