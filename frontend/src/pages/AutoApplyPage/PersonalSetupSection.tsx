@@ -5,7 +5,6 @@ import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { resumeService } from '@/features/resume/services/resume.service';
-
 import { Box, Chip, Paper, TextField, Typography } from '@/lib/material';
 
 import { PersonalContactSection } from './PersonalContactSection';
@@ -15,14 +14,16 @@ const profileKey = ['resume-profile', 'me'] as const;
 export function PersonalSetupSection() {
   const queryClient = useQueryClient();
   const { showToast } = useToast();
-  const profileQuery = useQuery({ queryKey: profileKey, queryFn: () => resumeService.getMyProfile() });
+  const profileQuery = useQuery({
+    queryKey: profileKey,
+    queryFn: () => resumeService.getMyProfile(),
+  });
   const [preferredName, setPreferredName] = useState('');
   const [authorizationCountry, setAuthorizationCountry] = useState('');
 
   useEffect(() => {
     const savedPreferredName = profileQuery.data?.personalDetails.preferredName;
-    const savedAuthorizationCountry =
-      profileQuery.data?.personalDetails.workAuthorizationCountry;
+    const savedAuthorizationCountry = profileQuery.data?.personalDetails.workAuthorizationCountry;
     setPreferredName(typeof savedPreferredName === 'string' ? savedPreferredName : '');
     setAuthorizationCountry(
       typeof savedAuthorizationCountry === 'string' ? savedAuthorizationCountry : '',
