@@ -3,9 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
-import {
-  useUpsertApplicationAnswer,
-} from '@/features/auto-apply/hooks/useApplicationAnswers';
+import { useUpsertApplicationAnswer } from '@/features/auto-apply/hooks/useApplicationAnswers';
 import {
   useCandidateProfile,
   useUpsertCandidateProfile,
@@ -26,12 +24,13 @@ import {
   FormControlLabel,
   MenuItem,
   Paper,
-  TextField,
   Typography,
 } from '@/lib/material';
 
 import { useSetupDirty } from './SetupDirtyContext';
+import { setupPageSx } from './setupPageStyles';
 import { SetupSectionHeading } from './SetupSectionHeading';
+import { SetupTextField } from './SetupTextField';
 
 const ROLE_SUGGESTIONS = [
   'Software Engineer',
@@ -61,7 +60,10 @@ const LOCATION_SUGGESTIONS = [
 const MAX_TAG_COUNT = 20;
 
 type FieldErrors = Partial<
-  Record<'desiredRoles' | 'preferredLocations' | 'remotePreferences' | 'noticePeriod' | 'salaryMax', string>
+  Record<
+    'desiredRoles' | 'preferredLocations' | 'remotePreferences' | 'noticePeriod' | 'salaryMax',
+    string
+  >
 >;
 
 export function JobPreferencesSection() {
@@ -220,7 +222,8 @@ export function JobPreferencesSection() {
       showToast({ message: 'Job preferences saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't save your details. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't save your details. Try again.",
         severity: 'error',
       });
     }
@@ -235,7 +238,10 @@ export function JobPreferencesSection() {
   }
 
   return (
-    <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 640 }} variant="outlined">
+    <Paper
+      sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 640 }}
+      variant="outlined"
+    >
       <SetupSectionHeading required sectionId="preferences" title="Job preferences" />
 
       <Autocomplete
@@ -255,7 +261,7 @@ export function JobPreferencesSection() {
         }}
         options={ROLE_SUGGESTIONS}
         renderInput={(params) => (
-          <TextField
+          <SetupTextField
             {...params}
             error={Boolean(errors.desiredRoles)}
             helperText={
@@ -294,7 +300,7 @@ export function JobPreferencesSection() {
         }}
         options={LOCATION_SUGGESTIONS}
         renderInput={(params) => (
-          <TextField
+          <SetupTextField
             {...params}
             error={Boolean(errors.preferredLocations)}
             helperText={
@@ -324,7 +330,7 @@ export function JobPreferencesSection() {
         getOptionLabel={(option) => option.label}
         isOptionEqualToValue={(option, value) => option.value === value.value}
         renderInput={(params) => (
-          <TextField
+          <SetupTextField
             {...params}
             error={Boolean(errors.remotePreferences)}
             helperText={errors.remotePreferences ?? 'Select all that apply.'}
@@ -341,7 +347,7 @@ export function JobPreferencesSection() {
         value={WORK_MODE_OPTIONS.filter((option) => remotePreferences.includes(option.value))}
       />
 
-      <Typography variant="subtitle2">Expected salary (optional)</Typography>
+      <Typography sx={setupPageSx.subsectionTitle}>Expected salary (optional)</Typography>
       <FormControlLabel
         control={
           <Checkbox
@@ -354,14 +360,14 @@ export function JobPreferencesSection() {
       <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
         {!salaryFlexible && (
           <>
-            <TextField
+            <SetupTextField
               label="Expected salary min"
               onChange={(event) => setSalaryMin(event.target.value)}
               sx={{ flex: 1, minWidth: 140 }}
               type="number"
               value={salaryMin}
             />
-            <TextField
+            <SetupTextField
               error={Boolean(errors.salaryMax)}
               helperText={errors.salaryMax}
               label="Expected salary max"
@@ -376,7 +382,7 @@ export function JobPreferencesSection() {
             />
           </>
         )}
-        <TextField
+        <SetupTextField
           label="Currency"
           onChange={(event) => setSalaryCurrency(event.target.value)}
           required
@@ -389,13 +395,13 @@ export function JobPreferencesSection() {
               {code}
             </MenuItem>
           ))}
-        </TextField>
+        </SetupTextField>
       </Box>
-      <Typography color="text.secondary" variant="caption">
+      <Typography sx={setupPageSx.bodySecondary}>
         Helps us flag jobs with a mismatched range. Never shared with employers automatically.
       </Typography>
 
-      <Typography variant="subtitle2">Notice period</Typography>
+      <Typography sx={setupPageSx.subsectionTitle}>Notice period</Typography>
       <FormControlLabel
         control={
           <Checkbox
@@ -409,7 +415,7 @@ export function JobPreferencesSection() {
         label="Immediate joiner (available to start right away)"
       />
       {!immediateJoiner && (
-        <TextField
+        <SetupTextField
           error={Boolean(errors.noticePeriod)}
           helperText={errors.noticePeriod ?? 'How soon could you start a new role?'}
           label="Notice period (days)"

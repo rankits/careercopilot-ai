@@ -23,9 +23,11 @@ import {
   FormControlLabel,
   IconButton,
   Paper,
-  TextField,
   Typography,
 } from '@/lib/material';
+
+import { setupPageSx } from './setupPageStyles';
+import { SetupTextField } from './SetupTextField';
 
 const SUGGESTED_ANSWER_KEYS: ReadonlyArray<{ key: string; hint: string }> = [
   { key: 'current_work_region', hint: 'e.g. India, United States, Canada' },
@@ -86,15 +88,19 @@ export function AdvancedAnswersPanel({
   };
 
   return (
-    <Accordion expanded={expanded} onChange={(_event, next) => setExpanded(next)} variant="outlined">
+    <Accordion
+      expanded={expanded}
+      onChange={(_event, next) => setExpanded(next)}
+      variant="outlined"
+    >
       <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-        <Typography variant="subtitle1">Advanced answers</Typography>
+        <Typography sx={setupPageSx.subsectionTitle}>Advanced answers</Typography>
       </AccordionSummary>
       <AccordionDetails>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Typography color="text.secondary" variant="body2">
-            Manage custom answer keys beyond the common questions above. Demographic, disability, and
-            veteran-status questions are always rejected — never stored, per platform policy.
+          <Typography sx={setupPageSx.bodySecondary}>
+            Manage custom answer keys beyond the common questions above. Demographic, disability,
+            and veteran-status questions are always rejected — never stored, per platform policy.
           </Typography>
 
           {suggestedQuestionKey && (
@@ -117,19 +123,19 @@ export function AdvancedAnswersPanel({
               />
             ))}
           </Box>
-          <Typography color="text.secondary" variant="caption">
+          <Typography sx={setupPageSx.bodySecondary}>
             {SUGGESTED_ANSWER_KEYS.find((item) => item.key === questionKey)?.hint ??
               'Pick a common key or type your own snake_case key'}
           </Typography>
 
-          <TextField
+          <SetupTextField
             fullWidth
             helperText="snake_case, e.g. current_work_region"
             label="Question key"
             onChange={(event) => setQuestionKey(event.target.value)}
             value={questionKey}
           />
-          <TextField
+          <SetupTextField
             fullWidth
             label="Answer"
             multiline
@@ -176,12 +182,8 @@ export function AdvancedAnswersPanel({
                   }}
                 >
                   <Box sx={{ flex: 1 }}>
-                    <Typography fontWeight={600} variant="body2">
-                      {answer.questionKey}
-                    </Typography>
-                    <Typography color="text.secondary" variant="body2">
-                      {answer.answer}
-                    </Typography>
+                    <Typography sx={setupPageSx.labelStrong}>{answer.questionKey}</Typography>
+                    <Typography sx={setupPageSx.bodySecondary}>{answer.answer}</Typography>
                   </Box>
                   {answer.sensitive && <Chip label="Sensitive" size="small" />}
                   <Chip
