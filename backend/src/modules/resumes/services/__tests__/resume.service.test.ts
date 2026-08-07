@@ -4,6 +4,7 @@ import { AppError } from '@/shared/utils/errors/AppError.js';
 const {
   findResumeByIdMock,
   findLatestExtractionMock,
+  findLatestParseRunMock,
   findCandidateProfileByUserIdMock,
   updateCandidateProfileMock,
   upsertCandidateProfileMock,
@@ -12,6 +13,7 @@ const {
 } = vi.hoisted(() => ({
   findResumeByIdMock: vi.fn(),
   findLatestExtractionMock: vi.fn(),
+  findLatestParseRunMock: vi.fn(),
   findCandidateProfileByUserIdMock: vi.fn(),
   updateCandidateProfileMock: vi.fn(),
   upsertCandidateProfileMock: vi.fn(),
@@ -24,7 +26,7 @@ vi.mock('@/modules/resumes/repositories/resume.repository.js', () => ({
     createResume: vi.fn(),
     findResumeById: findResumeByIdMock,
     findLatestExtraction: findLatestExtractionMock,
-    findLatestParseRun: vi.fn(),
+    findLatestParseRun: findLatestParseRunMock,
     findCandidateProfileByUserId: findCandidateProfileByUserIdMock,
     updateCandidateProfile: updateCandidateProfileMock,
     upsertCandidateProfile: upsertCandidateProfileMock,
@@ -99,6 +101,38 @@ const baseResume = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe('resumeService.getParseStatus', () => {
+  it('returns synthetic progress when the resume is still uploading or extracting text', async () => {
+    findResumeByIdMock.mockResolvedValue({ ...baseResume, status: 'PROCESSING' });
+    findLatestParseRunMock.mockResolvedValue(null);
+
+    await expect(resumeService.getParseStatus('resume-1', ownerId)).resolves.toMatchObject({
+      resumeId: 'resume-1',
+      parseRunId: null,
+      status: 'EXTRACTING_TEXT',
+      currentStep: 'EXTRACTING_TEXT',
+      progress: 20,
+      resumeStatus: 'PROCESSING',
+      failureReason: null,
+    });
+  });
+
+  it('returns a failed resume status even when no parse run exists yet', async () => {
+    findResumeByIdMock.mockResolvedValue({
+      ...baseResume,
+      status: 'FAILED',
+      failureReason: 'Unreadable document',
+    });
+    findLatestParseRunMock.mockResolvedValue(null);
+
+    await expect(resumeService.getParseStatus('resume-1', ownerId)).resolves.toMatchObject({
+      status: 'FAILED',
+      resumeStatus: 'FAILED',
+      failureReason: 'Unreadable document',
+    });
+  });
 });
 
 describe('resumeService ownership guards (AUTH-BE-003)', () => {

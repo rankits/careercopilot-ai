@@ -51,6 +51,7 @@ import {
   FilterTrack,
 } from '@/components/molecules/JobFilterBar/styles';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
+import { MatchScoreHelpNote } from '@/features/recommendations/components/MatchScoreHelpNote';
 
 import { useSaveJob, savedJobsQueryKey } from '@/features/applications/hooks/useSaveJob';
 import {
@@ -73,7 +74,6 @@ import { useAppSelector } from '@/hooks/redux';
 
 import { ANY_COUNTRY, findCountryOptionByName, getCountryOptions } from '@/constants/countries';
 import {
-  AI_MATCH_CAREER_PATHS,
   AI_MATCH_COPY,
   AI_MATCH_EXPERIENCE_OPTIONS,
   AI_MATCH_WORK_MODE_OPTIONS,
@@ -93,10 +93,19 @@ import type {
 } from '@/features/recommendations/types/recommendation.types';
 import { formatRecommendationCategoryLabel } from '@/features/recommendations/utils/formatRecommendationMatchLabel';
 import { mapCareerPreferences } from '@/features/recommendations/utils/mapCareerPreferences';
+import {
+  buildDynamicCareerQuickPicks,
+  isCareerQuickPick,
+} from '@/features/recommendations/utils/resolveCareerQuickPicks';
 import { resumeService } from '@/features/resume/services/resume.service';
+import { mapProfileToFormValues } from '@/features/resume/utils/profileFormMapper';
 import { jobFeedPageSx } from '@/pages/JobFeedPage/styles';
 
 import { aiMatchPageSx } from './styles';
+import {
+  hasNoRecommendationResults,
+  notifyEmptyRecommendations,
+} from './utils/notifyEmptyRecommendations';
 
 type RecommendationMode = 'profile' | 'resume' | 'similar' | 'text-career' | 'career' | 'saved';
 type RecommendationLifecycleState = NonNullable<RecommendationReadinessStatus['lifecycleState']>;
@@ -544,6 +553,25 @@ export function AiMatchPage() {
     return savedSortOrder === 'newest' ? sorted.reverse() : sorted;
   }, [savedQuery.data, savedSortOrder]);
   const careerGroups = groupCareerRecommendations(visibleCareerRecommendations);
+  const careerQuickPicks = useMemo(() => {
+    const signals = resumeProfile.data
+      ? (() => {
+          const profile = mapProfileToFormValues(resumeProfile.data);
+          return {
+            designation: profile.designation,
+            skills: profile.skills,
+            summary: profile.summary,
+            workExperience: profile.workExperience,
+          };
+        })()
+      : {};
+
+    return buildDynamicCareerQuickPicks(signals);
+  }, [resumeProfile.data]);
+  const careerPathPlaceholder =
+    careerQuickPicks[0] !== undefined
+      ? `e.g. ${careerQuickPicks[0]}`
+      : AI_MATCH_COPY.careerPathPlaceholder;
 
   const submitFeedback = (
     recommendationId: string,
@@ -630,12 +658,41 @@ export function AiMatchPage() {
     />
   );
 
+  const runGenerateProfile = useCallback(() => {
+    setGeneratedOnce(true);
+    void generate
+      .mutateAsync()
+      .then((items) => {
+        if (hasNoRecommendationResults(items)) {
+          notifyEmptyRecommendations(showToast, AI_MATCH_COPY.noMatchesProfileToast);
+        }
+      })
+      .catch(() => undefined);
+  }, [generate, showToast]);
+
+  const runRefreshProfile = useCallback(() => {
+    setGeneratedOnce(true);
+    void refreshProfile
+      .mutateAsync()
+      .then((result) => {
+        if (hasNoRecommendationResults(result)) {
+          notifyEmptyRecommendations(showToast, AI_MATCH_COPY.noMatchesProfileToast);
+        }
+      })
+      .catch(() => undefined);
+  }, [refreshProfile, showToast]);
+
   const runGenerateResume = () => {
     if (!selectedResumeId) return;
     setResumeGeneratedOnce(true);
     void generateResume
       .mutateAsync(selectedResumeId)
-      .then((items) => setResumeRecommendations(items.map(mapRecommendationDtoToCard)))
+      .then((items) => {
+        setResumeRecommendations(items.map(mapRecommendationDtoToCard));
+        if (hasNoRecommendationResults(items)) {
+          notifyEmptyRecommendations(showToast, AI_MATCH_COPY.noMatchesResumeToast);
+        }
+      })
       .catch(() => undefined);
   };
 
@@ -644,7 +701,12 @@ export function AiMatchPage() {
     setTextGeneratedOnce(true);
     void generateText
       .mutateAsync(trimmedTargetText)
-      .then((items) => setTextRecommendations(items.map(mapRecommendationDtoToCard)))
+      .then((items) => {
+        setTextRecommendations(items.map(mapRecommendationDtoToCard));
+        if (hasNoRecommendationResults(items)) {
+          notifyEmptyRecommendations(showToast, AI_MATCH_COPY.noMatchesTextToast);
+        }
+      })
       .catch(() => undefined);
   };
 
@@ -688,7 +750,12 @@ export function AiMatchPage() {
           flexibilityMode: 'FLEXIBLE',
         },
       })
-      .then((items) => setCareerRecommendations(items))
+      .then((items) => {
+        setCareerRecommendations(items);
+        if (hasNoRecommendationResults(items)) {
+          notifyEmptyRecommendations(showToast, AI_MATCH_COPY.noMatchesCareerToast);
+        }
+      })
       .catch(() => undefined);
   };
 
@@ -721,6 +788,9 @@ export function AiMatchPage() {
       .then((items) => {
         setSavedSearchRecommendations(items.map(mapRecommendationDtoToCard));
         setSavedSearchResultCounts((prev) => ({ ...prev, [savedSearchId]: items.length }));
+        if (hasNoRecommendationResults(items)) {
+          notifyEmptyRecommendations(showToast, AI_MATCH_COPY.noMatchesSavedSearchToast);
+        }
       })
       .catch(() => undefined);
   };
@@ -1138,6 +1208,7 @@ export function AiMatchPage() {
 
               {visibleResumeRecommendations.length > 0 ? (
                 <>
+                  <MatchScoreHelpNote mode="resume" />
                   <Box sx={aiMatchPageSx.listHeader}>
                     <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                       {AI_MATCH_COPY.resumeResultCount(visibleResumeRecommendations.length)}
@@ -1266,6 +1337,7 @@ export function AiMatchPage() {
 
           {similarSourceJobId && similarCards.length > 0 ? (
             <>
+              <MatchScoreHelpNote mode="similar" />
               <Box sx={aiMatchPageSx.listHeader}>
                 <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                   {AI_MATCH_COPY.similarResultCount(similarCards.length)}
@@ -1324,7 +1396,7 @@ export function AiMatchPage() {
                 fullWidth
                 label={AI_MATCH_COPY.careerPathLabel}
                 onChange={(event) => setCareerPath(event.target.value)}
-                placeholder={AI_MATCH_COPY.careerPathPlaceholder}
+                placeholder={careerPathPlaceholder}
                 size="small"
                 value={careerPath}
               />
@@ -1375,15 +1447,22 @@ export function AiMatchPage() {
             </Box>
 
             <Box sx={aiMatchPageSx.careerPathsSection}>
-              <Typography component="h3" sx={aiMatchPageSx.composerHint}>
-                {AI_MATCH_COPY.careerPopularTitle}
-              </Typography>
+              <Box sx={aiMatchPageSx.careerPathsHeader}>
+                <Typography component="h3" sx={aiMatchPageSx.composerHint}>
+                  {AI_MATCH_COPY.careerPopularTitle}
+                </Typography>
+                {isCareerQuickPick(careerPath, careerQuickPicks) ? (
+                  <Button onClick={() => setCareerPath('')} size="small" variant="outline">
+                    {AI_MATCH_COPY.clear}
+                  </Button>
+                ) : null}
+              </Box>
               <Box
                 aria-label={AI_MATCH_COPY.careerPopularTitle}
                 role="group"
                 sx={aiMatchPageSx.careerPathChips}
               >
-                {AI_MATCH_CAREER_PATHS.map((path) => {
+                {careerQuickPicks.map((path) => {
                   const isActive = careerPath === path;
 
                   return (
@@ -1391,7 +1470,7 @@ export function AiMatchPage() {
                       aria-pressed={isActive}
                       component="button"
                       key={path}
-                      onClick={() => setCareerPath(path)}
+                      onClick={() => setCareerPath(isActive ? '' : path)}
                       sx={{
                         ...aiMatchPageSx.careerPathChip,
                         ...(isActive ? aiMatchPageSx.careerPathChipActive : {}),
@@ -1472,11 +1551,14 @@ export function AiMatchPage() {
           ) : null}
 
           {visibleCareerRecommendations.length > 0 ? (
-            <Box sx={aiMatchPageSx.listHeader}>
-              <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
-                {AI_MATCH_COPY.careerResultCount(visibleCareerRecommendations.length)}
-              </Typography>
-            </Box>
+            <>
+              <MatchScoreHelpNote mode="career" />
+              <Box sx={aiMatchPageSx.listHeader}>
+                <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
+                  {AI_MATCH_COPY.careerResultCount(visibleCareerRecommendations.length)}
+                </Typography>
+              </Box>
+            </>
           ) : null}
 
           {careerGroups.map(([category, items]) => (
@@ -1597,6 +1679,7 @@ export function AiMatchPage() {
 
           {visibleTextRecommendations.length > 0 ? (
             <>
+              <MatchScoreHelpNote mode="text-career" />
               <Box sx={aiMatchPageSx.listHeader}>
                 <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                   {AI_MATCH_COPY.textResultCount(visibleTextRecommendations.length)}
@@ -2003,6 +2086,7 @@ export function AiMatchPage() {
 
               {visibleSavedSearchRecommendations.length > 0 ? (
                 <>
+                  <MatchScoreHelpNote mode="saved" />
                   <Box sx={aiMatchPageSx.listHeader}>
                     <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                       {AI_MATCH_COPY.savedResultCount(visibleSavedSearchRecommendations.length)}
@@ -2086,8 +2170,7 @@ export function AiMatchPage() {
                 disabled={profileActionPending}
                 isLoading={refreshProfile.isPending}
                 onClick={() => {
-                  setGeneratedOnce(true);
-                  void refreshProfile.mutateAsync().catch(() => undefined);
+                  void runRefreshProfile();
                 }}
                 size="small"
                 startIcon={<RefreshIcon fontSize="small" />}
@@ -2136,8 +2219,7 @@ export function AiMatchPage() {
                 disabled={!canGenerate || profileActionPending}
                 isLoading={refreshProfile.isPending}
                 onClick={() => {
-                  setGeneratedOnce(true);
-                  void refreshProfile.mutateAsync().catch(() => undefined);
+                  void runRefreshProfile();
                 }}
                 size="small"
                 startIcon={<RefreshIcon fontSize="small" />}
@@ -2234,10 +2316,7 @@ export function AiMatchPage() {
                 <Button
                   disabled={profileActionPending}
                   isLoading={generate.isPending}
-                  onClick={() => {
-                    setGeneratedOnce(true);
-                    void generate.mutateAsync().catch(() => undefined);
-                  }}
+                  onClick={runGenerateProfile}
                   size="small"
                   startIcon={<AutoAwesomeOutlinedIcon fontSize="small" />}
                 >
@@ -2252,6 +2331,7 @@ export function AiMatchPage() {
 
           {!isPending && !isError && visibleCards.length > 0 ? (
             <>
+              <MatchScoreHelpNote mode="profile" />
               <Box sx={aiMatchPageSx.listHeader}>
                 <Typography aria-live="polite" sx={aiMatchPageSx.resultCount}>
                   {AI_MATCH_COPY.resultCount(data?.total ?? 0)}
@@ -2259,10 +2339,7 @@ export function AiMatchPage() {
                 <Button
                   disabled={profileActionPending || isProcessingLifecycle}
                   isLoading={refreshProfile.isPending}
-                  onClick={() => {
-                    setGeneratedOnce(true);
-                    void refreshProfile.mutateAsync().catch(() => undefined);
-                  }}
+                  onClick={runRefreshProfile}
                   size="small"
                   startIcon={<RefreshIcon fontSize="small" />}
                   variant="outline"

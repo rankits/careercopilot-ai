@@ -1,5 +1,8 @@
 import { ExpandedCanonicalResumeSchema } from '@/modules/resumes/schemas/canonical-resume.schema.js';
-import { normalizeProfessionalSkills } from '@/modules/resumes/utils/skill-normalizer.js';
+import {
+  normalizeProfessionalSkills,
+  normalizeResumeSkills,
+} from '@/modules/resumes/utils/skill-normalizer.js';
 import {
   CanonicalResume,
   ParsedResumeData,
@@ -632,7 +635,7 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
   const data = isRecord(value) ? value : {};
 
   if (Array.isArray(value)) {
-    const skills = normalizeProfessionalSkills(
+    const skills = normalizeResumeSkills(
       value.flatMap((item) => {
         if (typeof item === 'string') {
           return [item];
@@ -655,7 +658,7 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
     };
   }
 
-  const groupedSkills = normalizeProfessionalSkills(
+  const groupedSkills = normalizeResumeSkills(
     [
       data.backend,
       data.frontend,
@@ -669,6 +672,12 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
       data.soft_skills,
       data.domains,
       data.technical,
+      data.coreSkills,
+      data.core_skills,
+      data.coreCompetencies,
+      data.core_competencies,
+      data.competencies,
+      data.core,
       data.backendTechnologies,
       data.backend_technologies,
       data.frontendTechnologies,
@@ -680,13 +689,15 @@ const mapSkills = (value: unknown): CanonicalResume['skills'] => {
 
   return {
     technical:
-      normalizeProfessionalSkills(data.technical).length > 0
-        ? normalizeProfessionalSkills(data.technical)
+      normalizeResumeSkills(data.technical).length > 0
+        ? normalizeResumeSkills(data.technical)
         : groupedSkills,
-    tools: normalizeProfessionalSkills(data.tools),
-    frameworks: normalizeProfessionalSkills(data.frameworks),
-    softSkills: [],
-    domains: [],
+    tools: normalizeResumeSkills(data.tools),
+    frameworks: normalizeResumeSkills(data.frameworks),
+    softSkills: normalizeResumeSkills(
+      [data.softSkills, data.soft_skills].flatMap(normalizeStringArray),
+    ),
+    domains: normalizeResumeSkills(data.domains),
   };
 };
 
@@ -943,7 +954,17 @@ export const buildCanonicalResume = (value: unknown): CanonicalResume => {
   const certifications = mapCertifications(
     firstDefined(data.certifications, data.certificates, data.licenses),
   );
-  const skills = mapSkills(firstDefined(data.skills, data.skillBlocks, data.skillset));
+  const skills = mapSkills(
+    firstDefined(
+      data.skills,
+      data.skillBlocks,
+      data.skillset,
+      data.coreSkills,
+      data.core_skills,
+      data.coreCompetencies,
+      data.core_competencies,
+    ),
+  );
   const projects = mapProjects(
     firstDefined(data.projects, data.projectHighlights, data.project_history, data.projectHistory),
   );

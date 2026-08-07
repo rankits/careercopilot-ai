@@ -1,5 +1,11 @@
 import { ROUTES } from '@/constants/routes';
 
+export const DEFAULT_INDUSTRY = 'technology';
+export const DEFAULT_EMPLOYMENT_TYPE = 'full-time';
+export const DEFAULT_EXPERIENCE_LEVEL = 'mid' as const;
+
+export type ExperienceLevel = 'entry' | 'mid' | 'senior' | 'lead' | 'executive';
+
 export type CleanSnapshot = {
   content: string;
   targetRole: string;

@@ -4,6 +4,9 @@ export const PHONE_MAX_LENGTH = 16;
 /** National number length when a dial code is selected separately. */
 export const NATIONAL_PHONE_MAX_LENGTH = 15;
 
+/** Register form national number length (e.g. 10-digit Indian mobile). */
+export const REGISTER_NATIONAL_PHONE_MAX_LENGTH = 10;
+
 export const COUNTRY_DIAL_CODES = [
   { code: '+91', label: 'IN (+91)', region: 'IN' },
   { code: '+1', label: 'US/CA (+1)', region: 'US' },
@@ -35,6 +38,25 @@ export function sanitizePhoneInput(value: string): string {
 /** Digits only for national number entry (country code selected separately). */
 export function sanitizeNationalPhoneInput(value: string): string {
   return value.replace(/\D/g, '').slice(0, NATIONAL_PHONE_MAX_LENGTH);
+}
+
+/** Digits only for register national number; strips pasted country code when present. */
+export function sanitizeRegisterNationalPhoneInput(
+  value: string,
+  dialCode: CountryDialCode,
+): string {
+  let digits = value.replace(/\D/g, '');
+  const dialDigits = dialCode.replace(/\D/g, '');
+
+  if (
+    dialDigits &&
+    digits.startsWith(dialDigits) &&
+    digits.length > REGISTER_NATIONAL_PHONE_MAX_LENGTH
+  ) {
+    digits = digits.slice(dialDigits.length);
+  }
+
+  return digits.slice(0, REGISTER_NATIONAL_PHONE_MAX_LENGTH);
 }
 
 export function composePhoneWithDialCode(dialCode: string, nationalNumber: string): string {

@@ -1,4 +1,5 @@
 import { DASHBOARD_LIMITS } from '@/constants/pages/dashboard';
+import { toTitleCase } from '@/lib/toTitleCase';
 
 export function getTimeGreeting(
   now = new Date(),
@@ -17,13 +18,13 @@ export function resolveDashboardFirstName(
   } | null,
 ): string {
   const first = user?.firstName?.trim();
-  if (first) return first;
+  if (first) return toTitleCase(first);
 
   const fromName = user?.name?.trim().split(/\s+/)[0];
-  if (fromName) return fromName;
+  if (fromName) return toTitleCase(fromName);
 
   const emailPrefix = user?.email?.split('@')[0]?.trim();
-  if (emailPrefix) return emailPrefix;
+  if (emailPrefix) return toTitleCase(emailPrefix);
 
   return 'there';
 }

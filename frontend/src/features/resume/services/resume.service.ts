@@ -128,19 +128,13 @@ export const resumeService = {
       callbacks.onParsing?.();
 
       for (let attempt = 0; attempt < MAX_POLL_ATTEMPTS; attempt += 1) {
-        const resumeStatusResponse = await httpClient.get(`/resumes/${upload.id}/status`);
-        const statusData = responseData(resumeStatusResponse);
-        const status = statusData?.status as ResumeProcessingStatus | undefined;
-        const parseStatusResponse =
-          status === 'UPLOADED' || status === 'PROCESSING'
-            ? await httpClient.get(`/resumes/${upload.id}/parse-status`).catch(() => null)
-            : null;
-        const detailedStatus = parseStatus(
-          parseStatusResponse ? responseData(parseStatusResponse) : null,
-        );
+        const parseStatusResponse = await httpClient.get(`/resumes/${upload.id}/parse-status`);
+        const statusData = responseData(parseStatusResponse);
+        const resumeStatus = statusData?.resumeStatus as ResumeProcessingStatus | undefined;
+        const detailedStatus = parseStatus(statusData);
         if (detailedStatus) callbacks.onProgress?.(detailedStatus);
 
-        if (status === 'FAILED' || detailedStatus?.status === 'FAILED') {
+        if (resumeStatus === 'FAILED' || detailedStatus?.status === 'FAILED') {
           throw new Error(
             typeof statusData?.failureReason === 'string'
               ? statusData.failureReason
@@ -149,7 +143,7 @@ export const resumeService = {
         }
 
         if (
-          status === 'PROCESSED' ||
+          resumeStatus === 'PROCESSED' ||
           (detailedStatus && TERMINAL_PARSE_STATUSES.has(detailedStatus.status))
         ) {
           const parsedResponse = await httpClient.get(`/resumes/${upload.id}/parsed-data`);

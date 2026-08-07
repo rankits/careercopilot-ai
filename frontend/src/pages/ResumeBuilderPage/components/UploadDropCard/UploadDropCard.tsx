@@ -37,6 +37,7 @@ export function UploadDropCard({
 
       <DropZone
         dragging={isDragging}
+        uploading={uploading}
         onDragOver={(event) => {
           event.preventDefault();
           onDragStateChange(true);

@@ -1,8 +1,12 @@
-import {
+import type {
   ResumeParser,
   ResumeParserInput,
   ResumeParserResult,
 } from '@/modules/resumes/types/resume.types.js';
+import {
+  extractProfessionalSkillsFromText,
+  normalizeResumeSkills,
+} from '@/modules/resumes/utils/skill-normalizer.js';
 
 const skillKeywords = [
   'javascript',
@@ -25,10 +29,13 @@ const skillKeywords = [
 ];
 
 const SECTION_STOP =
-  /^(experience|work\s+experience|employment|education|skills|projects?|certifications?|achievements?|awards?|languages?|interests?|references?|contact|summary|professional\s+summary|profile|objective|about(\s+me)?)\b/i;
+  /^(?:(?:professional\s+)?experience|work\s+experience|employment|education|skills?|core\s+skills?|key\s+skills?|technical\s+skills?|projects?|certifications?|achievements?|awards?|languages?|interests?|references?|contact|summary|professional\s+summary|profile|objective|about(?:\s+me)?|strengths|hobbies|declaration)\b/i;
 
 const SUMMARY_HEADER =
   /^(professional\s+summary|summary|profile|objective|about(\s+me)?|career\s+summary)\s*:?\s*$/i;
+
+const SKILLS_HEADER =
+  /^(core\s+skills?|key\s+skills?|technical\s+skills?|skills?|technologies|tools\s*&\s*technologies)\s*:?\s*$/i;
 
 const PROJECTS_HEADER =
   /^(projects?|personal\s+projects?|key\s+projects?|project\s+experience)\s*:?\s*$/i;
@@ -67,6 +74,23 @@ const synthesiseSummary = (input: {
   ]
     .filter(Boolean)
     .join(' ');
+};
+
+const splitSkillLine = (line: string): string[] =>
+  line
+    .replace(/^[-•*●▪◦]\s*/, '')
+    .split(/[,|;]/)
+    .map((item) => item.trim())
+    .filter((item) => item.length >= 2 && item.length <= 64);
+
+const parseSkillsFromSection = (skillLines: string[]): string[] => {
+  if (!skillLines.length) return [];
+
+  const rawTokens = skillLines.flatMap((line) => splitSkillLine(line));
+  return normalizeResumeSkills([
+    ...extractProfessionalSkillsFromText(skillLines.join(', ')),
+    ...rawTokens,
+  ]);
 };
 
 const parseProjects = (projectLines: string[]): Array<Record<string, unknown>> => {
@@ -146,7 +170,12 @@ export class RuleBasedResumeParser implements ResumeParser {
     const linkedIn = text.match(/https?:\/\/(?:www\.)?linkedin\.com\/[^\s]+/i)?.[0];
     const lowerText = text.toLowerCase();
 
-    const skills = skillKeywords.filter((skill) => lowerText.includes(skill));
+    const skills = [
+      ...new Set([
+        ...parseSkillsFromSection(extractSectionLines(lines, SKILLS_HEADER)),
+        ...skillKeywords.filter((skill) => lowerText.includes(skill)),
+      ]),
+    ];
     const education = lines
       .filter((line) =>
         /(university|college|bachelor|master|degree|b\.tech|m\.tech|mba|phd)/i.test(line),

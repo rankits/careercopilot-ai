@@ -7,6 +7,15 @@ import { borderRadius, borderWidth, colorTokens, shadows, spacing } from '@/toke
 export const OnboardingViewport = styled(Box)({
   background: colorTokens.backgroundApp,
   boxSizing: 'border-box',
+  minHeight: '100%',
+  overflowX: 'hidden',
+  width: '100%',
+});
+
+/** Scroll container for onboarding/profile pages rendered outside AppLayout. */
+export const OnboardingStandaloneViewport = styled(Box)({
+  background: colorTokens.backgroundApp,
+  boxSizing: 'border-box',
   height: '100dvh',
   overflowX: 'hidden',
   overflowY: 'auto',

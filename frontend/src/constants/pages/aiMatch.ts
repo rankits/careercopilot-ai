@@ -1,4 +1,17 @@
+export type MatchScoreHelpMode =
+  'profile' | 'resume' | 'similar' | 'text-career' | 'career' | 'saved';
+
+export const AI_MATCH_MATCH_SCORE_HELP: Record<MatchScoreHelpMode, string> = {
+  profile: 'Match % shows how well each job fits your profile.',
+  resume: 'Match % shows how well each job fits your resume.',
+  similar: 'Match % shows how similar each job is to your source job.',
+  'text-career': 'Match % shows how well each job fits your description.',
+  career: 'Match % shows how well each job fits your career goal.',
+  saved: 'Match % shows how well each job fits your saved search.',
+};
+
 export const AI_MATCH_COPY = {
+  matchScoreHelpTitle: 'How match % works',
   addResume: 'Add resume',
   allSavedJobs: 'All Saved Jobs',
   browseJobs: 'Browse all jobs',
@@ -15,7 +28,7 @@ export const AI_MATCH_COPY = {
   careerWorkModeLabel: 'Work mode',
   careerPathHelper: 'Helps us understand the right opportunities for you.',
   careerPathLabel: 'Career path',
-  careerPathPlaceholder: 'e.g. Frontend Developer → Full Stack Developer',
+  careerPathPlaceholder: 'e.g. Coordinator → Manager',
   careerPopularTitle: 'Quick picks',
   careerPrivacyNote: 'Your data is private and used only to improve recommendations.',
   careerResultCount: (count: number) => `${count} recommended job${count === 1 ? '' : 's'}`,
@@ -65,6 +78,11 @@ export const AI_MATCH_COPY = {
   missingProfileDescription:
     'We could not find a candidate profile for your account. Complete onboarding to continue.',
   missingProfileTitle: 'Set up your profile',
+  noMatchesCareerToast: 'No matching jobs found for your career goal.',
+  noMatchesProfileToast: 'No matching jobs found for your profile.',
+  noMatchesResumeToast: 'No matching jobs found for this resume.',
+  noMatchesSavedSearchToast: 'No matching jobs found for this saved search.',
+  noMatchesTextToast: 'No matching jobs found for your search.',
   modeComingSoon: 'This mode is being wired into the recommendation engine.',
   newSavedSearch: 'New saved search',
   paginationPrevious: 'Previous',
@@ -148,13 +166,32 @@ export const AI_MATCH_COPY = {
   resultCount: (total: number) => `${total} recommendation${total === 1 ? '' : 's'}`,
 } as const;
 
-export const AI_MATCH_CAREER_PATHS = [
+export const AI_MATCH_TECHNICAL_CAREER_PATHS = [
   'Frontend Developer → Full Stack Developer',
   'Software Engineer → Tech Lead',
   'Backend Engineer → Staff Engineer',
   'QA Engineer → Automation Engineer',
   'Data Analyst → Data Scientist',
 ] as const;
+
+export const AI_MATCH_NON_TECHNICAL_CAREER_PATHS = [
+  'Marketing Coordinator → Marketing Manager',
+  'Sales Representative → Account Executive',
+  'HR Coordinator → HR Business Partner',
+  'Customer Support Specialist → Customer Success Manager',
+  'Administrative Assistant → Office Manager',
+] as const;
+
+export const AI_MATCH_DEFAULT_CAREER_PATHS = [
+  'Coordinator → Manager',
+  'Analyst → Senior Analyst',
+  'Marketing Coordinator → Marketing Manager',
+  'Customer Support → Customer Success Manager',
+  'Individual Contributor → Team Lead',
+] as const;
+
+/** @deprecated Use resolveCareerQuickPicks() for profile-aware quick picks. */
+export const AI_MATCH_CAREER_PATHS = AI_MATCH_TECHNICAL_CAREER_PATHS;
 
 export const AI_MATCH_EXPERIENCE_OPTIONS = [
   'Any experience level',

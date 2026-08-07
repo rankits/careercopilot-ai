@@ -6,6 +6,8 @@ import TextField from '@mui/material/TextField';
 
 import { borderRadius, colorTokens, spacing } from '@/tokens';
 
+const CHAT_INPUT_CONTROL_SIZE = '2.75rem';
+
 export const ChatInputRoot = styled(Box)({
   alignItems: 'flex-end',
   background: colorTokens.backgroundCard,
@@ -17,12 +19,21 @@ export const ChatInputRoot = styled(Box)({
 
 export const ChatTextField = styled(TextField)({
   flex: 1,
+  minWidth: 0,
 
   '& .MuiOutlinedInput-root': {
+    alignItems: 'center',
     backgroundColor: colorTokens.actionPrimarySurface,
     borderRadius: borderRadius.xl,
     fontSize: '0.9375rem',
-    paddingRight: spacing[1],
+    minHeight: CHAT_INPUT_CONTROL_SIZE,
+    padding: `0.375rem ${spacing[3]}`,
+  },
+
+  '& .MuiOutlinedInput-inputMultiline': {
+    lineHeight: 1.5,
+    minHeight: '1.375rem',
+    padding: 0,
   },
 
   '& .MuiOutlinedInput-notchedOutline': {
@@ -40,13 +51,15 @@ export const ChatTextField = styled(TextField)({
 });
 
 export const SendButton = styled(IconButton)({
+  alignSelf: 'flex-end',
   background: colorTokens.actionPrimaryGradient,
   borderRadius: borderRadius.lg,
   color: colorTokens.textInverse,
   flexShrink: 0,
-  height: '2.75rem',
+  height: CHAT_INPUT_CONTROL_SIZE,
+  padding: 0,
   transition: 'transform 160ms ease, opacity 160ms ease',
-  width: '2.75rem',
+  width: CHAT_INPUT_CONTROL_SIZE,
 
   '&:hover': {
     background: colorTokens.actionPrimaryHover,

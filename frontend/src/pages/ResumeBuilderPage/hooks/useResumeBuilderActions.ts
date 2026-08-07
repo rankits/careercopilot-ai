@@ -27,6 +27,9 @@ import { getApiErrorMessage } from '../utils';
 
 import {
   analysisInputFingerprint,
+  DEFAULT_EMPLOYMENT_TYPE,
+  DEFAULT_EXPERIENCE_LEVEL,
+  DEFAULT_INDUSTRY,
   EMPTY_CLEAN_SNAPSHOT,
   skillsKeyOf,
   type CleanSnapshot,
@@ -304,9 +307,9 @@ export function useResumeBuilderActions({
         setCleanSnapshot(EMPTY_CLEAN_SNAPSHOT);
         setTargetRole('');
         setJobDescription('');
-        setIndustry('');
-        setEmploymentType('');
-        setExperienceLevel('mid');
+        setIndustry(DEFAULT_INDUSTRY);
+        setEmploymentType(DEFAULT_EMPLOYMENT_TYPE);
+        setExperienceLevel(DEFAULT_EXPERIENCE_LEVEL);
         setSkills([]);
         setSelectedTemplate('original');
 
@@ -471,9 +474,9 @@ export function useResumeBuilderActions({
     setLiveAtsScore(null);
     setTargetRole('');
     setJobDescription('');
-    setIndustry('');
-    setEmploymentType('');
-    setExperienceLevel('mid');
+    setIndustry(DEFAULT_INDUSTRY);
+    setEmploymentType(DEFAULT_EMPLOYMENT_TYPE);
+    setExperienceLevel(DEFAULT_EXPERIENCE_LEVEL);
     setSkills([]);
     setStep(1);
     if (!navigateAfterAssistedApplyExit(navigate, returnTo, false)) {
