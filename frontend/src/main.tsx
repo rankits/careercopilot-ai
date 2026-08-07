@@ -1,3 +1,4 @@
+import { ThemeProvider } from '@mui/material/styles';
 import { QueryClientProvider } from '@tanstack/react-query';
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -7,7 +8,6 @@ import { RouterProvider } from 'react-router-dom';
 import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
 import { logout, setAccessToken } from '@/features/auth/authSlice';
-import { ThemeProvider } from '@/lib/material';
 import { appRouter } from '@/routes/AppRouter';
 import { setTokenRefreshedHandler, setUnauthorizedHandler } from '@/services/httpClient';
 import { queryClient } from '@/services/queryClient';
