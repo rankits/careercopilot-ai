@@ -1,4 +1,5 @@
 import type { ResumeProfileFormValues } from '@/features/resume/types/resume.types';
+import { collectParsedSkills } from '@/features/resume/utils/collectParsedSkills';
 
 const EMPTY_PROFILE: ResumeProfileFormValues = {
   certifications: '',
@@ -86,12 +87,7 @@ export function mapResumeToProfile(value: unknown): ResumeProfileFormValues {
   const firstExperience = experienceRecords[0] ?? {};
   const current = isRecord(value.currentPosition) ? value.currentPosition : firstExperience;
   const location = isRecord(personal.location) ? personal.location : {};
-  const skills = isRecord(value.skills) ? value.skills : {};
-  const skillValues = isRecord(value.skills)
-    ? ['technical', 'tools', 'frameworks', 'softSkills', 'domains'].flatMap((key) =>
-        texts(skills[key]),
-      )
-    : texts(value.skills);
+  const skillValues = collectParsedSkills(value.skills);
   const totalExperienceYears =
     typeof value.totalExperienceYears === 'number'
       ? value.totalExperienceYears

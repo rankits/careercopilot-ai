@@ -431,6 +431,40 @@ export const normalizeProfessionalSkills = (values: unknown): string[] => {
   return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
 };
 
+/** Keeps catalog skills plus explicit resume-section skills (non-technical roles). */
+export const normalizeResumeSkill = (value: unknown): string | null => {
+  const catalogSkill = normalizeProfessionalSkill(value);
+  if (catalogSkill) return catalogSkill;
+
+  if (typeof value !== 'string') return null;
+  const cleaned = cleanSkillText(value);
+  if (!cleaned || cleaned.length > 64 || cleaned.length < 2) return null;
+  if (SECTION_LABELS.test(cleaned)) return null;
+  if (ROLE_TITLE_ENDING.test(cleaned)) return null;
+  if (ACTION_STARTERS.test(cleaned)) return null;
+
+  const key = cleaned.toLowerCase();
+  if (SKILL_BLACKLIST.has(key)) return null;
+  if (/\b(?:19|20)\d{2}\b/.test(cleaned)) return null;
+  if (/\b(?:present|assisted|managed|prepared|maintained|coordinated|resolved)\b/i.test(cleaned)) {
+    return null;
+  }
+
+  return cleaned;
+};
+
+export const normalizeResumeSkills = (values: unknown): string[] => {
+  const source = Array.isArray(values) ? values : typeof values === 'string' ? [values] : [];
+  const unique = new Map<string, string>();
+
+  for (const value of source) {
+    const skill = normalizeResumeSkill(value);
+    if (skill) unique.set(skill.toLowerCase(), skill);
+  }
+
+  return Array.from(unique.values()).sort((a, b) => a.localeCompare(b));
+};
+
 export const extractProfessionalSkillsFromText = (text: string): string[] => {
   if (!text?.trim()) return [];
 

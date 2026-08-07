@@ -331,6 +331,53 @@ export const aiMatchPageSx = {
       gap: spacing[2],
     },
   },
+  matchScoreHelp: {
+    alignItems: 'center',
+    background: colorTokens.actionPrimarySurface,
+    border: `0.0625rem solid ${colorTokens.actionPrimarySubtle}`,
+    borderLeft: `0.25rem solid ${colorTokens.actionPrimary}`,
+    borderRadius: borderRadius.lg,
+    display: 'grid',
+    gap: spacing[3],
+    gridTemplateColumns: 'auto minmax(0, 1fr)',
+    padding: `${spacing[3]} ${spacing[4]}`,
+    width: '100%',
+
+    [compactBreakpoint]: {
+      alignItems: 'start',
+    },
+  },
+  matchScoreHelpCopy: {
+    display: 'grid',
+    gap: spacing[1],
+    minWidth: 0,
+  },
+  matchScoreHelpIcon: {
+    alignItems: 'center',
+    background: colorTokens.backgroundCard,
+    borderRadius: borderRadius.full,
+    boxShadow: shadows.card,
+    color: colorTokens.actionPrimary,
+    display: 'grid',
+    flexShrink: 0,
+    height: spacing[10],
+    justifyItems: 'center',
+    width: spacing[10],
+  },
+  matchScoreHelpMessage: {
+    color: colorTokens.textSecondary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+    lineHeight: 1.5,
+    margin: 0,
+  },
+  matchScoreHelpTitle: {
+    color: colorTokens.textPrimary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.bold,
+    lineHeight: 1.4,
+    margin: 0,
+  },
   resultCount: {
     color: colorTokens.textSecondary,
     fontSize: fontSize.sm,
@@ -594,6 +641,13 @@ export const aiMatchPageSx = {
     [compactBreakpoint]: {
       paddingTop: spacing[3],
     },
+  },
+  careerPathsHeader: {
+    alignItems: 'center',
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: spacing[2],
+    justifyContent: 'space-between',
   },
   careerPathChips: {
     display: 'flex',

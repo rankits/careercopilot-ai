@@ -17,9 +17,7 @@ export function WelcomeHeader({ greeting }: WelcomeHeaderProps) {
   return (
     <WelcomeRoot>
       <WelcomeCopy>
-        <WelcomeHeading>
-          {greeting} <span aria-hidden="true">👋</span>
-        </WelcomeHeading>
+        <WelcomeHeading>{greeting}</WelcomeHeading>
         <WelcomeSubtitle>{DASHBOARD_COPY.subtitle}</WelcomeSubtitle>
       </WelcomeCopy>
       <WelcomeMascot

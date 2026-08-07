@@ -108,6 +108,21 @@ describe('mapResumeToProfile', () => {
     });
   });
 
+  it('maps core skills groups into the skills field', () => {
+    const mapped = mapResumeToProfile({
+      personalInformation: { fullName: 'Ada Lovelace' },
+      skills: {
+        coreSkills: ['React', 'TypeScript', 'Node.js'],
+        softSkills: ['Leadership'],
+      },
+    });
+
+    expect(mapped.fullName).toBe('Ada Lovelace');
+    expect(mapped.skills.split(', ')).toEqual(
+      expect.arrayContaining(['React', 'TypeScript', 'Node.js', 'Leadership']),
+    );
+  });
+
   it('rejects empty and invalid parser responses', () => {
     expect(() => mapResumeToProfile(null)).toThrow('Resume parser returned an invalid response.');
     expect(() => mapResumeToProfile({})).toThrow('Resume parser returned an empty response.');

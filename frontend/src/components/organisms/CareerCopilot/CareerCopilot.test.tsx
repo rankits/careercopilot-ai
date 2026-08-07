@@ -119,6 +119,9 @@ describe('CareerCopilot', () => {
 
     // Chat input
     expect(screen.getByPlaceholderText(CHAT_INPUT_COPY.placeholder)).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: CAREER_COPILOT_COPY.openAria }),
+    ).not.toBeInTheDocument();
   });
 
   it('hides suggested prompts when user has already sent messages', () => {

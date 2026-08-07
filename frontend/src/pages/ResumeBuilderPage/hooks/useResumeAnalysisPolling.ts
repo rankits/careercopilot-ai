@@ -17,7 +17,14 @@ import { resumeBuilderService } from '@/services/resumeBuilder.service';
 import type { ResumeBuilderStep as Step } from '../constants';
 import { getAnalysisFailureMessage } from '../utils';
 
-import { analysisInputFingerprint, skillsKeyOf, type CleanSnapshot } from './resumeBuilder.shared';
+import {
+  analysisInputFingerprint,
+  DEFAULT_EMPLOYMENT_TYPE,
+  DEFAULT_EXPERIENCE_LEVEL,
+  DEFAULT_INDUSTRY,
+  skillsKeyOf,
+  type CleanSnapshot,
+} from './resumeBuilder.shared';
 
 type ShowToast = (input: {
   message: string;
@@ -47,7 +54,6 @@ export function useResumeAnalysisPolling({
   setSkills,
   setEditedContent,
   setCleanSnapshot,
-  assistedApplyHydratedForRef,
 }: {
   resumeId: string;
   step: Step;
@@ -70,7 +76,6 @@ export function useResumeAnalysisPolling({
   setSkills: Dispatch<SetStateAction<string[]>>;
   setEditedContent: Dispatch<SetStateAction<string>>;
   setCleanSnapshot: Dispatch<SetStateAction<CleanSnapshot>>;
-  assistedApplyHydratedForRef?: React.MutableRefObject<string | null>;
 }) {
   const [analysis, setAnalysis] = useState<AnalysisResult | null>(null);
   /** Frozen ATS snapshot from the last completed analysis run (Analyze step display). */
@@ -142,31 +147,28 @@ export function useResumeAnalysisPolling({
               resumeId: id,
               targetRole: result.targetRole?.trim() || '',
               jobDescription: result.jobDescription?.trim() || '',
-              industry: '',
-              employmentType: '',
-              experienceLevel: 'mid',
+              industry: DEFAULT_INDUSTRY,
+              employmentType: DEFAULT_EMPLOYMENT_TYPE,
+              experienceLevel: DEFAULT_EXPERIENCE_LEVEL,
               skillsKey: '',
             });
           }
         }
         if (options?.force) {
-          // Re-selecting / re-uploading must not keep unsaved Define Role edits,
-          // unless Assisted Apply already prefilled this session.
-          if (!assistedApplyHydratedForRef?.current) {
-            setTargetRole(result.targetRole?.trim() || '');
-            setJobDescription(result.jobDescription?.trim() || '');
-            setIndustry('');
-            setEmploymentType('');
-            setExperienceLevel('mid');
-            setSkills([]);
-            setCleanSnapshot((prev) => ({
-              ...prev,
-              targetRole: result.targetRole?.trim() || '',
-              jobDescription: result.jobDescription?.trim() || '',
-              skillsKey: '',
-              skills: [],
-            }));
-          }
+          // Re-selecting / re-uploading must not keep unsaved Define Role edits.
+          setTargetRole(result.targetRole?.trim() || '');
+          setJobDescription(result.jobDescription?.trim() || '');
+          setIndustry(DEFAULT_INDUSTRY);
+          setEmploymentType(DEFAULT_EMPLOYMENT_TYPE);
+          setExperienceLevel(DEFAULT_EXPERIENCE_LEVEL);
+          setSkills([]);
+          setCleanSnapshot((prev) => ({
+            ...prev,
+            targetRole: result.targetRole?.trim() || '',
+            jobDescription: result.jobDescription?.trim() || '',
+            skillsKey: '',
+            skills: [],
+          }));
         } else {
           if (result.targetRole?.trim()) {
             setTargetRole((prev) => (prev.trim() ? prev : result.targetRole));

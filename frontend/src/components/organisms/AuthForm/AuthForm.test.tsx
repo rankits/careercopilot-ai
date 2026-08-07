@@ -52,7 +52,7 @@ describe('AuthForm', () => {
     );
     expect(screen.getByRole('textbox', { name: /phone number/i })).toHaveAttribute(
       'maxlength',
-      '15',
+      '10',
     );
     expect(screen.getByLabelText(/^password$/i, { selector: 'input' })).toHaveAttribute(
       'maxlength',
@@ -83,7 +83,7 @@ describe('AuthForm', () => {
 
     expect(firstNameInput).toHaveValue('A'.repeat(80));
     expect(emailInput).toHaveValue(longEmail.slice(0, 300));
-    expect(phoneInput).toHaveValue('1'.repeat(15));
+    expect(phoneInput).toHaveValue('1'.repeat(10));
     expect(passwordInput).toHaveValue('P'.repeat(128));
   });
 
@@ -176,7 +176,7 @@ describe('AuthForm', () => {
 
     await user.type(phoneInput, '+91 98765@43210');
 
-    expect(phoneInput).toHaveValue('919876543210');
+    expect(phoneInput).toHaveValue('9876543210');
   });
 
   it('disables submit action while submitting', () => {

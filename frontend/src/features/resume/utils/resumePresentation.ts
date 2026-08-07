@@ -2,6 +2,7 @@ import type {
   ResumeParserMetadata,
   ResumeProfileFormValues,
 } from '@/features/resume/types/resume.types';
+import { collectParsedSkills } from '@/features/resume/utils/collectParsedSkills';
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -31,12 +32,7 @@ export const getResumePresentation = (
   metadata: ResumeParserMetadata | null,
 ): ResumePresentation => {
   const data = metadata?.extractedData ?? {};
-  const skillGroup = isRecord(data.skills) ? data.skills : null;
-  const skillValues = skillGroup
-    ? ['technical', 'tools', 'frameworks', 'softSkills', 'domains'].flatMap((key) =>
-        strings(skillGroup[key]),
-      )
-    : strings(data.skills);
+  const skillValues = collectParsedSkills(data.skills);
   const experience = records(data.employmentHistory).length
     ? records(data.employmentHistory)
     : records(data.experience);

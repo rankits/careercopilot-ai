@@ -39,7 +39,7 @@ import { resumeService } from '@/features/resume/services/resume.service';
 import {
   OnboardingPage,
   OnboardingPageHeader,
-  OnboardingViewport,
+  OnboardingStandaloneViewport,
   ProfileReviewColumn,
   ProfileStickyActions,
   resumePrimaryActionSx,
@@ -311,7 +311,7 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
   };
 
   return (
-    <OnboardingViewport>
+    <OnboardingStandaloneViewport>
       <OnboardingPage>
         <OnboardingPageHeader>
           <Box>
@@ -507,6 +507,6 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
           {notice?.message}
         </Alert>
       </Snackbar>
-    </OnboardingViewport>
+    </OnboardingStandaloneViewport>
   );
 }

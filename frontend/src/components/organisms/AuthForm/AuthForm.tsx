@@ -34,10 +34,10 @@ import {
 import {
   composePhoneWithDialCode,
   getDefaultCountryDialCode,
-  NATIONAL_PHONE_MAX_LENGTH,
   PHONE_MAX_LENGTH,
-  sanitizeNationalPhoneInput,
+  REGISTER_NATIONAL_PHONE_MAX_LENGTH,
   sanitizePhoneInput,
+  sanitizeRegisterNationalPhoneInput,
   type CountryDialCode,
 } from '@/utils/phone';
 
@@ -120,7 +120,10 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
   const submitHandler = onValidSubmit
     ? handleSubmit((values) => {
         if (mode === 'register' && 'phone' in values) {
-          const national = sanitizeNationalPhoneInput(String(values.phone ?? ''));
+          const national = sanitizeRegisterNationalPhoneInput(
+            String(values.phone ?? ''),
+            countryDialCode,
+          );
           return onValidSubmit({
             ...values,
             phone: composePhoneWithDialCode(countryDialCode, national),
@@ -191,7 +194,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
           const isVisible = Boolean(visibleFields[field.name]);
           const resolvedType = isPasswordField && isVisible ? 'text' : (field.type ?? 'text');
           const maxLength = isRegisterPhone
-            ? NATIONAL_PHONE_MAX_LENGTH
+            ? REGISTER_NATIONAL_PHONE_MAX_LENGTH
             : (FIELD_MAX_LENGTHS[field.name] ?? field.maxLength);
           const registration = register(field.name as Path<TFormValues>);
           const fullWidthPasswordField =
@@ -218,7 +221,7 @@ export function AuthForm<TFormValues extends FieldValues = FieldValues>({
                   ? (event) => {
                       const inputEl = event.target as HTMLInputElement;
                       const sanitizedValue = isRegisterPhone
-                        ? sanitizeNationalPhoneInput(inputEl.value)
+                        ? sanitizeRegisterNationalPhoneInput(inputEl.value, countryDialCode)
                         : isPhoneField
                           ? sanitizePhoneInput(inputEl.value)
                           : inputEl.value;
