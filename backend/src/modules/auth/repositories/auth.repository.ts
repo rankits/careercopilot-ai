@@ -31,6 +31,14 @@ export interface FailedLoginResult {
 
 const withRole = { include: { role: true } } as const;
 
+export interface CreateGoogleUserInput {
+  email: string;
+  firstName: string;
+  lastName: string;
+  googleSub: string;
+  profileImage?: string | undefined;
+}
+
 export const authRepository = {
   async findUserByEmail(email: string): Promise<UserWithRole | null> {
     return prisma.user.findUnique({ where: { email: email.toLowerCase() }, ...withRole });
@@ -38,6 +46,51 @@ export const authRepository = {
 
   async findUserById(id: number): Promise<UserWithRole | null> {
     return prisma.user.findUnique({ where: { id }, ...withRole });
+  },
+
+  async findUserByGoogleSub(googleSub: string): Promise<UserWithRole | null> {
+    return prisma.user.findUnique({ where: { googleSub }, ...withRole });
+  },
+
+  async createGoogleUser(input: CreateGoogleUserInput): Promise<UserWithRole> {
+    const role = await prisma.role.findUnique({ where: { name: DEFAULT_USER_ROLE_NAME } });
+    if (!role) {
+      throw new AppError(
+        `Default role "${DEFAULT_USER_ROLE_NAME}" is not seeded. Run "npm run prisma:seed".`,
+        500,
+      );
+    }
+
+    return prisma.user.create({
+      data: {
+        email: input.email.toLowerCase(),
+        firstName: input.firstName,
+        lastName: input.lastName,
+        googleSub: input.googleSub,
+        profileImage: input.profileImage,
+        isEmailVerified: true,
+        status: Status.Active,
+        roleId: role.id,
+      },
+      ...withRole,
+    });
+  },
+
+  async linkGoogleSub(
+    userId: number,
+    googleSub: string,
+    profileImage?: string | undefined,
+  ): Promise<UserWithRole> {
+    return prisma.user.update({
+      where: { id: userId },
+      data: {
+        googleSub,
+        isEmailVerified: true,
+        status: Status.Active,
+        ...(profileImage ? { profileImage } : {}),
+      },
+      ...withRole,
+    });
   },
 
   /** Deliberately separate from the general lookups above - credentials
