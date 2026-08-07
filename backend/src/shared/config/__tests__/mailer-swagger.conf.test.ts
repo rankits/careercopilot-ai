@@ -2,7 +2,10 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const originalEnv = { ...process.env };
 
-const importMailer = async () => (await import('@/shared/config/mailer.conf.js')).mailerConfig;
+const importMailer = async () => {
+  const mod = await import('@/shared/config/mailer.conf.js');
+  return mod;
+};
 
 const importSwagger = async () => (await import('@/shared/config/swagger.conf.js')).swaggerSpec;
 
@@ -24,7 +27,7 @@ describe('mailer.conf', () => {
   });
 
   it('defaults to a local dev SMTP config with no auth', async () => {
-    const cfg = await withEnv({ SMTP_USER: '', SMTP_PASS: '' }, importMailer);
+    const { mailerConfig: cfg } = await withEnv({ SMTP_USER: '', SMTP_PASS: '' }, importMailer);
     expect(cfg.host).toBe('localhost');
     expect(cfg.port).toBe(1025);
     expect(cfg.secure).toBe(false);
@@ -33,7 +36,7 @@ describe('mailer.conf', () => {
   });
 
   it('includes auth credentials when both SMTP_USER and SMTP_PASS are set', async () => {
-    const cfg = await withEnv(
+    const { mailerConfig: cfg } = await withEnv(
       {
         SMTP_USER: 'smtp-user',
         SMTP_PASS: 'smtp-pass',
@@ -50,8 +53,27 @@ describe('mailer.conf', () => {
   });
 
   it('omits auth when only one of user/pass is present', async () => {
-    const cfg = await withEnv({ SMTP_USER: 'smtp-user', SMTP_PASS: '' }, importMailer);
+    const { mailerConfig: cfg } = await withEnv(
+      { SMTP_USER: 'smtp-user', SMTP_PASS: '' },
+      importMailer,
+    );
     expect(cfg.auth).toBeUndefined();
+  });
+
+  it('delivers email in development when SMTP credentials are configured', async () => {
+    const { shouldDeliverEmail } = await withEnv(
+      { NODE_ENV: 'development', SMTP_USER: 'smtp-user', SMTP_PASS: 'smtp-pass' },
+      importMailer,
+    );
+    expect(shouldDeliverEmail).toBe(true);
+  });
+
+  it('skips email delivery in development without SMTP credentials', async () => {
+    const { shouldDeliverEmail } = await withEnv(
+      { NODE_ENV: 'development', SMTP_USER: '', SMTP_PASS: '' },
+      importMailer,
+    );
+    expect(shouldDeliverEmail).toBe(false);
   });
 });
 

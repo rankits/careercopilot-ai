@@ -3,7 +3,7 @@ import { OtpPurpose, OtpTransport } from '@prisma/client';
 import { prisma } from '@/shared/config/db.conf.js';
 import { securityConfig } from '@/shared/config/security.conf.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
-import { isDevelopment } from '@/shared/config/env.conf.js';
+import { shouldDeliverEmail } from '@/shared/config/mailer.conf.js';
 
 const hashCode = (code: string): string => createHash('sha256').update(code).digest('hex');
 
@@ -59,7 +59,7 @@ export const OtpService = {
       );
     }
 
-    const code = isDevelopment ? '000000' : generateCode(securityConfig.otp.length);
+    const code = shouldDeliverEmail ? generateCode(securityConfig.otp.length) : '000000';
     const expiresAt = new Date(Date.now() + securityConfig.otp.ttlSeconds * 1000);
 
     await prisma.otp.upsert({

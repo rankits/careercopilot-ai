@@ -1,10 +1,15 @@
-import { env } from '@/shared/config/env.conf.js';
+import { env, isDevelopment } from '@/shared/config/env.conf.js';
 
 /**
  * SMTP mailer configuration. Defaults target a local Mailpit-style dev
  * container so OTP/notification emails can be inspected locally without
  * any real credentials.
  */
+export const isSmtpConfigured = Boolean(env.SMTP_USER && env.SMTP_PASS);
+
+/** Dev skips email delivery and uses OTP 000000 unless SMTP credentials are set. */
+export const shouldDeliverEmail = !isDevelopment || isSmtpConfigured;
+
 export const mailerConfig = {
   host: env.SMTP_HOST,
   port: env.SMTP_PORT,
