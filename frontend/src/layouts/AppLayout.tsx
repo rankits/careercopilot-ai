@@ -1,3 +1,4 @@
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useCallback, useEffect, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 
@@ -13,8 +14,9 @@ import { ROUTES } from '@/constants/routes';
 import { CopilotSessionProvider, useCopilotSession } from '@/features/copilot';
 import { resumeService } from '@/features/resume/services/resume.service';
 import type { UploadedResumeVersion } from '@/features/resume/types/resume.types';
-import { useMediaQuery } from '@/lib/material';
 import { toTitleCase } from '@/lib/toTitleCase';
+
+import { resolveSidebarActiveItemId } from './resolveSidebarActiveItemId';
 
 export function AppLayout() {
   return (
@@ -36,22 +38,7 @@ function AppLayoutShell() {
   const [isLoadingResumes, setIsLoadingResumes] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [isVersionsOpen, setIsVersionsOpen] = useState(false);
-  const activeItemId =
-    pathname === ROUTES.PROFILE_EDIT || pathname.startsWith(`${ROUTES.PROFILE}/`)
-      ? 'settings'
-      : pathname === ROUTES.SAVED_JOBS
-        ? 'saved-jobs'
-        : pathname === ROUTES.AI_MATCH
-          ? 'ai-match'
-          : pathname === ROUTES.APPLICATIONS
-            ? 'applications'
-            : pathname === ROUTES.JOB_FEED || pathname.startsWith('/jobs/')
-              ? 'jobs-feed'
-              : pathname === ROUTES.SAVED_RESUMES || pathname.startsWith(`${ROUTES.SAVED_RESUMES}/`)
-                ? 'saved-resumes'
-                : pathname.startsWith(ROUTES.RESUME_BUILDER)
-                  ? 'resume-builder'
-                  : 'dashboard';
+  const activeItemId = resolveSidebarActiveItemId(pathname);
 
   const { isLoggingOut, logout } = useLogout();
   const user = useAppSelector((state) => state.auth.user);
@@ -126,6 +113,9 @@ function AppLayoutShell() {
   return (
     <>
       <div className="app-shell">
+        <a className="skip-link" href="#main-content">
+          Skip to main content
+        </a>
         <Sidebar
           activeItemId={activeItemId}
           isDownloadingLatestResume={Boolean(latestResume && downloadingId === latestResume.id)}
@@ -158,7 +148,7 @@ function AppLayoutShell() {
             userName={userName}
             userRoleLabel={userRoleLabel}
           />
-          <main className="main-content">
+          <main className="main-content" id="main-content" tabIndex={-1}>
             <Outlet />
           </main>
         </div>
