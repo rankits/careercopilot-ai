@@ -2,6 +2,7 @@ import type { JobCardData } from '@/components/molecules';
 
 import type { ApplicationDto } from '@/features/applications/types/application.types';
 import { formatSavedAt } from '@/features/applications/utils/formatSavedAt';
+import { formatJobSalary } from '@/features/jobs/utils/formatJobSalary';
 import { toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
 import { decodeDisplayText } from '@/lib/decodeHtmlEntities';
 
@@ -10,22 +11,14 @@ const companyInitial = (name: string): string => {
   return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
 };
 
-const formatSalary = (app: ApplicationDto): string => {
+const formatApplicationSalary = (app: ApplicationDto): string => {
   const min = app.salaryMin != null && app.salaryMin !== '' ? Number(app.salaryMin) : null;
   const max = app.salaryMax != null && app.salaryMax !== '' ? Number(app.salaryMax) : null;
-  const hasMin = min != null && !Number.isNaN(min);
-  const hasMax = max != null && !Number.isNaN(max);
-  if (!hasMin && !hasMax) return 'Not disclosed';
-
-  const code = app.salaryCurrency?.toUpperCase() ?? '';
-  const unit = code === 'INR' ? 'LPA' : code;
-  if (hasMin && hasMax) {
-    return unit
-      ? `${unit} ${min.toLocaleString()} - ${max.toLocaleString()}`
-      : `${min.toLocaleString()} - ${max.toLocaleString()}`;
-  }
-  const value = (hasMin ? min : max) as number;
-  return unit ? `${unit} ${value.toLocaleString()}` : value.toLocaleString();
+  return formatJobSalary({
+    minimum: min != null && !Number.isNaN(min) ? min : null,
+    maximum: max != null && !Number.isNaN(max) ? max : null,
+    currency: app.salaryCurrency,
+  });
 };
 
 const remoteTag = (remoteType: string | null): string[] => {
@@ -101,7 +94,7 @@ export function mapApplicationDtoToSavedJobCard(app: ApplicationDto, index = 0):
     logo: companyInitial(decodeDisplayText(app.companyName) || '?'),
     location: formatLocation(app.location),
     postedAt: formatSavedAt(app.createdAt),
-    salary: formatSalary(app),
+    salary: formatApplicationSalary(app),
     salaryBand: 'all',
     savedAt: app.createdAt,
     skills: [],

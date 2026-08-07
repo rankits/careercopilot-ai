@@ -32,4 +32,18 @@ describe('VirtualizedJobList', () => {
     expect(mounted).toBeGreaterThan(0);
     expect(mounted).toBeLessThan(80);
   });
+
+  it('shows a bottom loader while more pages are fetching', () => {
+    render(
+      <VirtualizedJobList
+        ariaLabel="Job feed results"
+        getKey={(item) => item.id}
+        isLoadingMore
+        items={[{ id: 'job-1', title: 'Role 1' }]}
+        renderItem={(item) => <div>{item.title}</div>}
+      />,
+    );
+
+    expect(screen.getByRole('status')).toHaveTextContent(/loading more jobs/i);
+  });
 });

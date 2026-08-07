@@ -244,7 +244,7 @@ export const AUTH_FIELD_LIMITS = {
   email: 300,
   name: 80,
   password: 128,
-  phone: 10,
+  phone: 16,
 } as const;
 
 export const AUTH_FORM_CONTENT: Record<AuthFormMode, AuthFormContent> = {
@@ -267,7 +267,7 @@ export const AUTH_FORM_CONTENT: Record<AuthFormMode, AuthFormContent> = {
 export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
   login: [
     {
-      autoComplete: 'email',
+      autoComplete: 'username',
       label: 'Email address',
       maxLength: AUTH_FIELD_LIMITS.email,
       name: 'email',
@@ -397,17 +397,19 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
     password: yup
       .string()
       .required('Password is required')
-      .min(8, 'Password must be at least 8 characters')
+      .min(8, 'Use 8+ characters with uppercase, lowercase, number & special character')
       .max(AUTH_FIELD_LIMITS.password, 'Password must be 128 characters or fewer')
-      .matches(/[A-Z]/, 'Password must include an uppercase letter')
-      .matches(/[a-z]/, 'Password must include a lowercase letter')
-      .matches(/\d/, 'Password must include a number')
-      .matches(/[^A-Za-z0-9]/, 'Password must include a symbol'),
+      .matches(/[A-Z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/[a-z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/\d/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(
+        /[^A-Za-z0-9]/,
+        'Use 8+ characters with uppercase, lowercase, number & special character',
+      ),
     phone: yup
       .string()
       .required('Phone number is required')
-      .length(AUTH_FIELD_LIMITS.phone, 'Phone number must be 10 digits')
-      .matches(/^\d{10}$/, {
+      .matches(/^(\d{7,15}|\+[1-9]\d{7,14})$/, {
         excludeEmptyString: true,
         message: 'Enter a valid phone number',
       }),
@@ -510,18 +512,28 @@ export const SIDEBAR_NAV_LABELS = {
   savedResumes: 'Saved Resumes',
 } as const;
 
+/** Short labels for the 5-item mobile bottom bar (avoids ellipsis truncation). */
+export const SIDEBAR_BOTTOM_NAV_LABELS = {
+  applications: 'Apps',
+  aiMatch: 'AI Match',
+  dashboard: 'Home',
+  jobsFeed: 'Jobs',
+} as const;
+
 export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
   {
     href: ROUTES.DASHBOARD,
     icon: HomeOutlinedIcon,
     id: 'dashboard',
     label: SIDEBAR_NAV_LABELS.dashboard,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.dashboard,
   },
   {
     href: ROUTES.JOB_FEED,
     icon: SearchOutlinedIcon,
     id: 'jobs-feed',
     label: SIDEBAR_NAV_LABELS.jobsFeed,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.jobsFeed,
   },
   {
     href: ROUTES.SAVED_JOBS,
@@ -534,12 +546,14 @@ export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
     icon: TuneOutlinedIcon,
     id: 'ai-match',
     label: SIDEBAR_NAV_LABELS.aiMatch,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.aiMatch,
   },
   {
     href: ROUTES.APPLICATIONS,
     icon: BusinessCenterOutlinedIcon,
     id: 'applications',
     label: SIDEBAR_NAV_LABELS.applications,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.applications,
   },
   {
     href: ROUTES.RESUME_BUILDER,

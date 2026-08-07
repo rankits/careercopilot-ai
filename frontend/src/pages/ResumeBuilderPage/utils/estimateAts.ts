@@ -48,7 +48,7 @@ export function contentHasSkill(content: string, skill: string): boolean {
     .replace(/\u200d/g, '')
     .replace(/\ufeff/g, '')
     .replace(/\b([A-Za-z]{2,20})\s*\.\s*js\b/gi, '$1.js')
-    .replace(/\b(React|Node|Next|Vue|Express)(?:[._\s-])*js\b/gi, '$1.js');
+    .replace(/\b(React|Node|Next|Vue|Express|Angular)(?:[._\s-])*js\b/gi, '$1.js');
 
   const base = cleaned.replace(/\.js$/i, '');
   const variants = Array.from(
@@ -180,11 +180,16 @@ export function estimateImprovedAtsScore(input: {
       ((input.missingSkills?.length ?? 0) > 0 &&
         recoveredSkills / (input.missingSkills?.length ?? 1) >= 0.7));
   const markedApplied = appliedCount > 0 || highAppliedCount > 0;
+  // No Apply → no ATS uplift (Export must match Analyze until suggestions land).
+  if (!markedApplied) {
+    return baseline;
+  }
+
   // Mirror backend scoreEditedResume.optimizeSucceeded so Optimize ≈ Export.
   const optimizeSucceeded =
     (skillsRecoveredWell && markedApplied) ||
-    ((liveSkillMatch ?? 0) >= 90 && (markedApplied || recoveredSkills >= 2)) ||
-    ((liveSkillMatch ?? 0) >= 95 && recoveredKeywords >= 1) ||
+    ((liveSkillMatch ?? 0) >= 90 && markedApplied) ||
+    ((liveSkillMatch ?? 0) >= 95 && recoveredKeywords >= 1 && markedApplied) ||
     ((liveSkillMatch ?? 0) >= 100 && markedApplied);
 
   // Align uplift with backend scoreEditedResume (optimizeSucceeded max +45).

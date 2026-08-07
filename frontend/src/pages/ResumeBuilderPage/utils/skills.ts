@@ -144,6 +144,10 @@ const ALIASES: Record<string, string> = {
   reactjs: 'React',
   'react.js': 'React',
   react: 'React',
+  angular: 'Angular',
+  angularjs: 'Angular',
+  'angular.js': 'Angular',
+  'angular js': 'Angular',
   nodejs: 'Node.js',
   'node js': 'Node.js',
   node: 'Node.js',
@@ -311,8 +315,11 @@ export function canonicalizeSkill(token: string): string | null {
 
 /** Extract skill chips from comma/pipe skills text (or free text). */
 export function splitSkillTokens(raw: string): string[] {
+  // PDF re-uploads often yield one skill per line (or space-joined after extract).
+  // Turn line breaks into separators *before* collapsing whitespace.
   let text = raw
-    .replace(/[●•]/g, ',')
+    .replace(/[●•·▪◦]/g, ',')
+    .replace(/\r\n|\r|\n/g, ',')
     .replace(/\b(Frontend|Backend|Tools|Others|Build Tools|Tech Used|API Integration)\s*:/gi, ',')
     .replace(/\s+/g, ' ')
     .trim();
@@ -328,6 +335,15 @@ export function splitSkillTokens(raw: string): string[] {
     }
   }
 
+  // Single-token catalog scan — recovers space-separated PDF skill grids
+  // ("React TypeScript Angular Docker AWS") that have no commas.
+  for (const skill of SKILL_CATALOG) {
+    if (skill.includes(' ') || skill.includes('.') || skill.includes('/')) continue;
+    if (skill.length <= 2 && !SHORT_ALLOWED.has(skill.toLowerCase())) continue;
+    const pattern = new RegExp(`\\b${escapeRe(skill)}\\b`, 'i');
+    if (pattern.test(text)) found.push(skill);
+  }
+
   if (
     text.length > 180 &&
     /\b(developed|created|collaborated|maintained|optimized|participated)\b/i.test(text)
@@ -336,7 +352,7 @@ export function splitSkillTokens(raw: string): string[] {
   }
 
   const parts = text
-    .split(/[,|/;]+|\n+/)
+    .split(/[,|/;]+/)
     .map((part) => part.trim())
     .filter(Boolean);
 
@@ -347,7 +363,6 @@ export function splitSkillTokens(raw: string): string[] {
       found.push(whole);
       continue;
     }
-    if (part.split(/\s+/).length > 4) continue;
     for (const word of part.split(/\s+/)) {
       const canonical = canonicalizeSkill(word);
       if (canonical) found.push(canonical);

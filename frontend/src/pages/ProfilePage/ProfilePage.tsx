@@ -166,13 +166,16 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
   const [isLoadingProfile, setIsLoadingProfile] = useState(mode === 'edit');
   const {
     formState: { errors },
+    getValues,
     handleSubmit,
     register,
     reset,
+    setValue,
     watch,
   } = useForm<ResumeProfileFormValues>({
     defaultValues: DEFAULT_VALUES,
-    mode: 'onTouched',
+    mode: 'onChange',
+    reValidateMode: 'onChange',
   });
   const values = watch();
   const completion = getProfileCompletion(values);
@@ -199,6 +202,33 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
     });
   });
   const presentation = getResumePresentation(parser.metadata);
+
+  const aiSuggestMutation = useMutation({
+    mutationFn: () => resumeService.suggestProfileFields(getValues()),
+    mutationKey: ['resume', 'profile-ai-suggest'],
+    onError: (error) => {
+      setNotice({
+        message:
+          error instanceof Error ? error.message : 'Unable to generate AI suggestions right now.',
+        severity: 'error',
+      });
+    },
+    onSuccess: (suggestion) => {
+      if (!suggestion.summary.trim()) {
+        setNotice({
+          message: 'AI did not return a summary. Try again after adding more profile details.',
+          severity: 'error',
+        });
+        return;
+      }
+      setValue('summary', suggestion.summary, { shouldDirty: true, shouldValidate: true });
+      setExpandedSection('Professional Profile');
+      setNotice({
+        message: 'AI summary applied. Review and edit before saving.',
+        severity: 'success',
+      });
+    },
+  });
 
   useEffect(() => {
     if (mode !== 'edit') return;
@@ -263,7 +293,7 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
       if (mode === 'edit') return;
       dispatch(setProfileComplete(true));
       setSaveCompleted(true);
-      window.setTimeout(() => void navigate(ROUTES.JOB_FEED, { replace: true }), 800);
+      window.setTimeout(() => void navigate(ROUTES.DASHBOARD, { replace: true }), 800);
     },
   });
 
@@ -331,6 +361,18 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
             </Alert>
           ) : null}
 
+          {parser.error ? (
+            <Alert severity="error">
+              {parser.error instanceof Error
+                ? parser.error.message
+                : 'Unable to parse the resume. Please try again.'}
+            </Alert>
+          ) : null}
+
+          {Object.keys(errors).length > 0 ? (
+            <Alert severity="error">Please fix the highlighted fields before continuing.</Alert>
+          ) : null}
+
           <Box
             component="form"
             display="grid"
@@ -345,6 +387,10 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
                     section.fields.some(({ name }) => Boolean(validationErrors[name])),
                   );
                   if (firstInvalid) setExpandedSection(firstInvalid.title);
+                  setNotice({
+                    message: 'Please fix the highlighted fields before continuing.',
+                    severity: 'error',
+                  });
                 },
               )(event);
             }}
@@ -355,6 +401,27 @@ export function ProfilePage({ mode = 'onboarding', onSave }: ProfilePageProps) {
                 badge={hasParsedResume ? section.badge : undefined}
                 errors={errors}
                 expanded={expandedSection === section.title}
+                fieldActions={
+                  section.title === 'Professional Profile'
+                    ? {
+                        summary: (
+                          <Button
+                            disabled={aiSuggestMutation.isPending}
+                            isLoading={aiSuggestMutation.isPending}
+                            onClick={() => {
+                              void aiSuggestMutation.mutateAsync();
+                            }}
+                            size="small"
+                            startIcon={<AutoAwesomeOutlinedIcon />}
+                            type="button"
+                            variant="outline"
+                          >
+                            AI Suggestion
+                          </Button>
+                        ),
+                      }
+                    : undefined
+                }
                 key={section.title}
                 onToggle={() =>
                   setExpandedSection((current) => (current === section.title ? '' : section.title))

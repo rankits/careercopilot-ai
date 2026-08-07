@@ -15,6 +15,7 @@ export interface JobFeedUrlState {
   workMode: JobFeedWorkMode;
   minSalary?: number;
   maxSalary?: number;
+  currency?: string;
 }
 
 const parsePositiveInt = (value: string | null, fallback: number) => {
@@ -31,6 +32,7 @@ export function useJobFeedSearchParams() {
     const workMode = (searchParams.get('workMode') as JobFeedWorkMode) || 'all';
     const minSalaryRaw = searchParams.get('minSalary');
     const maxSalaryRaw = searchParams.get('maxSalary');
+    const currencyRaw = searchParams.get('currency')?.trim().toUpperCase();
 
     return {
       page: parsePositiveInt(searchParams.get('page'), 1),
@@ -42,6 +44,7 @@ export function useJobFeedSearchParams() {
         : 'all',
       minSalary: minSalaryRaw ? Number(minSalaryRaw) : undefined,
       maxSalary: maxSalaryRaw ? Number(maxSalaryRaw) : undefined,
+      currency: currencyRaw && /^[A-Z]{3}$/.test(currencyRaw) ? currencyRaw : undefined,
     };
   }, [searchParams]);
 
@@ -75,6 +78,7 @@ export function useJobFeedSearchParams() {
         setOrDelete('workMode', merged.workMode === 'all' ? undefined : merged.workMode);
         setOrDelete('minSalary', merged.minSalary);
         setOrDelete('maxSalary', merged.maxSalary);
+        setOrDelete('currency', merged.currency);
         return params;
       });
     },
@@ -96,6 +100,8 @@ export function useJobFeedSearchParams() {
       ...(state.maxSalary !== undefined && !Number.isNaN(state.maxSalary)
         ? { maxSalary: state.maxSalary }
         : {}),
+      // Explicit currency still supported via URL; salary bands omit it for multi-currency match.
+      ...(state.currency ? { currency: state.currency } : {}),
     };
 
     if (state.workMode === 'remote') params.remoteTypes = 'REMOTE';
@@ -105,7 +111,15 @@ export function useJobFeedSearchParams() {
     if (state.workMode === 'internship') params.employmentTypes = 'INTERNSHIP';
 
     return params;
-  }, [state.limit, state.maxSalary, state.minSalary, state.query, state.sortBy, state.workMode]);
+  }, [
+    state.currency,
+    state.limit,
+    state.maxSalary,
+    state.minSalary,
+    state.query,
+    state.sortBy,
+    state.workMode,
+  ]);
 
   return { state, listParams, patch, clearAll };
 }

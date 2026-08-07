@@ -8,15 +8,17 @@ import { ToastProvider } from '@/components/organisms/Toast/ToastProvider';
 
 import { ForgotPasswordDialog } from './ForgotPasswordDialog';
 
-const { forgotPasswordMock, resetPasswordMock } = vi.hoisted(() => ({
+const { forgotPasswordMock, resetPasswordMock, verifyForgotPasswordOtpMock } = vi.hoisted(() => ({
   forgotPasswordMock: vi.fn(),
   resetPasswordMock: vi.fn(),
+  verifyForgotPasswordOtpMock: vi.fn(),
 }));
 
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
     forgotPassword: forgotPasswordMock,
     resetPassword: resetPasswordMock,
+    verifyForgotPasswordOtp: verifyForgotPasswordOtpMock,
   },
 }));
 
@@ -46,8 +48,13 @@ describe('ForgotPasswordDialog', () => {
   beforeEach(() => {
     forgotPasswordMock.mockReset();
     resetPasswordMock.mockReset();
+    verifyForgotPasswordOtpMock.mockReset();
     forgotPasswordMock.mockResolvedValue({
       message: 'If an account with that email exists, a verification code has been sent.',
+      status: 'success',
+    });
+    verifyForgotPasswordOtpMock.mockResolvedValue({
+      message: 'Verification code confirmed',
       status: 'success',
     });
     resetPasswordMock.mockResolvedValue({
@@ -112,6 +119,13 @@ describe('ForgotPasswordDialog', () => {
     }
     await user.click(screen.getByRole('button', { name: /verify otp/i }));
 
+    await waitFor(() =>
+      expect(verifyForgotPasswordOtpMock).toHaveBeenCalledWith({
+        code: '000000',
+        email: 'jane.doe@example.com',
+      }),
+    );
+
     expect(
       await screen.findByRole('heading', { name: /create new password/i }),
     ).toBeInTheDocument();
@@ -157,6 +171,29 @@ describe('ForgotPasswordDialog', () => {
     await user.click(screen.getByRole('button', { name: /verify otp/i }));
     expect(await screen.findByText(/verification code is required/i)).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /verify your email/i })).toBeInTheDocument();
+    expect(verifyForgotPasswordOtpMock).not.toHaveBeenCalled();
+  });
+
+  it('stays on OTP step when verification fails', async () => {
+    verifyForgotPasswordOtpMock.mockResolvedValueOnce({
+      message: 'Invalid or expired verification code.',
+      status: 'error',
+    });
+    const user = userEvent.setup();
+    renderDialog();
+
+    await user.type(screen.getByLabelText(/email address/i), 'user@example.com');
+    await user.click(screen.getByRole('button', { name: /send reset link/i }));
+    expect(await screen.findByRole('heading', { name: /verify your email/i })).toBeInTheDocument();
+
+    const otpInputs = screen.getAllByRole('textbox');
+    for (const [index, digit] of ['1', '2', '3', '4', '5', '6'].entries()) {
+      await user.type(otpInputs[index]!, digit);
+    }
+    await user.click(screen.getByRole('button', { name: /verify otp/i }));
+
+    expect(await screen.findByText(/invalid or expired verification code/i)).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /verify your email/i })).toBeInTheDocument();
   });
 
   it('shows password policy validation on update', async () => {
@@ -180,7 +217,9 @@ describe('ForgotPasswordDialog', () => {
     await user.type(screen.getByLabelText(/confirm new password/i), 'different');
     await user.click(screen.getByRole('button', { name: /update password/i }));
 
-    expect(await screen.findByText(/password must be at least 8 characters/i)).toBeInTheDocument();
+    expect(
+      await screen.findByText(/use 8\+ characters with uppercase, lowercase, number/i),
+    ).toBeInTheDocument();
     expect(screen.getByText(/passwords must match/i)).toBeInTheDocument();
     expect(resetPasswordMock).not.toHaveBeenCalled();
   });

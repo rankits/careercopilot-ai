@@ -39,6 +39,10 @@ export const textExtractionService = {
         .trim();
     }
 
+    if (input.mimeType === 'text/plain' || extension === '.txt') {
+      return input.buffer.toString('utf8').trim();
+    }
+
     throw new AppError('Unsupported resume file type', 400);
   },
 };

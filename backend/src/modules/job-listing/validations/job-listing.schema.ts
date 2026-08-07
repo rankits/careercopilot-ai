@@ -12,7 +12,12 @@ export const jobSearchQuerySchema = z.object({
     skills: stringOrStringArray.optional(),
     minSalary: z.coerce.number().nonnegative().optional(),
     maxSalary: z.coerce.number().nonnegative().optional(),
-    // currency removed (JOB-BE-002) — was validated but never applied
+    currency: z
+      .string()
+      .trim()
+      .length(3)
+      .transform((value) => value.toUpperCase())
+      .optional(),
     sortBy: z.enum(['newest', 'salaryHighToLow', 'salaryLowToHigh']).default('newest'),
     page: z.coerce.number().int().min(1).default(1),
     limit: z.coerce.number().int().min(1).max(100).default(20),

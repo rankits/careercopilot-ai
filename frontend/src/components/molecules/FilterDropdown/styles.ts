@@ -79,6 +79,7 @@ export const DropdownButton = styled('button', {
 
   '& svg': {
     color: 'currentColor',
+    flexShrink: 0,
     justifySelf: 'end',
     opacity: 0.72,
     transition: 'transform 160ms ease, opacity 160ms ease',

@@ -31,6 +31,7 @@ export function useResumeBuilderNavigation({
   const [internalStep, internalSetStep] = useState<Step>(paramResumeId ? 2 : 1);
   const step = controlledStep ?? internalStep;
   const setStep = controlledSetStep ?? internalSetStep;
+  const [atsLeaveOpen, setAtsLeaveOpen] = useState(false);
 
   const goTo = useCallback(
     (s: Step) => {
@@ -44,6 +45,11 @@ export function useResumeBuilderNavigation({
     discardDefineRoleDraft();
     setStep(1);
   }, [discardDefineRoleDraft, setStep]);
+
+  const analysisIncomplete = (() => {
+    const status = String(analysis?.status || '').toUpperCase();
+    return status !== 'COMPLETED' && status !== 'FAILED';
+  })();
 
   const handleHeaderNext = () => {
     if (step === 1) {
@@ -67,6 +73,15 @@ export function useResumeBuilderNavigation({
     goTo(Math.min(10, step + 1) as Step);
   };
 
+  const confirmAtsLeave = useCallback(() => {
+    setAtsLeaveOpen(false);
+    setStep(2);
+  }, [setStep]);
+
+  const closeAtsLeaveDialog = useCallback(() => {
+    setAtsLeaveOpen(false);
+  }, []);
+
   const handleHeaderBack = () => {
     if (step === 1) return;
     if (step === 2) {
@@ -74,6 +89,10 @@ export function useResumeBuilderNavigation({
       return;
     }
     if (step === 3) {
+      if (analysisIncomplete) {
+        setAtsLeaveOpen(true);
+        return;
+      }
       setStep(2);
       return;
     }
@@ -106,5 +125,8 @@ export function useResumeBuilderNavigation({
     handleHeaderNext,
     handleHeaderBack,
     canContinue,
+    atsLeaveOpen,
+    confirmAtsLeave,
+    closeAtsLeaveDialog,
   };
 }

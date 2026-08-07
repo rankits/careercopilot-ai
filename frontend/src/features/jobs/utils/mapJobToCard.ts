@@ -1,6 +1,7 @@
 import type { JobCardData } from '@/components/molecules';
 
 import type { JobListDto } from '@/features/jobs/types/job.types';
+import { formatJobSalary } from '@/features/jobs/utils/formatJobSalary';
 import { formatPostedAt } from '@/features/jobs/utils/formatPostedAt';
 import { toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
 import { decodeDisplayText } from '@/lib/decodeHtmlEntities';
@@ -11,20 +12,6 @@ const PROVIDER_OR_MODE_TAG =
 const companyInitial = (name: string): string => {
   const trimmed = name.trim();
   return trimmed ? trimmed.charAt(0).toUpperCase() : '?';
-};
-
-const formatSalary = (salary: JobListDto['salary']): string => {
-  const { minimum, maximum, currency } = salary;
-  if (minimum == null && maximum == null) return 'Not disclosed';
-  const code = currency?.toUpperCase() ?? '';
-  const unit = code === 'INR' ? 'LPA' : code;
-  if (minimum != null && maximum != null) {
-    return unit
-      ? `${unit} ${minimum.toLocaleString()} - ${maximum.toLocaleString()}`
-      : `${minimum.toLocaleString()} - ${maximum.toLocaleString()}`;
-  }
-  const value = (minimum ?? maximum) as number;
-  return unit ? `${unit} ${value.toLocaleString()}` : value.toLocaleString();
 };
 
 const normalizeLabel = (value: string): string =>
@@ -108,13 +95,14 @@ export function mapJobListDtoToCard(job: JobListDto, index = 0): JobCardData {
     logo: companyInitial(decodeDisplayText(job.company.name) || '?'),
     location: formatLocation(job.location.formatted),
     postedAt: formatPostedAt(job.publishedAt),
-    salary: formatSalary(job.salary),
+    salary: formatJobSalary(job.salary),
     salaryBand: 'all',
     skills: filterDisplaySkills(job.skills, type),
     tags,
     title: decodeDisplayText(job.title) || 'Untitled role',
     type,
     verified: job.company.verified,
+    isSaved: job.isSaved,
   };
 }
 

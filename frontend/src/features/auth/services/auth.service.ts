@@ -6,6 +6,7 @@ import type {
   RegisterPayload,
   ResetPasswordPayload,
   User,
+  VerifyForgotPasswordOtpPayload,
 } from '@/features/auth/types/auth.types';
 import { AuthRequestError, getAuthErrorMessage } from '@/features/auth/utils/apiError';
 import { httpClient } from '@/services/httpClient';
@@ -106,6 +107,43 @@ export const authService = {
       }
       throw new AuthRequestError(
         getAuthErrorMessage(error, 'Unable to send reset code. Please try again.'),
+      );
+    }
+  },
+
+  async verifyForgotPasswordOtp(
+    payload: VerifyForgotPasswordOtpPayload,
+  ): Promise<AuthMessageResponse> {
+    try {
+      const { data, status } = await httpClient.post<AuthMessageResponse>(
+        '/auth/forgot-password/verify-otp',
+        {
+          code: payload.code,
+          email: payload.email.trim().toLowerCase(),
+        },
+      );
+
+      if (status < 200 || status >= 300 || data.status === 'error') {
+        throw new AuthRequestError(
+          typeof data.message === 'string' && data.message.length > 0
+            ? data.message
+            : 'Invalid or expired verification code.',
+        );
+      }
+
+      return {
+        message:
+          typeof data.message === 'string' && data.message.length > 0
+            ? data.message
+            : 'Verification code confirmed',
+        status: 'success',
+      };
+    } catch (error) {
+      if (error instanceof AuthRequestError) {
+        throw error;
+      }
+      throw new AuthRequestError(
+        getAuthErrorMessage(error, 'Invalid or expired verification code.'),
       );
     }
   },

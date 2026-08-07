@@ -208,7 +208,21 @@ describe('PrismaJobSearchRepository.search', () => {
     });
 
     expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ orderBy: { salaryMax: 'desc' }, skip: 60, take: 60 }),
+      expect.objectContaining({
+        orderBy: [
+          { salaryMax: { sort: 'desc', nulls: 'last' } },
+          { salaryMin: { sort: 'desc', nulls: 'last' } },
+        ],
+        skip: 60,
+        take: 60,
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            expect.objectContaining({
+              OR: [{ salaryMin: { not: null } }, { salaryMax: { not: null } }],
+            }),
+          ]),
+        }),
+      }),
     );
     expect(result.pagination).toEqual(
       expect.objectContaining({
@@ -232,7 +246,40 @@ describe('PrismaJobSearchRepository.search', () => {
     });
 
     expect(findMany).toHaveBeenCalledWith(
-      expect.objectContaining({ orderBy: { salaryMin: 'asc' } }),
+      expect.objectContaining({
+        orderBy: [
+          { salaryMin: { sort: 'asc', nulls: 'last' } },
+          { salaryMax: { sort: 'asc', nulls: 'last' } },
+        ],
+        where: expect.objectContaining({
+          AND: expect.arrayContaining([
+            expect.objectContaining({
+              OR: [{ salaryMin: { not: null } }, { salaryMax: { not: null } }],
+            }),
+          ]),
+        }),
+      }),
     );
+  });
+
+  it('does not require disclosed salary when sorting by newest', async () => {
+    const findMany = vi.spyOn(prisma.job, 'findMany').mockResolvedValue([]);
+    prisma.job.count = vi.fn().mockResolvedValue(0) as never;
+
+    const repo = new PrismaJobSearchRepository();
+    await repo.search({
+      filters: {},
+      pagination: { page: 1, limit: 20 },
+      sortBy: 'newest',
+    });
+
+    expect(findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        orderBy: [{ effectivePostedAt: { sort: 'desc', nulls: 'last' } }, { createdAt: 'desc' }],
+        where: expect.objectContaining({ status: 'ACTIVE' }),
+      }),
+    );
+    const call = findMany.mock.calls[0]?.[0] as { where: Record<string, unknown> };
+    expect(call.where).not.toHaveProperty('AND');
   });
 });

@@ -3,7 +3,6 @@ import type { ReactNode } from 'react';
 import aiPlatformIllustration from '@/assets/illustrations/ai-platform-illustration.png';
 import careerBoyIllustration from '@/assets/illustrations/career-boy-illustration.png';
 import careerCopilotLogo from '@/assets/logo/career-copilot-logo.png';
-import { ROUTES } from '@/constants/routes';
 import { AUTH_PAGE_COPY, LOGIN_FEATURES } from '@/constants/ui';
 import { AutoAwesomeOutlinedIcon, Box } from '@/lib/material';
 
@@ -117,14 +116,6 @@ export function AuthPageLayout({ children, mode }: AuthPageLayoutProps) {
     <Styled.AuthRoot as="main" mode={mode}>
       <Styled.AuthHeader mode={mode}>
         <Styled.LogoImage alt={AUTH_PAGE_COPY.logoAlt} mode={mode} src={careerCopilotLogo} />
-        {isRegister ? (
-          <Styled.HeaderLoginText>
-            {AUTH_PAGE_COPY.alreadyHaveAccount}{' '}
-            <Styled.HeaderLoginLink aria-label={AUTH_PAGE_COPY.loginAria} href={ROUTES.LOGIN}>
-              {AUTH_PAGE_COPY.loginLink}
-            </Styled.HeaderLoginLink>
-          </Styled.HeaderLoginText>
-        ) : null}
       </Styled.AuthHeader>
 
       <Styled.AuthContent data-testid="auth-page-content" mode={mode}>

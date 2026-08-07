@@ -11,13 +11,10 @@ function renderHeader(ui: ReactElement = <AppHeader />) {
 }
 
 describe('AppHeader', () => {
-  it('renders search, notifications, and default user account summary', () => {
+  it('renders notifications and default user account summary without search', () => {
     renderHeader();
 
-    expect(screen.getByRole('textbox', { name: /search/i })).toHaveAttribute(
-      'placeholder',
-      'Search jobs, companies, skills...',
-    );
+    expect(screen.queryByRole('textbox', { name: /search/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /upgrade to pro/i })).not.toBeInTheDocument();
     expect(screen.getByLabelText(/career copilot/i)).toHaveAttribute('href', '/app');
     expect(screen.getByLabelText(/notifications/i)).toBeInTheDocument();
@@ -32,20 +29,15 @@ describe('AppHeader', () => {
     expect(screen.getByText('DM')).toBeInTheDocument();
   });
 
-  it('renders custom search, role, and avatar image values', () => {
+  it('renders custom role and avatar image values', () => {
     renderHeader(
       <AppHeader
-        searchPlaceholder="Search roles"
         userAvatarUrl="/avatar.png"
         userName="Alex Morgan"
         userRoleLabel="Product Engineer"
       />,
     );
 
-    expect(screen.getByRole('textbox', { name: /search/i })).toHaveAttribute(
-      'placeholder',
-      'Search roles',
-    );
     expect(screen.getByRole('button', { name: /user menu/i })).toHaveTextContent(
       'Product Engineer',
     );
@@ -79,6 +71,5 @@ describe('AppHeader', () => {
     expect(handleUserMenuClick).toHaveBeenCalledTimes(2);
     expect(handleSettingsClick).toHaveBeenCalledTimes(1);
     expect(handleLogoutClick).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('menuitem', { name: /upload resume/i })).not.toBeInTheDocument();
   });
 });

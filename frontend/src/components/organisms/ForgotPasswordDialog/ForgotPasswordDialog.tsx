@@ -64,8 +64,14 @@ export function ForgotPasswordDialog({
   open,
 }: ForgotPasswordDialogProps) {
   const { showToast } = useToast();
-  const { isRequestingReset, isResettingPassword, requestReset, resetPassword } =
-    useForgotPassword();
+  const {
+    isRequestingReset,
+    isResettingPassword,
+    isVerifyingOtp,
+    requestReset,
+    resetPassword,
+    verifyOtp,
+  } = useForgotPassword();
   const [step, setStep] = useState<ForgotPasswordStep>(1);
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [otpError, setOtpError] = useState<string | undefined>();
@@ -104,7 +110,7 @@ export function ForgotPasswordDialog({
       ? errors.confirmPassword.message
       : undefined;
   const otpCode = otp.join('');
-  const isBusy = isRequestingReset || isResettingPassword;
+  const isBusy = isRequestingReset || isResettingPassword || isVerifyingOtp;
 
   function validateOtpCode(code: string): string | undefined {
     if (!code) {
@@ -201,10 +207,16 @@ export function ForgotPasswordDialog({
     }
 
     if (step === 2) {
-      // OTP is verified by reset-password on the final step; only format-check here.
       const nextOtpError = validateOtpCode(otpCode);
       setOtpError(nextOtpError);
       if (nextOtpError) return;
+
+      const result = await verifyOtp({ code: otpCode, email });
+      if (!result.succeeded) {
+        setOtpError(result.errorMessage ?? 'Invalid or expired verification code.');
+        return;
+      }
+
       setStep(3);
       return;
     }
@@ -274,20 +286,6 @@ export function ForgotPasswordDialog({
       }, 0);
     }
   }
-
-  const meetsPasswordPolicy =
-    password.length >= 8 &&
-    /[A-Z]/.test(password) &&
-    /[a-z]/.test(password) &&
-    /\d/.test(password) &&
-    /[^A-Za-z0-9]/.test(password);
-  const passwordStrength = meetsPasswordPolicy
-    ? password.length >= 12
-      ? 'Strong'
-      : 'Medium'
-    : password.length > 0
-      ? 'Weak'
-      : '';
 
   const illustrationUrl =
     step === 1
@@ -407,6 +405,7 @@ export function ForgotPasswordDialog({
                   label="Email Address"
                   placeholder="you@example.com"
                   size="medium"
+                  stabilizeHelper
                   startAdornment={<EmailOutlinedIcon />}
                   type="email"
                   {...register('email')}
@@ -487,11 +486,6 @@ export function ForgotPasswordDialog({
                       }
                       errorMessage={passwordError}
                       fullWidth
-                      helperText={
-                        passwordError
-                          ? undefined
-                          : 'Use 8+ characters with upper, lower, number, and symbol'
-                      }
                       label="New Password"
                       size="medium"
                       slotProps={{
@@ -499,27 +493,11 @@ export function ForgotPasswordDialog({
                           maxLength: 128,
                         },
                       }}
+                      stabilizeHelper
                       startAdornment={<LockOutlinedIcon />}
                       type={showPassword ? 'text' : 'password'}
                       {...register('password')}
                     />
-                    {passwordStrength ? (
-                      <Box sx={forgotPasswordDialogSx.strengthRow}>
-                        <Box sx={forgotPasswordDialogSx.strengthBar(passwordStrength)} />
-                        <Typography
-                          color={
-                            passwordStrength === 'Strong'
-                              ? 'success.main'
-                              : passwordStrength === 'Weak'
-                                ? 'error.main'
-                                : 'text.secondary'
-                          }
-                          variant="caption"
-                        >
-                          {passwordStrength}
-                        </Typography>
-                      </Box>
-                    ) : null}
                   </Box>
                   <Input
                     autoComplete="new-password"
@@ -542,6 +520,7 @@ export function ForgotPasswordDialog({
                         maxLength: 128,
                       },
                     }}
+                    stabilizeHelper
                     startAdornment={<LockOutlinedIcon />}
                     type={showConfirmPassword ? 'text' : 'password'}
                     {...register('confirmPassword')}
@@ -576,7 +555,7 @@ export function ForgotPasswordDialog({
             disabled={isBusy}
             endIcon={<ArrowForwardIcon />}
             form="forgot-password-form"
-            isLoading={isBusy && (step === 1 || step === 3)}
+            isLoading={isBusy && (step === 1 || step === 2 || step === 3)}
             size="large"
             sx={forgotPasswordDialogSx.primaryButton}
             type="submit"
@@ -586,7 +565,9 @@ export function ForgotPasswordDialog({
                 ? 'Sending…'
                 : 'Send Reset Link'
               : step === 2
-                ? 'Verify OTP'
+                ? isVerifyingOtp
+                  ? 'Verifying…'
+                  : 'Verify OTP'
                 : isResettingPassword
                   ? 'Updating…'
                   : 'Update Password'}

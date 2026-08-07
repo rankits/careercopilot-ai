@@ -73,4 +73,15 @@ describe('toJobListDto applyUrl', () => {
     expect(dto.location.formatted).toBe('Austin, TX');
     expect(dto.location.formatted).not.toBe('Unknown');
   });
+
+  it('prefers effectivePostedAt for publishedAt so newest sort matches card dates', () => {
+    const dto = toJobListDto({
+      ...baseJob,
+      postedAt: new Date('2026-01-01T00:00:00.000Z'),
+      effectivePostedAt: new Date('2026-01-10T00:00:00.000Z'),
+      sources: [],
+    });
+
+    expect(dto.publishedAt).toBe('2026-01-10T00:00:00.000Z');
+  });
 });

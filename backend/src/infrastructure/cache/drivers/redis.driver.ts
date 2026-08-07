@@ -151,8 +151,16 @@ export class RedisCacheDriver implements ICacheDriver {
 
   async increment(key: string, ttlSeconds?: number): Promise<number> {
     const count = await this.client.incr(key);
-    if (count === 1 && ttlSeconds && ttlSeconds > 0) {
-      await this.client.expire(key, ttlSeconds);
+    if (ttlSeconds && ttlSeconds > 0) {
+      if (count === 1) {
+        await this.client.expire(key, ttlSeconds);
+      } else {
+        // Heal counters that lost TTL (would otherwise permanently rate-limit).
+        const ttl = await this.client.ttl(key);
+        if (ttl === -1) {
+          await this.client.expire(key, ttlSeconds);
+        }
+      }
     }
     return count;
   }
