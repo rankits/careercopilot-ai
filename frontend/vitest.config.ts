@@ -16,7 +16,6 @@ export default defineConfig({
       '@hooks': path.resolve(configDir, './src/hooks'),
       '@lib': path.resolve(configDir, './src/lib'),
       '@styles': path.resolve(configDir, './src/styles'),
-
     },
   },
   test: {

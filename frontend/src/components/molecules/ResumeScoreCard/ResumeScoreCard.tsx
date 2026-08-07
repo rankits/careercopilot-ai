@@ -4,7 +4,6 @@ import { useEffect, useState, type CSSProperties } from 'react';
 
 import { RESUME_SCORE_ANIMATION, RESUME_SCORE_COPY } from '@/constants/ui';
 
-
 import {
   AiBadge,
   ResumeScoreAction,
