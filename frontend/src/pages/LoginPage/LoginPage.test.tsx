@@ -355,7 +355,7 @@ describe('LoginPage', () => {
       isAxiosError: true,
       response: {
         data: {
-          code: 'UNAUTHORIZED',
+          code: 'INVALID_CREDENTIALS',
           message: 'Invalid email or password',
           requestId: '7b5b53e2-fcb4-43c8-b081-7dc26240182b',
           status: 'error',

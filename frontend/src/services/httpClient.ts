@@ -106,7 +106,10 @@ httpClient.interceptors.response.use(
         }
       }
 
-      endSessionAndRedirectToLogin();
+      // Login/register and other unauthenticated auth endpoints should surface API errors.
+      if (wasAuthenticatedRequest || isRefreshCall) {
+        endSessionAndRedirectToLogin();
+      }
     }
 
     return Promise.reject(error instanceof Error ? error : new Error('HTTP request failed'));

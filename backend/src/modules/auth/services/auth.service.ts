@@ -36,7 +36,7 @@ import type {
   RequestContext,
   SafeUser,
 } from '@/modules/auth/types/auth.types.js';
-import { isDevelopment } from '@/shared/config/env.conf.js';
+import { shouldDeliverEmail } from '@/shared/config/mailer.conf.js';
 import { logger } from '@/shared/logger/logger.js';
 
 const assertLoginable = (user: UserWithRole): void => {
@@ -68,7 +68,7 @@ const issueAndSendOtp = async (
 ): Promise<void> => {
   const code = await OtpService.issue(purpose, user.email);
 
-  if (!isDevelopment) {
+  if (shouldDeliverEmail) {
     await EmailQueue.sendOtpEmail({
       to: user.email,
       firstName: user.firstName,
