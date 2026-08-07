@@ -1,4 +1,4 @@
-import { OAuth2Client } from 'google-auth-library';
+import { CodeChallengeMethod, OAuth2Client } from 'google-auth-library';
 
 import { env } from '@/shared/config/env.conf.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
@@ -48,7 +48,7 @@ export class GoogleLoginAdapter {
       include_granted_scopes: false,
       prompt: 'select_account',
       code_challenge: input.codeChallenge,
-      code_challenge_method: 'S256',
+      code_challenge_method: CodeChallengeMethod.S256,
     });
   }
 

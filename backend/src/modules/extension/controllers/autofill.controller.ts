@@ -1,7 +1,7 @@
 import { NextFunction, Request, Response } from 'express';
 import { successResponse } from '@/shared/utils/response.js';
 import { requireUserPrincipalId } from '@/modules/auto-apply/utils/require-user.util.js';
-import { autofillService } from '../services/autofill.service.js';
+import { autofillService } from '@/modules/extension/services/autofill.service.js';
 
 export const generateAutofillAnswersController = async (
   req: Request,

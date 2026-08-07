@@ -34,7 +34,7 @@ export interface ReadinessReasonLike {
   metadata?: Record<string, unknown>;
 }
 
-type SectionFix = Omit<MissingFieldFixAction, 'id' | 'field' | 'message'>;
+type SectionFix = Omit<MissingFieldFixAction, 'id' | 'message'>;
 
 const FIELD_FIX_MAP: Record<string, SectionFix> = {
   workAuthorization: {
@@ -417,12 +417,13 @@ export function resolveReadinessFixActions(
       continue;
     }
 
-    if (reason.field && FIELD_FIX_MAP[reason.field]) {
+    const byField = reason.field ? FIELD_FIX_MAP[reason.field] : undefined;
+    if (reason.field && byField) {
       actions.push({
+        ...byField,
         id: reason.field,
         field: reason.field,
         message: reason.message,
-        ...FIELD_FIX_MAP[reason.field],
       });
       continue;
     }

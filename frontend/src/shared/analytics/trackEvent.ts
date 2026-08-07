@@ -21,7 +21,8 @@ export type AssistedApplyAnalyticsEvent =
   | 'mark_applied_failed'
   | 'application_abandoned'
   | 'return_later_clicked'
-  | 'broken_link_reported';
+  | 'broken_link_reported'
+  | 'could_not_apply_clicked';
 
 /** Structural identifiers only — never free-text notes, resume, or answer content. */
 const FORBIDDEN_PROPERTY_KEYS = new Set([

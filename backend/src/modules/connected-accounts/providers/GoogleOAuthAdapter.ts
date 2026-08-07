@@ -1,4 +1,4 @@
-import { OAuth2Client } from 'google-auth-library';
+import { CodeChallengeMethod, OAuth2Client } from 'google-auth-library';
 import { ConnectedAccountProvider } from '@prisma/client';
 import { env } from '@/shared/config/env.conf.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
@@ -6,6 +6,7 @@ import {
   OAuthAccountProvider,
   CreateAuthorizationRequest,
   AuthorizationRequestResult,
+  EncryptedProviderCredentials,
   ExchangeAuthorizationCodeRequest,
   ProviderAuthorizationResult,
   ProviderHealthResult,
@@ -44,7 +45,7 @@ export class GoogleOAuthAdapter implements OAuthAccountProvider {
       include_granted_scopes: env.GOOGLE_OAUTH_INCLUDE_GRANTED_SCOPES,
       prompt: env.GOOGLE_OAUTH_PROMPT,
       code_challenge: request.pkceChallenge,
-      code_challenge_method: request.pkceChallenge ? 'S256' : undefined,
+      code_challenge_method: request.pkceChallenge ? CodeChallengeMethod.S256 : undefined,
     });
 
     return { authorizationUrl };
@@ -158,10 +159,7 @@ export class GoogleOAuthAdapter implements OAuthAccountProvider {
     }
   }
 
-  public async revokeCredentials(credentials: {
-    encryptedRefreshToken?: string;
-    encryptedAccessToken?: string;
-  }): Promise<void> {
+  public async revokeCredentials(_credentials: EncryptedProviderCredentials): Promise<void> {
     // In a real flow, we would decrypt the token and call this.client.revokeToken(token)
     // However, the interface passes *encrypted* credentials. The adapter should not decrypt them itself,
     // or we should pass plaintext tokens to the adapter's revoke method.

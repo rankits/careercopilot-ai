@@ -31,7 +31,7 @@ const {
       complete: true,
       percent: 100,
       sections: [],
-    } satisfies SetupStatusDto,
+    } as SetupStatusDto,
   },
 }));
 
