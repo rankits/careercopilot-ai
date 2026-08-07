@@ -236,7 +236,6 @@ export const RESUME_SCORE_ANIMATION = {
  * -------------------------------------------------------------------------- */
 
 export const APP_HEADER_DEFAULTS = {
-  notificationCount: 3,
   userName: 'User',
 } as const;
 
@@ -413,9 +412,9 @@ export const AUTH_FORM_VALIDATION_SCHEMAS = {
     phone: yup
       .string()
       .required('Phone number is required')
-      .matches(/^(\d{7,15}|\+[1-9]\d{7,14})$/, {
+      .matches(/^\d{10}$/, {
         excludeEmptyString: true,
-        message: 'Enter a valid phone number',
+        message: 'Enter a valid 10-digit phone number',
       }),
   }),
   forgotPassword: yup.object({

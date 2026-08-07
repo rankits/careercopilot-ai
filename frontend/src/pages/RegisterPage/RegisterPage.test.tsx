@@ -163,7 +163,7 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(await screen.findByText(/enter a valid email address/i)).toBeInTheDocument();
-    expect(screen.getByText(/enter a valid phone number/i)).toBeInTheDocument();
+    expect(screen.getByText(/enter a valid 10-digit phone number/i)).toBeInTheDocument();
     expect(
       screen.getByText(/use 8\+ characters with uppercase, lowercase, number/i),
     ).toBeInTheDocument();
@@ -191,7 +191,7 @@ describe('RegisterPage', () => {
     expect(registerMock).not.toHaveBeenCalled();
   }, 15_000);
 
-  it('submits normalized values and redirects after successful registration', async () => {
+  it('submits normalized values and redirects to login after successful registration', async () => {
     const user = setupUser();
     registerMock.mockResolvedValue({
       accessToken: 'token',
@@ -217,9 +217,7 @@ describe('RegisterPage', () => {
         phone: '+919876543210',
       }),
     );
-    expect(
-      await screen.findByRole('heading', { name: /profile destination/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
     expect(
       queryClient.getMutationCache().find({ mutationKey: ['auth', 'register'] })?.state.status,
     ).toBe('success');
@@ -272,9 +270,7 @@ describe('RegisterPage', () => {
     await user.click(screen.getByRole('button', { name: /create account/i }));
 
     expect(registerMock).toHaveBeenCalledTimes(2);
-    expect(
-      await screen.findByRole('heading', { name: /profile destination/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /login destination/i })).toBeInTheDocument();
   }, 15_000);
 
   it('shows the backend registration error message when the API provides one', async () => {

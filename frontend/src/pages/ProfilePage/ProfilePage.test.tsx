@@ -261,7 +261,7 @@ describe('ProfilePage resume parsing', () => {
     });
   }, 30_000);
 
-  it('confirms a parsed profile and navigates to the job feed', async () => {
+  it('confirms a parsed profile and navigates to the dashboard', async () => {
     const user = setupUser();
     parseMock.mockImplementationOnce((_file: File, callbacks: ResumeParseCallbacks) => {
       callbacks.onUploaded?.('resume-1');

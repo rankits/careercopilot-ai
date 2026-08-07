@@ -1,6 +1,6 @@
 import crypto from 'node:crypto';
 import path from 'node:path';
-import { ResumeStorageDriver } from '@prisma/client';
+import { ResumeStatus, ResumeStorageDriver } from '@prisma/client';
 import { authRepository } from '@/modules/auth/repositories/auth.repository.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 import {
@@ -258,9 +258,6 @@ export const resumeService = {
     const resume = await assertOwnedResume(resumeId, principalId);
 
     const parseRun = await resumeRepository.findLatestParseRun(resumeId);
-    if (!parseRun) {
-      throw new AppError('Resume has not been parsed yet', 404);
-    }
 
     const stepByStatus: Record<ResumeParseStatus, string> = {
       QUEUED: 'QUEUED',
@@ -286,6 +283,62 @@ export const resumeService = {
       FAILED: 100,
     };
 
+    if (!parseRun) {
+      if (resume.status === ResumeStatus.FAILED) {
+        return {
+          resumeId,
+          parseRunId: null,
+          status: ResumeParseStatus.FAILED,
+          currentStep: stepByStatus[ResumeParseStatus.FAILED],
+          progress: progressByStatus[ResumeParseStatus.FAILED],
+          requiresReview: false,
+          warnings: [],
+          startedAt: null,
+          completedAt: null,
+          updatedAt: resume.updatedAt,
+          resumeStatus: resume.status,
+          failureReason: resume.failureReason,
+        };
+      }
+
+      if (resume.status === ResumeStatus.PROCESSED) {
+        return {
+          resumeId,
+          parseRunId: null,
+          status: ResumeParseStatus.COMPLETED,
+          currentStep: stepByStatus[ResumeParseStatus.COMPLETED],
+          progress: progressByStatus[ResumeParseStatus.COMPLETED],
+          requiresReview: false,
+          warnings: [],
+          startedAt: null,
+          completedAt: resume.processedAt,
+          updatedAt: resume.updatedAt,
+          resumeStatus: resume.status,
+          failureReason: resume.failureReason,
+        };
+      }
+
+      const isProcessing = resume.status === ResumeStatus.PROCESSING;
+      const syntheticStatus = isProcessing
+        ? ResumeParseStatus.EXTRACTING_TEXT
+        : ResumeParseStatus.QUEUED;
+
+      return {
+        resumeId,
+        parseRunId: null,
+        status: syntheticStatus,
+        currentStep: stepByStatus[syntheticStatus],
+        progress: progressByStatus[syntheticStatus],
+        requiresReview: false,
+        warnings: [],
+        startedAt: null,
+        completedAt: null,
+        updatedAt: resume.updatedAt,
+        resumeStatus: resume.status,
+        failureReason: resume.failureReason,
+      };
+    }
+
     return {
       resumeId,
       parseRunId: parseRun.id,
@@ -298,6 +351,7 @@ export const resumeService = {
       completedAt: parseRun.completedAt,
       updatedAt: parseRun.updatedAt,
       resumeStatus: resume.status,
+      failureReason: resume.failureReason,
     };
   },
 

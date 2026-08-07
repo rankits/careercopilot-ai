@@ -77,7 +77,6 @@ export function ResumeBuilderPage() {
     setSkills: draft.setSkills,
     setEditedContent: draft.setEditedContent,
     setCleanSnapshot: draft.setCleanSnapshot,
-    assistedApplyHydratedForRef: assistedApply.assistedApplyHydratedForRef,
   });
 
   const jobApplicationId =

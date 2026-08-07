@@ -4,11 +4,24 @@ import {
   extractProfessionalSkillsFromText,
   normalizeProfessionalSkill,
   normalizeProfessionalSkills,
+  normalizeResumeSkills,
   skillAppearsIn,
   skillMatchKey,
 } from '@/modules/resumes/utils/skill-normalizer.js';
 
 describe('skill-normalizer', () => {
+  it('preserves explicit non-catalog resume skills', () => {
+    expect(
+      normalizeResumeSkills([
+        'Customer Relationship Management',
+        'MS Excel, Word & PowerPoint',
+        'Required',
+      ]),
+    ).toEqual(
+      expect.arrayContaining(['Customer Relationship Management', 'MS Excel, Word & PowerPoint']),
+    );
+  });
+
   it('rejects generic fragments, section labels, and incomplete tokens', () => {
     expect(
       normalizeProfessionalSkills([

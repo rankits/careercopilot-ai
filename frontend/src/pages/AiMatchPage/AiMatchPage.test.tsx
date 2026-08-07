@@ -493,16 +493,87 @@ describe('AiMatchPage', () => {
 
   it('fills the career path field when a popular path is clicked', async () => {
     const user = userEvent.setup();
+    profileMock.mockResolvedValue({
+      certifications: [],
+      education: [],
+      experience: [],
+      isComplete: true,
+      personalDetails: { designation: 'Software Engineer' },
+      skills: ['React', 'TypeScript'],
+      sourceResumeId: null,
+      userId: 'u1',
+    });
     renderPage(true, '/ai-match?mode=career');
 
     await screen.findByText(/quick picks/i);
-    await user.click(
-      screen.getByRole('button', { name: /frontend developer.*full stack developer/i }),
-    );
+    const quickPick = await screen.findByRole('button', {
+      name: /software engineer.*senior software engineer/i,
+    });
+    await user.click(quickPick);
 
-    expect(screen.getByPlaceholderText(/frontend developer.*full stack developer/i)).toHaveValue(
-      'Frontend Developer → Full Stack Developer',
+    expect(screen.getByLabelText(/career path/i)).toHaveValue(
+      'Software Engineer → Senior Software Engineer',
     );
+    expect(quickPick).toHaveAttribute('aria-pressed', 'true');
+    expect(screen.getByRole('button', { name: /^clear$/i })).toBeInTheDocument();
+  });
+
+  it('shows non-technical quick picks for non-technical profiles', async () => {
+    profileMock.mockResolvedValue({
+      certifications: [],
+      education: [],
+      experience: [],
+      isComplete: true,
+      personalDetails: { designation: 'Marketing Coordinator' },
+      skills: ['SEO', 'content strategy'],
+      sourceResumeId: null,
+      userId: 'u1',
+    });
+    renderPage(true, '/ai-match?mode=career');
+
+    expect(
+      await screen.findByRole('button', { name: /marketing coordinator.*marketing manager/i }),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole('button', {
+        name: /marketing coordinator.*digital marketing specialist/i,
+      }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: /software engineer.*senior software engineer/i }),
+    ).not.toBeInTheDocument();
+  });
+
+  it('clears a selected career quick pick when clicked again or via Clear', async () => {
+    const user = userEvent.setup();
+    profileMock.mockResolvedValue({
+      certifications: [],
+      education: [],
+      experience: [],
+      isComplete: true,
+      personalDetails: { designation: 'Software Engineer' },
+      skills: ['React', 'TypeScript'],
+      sourceResumeId: null,
+      userId: 'u1',
+    });
+    renderPage(true, '/ai-match?mode=career');
+
+    await screen.findByText(/quick picks/i);
+    const quickPick = await screen.findByRole('button', {
+      name: /software engineer.*senior software engineer/i,
+    });
+    await user.click(quickPick);
+    await user.click(quickPick);
+
+    expect(screen.getByLabelText(/career path/i)).toHaveValue('');
+    expect(quickPick).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.queryByRole('button', { name: /^clear$/i })).not.toBeInTheDocument();
+
+    await user.click(quickPick);
+    await user.click(screen.getByRole('button', { name: /^clear$/i }));
+
+    expect(screen.getByLabelText(/career path/i)).toHaveValue('');
+    expect(quickPick).toHaveAttribute('aria-pressed', 'false');
   });
 
   it('creates, reruns, and deletes a saved search from the Saved tab', async () => {
@@ -1093,6 +1164,8 @@ describe('AiMatchPage', () => {
     renderPage(true);
     expect(await screen.findByText(/88% Match/i)).toBeInTheDocument();
     expect(screen.getByText(/ai recommended/i)).toBeInTheDocument();
+    expect(screen.getByText(/how match % works/i)).toBeInTheDocument();
+    expect(screen.getByText(/fits your profile/i)).toBeInTheDocument();
   });
 
   it('sends recommendation feedback only after an explicit user action', async () => {
@@ -1185,5 +1258,16 @@ describe('AiMatchPage', () => {
 
     await user.click(await screen.findByRole('button', { name: /generate recommendations/i }));
     await waitFor(() => expect(generateMock).toHaveBeenCalledTimes(1));
+  });
+
+  it('shows a toast when profile generation returns no matching jobs', async () => {
+    const user = userEvent.setup();
+    listMock.mockResolvedValue({ items: [], page: 1, limit: 20, total: 0 });
+    generateMock.mockResolvedValue([]);
+    renderPage(true);
+
+    await user.click(await screen.findByRole('button', { name: /generate recommendations/i }));
+
+    expect(await screen.findByText(/no matching jobs found for your profile/i)).toBeInTheDocument();
   });
 });

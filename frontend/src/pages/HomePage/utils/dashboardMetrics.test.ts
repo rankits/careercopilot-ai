@@ -20,8 +20,9 @@ describe('dashboardMetrics utils', () => {
 
   it('resolves first name with fallbacks', () => {
     expect(resolveDashboardFirstName({ firstName: 'Raj', name: 'Raj Patel' })).toBe('Raj');
+    expect(resolveDashboardFirstName({ firstName: 'pankaj', name: 'pankaj saini' })).toBe('Pankaj');
     expect(resolveDashboardFirstName({ name: 'Ada Lovelace' })).toBe('Ada');
-    expect(resolveDashboardFirstName({ email: 'dev@example.com' })).toBe('dev');
+    expect(resolveDashboardFirstName({ email: 'dev@example.com' })).toBe('Dev');
     expect(resolveDashboardFirstName(null)).toBe('there');
   });
 
