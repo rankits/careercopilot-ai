@@ -163,7 +163,7 @@ function AutoApplyPageContent() {
           <Typography component="h1" sx={setupPageSx.pageTitle}>
             Application Setup
           </Typography>
-          <Typography sx={setupPageSx.pageSubtitle} variant="body2">
+          <Typography sx={setupPageSx.pageSubtitle}>
             Tell us about your preferences. We&apos;ll use this to prepare better applications and
             streamline your review.
           </Typography>

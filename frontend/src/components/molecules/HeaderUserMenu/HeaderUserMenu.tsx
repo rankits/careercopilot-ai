@@ -15,6 +15,7 @@ import { menuItemSx, UserAvatar, UserMenuButton, UserMenuText } from './styles';
 
 export interface HeaderUserMenuProps {
   avatarUrl?: string;
+  menuEnabled?: boolean;
   name: string;
   onConnectedAccountsClick?: () => void;
   onLogoutClick?: () => void;
@@ -25,6 +26,7 @@ export interface HeaderUserMenuProps {
 
 export function HeaderUserMenu({
   avatarUrl,
+  menuEnabled = true,
   name,
   onConnectedAccountsClick,
   onLogoutClick,
@@ -60,6 +62,14 @@ export function HeaderUserMenu({
     handleClose();
   }
 
+  if (!menuEnabled) {
+    return (
+      <UserAvatar alt={name} aria-label={name} src={avatarUrl}>
+        {avatarUrl ? null : initials}
+      </UserAvatar>
+    );
+  }
+
   return (
     <>
       <UserMenuButton
@@ -70,11 +80,11 @@ export function HeaderUserMenu({
         <UserAvatar alt={name} src={avatarUrl}>
           {avatarUrl ? null : initials}
         </UserAvatar>
-        <UserMenuText>
+        <UserMenuText className="header-user-meta">
           <Typography component="span">{name}</Typography>
           <Typography component="small">{roleLabel}</Typography>
         </UserMenuText>
-        <KeyboardArrowDownIcon fontSize="small" />
+        <KeyboardArrowDownIcon className="header-user-chevron" fontSize="small" />
       </UserMenuButton>
 
       <Menu anchorEl={anchorElement} onClose={handleClose} open={open}>

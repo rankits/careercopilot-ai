@@ -18,11 +18,11 @@ export const COUNTRY_OPTIONS: ReadonlyArray<{ code: string; label: string }> = [
   { code: 'BR', label: 'Brazil' },
 ];
 
-const E164_PHONE_PATTERN = /^\+[1-9]\d{1,14}$/;
+const PHONE_PATTERN = /^(\d{10}|\+?[1-9]\d{7,14})$/;
 
-export function isValidE164Phone(value: string): boolean {
+export function isValidPhone(value: string): boolean {
   if (!value.trim()) return true;
-  return E164_PHONE_PATTERN.test(value.trim());
+  return PHONE_PATTERN.test(value.trim());
 }
 
 export function splitFullName(fullName: string): { firstName: string; lastName: string } {
@@ -115,6 +115,7 @@ export const BASELINE_ANSWER_FIELDS = [
     label: 'How many years of relevant experience do you have?',
     inputType: 'number' as const,
     placeholder: 'e.g. 5',
+    required: true,
     validate: (value: string) => {
       if (!value.trim()) return 'Enter your years of experience.';
       const num = Number(value);

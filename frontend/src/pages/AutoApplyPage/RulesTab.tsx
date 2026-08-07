@@ -3,12 +3,17 @@ import { useEffect, useState } from 'react';
 import { Button } from '@/components/atoms/Button';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
-import { useApplicationRule, useUpsertApplicationRule } from '@/features/auto-apply/hooks/useApplicationRule';
+import {
+  useApplicationRule,
+  useUpsertApplicationRule,
+} from '@/features/auto-apply/hooks/useApplicationRule';
 
 import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
-import { Box, CircularProgress, Paper, TextField, Typography } from '@/lib/material';
+import { Box, CircularProgress, Paper, Typography } from '@/lib/material';
 
 import { ChipListEditor } from './ChipListEditor';
+import { setupPageSx } from './setupPageStyles';
+import { SetupTextField } from './SetupTextField';
 
 export function RulesTab() {
   const { data: rule, isLoading } = useApplicationRule();
@@ -45,7 +50,8 @@ export function RulesTab() {
       showToast({ message: 'Auto-apply rules saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't update your exclusions. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't update your exclusions. Try again.",
         severity: 'error',
       });
     }
@@ -53,7 +59,11 @@ export function RulesTab() {
 
   if (isLoading) {
     return (
-      <Box aria-busy="true" aria-label="Loading exclusions" sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+      <Box
+        aria-busy="true"
+        aria-label="Loading exclusions"
+        sx={{ display: 'flex', justifyContent: 'center', py: 4 }}
+      >
         <CircularProgress size={28} />
       </Box>
     );
@@ -65,28 +75,36 @@ export function RulesTab() {
       sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}
     >
       <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 3 }} variant="outlined">
-        <Typography component="h2" data-setup-heading id="setup-rules-heading" tabIndex={-1} variant="h6">
+        <Typography
+          component="h2"
+          data-setup-heading
+          id="setup-rules-heading"
+          sx={setupPageSx.sectionTitle}
+          tabIndex={-1}
+        >
           Auto-apply rules
         </Typography>
-        <Typography color="text.secondary" variant="body2">
+        <Typography sx={setupPageSx.sectionHelper}>
           Control which opportunities qualify and how frequently applications can be prepared.
         </Typography>
-        <Box sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}>
-          <TextField
+        <Box
+          sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}
+        >
+          <SetupTextField
             inputProps={{ max: 100, min: 0 }}
             label="Minimum match score"
             onChange={(event) => setMinMatchScore(Number(event.target.value))}
             type="number"
             value={minMatchScore}
           />
-          <TextField
+          <SetupTextField
             inputProps={{ min: 1 }}
             label="Daily application limit"
             onChange={(event) => setDailyLimit(Number(event.target.value))}
             type="number"
             value={dailyLimit}
           />
-          <TextField
+          <SetupTextField
             helperText="Optional"
             inputProps={{ min: 1 }}
             label="Weekly application limit"
@@ -116,7 +134,11 @@ export function RulesTab() {
         />
 
         <Box>
-          <Button isLoading={upsertRule.isPending} onClick={() => void handleSave()} sx={setupTouchTargetSx}>
+          <Button
+            isLoading={upsertRule.isPending}
+            onClick={() => void handleSave()}
+            sx={setupTouchTargetSx}
+          >
             Save rules
           </Button>
         </Box>

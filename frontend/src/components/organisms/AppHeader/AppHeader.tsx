@@ -11,6 +11,7 @@ export interface AppHeaderProps {
   onLogoutClick?: () => void;
   onSettingsClick?: () => void;
   onUserMenuClick?: () => void;
+  showUserMenu?: boolean;
   userAvatarUrl?: string;
   userName?: string;
   userRoleLabel?: string;
@@ -21,6 +22,7 @@ export function AppHeader({
   onLogoutClick,
   onSettingsClick,
   onUserMenuClick,
+  showUserMenu = true,
   userAvatarUrl,
   userName = APP_HEADER_DEFAULTS.userName,
   userRoleLabel,
@@ -34,6 +36,7 @@ export function AppHeader({
       <HeaderActions>
         <HeaderUserMenu
           avatarUrl={userAvatarUrl}
+          menuEnabled={showUserMenu}
           name={userName}
           onConnectedAccountsClick={onConnectedAccountsClick}
           onLogoutClick={onLogoutClick}

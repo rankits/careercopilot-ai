@@ -32,6 +32,7 @@ export interface SidebarProps {
   onItemSelect?: (item: SidebarNavItem) => void;
   onLogoutClick?: () => void;
   onOpenResumeVersions?: () => void;
+  onConnectedAccountsClick?: () => void;
   onSettingsClick?: () => void;
   onVariantChange?: (variant: SidebarVariant) => void;
   resumeListLoaded?: boolean;

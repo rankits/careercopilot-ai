@@ -52,9 +52,18 @@ describe('BaselineAnswersSection AA-025', () => {
     expect(
       screen.getByLabelText(/How many years of relevant experience do you have/i),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText(/years_of_experience/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/years_of_experience/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Required$/i)).not.toBeInTheDocument();
+  });
+
+  it('marks only years of experience as a required field', () => {
+    renderSection();
+
+    const experienceField = screen.getByLabelText(
+      /How many years of relevant experience do you have/i,
+    );
+    expect(experienceField).toBeRequired();
+    expect(screen.getByLabelText(/Tell us about yourself/i)).not.toBeRequired();
   });
 
   it('validates numeric years of experience', async () => {

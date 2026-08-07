@@ -73,4 +73,14 @@ describe('AppHeader', () => {
     expect(handleConnectedAccountsClick).toHaveBeenCalledTimes(1);
     expect(handleLogoutClick).toHaveBeenCalledTimes(1);
   });
+
+  it('shows avatar only when showUserMenu is false', () => {
+    renderHeader(
+      <AppHeader showUserMenu={false} userAvatarUrl="/avatar.png" userName="Ada Lovelace" />,
+    );
+
+    expect(screen.getByLabelText(/notifications/i)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /user menu/i })).not.toBeInTheDocument();
+    expect(screen.getByAltText('Ada Lovelace')).toHaveAttribute('src', '/avatar.png');
+  });
 });

@@ -123,6 +123,7 @@ function AppLayoutShell() {
           latestResumeUploadedAt={latestResume?.uploadedAt ?? null}
           mobileMode={isMobile ? 'bottomNav' : undefined}
           onDownloadLatestResume={handleDownloadLatestResume}
+          onConnectedAccountsClick={() => void navigate(ROUTES.CONNECTED_ACCOUNTS)}
           onLogoutClick={() => {
             if (!isLoggingOut) {
               void logout();
@@ -145,6 +146,7 @@ function AppLayoutShell() {
               }
             }}
             onSettingsClick={() => void navigate(ROUTES.PROFILE_EDIT)}
+            showUserMenu={!isMobile}
             userAvatarUrl={user?.profileImage ?? undefined}
             userName={userName}
             userRoleLabel={userRoleLabel}
