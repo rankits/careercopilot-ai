@@ -464,7 +464,7 @@ docker compose -f compose.yaml config >/dev/null
 
 # install-release.sh -> deploy.sh:
 # lock, pull exact image, prisma migrate deploy once, compose up
-# (api + outbox-relay + job-embedding-worker), local /health, nginx,
+# (api + outbox-relay + job-embedding-worker + application-submission-worker + resume-analysis-worker), local /health, nginx,
 # state update, auto-rollback on failure, retain 3 newest releases.
 echo ">>> [remote] Invoking install-release.sh..."
 exec ./install-release.sh "\${IMAGE}" "\${VERSION}"
@@ -653,7 +653,7 @@ print_plan() {
   4. Upload ${S3_URI}
   5. SSM Run Command on ${EC2_INSTANCE_ID}:
        download bundle → pull image → migrate → compose up
-       (api + outbox-relay + job-embedding-worker)
+       (api + outbox-relay + job-embedding-worker + application-submission-worker + resume-analysis-worker)
        → /health → nginx → state
   6. Poll SSM result
   7. curl --fail ${PUBLIC_HEALTH_URL}
@@ -670,7 +670,7 @@ EOF
   7. SSM Run Command on ${EC2_INSTANCE_ID}:
        download bundle → extract release → validate scripts/compose
        → pull image → prisma migrate deploy
-       → compose up (api, outbox-relay, job-embedding-worker)
+       → compose up (api, outbox-relay, job-embedding-worker, application-submission-worker, resume-analysis-worker)
        → local /health → nginx -t/reload → update state
        → auto-rollback on failure → retain 3 releases
   8. Poll SSM result

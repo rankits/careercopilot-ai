@@ -20,7 +20,10 @@ chrome.runtime.onMessage.addListener((request, _sender, sendResponse) => {
       let vaultData: Record<string, string> = {};
       let contentGenerationAllowed = false;
       try {
-        const response = await new Promise<{ success: boolean; data?: { answers: Record<string, string>; contentGenerationAllowed: boolean } }>(resolve => {
+        const response = await new Promise<{
+          success: boolean;
+          data?: { answers: Record<string, string>; contentGenerationAllowed: boolean };
+        }>((resolve) => {
           chrome.runtime.sendMessage({ action: 'FETCH_VAULT_ANSWERS' }, resolve);
         });
         if (response.success && response.data) {
@@ -93,7 +96,7 @@ function getFieldLabel(el: HTMLElement): string {
 
 function isSensitiveField(name: string, label: string): boolean {
   const combined = `${name || ''} ${label || ''}`.toLowerCase();
-  
+
   // Based on AA-025 PROHIBITED/SENSITIVE taxonomy (EEOC, demographic, etc.)
   const sensitivePatterns = [
     /\b(race|ethnicity)\b/i,
@@ -103,25 +106,27 @@ function isSensitiveField(name: string, label: string): boolean {
     /\b(hispanic|latino)\b/i,
     /\bsexual orientation\b/i,
     /\b(marital status)\b/i,
-    /\b(religion|religious)\b/i
+    /\b(religion|religious)\b/i,
   ];
-  
-  return sensitivePatterns.some(pattern => pattern.test(combined));
+
+  return sensitivePatterns.some((pattern) => pattern.test(combined));
 }
 
 function extractFormFields() {
-  const inputs = Array.from(document.querySelectorAll('input, select, textarea')) as HTMLInputElement[];
-  
+  const inputs = Array.from(
+    document.querySelectorAll('input, select, textarea'),
+  ) as HTMLInputElement[];
+
   const fields = inputs
-    .filter(el => {
+    .filter((el) => {
       const type = el.getAttribute('type');
       // Ignore hidden, submit, button, etc. (Allow file)
       return !['hidden', 'submit', 'button', 'image', 'reset'].includes(type || '');
     })
-    .map(el => {
+    .map((el) => {
       // Generate a unique selector or use an existing id/name to identify this field later
       const identifier = el.id || el.name || generateUniqueSelector(el);
-      
+
       // Store our generated identifier on the element for easy retrieval during autofill
       el.setAttribute('data-career-copilot-id', identifier);
 
@@ -150,7 +155,8 @@ export async function fillFormFields(answers: Record<string, string>) {
       continue;
     }
 
-    const el = document.querySelector(`[data-career-copilot-id="${identifier}"]`) as HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
+    const el = document.querySelector(`[data-career-copilot-id="${identifier}"]`) as
+      HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement;
     if (el) {
       if (value === '__RESUME__' && el instanceof HTMLInputElement && el.type === 'file') {
         try {
@@ -160,7 +166,13 @@ export async function fillFormFields(answers: Record<string, string>) {
             // Wait, we don't have API_URL in content script. We need to get it from popup or hardcode to localhost.
             // Actually, we can ask background/popup to fetch it, but let's just fetch it here if we know the URL.
             // To be safe, we'll send a message to background to fetch the blob.
-            const response = await new Promise<{ success: boolean; data?: string; mimeType?: string; filename?: string; error?: string }>(resolve => {
+            const response = await new Promise<{
+              success: boolean;
+              data?: string;
+              mimeType?: string;
+              filename?: string;
+              error?: string;
+            }>((resolve) => {
               chrome.runtime.sendMessage({ action: 'FETCH_RESUME_BLOB' }, resolve);
             });
 
@@ -169,7 +181,7 @@ export async function fillFormFields(answers: Record<string, string>) {
               const res = await fetch(`data:${response.mimeType};base64,${response.data}`);
               const blob = await res.blob();
               const file = new File([blob], response.filename, { type: response.mimeType });
-              
+
               const dataTransfer = new DataTransfer();
               dataTransfer.items.add(file);
               el.files = dataTransfer.files;
@@ -187,7 +199,7 @@ export async function fillFormFields(answers: Record<string, string>) {
       }
 
       FrameworkEventAdapter.setValue(el, value);
-      
+
       // Listen for future manual edits to flag as user-overridden
       el.addEventListener('input', () => trackUserEdit(identifier), { once: true });
     }
@@ -195,17 +207,17 @@ export async function fillFormFields(answers: Record<string, string>) {
 }
 
 function generateUniqueSelector(el: Element): string {
-  if (el.tagName.toLowerCase() === "html") return "html";
+  if (el.tagName.toLowerCase() === 'html') return 'html';
   let str = el.tagName.toLowerCase();
-  str += (el.id != "") ? "#" + el.id : "";
+  str += el.id != '' ? '#' + el.id : '';
   if (el.className) {
     const classes = el.className.split(/\s/).filter(Boolean);
     for (let i = 0; i < classes.length; i++) {
-      str += "." + classes[i];
+      str += '.' + classes[i];
     }
   }
   if (el.parentNode) {
-    str = generateUniqueSelector(el.parentNode as Element) + " > " + str;
+    str = generateUniqueSelector(el.parentNode as Element) + ' > ' + str;
   }
   return str;
 }

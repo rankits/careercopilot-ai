@@ -319,9 +319,7 @@ function DimensionRow({
           >
             {dim.summary}
           </Typography>
-          {dim.score != null ? (
-            <Typography variant="body2">Score: {dim.score}%</Typography>
-          ) : null}
+          {dim.score != null ? <Typography variant="body2">Score: {dim.score}%</Typography> : null}
           {dim.evidence.length === 0 ? (
             <Typography color="text.secondary" variant="body2">
               No additional evidence for this dimension yet.
@@ -966,7 +964,12 @@ function ProfileMatchContent({
                       {row.summary}
                     </Typography>
                   ) : null}
-                  <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="caption" component="div">
+                  <Typography
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                    variant="caption"
+                    component="div"
+                  >
                     Impact: {row.impact}
                   </Typography>
                   {row.actionHref && row.actionLabel ? (
@@ -1027,7 +1030,12 @@ function ProfileMatchContent({
                     : 'No unconfirmed skills listed.'}
                 </Typography>
                 {view.skillsUnknown.length > 0 ? (
-                  <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="caption" component="div">
+                  <Typography
+                    color="text.secondary"
+                    sx={{ mt: 0.5 }}
+                    variant="caption"
+                    component="div"
+                  >
                     Status: Not confirmed · Checked in Resume step
                   </Typography>
                 ) : null}
@@ -1061,7 +1069,11 @@ function ProfileMatchContent({
                     <Typography color="text.secondary" sx={{ mt: 0.5 }} variant="body2">
                       {req.operatorLabel}: {req.valueLabel}
                     </Typography>
-                    <Typography color="text.secondary" sx={{ mt: 0.5, wordBreak: 'break-word' }} variant="body2">
+                    <Typography
+                      color="text.secondary"
+                      sx={{ mt: 0.5, wordBreak: 'break-word' }}
+                      variant="body2"
+                    >
                       Evidence: {req.evidence}
                     </Typography>
                     {req.confidencePercent != null ? (

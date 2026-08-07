@@ -18,15 +18,13 @@ export const setupStatusService = new SetupStatusService(
   new PrismaUserContactLookup(),
 );
 
-export const getSetupStatusController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const getSetupStatusController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = requireUserPrincipalId(req);
     const status = await setupStatusService.getSetupStatus(userId);
-    return res.status(200).json(successResponse('Application setup status fetched successfully', status));
+    return res
+      .status(200)
+      .json(successResponse('Application setup status fetched successfully', status));
   } catch (error) {
     return next(error);
   }

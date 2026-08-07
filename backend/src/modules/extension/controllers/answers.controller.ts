@@ -23,21 +23,24 @@ export const ExtensionAnswersController = {
             userId,
             consentType: 'CONTENT_GENERATION',
             revokedAt: null,
-          }
-        })
+          },
+        }),
       ]);
 
       // Transform into a simple key-value object
-      const answersMap = answers.reduce((acc, curr) => {
-        acc[curr.questionKey] = curr.answer;
-        return acc;
-      }, {} as Record<string, string>);
+      const answersMap = answers.reduce(
+        (acc, curr) => {
+          acc[curr.questionKey] = curr.answer;
+          return acc;
+        },
+        {} as Record<string, string>,
+      );
 
       res.status(200).json({
         data: {
           answers: answersMap,
-          contentGenerationAllowed: !!contentConsent
-        }
+          contentGenerationAllowed: !!contentConsent,
+        },
       });
     } catch (error) {
       next(error);

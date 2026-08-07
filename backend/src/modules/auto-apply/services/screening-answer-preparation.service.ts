@@ -1,7 +1,5 @@
 import { IApplicationAnswerRepository } from '@/modules/auto-apply/contracts/application-answer.contract.js';
-import {
-  PreparedScreeningAnswer,
-} from '@/modules/auto-apply/types/application-content.types.js';
+import { PreparedScreeningAnswer } from '@/modules/auto-apply/types/application-content.types.js';
 import {
   isProhibitedQuestionKey,
   VAULT_SCREENING_KEYS,

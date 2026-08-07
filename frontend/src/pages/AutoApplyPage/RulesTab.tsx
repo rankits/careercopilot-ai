@@ -9,7 +9,7 @@ import {
 } from '@/features/auto-apply/hooks/useApplicationRule';
 
 import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
-import { Box, CircularProgress, Paper, Typography } from '@/lib/material';
+import { Box, CircularProgress, Paper, TextField, Typography } from '@/lib/material';
 
 import { ChipListEditor } from './ChipListEditor';
 import { setupPageSx } from './setupPageStyles';
@@ -81,6 +81,7 @@ export function RulesTab() {
           id="setup-rules-heading"
           sx={setupPageSx.sectionTitle}
           tabIndex={-1}
+          variant="h6"
         >
           Auto-apply rules
         </Typography>
@@ -90,10 +91,10 @@ export function RulesTab() {
         <Box
           sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', sm: 'repeat(3, 1fr)' } }}
         >
-          <SetupTextField
+          <TextField
             inputProps={{ max: 100, min: 0 }}
             label="Minimum match score"
-            onChange={(event) => setMinMatchScore(Number(event.target.value))}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) => setMinMatchScore(Number(event.target.value))}
             type="number"
             value={minMatchScore}
           />

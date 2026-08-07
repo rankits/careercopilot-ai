@@ -110,7 +110,11 @@ describe('EmbeddingProviderCircuitBreaker', () => {
   });
 
   it('scopes breaker state per provider', async () => {
-    const creditsError = new AppError('Insufficient credits.', 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+    const creditsError = new AppError(
+      'Insufficient credits.',
+      402,
+      'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+    );
     await breaker.tripOnError('openrouter', creditsError);
 
     await expect(breaker.assertClosed('openrouter')).rejects.toBeDefined();
@@ -118,7 +122,11 @@ describe('EmbeddingProviderCircuitBreaker', () => {
   });
 
   it('closes manually, allowing calls to resume', async () => {
-    const creditsError = new AppError('Insufficient credits.', 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+    const creditsError = new AppError(
+      'Insufficient credits.',
+      402,
+      'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+    );
     await breaker.tripOnError('openrouter', creditsError);
     await expect(breaker.assertClosed('openrouter')).rejects.toBeDefined();
 
@@ -149,10 +157,17 @@ describe('fingerprintCircuitBreakerScope', () => {
   it('scopes different API keys (e.g. shared vs. recommendation) to different breakers', async () => {
     const breaker = new EmbeddingProviderCircuitBreaker(new FakeCacheService(), 900);
     const sharedScope = fingerprintCircuitBreakerScope('openrouter', 'sk-shared-key');
-    const recommendationScope = fingerprintCircuitBreakerScope('openrouter', 'sk-recommendation-key');
+    const recommendationScope = fingerprintCircuitBreakerScope(
+      'openrouter',
+      'sk-recommendation-key',
+    );
     expect(sharedScope).not.toBe(recommendationScope);
 
-    const creditsError = new AppError('Insufficient credits.', 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+    const creditsError = new AppError(
+      'Insufficient credits.',
+      402,
+      'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+    );
     await breaker.tripOnError(sharedScope, creditsError);
 
     // Tripping the shared-key breaker must not affect a differently-keyed config.
@@ -165,7 +180,11 @@ describe('fingerprintCircuitBreakerScope', () => {
     const scopeA = fingerprintCircuitBreakerScope('openrouter', 'sk-identical-key');
     const scopeB = fingerprintCircuitBreakerScope('openrouter', 'sk-identical-key');
 
-    const creditsError = new AppError('Insufficient credits.', 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+    const creditsError = new AppError(
+      'Insufficient credits.',
+      402,
+      'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+    );
     await breaker.tripOnError(scopeA, creditsError);
 
     await expect(breaker.assertClosed(scopeB)).rejects.toBeDefined();

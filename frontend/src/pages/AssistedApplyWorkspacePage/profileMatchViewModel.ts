@@ -20,12 +20,7 @@ export type FitAlignmentLabel =
 export type FitBannerTone = 'success' | 'warning' | 'error' | 'info';
 
 export type FitDimensionId =
-  | 'ROLE'
-  | 'SKILLS'
-  | 'EXPERIENCE'
-  | 'LOCATION'
-  | 'WORK_AUTHORIZATION'
-  | 'SPONSORSHIP';
+  'ROLE' | 'SKILLS' | 'EXPERIENCE' | 'LOCATION' | 'WORK_AUTHORIZATION' | 'SPONSORSHIP';
 
 export interface FitIssueViewModel {
   code: string;
@@ -189,7 +184,8 @@ function formatJobRequirement(value: unknown): string {
  */
 export function classifyProfileMatchIssue(input: {
   code: string;
-  kind: 'blocker' | 'missing' | 'warning' | 'skill_unknown' | 'skill_missing' | 'role' | 'dimension';
+  kind:
+    'blocker' | 'missing' | 'warning' | 'skill_unknown' | 'skill_missing' | 'role' | 'dimension';
   dimensionStatus?: string;
 }): FitIssueSeverity {
   const code = input.code.toUpperCase();
@@ -324,7 +320,11 @@ function alignmentLabelText(label: FitAlignmentLabel): string {
   }
 }
 
-function dimensionStatusLabel(id: FitDimensionId, status: string, match: ProfileJobMatchDto): string {
+function dimensionStatusLabel(
+  id: FitDimensionId,
+  status: string,
+  match: ProfileJobMatchDto,
+): string {
   if (id === 'SKILLS') {
     if (match.skillsMatch.matched.length > 0 && match.skillsMatch.unknown.length === 0) {
       return 'Confirmed';
@@ -363,10 +363,7 @@ function dimensionStatusLabel(id: FitDimensionId, status: string, match: Profile
   return status.replaceAll('_', ' ');
 }
 
-function dimensionSeverity(
-  id: FitDimensionId,
-  status: string,
-): FitIssueSeverity | null {
+function dimensionSeverity(id: FitDimensionId, status: string): FitIssueSeverity | null {
   if (id === 'SKILLS') {
     return status === 'UNKNOWN' ? 'ADVISORY' : null;
   }
@@ -742,10 +739,7 @@ function classifyIssues(match: ProfileJobMatchDto): {
     push({
       code,
       title: 'Role alignment',
-      message: firstMessage(
-        match.roleMatch.evidence,
-        'Preferred roles differ from this posting.',
-      ),
+      message: firstMessage(match.roleMatch.evidence, 'Preferred roles differ from this posting.'),
       severity: 'ADVISORY',
       evidence: evidenceLines(match.roleMatch.evidence).map((value) => ({
         label: 'Evidence',

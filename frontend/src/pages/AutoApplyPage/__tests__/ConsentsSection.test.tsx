@@ -83,7 +83,9 @@ describe('ConsentsSection AA-028', () => {
     expect(
       screen.getByText('Generate tailored content (cover letters, answers) with AI'),
     ).toBeInTheDocument();
-    expect(screen.queryByText(/Send applications from my connected email/i)).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(/Send applications from my connected email/i),
+    ).not.toBeInTheDocument();
     expect(screen.queryByText(/Apply automatically under my rules/i)).not.toBeInTheDocument();
   });
 

@@ -7,21 +7,18 @@ import { fileURLToPath } from 'url';
 var __filename = fileURLToPath(import.meta.url);
 var __dirname = path.dirname(__filename);
 export default defineConfig({
-    plugins: [
-        react(),
-        crx({ manifest: manifest }),
-    ],
-    resolve: {
-        alias: {
-            '@': path.resolve(__dirname, './src'),
-            '@frontend': path.resolve(__dirname, '../frontend/src'),
-        },
+  plugins: [react(), crx({ manifest: manifest })],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+      '@frontend': path.resolve(__dirname, '../frontend/src'),
     },
-    server: {
-        port: 5173,
-        strictPort: true,
-        hmr: {
-            port: 5173,
-        },
+  },
+  server: {
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      port: 5173,
     },
+  },
 });

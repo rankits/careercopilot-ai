@@ -2,10 +2,7 @@ import { isValidTransition } from '@/modules/auto-apply/utils/state-machine.util
 import type { JobApplicationStatusValue } from '@/modules/auto-apply/types/job-application.types.js';
 
 /** Legacy queue-era statuses repaired by AA-093 → WITHDRAWN. */
-export const LEGACY_REPAIR_SOURCE_STATUSES: JobApplicationStatusValue[] = [
-  'APPROVED',
-  'QUEUED',
-];
+export const LEGACY_REPAIR_SOURCE_STATUSES: JobApplicationStatusValue[] = ['APPROVED', 'QUEUED'];
 
 export const LEGACY_REPAIR_TARGET: JobApplicationStatusValue = 'WITHDRAWN';
 
@@ -29,9 +26,7 @@ export function canRepairLegacyStatus(status: JobApplicationStatusValue): boolea
   return isValidTransition(status, LEGACY_REPAIR_TARGET);
 }
 
-export function planLegacyStatusRepairs(
-  rows: LegacyRepairCandidate[],
-): LegacyRepairPlanRow[] {
+export function planLegacyStatusRepairs(rows: LegacyRepairCandidate[]): LegacyRepairPlanRow[] {
   return rows.map((row) => {
     if (!LEGACY_REPAIR_SOURCE_STATUSES.includes(row.status)) {
       return {

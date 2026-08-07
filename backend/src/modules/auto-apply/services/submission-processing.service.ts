@@ -106,13 +106,7 @@ export class SubmissionProcessingService {
           blockingCodes: readiness.blockingReasons.map((r) => r.code),
         },
       });
-      await this.fail(
-        userId,
-        jobApplicationId,
-        'FAILED_DO_NOT_RETRY',
-        errorCode,
-        message,
-      );
+      await this.fail(userId, jobApplicationId, 'FAILED_DO_NOT_RETRY', errorCode, message);
       return;
     }
 
@@ -264,7 +258,8 @@ export class SubmissionProcessingService {
         failureMessage: errorMessage,
       },
       'SUBMITTING',
-    );    await this.eventService.record({
+    );
+    await this.eventService.record({
       userId,
       eventType: 'SUBMISSION_FAILED',
       jobApplicationId,

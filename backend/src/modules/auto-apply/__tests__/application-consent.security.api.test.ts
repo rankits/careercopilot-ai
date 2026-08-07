@@ -96,10 +96,7 @@ describe('auto-apply consent IDOR / authz', () => {
       const token = accessTokenForUser(user);
       const grantSpy = vi.spyOn(applicationConsentService, 'grantConsent');
 
-      const res = await request(app)
-        .post(API)
-        .set(authHeader(token))
-        .send({ consentType });
+      const res = await request(app).post(API).set(authHeader(token)).send({ consentType });
 
       expect(res.status).toBe(403);
       expect(res.body.code).toBe('CONSENT_NOT_AVAILABLE_YET');

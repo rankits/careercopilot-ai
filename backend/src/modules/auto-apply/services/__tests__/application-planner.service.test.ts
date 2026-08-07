@@ -432,10 +432,7 @@ describe('ApplicationPlannerService', () => {
         coverLetterContent: expect.stringContaining('I am interested'),
       }),
     );
-    expect(warnSpy).not.toHaveBeenCalledWith(
-      expect.anything(),
-      'Content preparation failed',
-    );
+    expect(warnSpy).not.toHaveBeenCalledWith(expect.anything(), 'Content preparation failed');
   });
 
   it('keeps the plan ready when content preparation fails and logs a safe warning (AA-013)', async () => {

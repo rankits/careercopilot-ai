@@ -10,7 +10,7 @@ export function startPolling() {
       // Fetch job applications
       const response = await fetch(`${API_URL}/auto-apply/job-applications`, {
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
       });
 
@@ -36,7 +36,7 @@ async function processQueuedJob(job: any, accessToken: string) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
       body: JSON.stringify({ toStatus: 'SUBMITTING' }),
     });
@@ -45,10 +45,10 @@ async function processQueuedJob(job: any, accessToken: string) {
     // For now, let's fetch the plan to get the jobPageUrl
     const planResponse = await fetch(`${API_URL}/auto-apply/planner/${job.jobId}/plan`, {
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     });
-    
+
     if (!planResponse.ok) throw new Error('Could not fetch plan');
     const planJson = await planResponse.json();
     const jobUrl = planJson.data.pageAnalysis?.jobPageUrl;
@@ -65,28 +65,29 @@ async function processQueuedJob(job: any, accessToken: string) {
       if (tab.id) {
         try {
           // Extract fields
-          const extractResponse = await chrome.tabs.sendMessage(tab.id, { action: 'EXTRACT_FORM_FIELDS' });
+          const extractResponse = await chrome.tabs.sendMessage(tab.id, {
+            action: 'EXTRACT_FORM_FIELDS',
+          });
           if (extractResponse && extractResponse.fields) {
-            
             // Get answers from autofill API
             const autofillRes = await fetch(`${API_URL}/extension/autofill`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
-                'Authorization': `Bearer ${accessToken}`
+                Authorization: `Bearer ${accessToken}`,
               },
               body: JSON.stringify({
                 url: jobUrl,
-                fields: extractResponse.fields
-              })
+                fields: extractResponse.fields,
+              }),
             });
 
             if (autofillRes.ok) {
               const autofillJson = await autofillRes.json();
-              await chrome.tabs.sendMessage(tab.id, { 
-                action: 'PREVIEW_AUTOFILL', 
+              await chrome.tabs.sendMessage(tab.id, {
+                action: 'PREVIEW_AUTOFILL',
                 fields: extractResponse.fields,
-                answers: autofillJson.data.answers 
+                answers: autofillJson.data.answers,
               });
 
               // Transition to ACTION_REQUIRED so user can review and submit
@@ -94,18 +95,17 @@ async function processQueuedJob(job: any, accessToken: string) {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
-                  'Authorization': `Bearer ${accessToken}`,
+                  Authorization: `Bearer ${accessToken}`,
                 },
                 body: JSON.stringify({ toStatus: 'ACTION_REQUIRED' }),
               });
             }
           }
         } catch (e) {
-          console.error("Error during tab injection/autofill", e);
+          console.error('Error during tab injection/autofill', e);
         }
       }
     }, 5000); // Wait 5 seconds for page to load
-
   } catch (error) {
     console.error('Error processing queued job:', error);
     // Transition to FAILED if possible
@@ -114,7 +114,7 @@ async function processQueuedJob(job: any, accessToken: string) {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken}`,
         },
         body: JSON.stringify({ toStatus: 'SUBMISSION_FAILED' }),
       });

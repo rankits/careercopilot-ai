@@ -5,7 +5,9 @@ import { UpsertApplicationRuleSchema } from '@/modules/auto-apply/validations/ap
 
 describe('UpdateApprovedResumeVersionSchema AA-026', () => {
   it('maps isDefault to isActive', () => {
-    expect(UpdateApprovedResumeVersionSchema.parse({ isDefault: true })).toEqual({ isActive: true });
+    expect(UpdateApprovedResumeVersionSchema.parse({ isDefault: true })).toEqual({
+      isActive: true,
+    });
   });
 });
 

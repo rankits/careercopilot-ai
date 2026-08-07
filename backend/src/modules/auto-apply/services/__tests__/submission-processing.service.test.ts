@@ -399,18 +399,16 @@ describe('SubmissionProcessingService', () => {
     vi.mocked(attemptRepo.countByJobApplicationId)
       .mockResolvedValueOnce(1) // first count → attempt 2
       .mockResolvedValueOnce(2); // recount after P2002 → attempt 3
-    vi.mocked(attemptRepo.create)
-      .mockRejectedValueOnce({ code: 'P2002' })
-      .mockResolvedValueOnce({
-        id: 'attempt-3',
-        jobApplicationId: 'jobapp-1',
-        attemptNumber: 3,
-        outcome: 'FAILED_DO_NOT_RETRY',
-        errorCode: 'CONSENT_REVOKED',
-        errorMessage: 'Required consent was revoked before submission could complete.',
-        startedAt: new Date(),
-        completedAt: new Date(),
-      });
+    vi.mocked(attemptRepo.create).mockRejectedValueOnce({ code: 'P2002' }).mockResolvedValueOnce({
+      id: 'attempt-3',
+      jobApplicationId: 'jobapp-1',
+      attemptNumber: 3,
+      outcome: 'FAILED_DO_NOT_RETRY',
+      errorCode: 'CONSENT_REVOKED',
+      errorMessage: 'Required consent was revoked before submission could complete.',
+      startedAt: new Date(),
+      completedAt: new Date(),
+    });
 
     await service.processJob({ jobApplicationId: 'jobapp-1', userId: 'user-1' });
 
