@@ -9,6 +9,7 @@ import { JOBS_INGESTION_RATE_LIMIT } from '@/modules/jobs/constants/jobs.rate-li
 import { RESUME_ANALYSIS_RATE_LIMIT } from '@/modules/resume-analysis/constants/resume-analysis.rate-limit.constant.js';
 import { RESUME_PROCESSING_RATE_LIMIT } from '@/modules/resumes/constants/resumes.rate-limit.constant.js';
 import { USER_RATE_LIMIT } from '@/modules/user/constants/user.rate-limit.constant.js';
+import { AI_MAIL_SEND_RATE_LIMIT } from '@/modules/ai-mail/constants/ai-mail-send.rate-limit.constant.js';
 
 const RATE_LIMIT_USER_MESSAGE = 'Something went wrong. Please try again later.';
 
@@ -154,5 +155,13 @@ export const userRateLimiter = buildLimiter({
   windowMinutes: USER_RATE_LIMIT.windowMinutes,
   max: USER_RATE_LIMIT.max,
   prefix: 'user',
+  keyGenerator: authenticatedUserKeyGenerator,
+});
+
+/** Manual AI Mail Gmail send — stricter than generation. */
+export const aiMailSendRateLimiter = buildLimiter({
+  windowMinutes: AI_MAIL_SEND_RATE_LIMIT.windowMinutes,
+  max: AI_MAIL_SEND_RATE_LIMIT.max,
+  prefix: 'ai-mail-send',
   keyGenerator: authenticatedUserKeyGenerator,
 });

@@ -203,6 +203,64 @@ describe('authService login', () => {
   });
 });
 
+describe('authService Google login', () => {
+  beforeEach(() => {
+    postMock.mockReset();
+  });
+
+  it('starts Google login and returns the authorization URL', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        data: { authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?mock=1' },
+      },
+    });
+
+    await expect(authService.startGoogleLogin({ returnPath: '/app' })).resolves.toEqual({
+      authorizationUrl: 'https://accounts.google.com/o/oauth2/v2/auth?mock=1',
+    });
+    expect(postMock).toHaveBeenCalledWith('/auth/google/start', { returnPath: '/app' });
+  });
+
+  it('completes Google login and returns a normalized session', async () => {
+    postMock.mockResolvedValue({
+      data: {
+        accessToken: 'token',
+        data: {
+          returnPath: '/jobs-feed',
+          user: {
+            email: 'ada@example.com',
+            firstName: 'Ada',
+            id: '1',
+            lastName: 'Lovelace',
+            role: 'USER' as const,
+          },
+        },
+      },
+    });
+
+    await expect(
+      authService.completeGoogleLogin({ code: 'code', state: 'state' }),
+    ).resolves.toEqual({
+      accessToken: 'token',
+      accessTokenExpiresInSeconds: undefined,
+      returnPath: '/jobs-feed',
+      user: {
+        email: 'ada@example.com',
+        firstName: 'Ada',
+        id: '1',
+        isProfileCreated: false,
+        lastName: 'Lovelace',
+        name: 'Ada Lovelace',
+        role: 'user',
+      },
+    });
+    expect(postMock).toHaveBeenCalledWith('/auth/google/callback', {
+      code: 'code',
+      state: 'state',
+    });
+  });
+});
+
 describe('authService logout', () => {
   beforeEach(() => {
     postMock.mockReset();

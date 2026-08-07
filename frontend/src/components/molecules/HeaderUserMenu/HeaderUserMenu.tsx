@@ -1,20 +1,22 @@
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import LogoutIcon from '@mui/icons-material/Logout';
-import SettingsOutlinedIcon from '@mui/icons-material/SettingsOutlined';
-import Menu from '@mui/material/Menu';
-import MenuItem from '@mui/material/MenuItem';
-import Typography from '@mui/material/Typography';
 import { useState, type MouseEvent } from 'react';
 
-import { ROUTES } from '@/constants/routes';
 import { HEADER_USER_MENU_COPY, USER_INITIALS_FALLBACK } from '@/constants/ui';
-import { prefetchRoute } from '@/routes/lazyPages';
+import {
+  KeyboardArrowDownIcon,
+  LinkOutlinedIcon,
+  LogoutIcon,
+  Menu,
+  MenuItem,
+  SettingsOutlinedIcon,
+  Typography,
+} from '@/lib/material';
 
 import { menuItemSx, UserAvatar, UserMenuButton, UserMenuText } from './styles';
 
 export interface HeaderUserMenuProps {
   avatarUrl?: string;
   name: string;
+  onConnectedAccountsClick?: () => void;
   onLogoutClick?: () => void;
   onMenuClick?: () => void;
   onSettingsClick?: () => void;
@@ -24,6 +26,7 @@ export interface HeaderUserMenuProps {
 export function HeaderUserMenu({
   avatarUrl,
   name,
+  onConnectedAccountsClick,
   onLogoutClick,
   onMenuClick,
   onSettingsClick,
@@ -47,6 +50,11 @@ export function HeaderUserMenu({
     handleClose();
   }
 
+  function handleConnectedAccountsClick() {
+    onConnectedAccountsClick?.();
+    handleClose();
+  }
+
   function handleLogoutClick() {
     onLogoutClick?.();
     handleClose();
@@ -62,22 +70,21 @@ export function HeaderUserMenu({
         <UserAvatar alt={name} src={avatarUrl}>
           {avatarUrl ? null : initials}
         </UserAvatar>
-        <UserMenuText className="header-user-meta">
+        <UserMenuText>
           <Typography component="span">{name}</Typography>
           <Typography component="small">{roleLabel}</Typography>
         </UserMenuText>
-        <KeyboardArrowDownIcon className="header-user-chevron" fontSize="small" />
+        <KeyboardArrowDownIcon fontSize="small" />
       </UserMenuButton>
 
       <Menu anchorEl={anchorElement} onClose={handleClose} open={open}>
-        <MenuItem
-          onClick={handleSettingsClick}
-          onFocus={() => prefetchRoute(ROUTES.PROFILE_EDIT)}
-          onMouseEnter={() => prefetchRoute(ROUTES.PROFILE_EDIT)}
-          sx={menuItemSx}
-        >
+        <MenuItem onClick={handleSettingsClick} sx={menuItemSx}>
           <SettingsOutlinedIcon fontSize="small" />
           {HEADER_USER_MENU_COPY.editProfile}
+        </MenuItem>
+        <MenuItem onClick={handleConnectedAccountsClick} sx={menuItemSx}>
+          <LinkOutlinedIcon fontSize="small" />
+          {HEADER_USER_MENU_COPY.connectedAccounts}
         </MenuItem>
         <MenuItem onClick={handleLogoutClick} sx={menuItemSx}>
           <LogoutIcon fontSize="small" />

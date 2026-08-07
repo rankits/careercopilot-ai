@@ -66,38 +66,38 @@ enum ConsentType {
 // existing `CandidateProfile` (resumes.prisma) — keeps the onboarding/resume
 // -parse profile untouched while adding apply-specific data on top of it.
 model CandidateApplicationProfile {
-  id                    String    @id @default(uuid())
-  userId                String    @unique @map("user_id")
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
 
   // ApplicationPreferences — desiredRoles/preferredLocations/remotePreference/
   // expectedSalary/noticePeriodDays/willingToRelocate/requiresSponsorship.
-  preferences           Json      @default("{}")
+  preferences  Json @default("{}")
   // { linkedin?, github?, portfolio? }
-  links                 Json      @default("{}")
+  links        Json @default("{}")
   // Per-field verification metadata: { [fieldName]: { source, lastVerifiedAt, confidence } }
-  verification          Json      @default("{}")
+  verification Json @default("{}")
 
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("candidate_application_profiles")
 }
 
 // ─── Verified Application Answers Library (AJA-PROFILE-002) ─────────────────
 model ApplicationAnswerProfile {
-  id                String        @id @default(uuid())
-  userId            String        @map("user_id")
-  questionKey       String        @map("question_key")
-  answer            String        @db.Text
-  source            AnswerSource  @default(USER_VERIFIED)
+  id                String       @id @default(uuid())
+  userId            String       @map("user_id")
+  questionKey       String       @map("question_key")
+  answer            String       @db.Text
+  source            AnswerSource @default(USER_VERIFIED)
   // Demographic / disability / veteran-status questions must be `sensitive:
   // true` and can never carry `autoSubmitAllowed: true` — enforced in
   // ApplicationAnswerService, not just here (AJA-PROD-005).
-  sensitive         Boolean       @default(false)
-  autoSubmitAllowed Boolean       @default(false) @map("auto_submit_allowed")
-  lastVerifiedAt    DateTime      @map("last_verified_at")
-  createdAt         DateTime      @default(now()) @map("created_at")
-  updatedAt         DateTime      @updatedAt @map("updated_at")
+  sensitive         Boolean      @default(false)
+  autoSubmitAllowed Boolean      @default(false) @map("auto_submit_allowed")
+  lastVerifiedAt    DateTime     @map("last_verified_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
 
   @@unique([userId, questionKey])
   @@index([userId])
@@ -112,18 +112,18 @@ model ApplicationAnswerProfile {
 // selection, following the same "plain string id, no cross-file relation"
 // convention `Application.jobId` already uses for cross-domain references.
 model ApprovedResumeVersion {
-  id         String   @id @default(uuid())
-  userId     String   @map("user_id")
-  resumeId   String   @map("resume_id")
-  label      String   @db.VarChar(120)
-  category   String   @db.VarChar(60)
+  id                     String   @id @default(uuid())
+  userId                 String   @map("user_id")
+  resumeId               String   @map("resume_id")
+  label                  String   @db.VarChar(120)
+  category               String   @db.VarChar(60)
   /// Role/skill tags used to pick the right resume for a job (e.g. "mobile", "backend").
-  tags       String[] @default([])
+  tags                   String[] @default([])
   /// Optional pin to Resume Builder `ResumeVersion.id` (Int). Plain field — no cross-file FK.
-  builderResumeVersionId Int? @map("builder_resume_version_id")
-  isActive   Boolean  @default(true) @map("is_active")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  builderResumeVersionId Int?     @map("builder_resume_version_id")
+  isActive               Boolean  @default(true) @map("is_active")
+  createdAt              DateTime @default(now()) @map("created_at")
+  updatedAt              DateTime @updatedAt @map("updated_at")
 
   @@index([userId, isActive])
   @@index([userId, resumeId])
@@ -136,25 +136,25 @@ model ApprovedResumeVersion {
 // operational automation policy (limits, blacklist, pause) — implements the
 // AJA-PROD-003 defaults (≤5/day, min match score 0.85).
 model ApplicationRule {
-  id                      String    @id @default(uuid())
-  userId                  String    @unique @map("user_id")
+  id     String @id @default(uuid())
+  userId String @unique @map("user_id")
 
-  minMatchScore           Float     @default(0.85) @map("min_match_score")
-  dailyApplicationLimit   Int       @default(5) @map("daily_application_limit")
-  weeklyApplicationLimit  Int?      @map("weekly_application_limit")
+  minMatchScore          Float @default(0.85) @map("min_match_score")
+  dailyApplicationLimit  Int   @default(5) @map("daily_application_limit")
+  weeklyApplicationLimit Int?  @map("weekly_application_limit")
 
-  blacklistedCompanySlugs String[]  @default([]) @map("blacklisted_company_slugs")
-  excludedTitleKeywords   String[]  @default([]) @map("excluded_title_keywords")
-  excludedSources         String[]  @default([]) @map("excluded_sources")
+  blacklistedCompanySlugs String[] @default([]) @map("blacklisted_company_slugs")
+  excludedTitleKeywords   String[] @default([]) @map("excluded_title_keywords")
+  excludedSources         String[] @default([]) @map("excluded_sources")
 
   // Full Autopilot (Mode C) stays disabled until Wave 6 (AJA-RULE-002) wires
   // real enforcement end-to-end; the flag exists now so the schema doesn't
   // need another migration to add it later.
-  autopilotEnabled        Boolean   @default(false) @map("autopilot_enabled")
-  autopilotPausedAt       DateTime? @map("autopilot_paused_at")
+  autopilotEnabled  Boolean   @default(false) @map("autopilot_enabled")
+  autopilotPausedAt DateTime? @map("autopilot_paused_at")
 
-  createdAt               DateTime  @default(now()) @map("created_at")
-  updatedAt               DateTime  @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("application_rules")
 }
@@ -179,64 +179,74 @@ model ApplicationConsent {
 // user-facing recruitment history and is never written to by this domain
 // in this wave.
 model JobApplication {
-  id                     String                @id @default(uuid())
-  userId                 String                @map("user_id")
-  jobId                  String?                @map("job_id")
-  normalisedJobUrl       String?               @map("normalised_job_url")
+  id               String  @id @default(uuid())
+  userId           String  @map("user_id")
+  jobId            String? @map("job_id")
+  normalisedJobUrl String? @map("normalised_job_url")
   // Reuses `Job.canonicalHash` (jobs.prisma) — the ingestion pipeline's own
   // cross-source dedup hash — rather than inventing a second canonicalization
   // scheme (AJA-DATA-003).
-  canonicalJobId         String?               @map("canonical_job_id")
+  canonicalJobId   String? @map("canonical_job_id")
   // Lightweight snapshot captured at creation time, used only for the
   // fuzzy company+title duplicate warning (never a hard block) — not a
   // source of truth, so no cascading update needed if the job listing changes.
-  companySlug            String?               @map("company_slug")
-  jobTitle               String?               @map("job_title")
+  companySlug      String? @map("company_slug")
+  jobTitle         String? @map("job_title")
 
-  channel                AutoApplyChannel      @default(UNSUPPORTED)
-  status                 JobApplicationStatus  @default(DISCOVERED)
-  approvalMode           ApprovalMode          @default(PER_APPLICATION) @map("approval_mode")
+  channel      AutoApplyChannel     @default(UNSUPPORTED)
+  status       JobApplicationStatus @default(DISCOVERED)
+  approvalMode ApprovalMode         @default(PER_APPLICATION) @map("approval_mode")
 
-  matchScore             Float?                @map("match_score")
-  eligibilityResult      Json?                 @map("eligibility_result")
+  matchScore        Float? @map("match_score")
+  eligibilityResult Json?  @map("eligibility_result")
 
-  resumeVersionId        String?               @map("resume_version_id")
-  coverLetterContent     String?               @db.Text @map("cover_letter_content")
+  resumeVersionId    String? @map("resume_version_id")
+  coverLetterContent String? @map("cover_letter_content") @db.Text
 
-  consentId              String?               @map("consent_id")
-  approvedAt             DateTime?             @map("approved_at")
-  queuedAt               DateTime?             @map("queued_at")
-  submittedAt            DateTime?             @map("submitted_at")
+  consentId   String?   @map("consent_id")
+  approvedAt  DateTime? @map("approved_at")
+  queuedAt    DateTime? @map("queued_at")
+  submittedAt DateTime? @map("submitted_at")
 
-  externalApplicationId  String?               @map("external_application_id")
-  externalConfirmationUrl String?              @map("external_confirmation_url")
+  externalApplicationId   String? @map("external_application_id")
+  externalConfirmationUrl String? @map("external_confirmation_url")
 
-  failureCode            String?               @map("failure_code")
-  failureMessage         String?               @db.Text @map("failure_message")
+  failureCode    String? @map("failure_code")
+  failureMessage String? @map("failure_message") @db.Text
 
   // Idempotency: a hash of the planner inputs (profile+rules+job+resume)
   // this plan was generated from (AJA-PLAN-001, Wave 3). Null until the
   // planner exists; present so createPlan() can detect "nothing changed"
   // without another migration.
-  planInputsHash         String?               @map("plan_inputs_hash")
-  planVersion            Int                   @default(1) @map("plan_version")
+  planInputsHash String? @map("plan_inputs_hash")
+  planVersion    Int     @default(1) @map("plan_version")
 
-  /** AA-043: last-viewed Assisted Apply workspace step id. */
-  progressStep           String?               @map("progress_step") @db.VarChar(40)
-  /** AA-042: set when reopened from WITHDRAWN so workspace can show banner after refresh. */
-  reopenedAt             DateTime?             @map("reopened_at")
-  /** AA-070: set when candidate opens employer apply URL via direct handoff (no queue). */
-  handoffOpenedAt        DateTime?             @map("handoff_opened_at")
-  /** AA-072: optional notes when candidate marks applied. */
-  appliedNotes           String?               @map("applied_notes") @db.Text
-  /** AA-073: abandon reason code + optional note. */
-  abandonReason          String?               @map("abandon_reason") @db.VarChar(40)
-  abandonNote            String?               @map("abandon_note") @db.Text
+  /**
+   * AA-043: last-viewed Assisted Apply workspace step id.
+   */
+  progressStep    String?   @map("progress_step") @db.VarChar(40)
+  /**
+   * AA-042: set when reopened from WITHDRAWN so workspace can show banner after refresh.
+   */
+  reopenedAt      DateTime? @map("reopened_at")
+  /**
+   * AA-070: set when candidate opens employer apply URL via direct handoff (no queue).
+   */
+  handoffOpenedAt DateTime? @map("handoff_opened_at")
+  /**
+   * AA-072: optional notes when candidate marks applied.
+   */
+  appliedNotes    String?   @map("applied_notes") @db.Text
+  /**
+   * AA-073: abandon reason code + optional note.
+   */
+  abandonReason   String?   @map("abandon_reason") @db.VarChar(40)
+  abandonNote     String?   @map("abandon_note") @db.Text
 
-  createdAt              DateTime              @default(now()) @map("created_at")
-  updatedAt              DateTime              @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  attempts               ApplicationSubmissionAttempt[]
+  attempts ApplicationSubmissionAttempt[]
 
   // Hard duplicate-prevention (AJA-PROD-007 / AJA-DATA-002), enforced at the
   // database layer for this new entity from day one — the existing tracker's
@@ -286,17 +296,17 @@ model JobApplicationProfileMatch {
 
 // ─── Submission attempt log (AJA-DATA-001 / AJA-QUEUE-002) ──────────────────
 model ApplicationSubmissionAttempt {
-  id                    String                    @id @default(uuid())
-  jobApplicationId      String                    @map("job_application_id")
-  attemptNumber         Int                       @map("attempt_number")
-  outcome               SubmissionAttemptOutcome?
-  rawResponseSanitized  Json?                     @map("raw_response_sanitized")
-  errorCode             String?                   @map("error_code")
-  errorMessage          String?                   @db.Text @map("error_message")
-  startedAt             DateTime                  @default(now()) @map("started_at")
-  completedAt           DateTime?                 @map("completed_at")
+  id                   String                    @id @default(uuid())
+  jobApplicationId     String                    @map("job_application_id")
+  attemptNumber        Int                       @map("attempt_number")
+  outcome              SubmissionAttemptOutcome?
+  rawResponseSanitized Json?                     @map("raw_response_sanitized")
+  errorCode            String?                   @map("error_code")
+  errorMessage         String?                   @map("error_message") @db.Text
+  startedAt            DateTime                  @default(now()) @map("started_at")
+  completedAt          DateTime?                 @map("completed_at")
 
-  jobApplication        JobApplication            @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
+  jobApplication JobApplication @relation(fields: [jobApplicationId], references: [id], onDelete: Cascade)
 
   @@unique([jobApplicationId, attemptNumber])
   @@index([jobApplicationId])
@@ -331,12 +341,12 @@ enum AutoApplyEventType {
 }
 
 model AutoApplyAuditEvent {
-  id               String              @id @default(uuid())
-  userId           String              @map("user_id")
-  jobApplicationId String?             @map("job_application_id")
-  eventType        AutoApplyEventType  @map("event_type")
-  metadata         Json                @default("{}")
-  createdAt        DateTime            @default(now()) @map("created_at")
+  id               String             @id @default(uuid())
+  userId           String             @map("user_id")
+  jobApplicationId String?            @map("job_application_id")
+  eventType        AutoApplyEventType @map("event_type")
+  metadata         Json               @default("{}")
+  createdAt        DateTime           @default(now()) @map("created_at")
 
   @@index([userId, createdAt(sort: Desc)])
   @@index([jobApplicationId, createdAt(sort: Desc)])
@@ -348,37 +358,37 @@ model AutoApplyAuditEvent {
 // Separate from canonical Job fields — AI/rule extractions requirements with
 // provenance live here only (never silently overwrite Job columns).
 model ApplicationPageAnalysis {
-  id                       String   @id @default(uuid())
-  jobId                    String   @map("job_id")
-  jobApplicationId         String?  @map("job_application_id")
+  id               String  @id @default(uuid())
+  jobId            String  @map("job_id")
+  jobApplicationId String? @map("job_application_id")
 
-  schemaVersion            Int      @default(1) @map("schema_version")
-  extractorVersion         String   @map("extractor_version") @db.VarChar(64)
-  extractionPolicyVersion  String   @map("extraction_policy_version") @db.VarChar(64)
+  schemaVersion           Int    @default(1) @map("schema_version")
+  extractorVersion        String @map("extractor_version") @db.VarChar(64)
+  extractionPolicyVersion String @map("extraction_policy_version") @db.VarChar(64)
 
-  provider                 String   @db.VarChar(32)
-  jobPageUrl               String   @map("job_page_url") @db.Text
-  applicationUrl           String?  @map("application_url") @db.Text
+  provider       String  @db.VarChar(32)
+  jobPageUrl     String  @map("job_page_url") @db.Text
+  applicationUrl String? @map("application_url") @db.Text
 
-  jobPageStatus            String   @map("job_page_status") @db.VarChar(32)
-  formStatus               String   @map("form_status") @db.VarChar(32)
-  submissionCapability     String   @map("submission_capability") @db.VarChar(32)
-  outcomeStatus            String   @map("outcome_status") @db.VarChar(48)
+  jobPageStatus        String @map("job_page_status") @db.VarChar(32)
+  formStatus           String @map("form_status") @db.VarChar(32)
+  submissionCapability String @map("submission_capability") @db.VarChar(32)
+  outcomeStatus        String @map("outcome_status") @db.VarChar(48)
 
-  requirements             Json     @default("[]")
-  fields                   Json     @default("[]")
-  snapshot                 Json     @default("{}")
-  freshness                Json     @default("{}")
+  requirements Json @default("[]")
+  fields       Json @default("[]")
+  snapshot     Json @default("{}")
+  freshness    Json @default("{}")
 
   // Sanitized visible text only — never raw HTML in this column.
-  sanitizedText            String?  @map("sanitized_text") @db.Text
-  contentHash              String   @map("content_hash") @db.VarChar(64)
-  idempotencyKey           String   @unique @map("idempotency_key") @db.VarChar(191)
+  sanitizedText  String? @map("sanitized_text") @db.Text
+  contentHash    String  @map("content_hash") @db.VarChar(64)
+  idempotencyKey String  @unique @map("idempotency_key") @db.VarChar(191)
 
-  analyzedAt               DateTime @map("analyzed_at")
-  expiresAt                DateTime @map("expires_at")
-  createdAt                DateTime @default(now()) @map("created_at")
-  updatedAt                DateTime @updatedAt @map("updated_at")
+  analyzedAt DateTime @map("analyzed_at")
+  expiresAt  DateTime @map("expires_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
 
   @@index([jobId, analyzedAt(sort: Desc)])
   @@index([jobId, expiresAt])

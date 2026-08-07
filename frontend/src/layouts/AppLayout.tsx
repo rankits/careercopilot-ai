@@ -138,6 +138,7 @@ function AppLayoutShell() {
         />
         <div className="content-shell">
           <AppHeader
+            onConnectedAccountsClick={() => void navigate(ROUTES.CONNECTED_ACCOUNTS)}
             onLogoutClick={() => {
               if (!isLoggingOut) {
                 void logout();

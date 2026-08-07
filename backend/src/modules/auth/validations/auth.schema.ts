@@ -131,6 +131,24 @@ export const logoutSchema = withEnvelope(
   }),
 );
 
+export const googleLoginStartSchema = withEnvelope(
+  z.object({
+    returnPath: z
+      .string()
+      .trim()
+      .regex(/^\/(?!\/)/, 'returnPath must be a relative path starting with /')
+      .max(512)
+      .optional(),
+  }),
+);
+
+export const googleLoginCallbackSchema = withEnvelope(
+  z.object({
+    code: z.string().trim().min(1, 'Authorization code is required'),
+    state: z.string().trim().min(1, 'OAuth state is required'),
+  }),
+);
+
 export type RegisterInput = z.infer<typeof registerSchema>['body'];
 export type ResendOtpInput = z.infer<typeof resendOtpSchema>['body'];
 export type LoginInput = z.infer<typeof loginSchema>['body'];
@@ -142,3 +160,5 @@ export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>['body'];
 export type ChangePasswordInput = z.infer<typeof changePasswordSchema>['body'];
 export type RefreshTokenInput = z.infer<typeof refreshTokenSchema>['body'];
 export type LogoutInput = z.infer<typeof logoutSchema>['body'];
+export type GoogleLoginStartInput = z.infer<typeof googleLoginStartSchema>['body'];
+export type GoogleLoginCallbackInput = z.infer<typeof googleLoginCallbackSchema>['body'];
