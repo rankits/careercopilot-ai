@@ -1,3 +1,6 @@
+import axios from 'axios';
+
+import { env } from '@/config/env';
 import type {
   AuthMessageResponse,
   AuthResponse,
@@ -179,5 +182,33 @@ export const authService = {
         getAuthErrorMessage(error, 'Unable to reset password. Please try again.'),
       );
     }
+  },
+
+  /**
+   * Silent session restore via httpOnly refresh cookie.
+   * Uses a bare axios call so the shared httpClient 401 interceptor cannot loop.
+   */
+  async refreshSession(): Promise<{ accessToken: string }> {
+    const { data } = await axios.post<{ accessToken?: string }>(
+      `${env.apiBaseUrl}/auth/refresh-token`,
+      {},
+      { withCredentials: true },
+    );
+
+    if (typeof data.accessToken !== 'string' || data.accessToken.length === 0) {
+      throw new AuthRequestError('Missing access token in refresh response');
+    }
+
+    return { accessToken: data.accessToken };
+  },
+
+  async getCurrentUser(): Promise<User> {
+    const { data } = await httpClient.get<{ data?: User }>('/auth/me');
+
+    if (!data.data) {
+      throw new AuthRequestError('Missing user data in session response');
+    }
+
+    return normalizeUser(data.data);
   },
 };
