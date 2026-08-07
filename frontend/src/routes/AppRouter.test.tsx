@@ -23,6 +23,7 @@ beforeAll(async () => {
         m.loadJobFeedPage(),
         m.loadJobDetailPage(),
         m.loadAiMatchPage(),
+        m.loadAiMailPage(),
         m.loadSavedJobsPage(),
         m.loadApplicationsPage(),
         m.loadSavedResumesPage(),

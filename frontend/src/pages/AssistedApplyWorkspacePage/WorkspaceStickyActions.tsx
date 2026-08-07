@@ -25,17 +25,23 @@ export function WorkspaceStickyActions({ children }: { children: ReactNode }) {
     <Box
       data-testid="workspace-sticky-actions"
       sx={{
-        position: 'sticky',
-        bottom: 0,
-        zIndex: 2,
-        mt: 2,
-        mx: { xs: -2, sm: -3 },
-        px: { xs: 2, sm: 3 },
-        py: 1.5,
         bgcolor: 'background.paper',
-        borderTop: 1,
         borderColor: 'divider',
+        borderTop: 1,
+        bottom: 0,
         boxShadow: '0 -4px 12px rgba(0,0,0,0.06)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 1.25,
+        mx: { xs: -2, sm: -3, md: -4 },
+        mt: 2,
+        px: { xs: 2, sm: 3, md: 4 },
+        py: 1.5,
+        position: 'sticky',
+        zIndex: 2,
+        '& .MuiButton-root': {
+          maxWidth: '100%',
+        },
       }}
     >
       {children}

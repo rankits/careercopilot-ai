@@ -19,6 +19,8 @@ import {
   Typography,
 } from '@/lib/material';
 
+import { assistedApplyWorkspaceSx } from './styles';
+
 export interface ResumeSelectionStepProps {
   jobApplicationId: string;
   selectedResumeVersionId: string | null;
@@ -57,9 +59,14 @@ export function ResumeSelectionStep({
 
   if (consentsQuery.isLoading || versionsQuery.isLoading) {
     return (
-      <Stack alignItems="center" direction="row" spacing={1.5} sx={{ py: 2 }}>
+      <Stack
+        alignItems={{ sm: 'center' }}
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        sx={{ py: 2, ...assistedApplyWorkspaceSx.stepRoot }}
+      >
         <CircularProgress size={20} />
-        <Typography>Loading resumes…</Typography>
+        <Typography sx={assistedApplyWorkspaceSx.overflowWrap}>Loading resumes…</Typography>
       </Stack>
     );
   }
@@ -70,7 +77,9 @@ export function ResumeSelectionStep({
         action={
           <MuiButton
             component={RouterLink}
+            fullWidth
             size="small"
+            sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
             to={`${ROUTES.AUTO_APPLY}?section=consents`}
             variant="outlined"
           >
@@ -78,6 +87,7 @@ export function ResumeSelectionStep({
           </MuiButton>
         }
         severity="warning"
+        sx={assistedApplyWorkspaceSx.alertWithAction}
       >
         Grant resume usage to select a resume for this application.
       </Alert>
@@ -90,7 +100,9 @@ export function ResumeSelectionStep({
         action={
           <MuiButton
             component={RouterLink}
+            fullWidth
             size="small"
+            sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
             to={`${ROUTES.AUTO_APPLY}?section=resumes`}
             variant="outlined"
           >
@@ -98,6 +110,7 @@ export function ResumeSelectionStep({
           </MuiButton>
         }
         severity="info"
+        sx={assistedApplyWorkspaceSx.alertWithAction}
       >
         You haven&apos;t approved any resumes yet.
       </Alert>
@@ -115,7 +128,7 @@ export function ResumeSelectionStep({
   };
 
   return (
-    <Stack spacing={1.5}>
+    <Stack spacing={1.5} sx={assistedApplyWorkspaceSx.stepRoot}>
       <Typography fontWeight={600} variant="subtitle2">
         Resume for this application
       </Typography>
@@ -138,13 +151,22 @@ export function ResumeSelectionStep({
             }}
           >
             <FormControlLabel
-              control={<Radio />}
+              control={<Radio sx={{ alignSelf: 'flex-start', mt: 0.25 }} />}
               label={
-                <Stack alignItems="center" direction="row" spacing={1}>
-                  <Typography variant="body2">{version.label}</Typography>
+                <Stack
+                  alignItems="center"
+                  direction="row"
+                  flexWrap="wrap"
+                  spacing={1}
+                  sx={{ minWidth: 0 }}
+                >
+                  <Typography sx={assistedApplyWorkspaceSx.overflowWrap} variant="body2">
+                    {version.label}
+                  </Typography>
                   {version.isActive ? <Chip label="Default" size="small" /> : null}
                 </Stack>
               }
+              sx={{ alignItems: 'flex-start', m: 0, width: '100%' }}
               value={version.id}
             />
           </Box>

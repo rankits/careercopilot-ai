@@ -11,6 +11,7 @@ import { buildImproveResumeHref } from '@/features/auto-apply/utils/returnToNavi
 import { Alert, Box, Chip, CircularProgress, MuiButton, Stack, Typography } from '@/lib/material';
 import { trackEvent } from '@/shared/analytics/trackEvent';
 
+import { assistedApplyWorkspaceSx } from './styles';
 import { assistedApplyTouchTargetSx, WorkspaceStickyActions } from './WorkspaceStickyActions';
 
 function CategoryCard({
@@ -23,18 +24,27 @@ function CategoryCard({
   emptyLabel: string;
 }) {
   return (
-    <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, p: 1.5 }}>
+    <Box sx={{ border: 1, borderColor: 'divider', borderRadius: 1, minWidth: 0, p: 1.5 }}>
       <Typography fontWeight={600} sx={{ mb: 0.75 }} variant="subtitle2">
         {title}
       </Typography>
       {items.length === 0 ? (
-        <Typography color="text.secondary" variant="body2">
+        <Typography
+          color="text.secondary"
+          sx={assistedApplyWorkspaceSx.overflowWrap}
+          variant="body2"
+        >
           {emptyLabel}
         </Typography>
       ) : (
         <Box component="ul" sx={{ m: 0, pl: 2 }}>
           {items.map((item) => (
-            <Typography component="li" key={item} variant="body2">
+            <Typography
+              component="li"
+              key={item}
+              sx={assistedApplyWorkspaceSx.overflowWrap}
+              variant="body2"
+            >
               {item}
             </Typography>
           ))}
@@ -111,7 +121,9 @@ export function ResumeAnalysisStep({
         action={
           <MuiButton
             component={RouterLink}
+            fullWidth
             size="small"
+            sx={assistedApplyWorkspaceSx.fullWidthMobileButton}
             to={`${ROUTES.AUTO_APPLY}?section=consents`}
             variant="outlined"
           >
@@ -119,6 +131,7 @@ export function ResumeAnalysisStep({
           </MuiButton>
         }
         severity="warning"
+        sx={assistedApplyWorkspaceSx.alertWithAction}
       >
         Grant resume usage to select a resume for this application.
       </Alert>
@@ -135,9 +148,16 @@ export function ResumeAnalysisStep({
 
   if (analysisQuery.isLoading) {
     return (
-      <Stack alignItems="center" direction="row" spacing={1.5} sx={{ py: 2 }}>
+      <Stack
+        alignItems={{ sm: 'center' }}
+        direction={{ xs: 'column', sm: 'row' }}
+        spacing={1.5}
+        sx={{ py: 2, ...assistedApplyWorkspaceSx.stepRoot }}
+      >
         <CircularProgress aria-label="Comparing resume" size={20} />
-        <Typography>Comparing your resume to this job…</Typography>
+        <Typography sx={assistedApplyWorkspaceSx.overflowWrap}>
+          Comparing your resume to this job…
+        </Typography>
       </Stack>
     );
   }
@@ -150,7 +170,7 @@ export function ResumeAnalysisStep({
     (analysis?.summary?.criteriaAnalyzed === 0 && !degraded);
 
   return (
-    <Stack spacing={2}>
+    <Stack spacing={2} sx={assistedApplyWorkspaceSx.stepRoot}>
       {analysisLimited || analysisFailed ? (
         <Alert severity="warning">
           <strong>Resume selected based on general role alignment.</strong> Because the job posting
@@ -243,11 +263,20 @@ export function ResumeAnalysisStep({
       {continueError ? <Alert severity="error">{continueError}</Alert> : null}
 
       <WorkspaceStickyActions>
-        <Stack direction={{ xs: 'column', sm: 'row' }} flexWrap="wrap" spacing={1}>
+        <Stack
+          direction={{ xs: 'column', lg: 'row' }}
+          flexWrap="wrap"
+          spacing={1.25}
+          sx={assistedApplyWorkspaceSx.stackedActionButtons}
+        >
           <MuiButton
             component={RouterLink}
             disabled={!selectedVersion}
-            sx={assistedApplyTouchTargetSx}
+            fullWidth
+            sx={{
+              ...assistedApplyTouchTargetSx,
+              ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+            }}
             to={
               selectedVersion
                 ? buildImproveResumeHref({
@@ -260,13 +289,25 @@ export function ResumeAnalysisStep({
           >
             Improve resume
           </MuiButton>
-          <MuiButton onClick={onSelectAnother} sx={assistedApplyTouchTargetSx} variant="outlined">
+          <MuiButton
+            fullWidth
+            onClick={onSelectAnother}
+            sx={{
+              ...assistedApplyTouchTargetSx,
+              ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+            }}
+            variant="outlined"
+          >
             Select another resume
           </MuiButton>
           <MuiButton
             disabled={continuePending}
+            fullWidth
             onClick={onContinue}
-            sx={assistedApplyTouchTargetSx}
+            sx={{
+              ...assistedApplyTouchTargetSx,
+              ...assistedApplyWorkspaceSx.fullWidthMobileButton,
+            }}
             variant="contained"
           >
             {continuePending ? 'Continuing…' : 'Continue with this resume'}

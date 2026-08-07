@@ -3,6 +3,7 @@ import { useAssistedApplyEvents } from '@/features/auto-apply/hooks/useAssistedA
 import { AccessTimeOutlinedIcon, Box, Skeleton, Stack, Tooltip, Typography } from '@/lib/material';
 
 import { activityEventCategory, activityEventLabel, formatRelativeTime } from './activityLabels';
+import { assistedApplyWorkspaceSx } from './styles';
 
 const CATEGORY_COLOR: Record<string, string> = {
   tracking: 'primary.main',
@@ -27,10 +28,10 @@ export function ActivityTimelinePanel({ jobApplicationId }: ActivityTimelinePane
         border: 1,
         borderColor: 'divider',
         borderRadius: 1,
-        p: 2,
-        minWidth: { md: 240 },
+        p: { xs: 1.5, sm: 2 },
+        minWidth: 0,
         maxWidth: { md: 300 },
-        width: { xs: '100%', md: 'auto' },
+        width: '100%',
         flexShrink: 0,
       }}
     >
@@ -81,7 +82,9 @@ export function ActivityTimelinePanel({ jobApplicationId }: ActivityTimelinePane
                 }}
               />
               <Box sx={{ minWidth: 0 }}>
-                <Typography variant="body2">{label}</Typography>
+                <Typography sx={assistedApplyWorkspaceSx.overflowWrap} variant="body2">
+                  {label}
+                </Typography>
                 <Tooltip title={absolute}>
                   <Typography
                     color="text.secondary"
