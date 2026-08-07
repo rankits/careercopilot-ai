@@ -1,3 +1,13 @@
+import AccessTimeOutlinedIcon from '@mui/icons-material/AccessTimeOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import CloseIcon from '@mui/icons-material/Close';
+import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import StickyNote2OutlinedIcon from '@mui/icons-material/StickyNote2Outlined';
+import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
+import Link from '@mui/material/Link';
+import MenuItem from '@mui/material/MenuItem';
 import { useEffect, useState, type ReactNode } from 'react';
 
 import { Button } from '@/components/atoms/Button';
@@ -37,18 +47,6 @@ import {
   formatDateTime,
   mapApiStatusToUi,
 } from '@/features/applications/utils/applicationMappers';
-import {
-  AccessTimeOutlinedIcon,
-  CheckCircleOutlineIcon,
-  CloseIcon,
-  DeleteOutlineIcon,
-  HistoryOutlinedIcon,
-  InsightsOutlinedIcon,
-  Link,
-  MenuItem,
-  StickyNote2OutlinedIcon,
-  TaskAltOutlinedIcon,
-} from '@/lib/material';
 import { palette } from '@/tokens';
 
 import { LocationPinIcon, PriorityBadge, SourceBadge, StatusBadge } from '../../styles';

@@ -1,4 +1,5 @@
-import { Box, CheckCircleIcon } from '@/lib/material';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import Box from '@mui/material/Box';
 
 import { WORKFLOW_STEPS, type ResumeBuilderStep } from '../../constants';
 

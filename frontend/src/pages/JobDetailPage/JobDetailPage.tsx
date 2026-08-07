@@ -1,3 +1,10 @@
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import HistoryOutlinedIcon from '@mui/icons-material/HistoryOutlined';
+import LocationOnOutlinedIcon from '@mui/icons-material/LocationOnOutlined';
+import WorkOutlineOutlinedIcon from '@mui/icons-material/WorkOutlineOutlined';
+import Box from '@mui/material/Box';
+import Typography from '@mui/material/Typography';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router-dom';
 
@@ -20,15 +27,6 @@ import { formatJobSalary } from '@/features/jobs/utils/formatJobSalary';
 import { formatPostedAt } from '@/features/jobs/utils/formatPostedAt';
 import { openExternalApply, toSafeApplyUrl } from '@/features/jobs/utils/openExternalApply';
 import { resolveJobDescriptionDisplay } from '@/features/jobs/utils/resolveJobDescriptionDisplay';
-import {
-  Box,
-  BusinessCenterOutlinedIcon,
-  ChevronLeftIcon,
-  HistoryOutlinedIcon,
-  LocationOnOutlinedIcon,
-  Typography,
-  WorkOutlineOutlinedIcon,
-} from '@/lib/material';
 
 import { JobAboutRoleSection } from './JobAboutRoleSection';
 import { JobDetailSectionHeader } from './JobDetailSectionHeader';

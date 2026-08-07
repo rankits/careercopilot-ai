@@ -1,7 +1,8 @@
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import { styled } from '@mui/material/styles';
 import { Link as RouterLink } from 'react-router-dom';
 
 import { LANDING_COPY, LANDING_FEATURES, LANDING_SECTION_IDS } from '@/constants/pages/landing';
-import { ArrowForwardIcon, styled } from '@/lib/material';
 import {
   borderRadius,
   borderWidth,

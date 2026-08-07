@@ -1,6 +1,6 @@
 import { styled } from '@mui/material/styles';
 
-import { spacing } from '@/tokens';
+import { colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const VirtualListRoot = styled('div')({
   minHeight: 0,

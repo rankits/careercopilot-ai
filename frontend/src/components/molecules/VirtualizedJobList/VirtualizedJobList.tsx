@@ -1,7 +1,6 @@
+import CircularProgress from '@mui/material/CircularProgress';
 import { observeElementRect, useVirtualizer } from '@tanstack/react-virtual';
 import { useCallback, useEffect, useRef, type ReactNode } from 'react';
-
-import { CircularProgress } from '@/lib/material';
 
 import {
   VirtualListItem,

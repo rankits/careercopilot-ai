@@ -1,3 +1,12 @@
+import AddIcon from '@mui/icons-material/Add';
+import BusinessCenterOutlinedIcon from '@mui/icons-material/BusinessCenterOutlined';
+import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
+import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import FileDownloadOutlinedIcon from '@mui/icons-material/FileDownloadOutlined';
+import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import ViewListOutlinedIcon from '@mui/icons-material/ViewListOutlined';
+import useMediaQuery from '@mui/material/useMediaQuery';
 import { useMemo, useState } from 'react';
 
 import { Button } from '@/components/atoms/Button';
@@ -75,17 +84,6 @@ import {
 import type { ApplicationRecord } from '@/features/applications/types/application.view.types';
 import { mapUiStatusToApi } from '@/features/applications/utils/applicationMappers';
 import { APPLICATIONS_EXPORT_EMPTY_MESSAGE } from '@/features/applications/utils/exportApplicationsCsv';
-import {
-  AddIcon,
-  BusinessCenterOutlinedIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  FileDownloadOutlinedIcon,
-  GridViewOutlinedIcon,
-  SearchOutlinedIcon,
-  useMediaQuery,
-  ViewListOutlinedIcon,
-} from '@/lib/material';
 import { colorTokens } from '@/tokens';
 
 export function ApplicationsPage() {

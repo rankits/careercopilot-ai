@@ -1,4 +1,8 @@
-import { Accordion, Box, styled, type SxProps, type Theme } from '@/lib/material';
+import Accordion from '@mui/material/Accordion';
+import Box from '@mui/material/Box';
+import { styled } from '@mui/material/styles';
+import type { SxProps, Theme } from '@mui/material/styles';
+
 import { borderRadius, borderWidth, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 /** Matches AppLayout compact breakpoint (760px). */

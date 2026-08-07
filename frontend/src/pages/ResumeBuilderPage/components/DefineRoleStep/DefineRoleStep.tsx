@@ -1,20 +1,18 @@
+import AddIcon from '@mui/icons-material/Add';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import BarChartOutlinedIcon from '@mui/icons-material/BarChartOutlined';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CloseIcon from '@mui/icons-material/Close';
+import DescriptionOutlinedIcon from '@mui/icons-material/DescriptionOutlined';
+import DownloadIcon from '@mui/icons-material/Download';
+import Box from '@mui/material/Box';
+import Chip from '@mui/material/Chip';
+import MenuItem from '@mui/material/MenuItem';
+import Typography from '@mui/material/Typography';
 import { useState, type KeyboardEvent } from 'react';
 
 import { Button, Input } from '@/components/atoms';
 
-import {
-  AddIcon,
-  AutoAwesomeOutlinedIcon,
-  BarChartOutlinedIcon,
-  Box,
-  CheckCircleIcon,
-  Chip,
-  CloseIcon,
-  DescriptionOutlinedIcon,
-  DownloadIcon,
-  MenuItem,
-  Typography,
-} from '@/lib/material';
 import type {
   AnalysisResult,
   ResumeVersion,

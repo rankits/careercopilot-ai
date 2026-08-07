@@ -1,8 +1,7 @@
+import type { SvgIconComponent } from '@mui/icons-material';
 import type { FormEventHandler } from 'react';
 import type { FieldValues, SubmitHandler } from 'react-hook-form';
 import type { AnyObjectSchema } from 'yup';
-
-import type { SvgIconComponent } from '@/lib/material';
 
 export type AuthFormMode = 'login' | 'register';
 export type AuthFieldType = 'email' | 'password' | 'tel' | 'text';

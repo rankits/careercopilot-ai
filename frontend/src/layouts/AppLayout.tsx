@@ -112,10 +112,10 @@ function AppLayoutShell() {
 
   return (
     <>
+      <a className="skip-link" href="#main-content">
+        Skip to main content
+      </a>
       <div className="app-shell">
-        <a className="skip-link" href="#main-content">
-          Skip to main content
-        </a>
         <Sidebar
           activeItemId={activeItemId}
           isDownloadingLatestResume={Boolean(latestResume && downloadingId === latestResume.id)}
@@ -152,8 +152,8 @@ function AppLayoutShell() {
             <Outlet />
           </main>
         </div>
-        <CareerCopilot />
       </div>
+      <CareerCopilot />
 
       <ResumeVersionsDialog
         downloadingId={downloadingId}
