@@ -1,0 +1,79 @@
+enum ConnectedAccountProvider {
+  GOOGLE
+  MICROSOFT
+  OTHER_FUTURE_PROVIDER
+
+  @@map("connected_account_provider")
+}
+
+enum ConnectedAccountStatus {
+  PENDING
+  ACTIVE
+  REAUTHORIZATION_REQUIRED
+  REVOKED
+  ERROR
+
+  @@map("connected_account_status")
+}
+
+model ConnectedAccount {
+  id                Int                      @id @default(autoincrement())
+  userId            Int                      @map("user_id")
+  provider          ConnectedAccountProvider
+  providerAccountId String                   @map("provider_account_id")
+  emailAddress      String                   @map("email_address")
+  displayName       String?                  @map("display_name")
+  avatarUrl         String?                  @map("avatar_url")
+  grantedScopes     String[]                 @map("granted_scopes")
+
+  // Encrypted JSON representing the refresh token (and optionally access token)
+  encryptedRefreshToken String?   @map("encrypted_refresh_token")
+  encryptedAccessToken  String?   @map("encrypted_access_token")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  credentialKeyId       String    @map("credential_key_id")
+
+  status ConnectedAccountStatus @default(PENDING)
+
+  connectedAt               DateTime  @default(now()) @map("connected_at")
+  lastAuthorizedAt          DateTime? @map("last_authorized_at")
+  lastRefreshedAt           DateTime? @map("last_refreshed_at")
+  reauthorizationRequiredAt DateTime? @map("reauthorization_required_at")
+  revokedAt                 DateTime? @map("revoked_at")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@unique([userId, provider, providerAccountId])
+  @@index([userId, status])
+  @@index([provider, status])
+  @@map("connected_accounts")
+}
+
+model OAuthTransaction {
+  id        String                   @id @default(uuid())
+  provider  ConnectedAccountProvider
+  userId    Int                      @map("user_id")
+  sessionId String                   @map("session_id")
+
+  // A hash of the state nonce sent to the client/provider
+  stateHash String @unique @map("state_hash")
+
+  // PKCE verifier (encrypted or protected)
+  pkceVerifierEncrypted String @map("pkce_verifier_encrypted")
+
+  returnPath      String   @map("return_path")
+  requestedScopes String[] @map("requested_scopes")
+
+  expiresAt  DateTime  @map("expires_at")
+  consumedAt DateTime? @map("consumed_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([expiresAt])
+  @@index([stateHash])
+  @@map("oauth_transactions")
+}

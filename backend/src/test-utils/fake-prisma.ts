@@ -28,6 +28,7 @@ export interface FakeUser {
   phone: string | null;
   profileImage: string | null;
   bio: string | null;
+  googleSub: string | null;
   status: Status;
   isEmailVerified: boolean;
   isProfileCreated: boolean;
@@ -39,6 +40,16 @@ export interface FakeUser {
   lastLoginIp: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface FakeGoogleLoginTransaction {
+  id: string;
+  stateHash: string;
+  pkceVerifierEncrypted: string;
+  returnPath: string;
+  expiresAt: Date;
+  consumedAt: Date | null;
+  createdAt: Date;
 }
 
 export interface FakeUserMeta {
@@ -165,6 +176,36 @@ export interface FakeResumeExtraction {
   extractedData: unknown;
   parserVersion: string;
   confidenceScore: number | null;
+  createdAt: Date;
+}
+
+export interface FakeConnectedAccount {
+  id: number;
+  userId: number;
+  provider: 'GOOGLE';
+  providerAccountId: string;
+  emailAddress: string | null;
+  encryptedRefreshToken: string | null;
+  encryptedAccessToken: string | null;
+  credentialKeyId: string;
+  scopes: string[];
+  status: 'ACTIVE' | 'REVOKED' | 'EXPIRED';
+  lastTokenRefreshAt: Date | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FakeOAuthTransaction {
+  id: string;
+  userId: number;
+  sessionId: string;
+  provider: 'GOOGLE';
+  stateHash: string;
+  pkceVerifierEncrypted: string;
+  returnPath: string | null;
+  requestedScopes: string[];
+  expiresAt: Date;
+  consumedAt: Date | null;
   createdAt: Date;
 }
 
@@ -415,6 +456,9 @@ export class FakeDb {
   adminSessions: FakeAdminSession[] = [];
   otps: FakeOtp[] = [];
   auditLogs: FakeAuditLog[] = [];
+  connectedAccounts: FakeConnectedAccount[] = [];
+  oAuthTransactions: FakeOAuthTransaction[] = [];
+  googleLoginTransactions: FakeGoogleLoginTransaction[] = [];
   applications: FakeApplication[] = [];
   applicationSources: FakeApplicationSource[] = [];
   applicationStatusHistories: FakeApplicationStatusHistory[] = [];
@@ -434,6 +478,9 @@ export class FakeDb {
     this.adminSessions = [];
     this.otps = [];
     this.auditLogs = [];
+    this.connectedAccounts = [];
+    this.oAuthTransactions = [];
+    this.googleLoginTransactions = [];
     this.applications = [];
     this.applicationSources = [];
     this.applicationStatusHistories = [];
@@ -512,6 +559,7 @@ export class FakeDb {
       phone: null,
       profileImage: null,
       bio: null,
+      googleSub: null,
       status: Status.Active,
       isEmailVerified: true,
       isProfileCreated: false,
@@ -600,14 +648,15 @@ export class FakeDb {
           select,
           include,
         }: {
-          where: { id?: number; email?: string };
+          where: { id?: number; email?: string; googleSub?: string };
           select?: Record<string, boolean>;
           include?: { role?: boolean };
         }) => {
           const found = db.users.find(
             (u) =>
               (where.id !== undefined && u.id === where.id) ||
-              (where.email !== undefined && u.email === where.email),
+              (where.email !== undefined && u.email === where.email) ||
+              (where.googleSub !== undefined && u.googleSub === where.googleSub),
           );
           if (!found) return null;
           if (select) return project(found, select);
@@ -631,6 +680,7 @@ export class FakeDb {
             phone: null,
             profileImage: null,
             bio: null,
+            googleSub: null,
             status: Status.PendingVerification,
             isEmailVerified: false,
             isProfileCreated: false,
@@ -1066,6 +1116,166 @@ export class FakeDb {
             }
             return s;
           });
+          return { count };
+        },
+      },
+
+      connectedAccount: {
+        findUnique: async ({ where }: { where: { id: number } }) => {
+          const found = db.connectedAccounts.find((a) => a.id === where.id);
+          return found ? { ...found } : null;
+        },
+        findFirst: async ({ where }: { where: { userId?: number; provider?: string } }) => {
+          const found = db.connectedAccounts.find(
+            (a) =>
+              (where.userId === undefined || a.userId === where.userId) &&
+              (where.provider === undefined || a.provider === where.provider),
+          );
+          return found ? { ...found } : null;
+        },
+        findMany: async ({ where }: { where: { userId?: number; provider?: string } }) => {
+          return db.connectedAccounts
+            .filter(
+              (a) =>
+                (where.userId === undefined || a.userId === where.userId) &&
+                (where.provider === undefined || a.provider === where.provider),
+            )
+            .map((a) => ({ ...a }));
+        },
+        create: async ({
+          data,
+        }: {
+          data: Omit<FakeConnectedAccount, 'id' | 'createdAt' | 'updatedAt'>;
+        }) => {
+          const account: FakeConnectedAccount = {
+            id: allocId(),
+            createdAt: new Date(),
+            updatedAt: new Date(),
+            ...data,
+          } as FakeConnectedAccount;
+          db.connectedAccounts.push(account);
+          return { ...account };
+        },
+        update: async ({
+          where,
+          data,
+        }: {
+          where: { id: number };
+          data: Partial<FakeConnectedAccount>;
+        }) => {
+          const index = db.connectedAccounts.findIndex((a) => a.id === where.id);
+          if (index === -1) throw new Error(`FakeDb: connectedAccount ${where.id} not found`);
+          db.connectedAccounts[index] = {
+            ...db.connectedAccounts[index],
+            ...data,
+            updatedAt: new Date(),
+          } as FakeConnectedAccount;
+          return { ...db.connectedAccounts[index] };
+        },
+        deleteMany: async () => {
+          db.connectedAccounts = [];
+          return { count: db.connectedAccounts.length };
+        },
+      },
+
+      oAuthTransaction: {
+        findUnique: async ({ where }: { where: { id?: string; stateHash?: string } }) => {
+          let found;
+          if (where.id) {
+            found = db.oAuthTransactions.find((t) => t.id === where.id);
+          } else if (where.stateHash) {
+            found = db.oAuthTransactions.find((t) => t.stateHash === where.stateHash);
+          }
+          return found ? { ...found } : null;
+        },
+        findFirst: async ({ where }: { where: { userId?: number; sessionId?: string } }) => {
+          const found = db.oAuthTransactions.find(
+            (t) =>
+              (where.userId === undefined || t.userId === where.userId) &&
+              (where.sessionId === undefined || t.sessionId === where.sessionId),
+          );
+          return found ? { ...found } : null;
+        },
+        create: async ({ data }: { data: Omit<FakeOAuthTransaction, 'id' | 'createdAt'> }) => {
+          const tx: FakeOAuthTransaction = {
+            id: randomUUID(),
+            createdAt: new Date(),
+            ...data,
+          } as FakeOAuthTransaction;
+          db.oAuthTransactions.push(tx);
+          return { ...tx };
+        },
+        update: async ({
+          where,
+          data,
+        }: {
+          where: { id: string };
+          data: Partial<FakeOAuthTransaction>;
+        }) => {
+          const index = db.oAuthTransactions.findIndex((t) => t.id === where.id);
+          if (index === -1) throw new Error(`FakeDb: oAuthTransaction ${where.id} not found`);
+          db.oAuthTransactions[index] = {
+            ...db.oAuthTransactions[index],
+            ...data,
+          } as FakeOAuthTransaction;
+          return { ...db.oAuthTransactions[index] };
+        },
+        deleteMany: async () => {
+          db.oAuthTransactions = [];
+          return { count: db.oAuthTransactions.length };
+        },
+      },
+
+      googleLoginTransaction: {
+        findUnique: async ({ where }: { where: { id?: string; stateHash?: string } }) => {
+          let found;
+          if (where.id) {
+            found = db.googleLoginTransactions.find((t) => t.id === where.id);
+          } else if (where.stateHash) {
+            found = db.googleLoginTransactions.find((t) => t.stateHash === where.stateHash);
+          }
+          return found ? { ...found } : null;
+        },
+        create: async ({
+          data,
+        }: {
+          data: Omit<FakeGoogleLoginTransaction, 'id' | 'createdAt' | 'consumedAt'> & {
+            consumedAt?: Date | null;
+          };
+        }) => {
+          const tx: FakeGoogleLoginTransaction = {
+            id: randomUUID(),
+            createdAt: new Date(),
+            consumedAt: null,
+            ...data,
+          };
+          db.googleLoginTransactions.push(tx);
+          return { ...tx };
+        },
+        updateMany: async ({
+          where,
+          data,
+        }: {
+          where: { id?: string; consumedAt?: null };
+          data: Partial<FakeGoogleLoginTransaction>;
+        }) => {
+          let count = 0;
+          db.googleLoginTransactions = db.googleLoginTransactions.map((tx) => {
+            const idMatch = where.id === undefined || tx.id === where.id;
+            const consumedMatch =
+              where.consumedAt === undefined ||
+              (where.consumedAt === null && tx.consumedAt === null);
+            if (idMatch && consumedMatch) {
+              count += 1;
+              return { ...tx, ...data };
+            }
+            return tx;
+          });
+          return { count };
+        },
+        deleteMany: async () => {
+          const count = db.googleLoginTransactions.length;
+          db.googleLoginTransactions = [];
           return { count };
         },
       },
