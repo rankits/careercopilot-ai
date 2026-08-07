@@ -18,12 +18,16 @@ describe('ResumeScoreCard', () => {
   it('renders static copy and header elements correctly', () => {
     render(<ResumeScoreCard score={85} />);
 
-    expect(screen.getByRole('heading', { level: 2, name: RESUME_SCORE_COPY.title })).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: RESUME_SCORE_COPY.title }),
+    ).toBeInTheDocument();
     expect(screen.getByText(RESUME_SCORE_COPY.aiAnalysis)).toBeInTheDocument();
     expect(screen.getByText(RESUME_SCORE_COPY.excellent)).toBeInTheDocument();
     expect(screen.getByText(RESUME_SCORE_COPY.message)).toBeInTheDocument();
     expect(screen.getByText(RESUME_SCORE_COPY.growth)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: RESUME_SCORE_COPY.improveResume })).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: RESUME_SCORE_COPY.improveResume }),
+    ).toBeInTheDocument();
   });
 
   it('renders score ring with proper aria-label and style variable', () => {

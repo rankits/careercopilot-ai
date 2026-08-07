@@ -38,7 +38,7 @@ function Flag({ region }: { region: string }) {
       />
     );
   }
-  return <Icon style={{ display: 'block', height: 14, width: 20 }} title={region} />;
+  return <Icon aria-label={region} style={{ display: 'block', height: 14, width: 20 }} />;
 }
 
 export function CountryDialCodeSelect({ onChange, value }: CountryDialCodeSelectProps) {

@@ -548,11 +548,10 @@ export function OptimizeStep({
       const orderedIds = new Set(ordered.map((item) => item.id));
       const extras = [...appliedIds]
         .filter((id) => !orderedIds.has(id))
-        .map((id) => {
+        .flatMap((id) => {
           const fromPending = pendingSuggestions.find((item) => item.id === id);
-          return fromPending ? { ...fromPending, status: 'APPLIED' as const } : null;
-        })
-        .filter((item): item is SuggestionItem => item != null);
+          return fromPending ? [{ ...fromPending, status: 'APPLIED' as const }] : [];
+        });
       return [...rest, ...marked, ...extras];
     });
 

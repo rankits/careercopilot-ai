@@ -5,9 +5,6 @@ import type { ElementType } from 'react';
 
 import { Button } from '@/components/atoms/Button';
 
-
-
-
 import { borderRadius, colorTokens, fontSize, fontWeight, spacing } from '@/tokens';
 
 export const ResumeScoreRoot = styled(Box)({
