@@ -139,7 +139,7 @@ function BottomNavItem({
       }}
     >
       <Icon fontSize="small" />
-      <span>{item.label}</span>
+      <span>{item.shortLabel ?? item.label}</span>
     </MoreNavButton>
   );
 }
@@ -156,6 +156,7 @@ function MobileMoreDrawer({
   onOpenResumeVersions,
   onSettingsClick,
   open,
+  resumeListLoaded = false,
   userName,
 }: {
   activeItemId: string;
@@ -169,6 +170,7 @@ function MobileMoreDrawer({
   onOpenResumeVersions?: () => void;
   onSettingsClick?: () => void;
   open: boolean;
+  resumeListLoaded?: boolean;
   userName?: string;
 }) {
   return (
@@ -227,7 +229,7 @@ function MobileMoreDrawer({
         <MobileDrawerSectionLabel>{SIDEBAR_COPY.drawerResume}</MobileDrawerSectionLabel>
         <MobileDrawerList>
           <MobileDrawerItem
-            disabled={!hasLatestResume || isDownloadingLatestResume}
+            disabled={resumeListLoaded && (!hasLatestResume || isDownloadingLatestResume)}
             onClick={() => {
               onDownloadLatestResume?.();
               onClose();
@@ -297,6 +299,7 @@ export function Sidebar({
   onOpenResumeVersions,
   onSettingsClick,
   onVariantChange,
+  resumeListLoaded = false,
   tone = 'light',
   userName,
   variant = 'open',
@@ -351,6 +354,7 @@ export function Sidebar({
           onOpenResumeVersions={onOpenResumeVersions}
           onSettingsClick={onSettingsClick}
           open={moreOpen}
+          resumeListLoaded={resumeListLoaded}
           userName={userName}
         />
       </>
@@ -404,10 +408,12 @@ export function Sidebar({
           <Typography sx={sidebarTextSx.muted}>
             {hasLatestResume
               ? 'Download your most recent uploaded resume.'
-              : 'No resume uploaded yet. Add one from Edit Profile.'}
+              : resumeListLoaded
+                ? 'No resume uploaded yet. Add one from Edit Profile.'
+                : 'Download your most recent uploaded resume.'}
           </Typography>
           <Button
-            disabled={!hasLatestResume}
+            disabled={resumeListLoaded && !hasLatestResume}
             fullWidth
             isLoading={isDownloadingLatestResume}
             onClick={onDownloadLatestResume}

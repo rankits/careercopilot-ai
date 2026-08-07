@@ -11,6 +11,7 @@ import {
   requestLoginOtpController,
   resendOtpController,
   resetPasswordController,
+  verifyForgotPasswordOtpController,
   verifyLoginOtpController,
 } from '@/modules/auth/controllers/auth.controller.js';
 import { authMiddleware } from '@/shared/middlewares/auth.middleware.js';
@@ -27,6 +28,7 @@ import {
   registerSchema,
   resendOtpSchema,
   resetPasswordSchema,
+  verifyForgotPasswordOtpSchema,
 } from '@/modules/auth/validations/auth.schema.js';
 
 const router = express.Router();
@@ -56,6 +58,12 @@ router.post(
   otpRateLimiter,
   validateResource(forgotPasswordSchema),
   forgotPasswordController,
+);
+router.post(
+  '/forgot-password/verify-otp',
+  authRateLimiter,
+  validateResource(verifyForgotPasswordOtpSchema),
+  verifyForgotPasswordOtpController,
 );
 router.post(
   '/reset-password',

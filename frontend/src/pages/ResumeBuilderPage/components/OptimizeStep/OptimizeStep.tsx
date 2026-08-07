@@ -94,7 +94,7 @@ export function OptimizeStep({
   applyingId,
   editedContent,
   jobDescription = '',
-  preferredSkills = [],
+  preferredSkills: _preferredSkills = [],
   recheckResult = null,
   saving,
   suggestions,
@@ -111,6 +111,7 @@ export function OptimizeStep({
 }: OptimizeStepProps) {
   void saving;
   void onSaveContent;
+  void _preferredSkills;
   const { showToast } = useToast();
   const previewRef = useRef<HTMLDivElement>(null);
   const lastParseKey = useRef<string>('');
@@ -123,6 +124,7 @@ export function OptimizeStep({
     ),
   );
   const draftRef = useRef(draft);
+  const [previewEpoch, setPreviewEpoch] = useState(0);
   useEffect(() => {
     draftRef.current = draft;
   }, [draft]);
@@ -130,49 +132,42 @@ export function OptimizeStep({
   const [localOverrides, setLocalOverrides] = useState<SuggestionItem[]>([]);
   const skillBundleServerIdsRef = useRef<number[]>([]);
 
-  // Re-parse once per analysis into the app's structured default draft.
+  // Re-parse once per analysis identity — not when Apply updates editedContent
+  // (that race was wiping the live preview back to the pre-apply parse).
   useEffect(() => {
     const source = analysis?.editedContent || editedContent;
     if (!source) return;
     const parseKey =
       analysis?.id != null
-        ? `analysis:${analysis.id}:${analysis.resumeId}:v12`
+        ? `analysis:${analysis.id}:${analysis.resumeId}:v13`
         : `local:${source.slice(0, 96)}:${source.length}`;
     if (lastParseKey.current === parseKey) return;
     lastParseKey.current = parseKey;
     const parsed = parseResumeContent(source, targetRole || analysis?.targetRole || '');
+    // Do NOT inject optimizedSummary here — Apply must be what updates the preview.
+    // Pre-aligning made summary/skills Apply look like a no-op on the live preview.
     const aligned = alignDraftToJob(parsed, {
-      preferredSkills,
       jobDescription,
       matchedSkills: analysis?.skillAnalysis?.matchedSkills,
-      recommendedSkills: [
-        ...(analysis?.skillAnalysis?.recommendedSkills ?? []),
-        ...(analysis?.skillAnalysis?.missingSkills ?? []),
-      ],
-      optimizedSummary: analysis?.optimizedSummary,
       targetRole: targetRole || analysis?.targetRole || '',
     });
     // Fresh upload/analysis: trust the new parse. Do not merge stale previous sections.
     draftRef.current = aligned;
     setDraft(aligned);
+    setPreviewEpoch((value) => value + 1);
     const serialized = serializeResumeDraft(aligned);
     if (serialized) onEditedContentChange(serialized);
-    // Intentionally omit editedContent / preferredSkills — user edits merge via separate effect.
+    // Intentionally omit editedContent / preferredSkills / optimizedSummary —
+    // Apply + editor own the draft after first parse; parent content sync must not reset preview.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analysis?.id, analysis?.resumeId, analysis?.editedContent]);
+  }, [analysis?.id, analysis?.resumeId]);
 
-  // Merge Define-Role preferred skills into the live draft without re-parsing.
-  // Do NOT depend on skillAnalysis — recheck after Apply must not reshuffle suggestions/skills.
+  // Keep role aligned to Define Role target — do not auto-inject preferred skills.
   useEffect(() => {
-    if (!preferredSkills.length) return;
-    setDraft((current) =>
-      alignDraftToJob(current, {
-        preferredSkills,
-        jobDescription,
-        targetRole: targetRole || analysis?.targetRole || '',
-      }),
-    );
-  }, [preferredSkills, jobDescription, targetRole, analysis?.targetRole]);
+    const role = (targetRole || analysis?.targetRole || '').trim();
+    if (!role) return;
+    setDraft((current) => (current.role === role ? current : { ...current, role }));
+  }, [targetRole, analysis?.targetRole]);
 
   // One-pass OCR glyph cleanup (Σ/Θ etc.) so preview text is readable.
   const ocrCleaned = useRef(false);
@@ -220,32 +215,32 @@ export function OptimizeStep({
     if (spellingFixes.length === 0) return;
     autoAppliedSpelling.current = true;
 
-    setDraft((current) => {
-      let next = current;
-      for (const suggestion of spellingFixes) {
-        const sectionId = normalizeSuggestionCategory(suggestion.category);
-        next = {
-          ...applyTextReplaceToDraft(
-            next,
-            sectionId,
-            suggestion.originalText,
-            suggestion.suggestedText,
-          ),
-          role: targetRole || analysis?.targetRole || next.role || '',
-          originalText: next.originalText,
-        };
-      }
-      draftRef.current = next;
-      const serialized = serializeResumeDraft(next);
-      if (serialized) onEditedContentChange(serialized);
-      const serverIds = spellingFixes
-        .map((suggestion) => suggestion.id)
-        .filter((id) => !isLocalSuggestionId(id));
-      if (serverIds.length > 0) {
-        onApplyAllSuggestions(serverIds, serialized);
-      }
-      return next;
-    });
+    let next = draftRef.current;
+    for (const suggestion of spellingFixes) {
+      const sectionId = normalizeSuggestionCategory(suggestion.category);
+      next = {
+        ...applyTextReplaceToDraft(
+          next,
+          sectionId,
+          suggestion.originalText,
+          suggestion.suggestedText,
+        ),
+        role: targetRole || analysis?.targetRole || next.role || '',
+      };
+    }
+    const serialized = serializeResumeDraft(next) || next.originalText;
+    next = { ...next, originalText: serialized };
+    draftRef.current = next;
+    setDraft(next);
+    setPreviewEpoch((value) => value + 1);
+    if (serialized) onEditedContentChange(serialized);
+    const serverIds = spellingFixes
+      .map((suggestion) => suggestion.id)
+      .filter((id) => !isLocalSuggestionId(id));
+    // Mark spelling applied without the full Apply-All recheck/getAnalysis chain.
+    for (const id of serverIds) {
+      onApplySuggestion(id, serialized);
+    }
 
     const localSpelling = spellingFixes.filter((item) => isLocalSuggestionId(item.id));
     if (localSpelling.length > 0) {
@@ -258,7 +253,7 @@ export function OptimizeStep({
   }, [
     analysis?.id,
     analysis?.targetRole,
-    onApplyAllSuggestions,
+    onApplySuggestion,
     onEditedContentChange,
     suggestions,
     targetRole,
@@ -381,16 +376,25 @@ export function OptimizeStep({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- intentionally keyed
   }, [improvedScore, liveSkillsKey, onLiveAtsChange]);
 
-  const pushDraftToParent = (next: ResumeDraft) => {
-    const serialized = serializeResumeDraft(next) || editedContent || analysis?.editedContent || '';
-    draftRef.current = next;
-    setDraft(next);
+  const pushDraftToParent = (next: ResumeDraft, options?: { fromApply?: boolean }) => {
+    const withOriginal = options?.fromApply
+      ? {
+          ...next,
+          // Keep "original" template + export fallback in sync with structured edits.
+          originalText: serializeResumeDraft(next) || next.originalText,
+        }
+      : next;
+    const serialized =
+      serializeResumeDraft(withOriginal) || editedContent || analysis?.editedContent || '';
+    draftRef.current = withOriginal;
+    setDraft(withOriginal);
+    if (options?.fromApply) setPreviewEpoch((value) => value + 1);
     if (serialized) onEditedContentChange(serialized);
     return serialized;
   };
 
   const commitAppliedDraft = (next: ResumeDraft) => {
-    return pushDraftToParent(next);
+    return pushDraftToParent(next, { fromApply: true });
   };
 
   const markLocalApplied = (suggestion: SuggestionItem) => {
@@ -425,13 +429,14 @@ export function OptimizeStep({
       ...applyTextReplaceToDraft(
         current,
         sectionId,
-        sectionId === 'skills' ? '' : suggestion.originalText,
         sectionId === 'skills'
-          ? skillsFromSuggestion(suggestion).join(', ')
+          ? suggestion.originalText || current.skillsList.join(', ')
+          : suggestion.originalText,
+        sectionId === 'skills'
+          ? skillsFromSuggestion(suggestion).join(', ') || suggestion.suggestedText
           : suggestion.suggestedText,
       ),
       role: targetRole || analysis?.targetRole || current.role || '',
-      originalText: current.originalText,
     };
     const serialized = commitAppliedDraft(next);
     setSelectedSuggestionId(null);
@@ -503,9 +508,13 @@ export function OptimizeStep({
           continue;
         }
         next = {
-          ...applyTextReplaceToDraft(next, 'skills', '', missing.join(', ')),
+          ...applyTextReplaceToDraft(
+            next,
+            'skills',
+            suggestion.originalText || next.skillsList.join(', '),
+            missing.join(', '),
+          ),
           role: targetRole || analysis?.targetRole || next.role || '',
-          originalText: next.originalText,
         };
       } else {
         next = {
@@ -516,7 +525,6 @@ export function OptimizeStep({
             suggestion.suggestedText,
           ),
           role: targetRole || analysis?.targetRole || next.role || '',
-          originalText: next.originalText,
         };
       }
 
@@ -708,16 +716,24 @@ export function OptimizeStep({
                 </EmptyHint>
               ) : (
                 sectionSuggestions.map((suggestion) => {
+                  const suggestionSection = normalizeSuggestionCategory(suggestion.category);
                   const skillLabels =
-                    normalizeSuggestionCategory(suggestion.category) === 'skills'
-                      ? skillsFromSuggestion(suggestion)
-                      : [];
+                    suggestionSection === 'skills' ? skillsFromSuggestion(suggestion) : [];
                   const skillLabel = skillLabels.join(', ');
                   const alreadyAdded =
                     skillLabels.length > 0 &&
                     skillLabels.every((skill) =>
                       draft.skillsList.some((item) => item.toLowerCase() === skill.toLowerCase()),
                     );
+                  const beforeText =
+                    suggestionSection === 'skills'
+                      ? draft.skillsList.join(', ') || 'No skills yet'
+                      : getSectionText(
+                          draft,
+                          suggestionSection === 'other' ? 'summary' : suggestionSection,
+                        ) ||
+                        suggestion.originalText ||
+                        'No excerpt available';
 
                   return (
                     <SuggestionCard
@@ -745,24 +761,18 @@ export function OptimizeStep({
                           <Typography className="label">
                             {isSentenceSection ? 'Current sentence' : 'Before'}
                           </Typography>
-                          <Typography className="body">
-                            {normalizeSuggestionCategory(suggestion.category) === 'skills'
-                              ? draft.skillsList.join(', ') || 'No skills yet'
-                              : suggestion.originalText ||
-                                getSectionText(draft, activeSection) ||
-                                'No excerpt available'}
-                          </Typography>
+                          <Typography className="body">{beforeText}</Typography>
                         </Box>
                         <Box className="pane after">
                           <Typography className="label">
                             {isSentenceSection
                               ? 'Improved sentence'
-                              : normalizeSuggestionCategory(suggestion.category) === 'skills'
+                              : suggestionSection === 'skills'
                                 ? 'Skill to add'
                                 : 'After (AI)'}
                           </Typography>
                           <Typography className="body">
-                            {normalizeSuggestionCategory(suggestion.category) === 'skills'
+                            {suggestionSection === 'skills'
                               ? skillLabel || suggestion.suggestedText
                               : suggestion.suggestedText}
                           </Typography>
@@ -886,6 +896,7 @@ export function OptimizeStep({
 
           <PreviewResumeScroll>
             <ResumeTemplatePreview
+              key={`preview-${previewEpoch}`}
               ref={previewRef}
               draft={draft}
               template={template}

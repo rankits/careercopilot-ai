@@ -33,7 +33,7 @@ describe('estimateImprovedAtsScore', () => {
     expect(score).toBeLessThanOrEqual(94);
   });
 
-  it('varies with live JD skill coverage instead of sticking at baseline', () => {
+  it('stays at baseline when no suggestions were applied even if content covers JD skills', () => {
     const low = estimateImprovedAtsScore({
       baseline: 45,
       content: 'React CSS HTML designer',
@@ -41,16 +41,24 @@ describe('estimateImprovedAtsScore', () => {
       missingSkills: ['Java', 'Spring Boot', 'Hibernate', 'Kafka'],
       appliedCount: 0,
     });
-    const high = estimateImprovedAtsScore({
+    const highWithoutApply = estimateImprovedAtsScore({
       baseline: 45,
       content: 'Java Spring Boot Hibernate Kafka React',
       matchedSkills: ['Java', 'Spring Boot'],
       missingSkills: ['Hibernate', 'Kafka'],
       appliedCount: 0,
     });
+    const highWithApply = estimateImprovedAtsScore({
+      baseline: 45,
+      content: 'Java Spring Boot Hibernate Kafka React',
+      matchedSkills: ['Java', 'Spring Boot'],
+      missingSkills: ['Hibernate', 'Kafka'],
+      appliedCount: 2,
+    });
 
-    expect(high).toBeGreaterThan(low);
-    expect(high).toBeGreaterThan(45);
+    expect(low).toBe(45);
+    expect(highWithoutApply).toBe(45);
+    expect(highWithApply).toBeGreaterThan(45);
   });
 
   it('floors near Export when optimize succeeds from applied fixes + skill recovery', () => {

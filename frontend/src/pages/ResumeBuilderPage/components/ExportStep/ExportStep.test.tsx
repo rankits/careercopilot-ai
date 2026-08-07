@@ -11,6 +11,7 @@ describe('ExportStep', () => {
   it('shows recheck improvement and export actions', () => {
     const onExport = vi.fn();
     const onDone = vi.fn();
+    const onCreateNewResume = vi.fn();
     render(
       <ExportStep
         analysis={
@@ -47,6 +48,7 @@ describe('ExportStep', () => {
         targetRole="Java Developer"
         template="original"
         onDone={onDone}
+        onCreateNewResume={onCreateNewResume}
         onExport={onExport}
         onTemplateChange={vi.fn()}
       />,
@@ -59,6 +61,9 @@ describe('ExportStep', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /Download PDF/i }));
     expect(onExport).toHaveBeenCalledWith('pdf', null);
+
+    fireEvent.click(screen.getByRole('button', { name: /Create New Resume/i }));
+    expect(onCreateNewResume).toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole('button', { name: /Save Resume/i }));
     expect(onDone).toHaveBeenCalled();

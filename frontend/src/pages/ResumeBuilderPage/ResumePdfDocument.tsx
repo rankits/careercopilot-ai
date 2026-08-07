@@ -258,24 +258,41 @@ function EntryBlock({
   entry,
   styles,
   showCompanyLine,
+  kind = 'experience',
 }: {
   entry: ResumeDraft['experiences'][number];
   styles: ReturnType<typeof buildStyles>;
   showCompanyLine?: boolean;
+  kind?: 'experience' | 'project';
 }) {
   const bullets = toBullets(entry.details);
+  const rawTitle = entry.title.trim();
+  const entryTitle =
+    kind === 'project'
+      ? rawTitle && !/^(projects?|project\s+\d+|role)$/i.test(rawTitle)
+        ? rawTitle
+        : entry.company.trim() && !/^https?:\/\//i.test(entry.company)
+          ? entry.company.trim()
+          : bullets[0] && bullets[0].length < 70 && bullets[0].split(/\s+/).length <= 8
+            ? bullets[0]
+            : 'Project'
+      : rawTitle || entry.company.trim() || 'Role';
+
   return (
     <View style={styles.entry} wrap={false} minPresenceAhead={48}>
       <View style={styles.entryTop}>
         <View>
-          <Text style={styles.entryTitle}>{entry.title || 'Role'}</Text>
-          {showCompanyLine && entry.company ? (
+          <Text style={styles.entryTitle}>{entryTitle}</Text>
+          {showCompanyLine &&
+          entry.company &&
+          entryTitle !== entry.company &&
+          !/^https?:\/\//i.test(entry.company) ? (
             <Text style={styles.entryCompany}>{entry.company}</Text>
           ) : null}
         </View>
         <Text style={styles.entryMeta}>{formatDateRange(entry.startDate, entry.endDate)}</Text>
       </View>
-      {!showCompanyLine && entry.company ? (
+      {!showCompanyLine && entry.company && kind === 'experience' ? (
         <Text style={styles.entryMeta}>{entry.company}</Text>
       ) : null}
       {bullets.map((line, index) => (
@@ -310,13 +327,8 @@ function MainBody({
       {!omitSkills && draft.skillsList.length > 0 ? (
         <View style={styles.section} wrap={false}>
           <Text style={styles.heading}>Skills</Text>
-          <View style={styles.skillsGrid}>
-            {draft.skillsList.map((skill) => (
-              <Text key={skill} style={styles.skillItem}>
-                • {skill}
-              </Text>
-            ))}
-          </View>
+          {/* Comma-separated: PDF text extract round-trips cleanly on re-upload */}
+          <Text style={styles.body}>{draft.skillsList.join(', ')}</Text>
         </View>
       ) : null}
 
@@ -328,7 +340,13 @@ function MainBody({
           {draft.experiences
             .filter((item) => item.title || item.company || item.details)
             .map((entry) => (
-              <EntryBlock key={entry.id} entry={entry} styles={styles} showCompanyLine />
+              <EntryBlock
+                key={entry.id}
+                entry={entry}
+                styles={styles}
+                showCompanyLine
+                kind="experience"
+              />
             ))}
         </View>
       ) : null}
@@ -341,7 +359,13 @@ function MainBody({
           {draft.projectsList
             .filter((item) => item.title || item.company || item.details)
             .map((entry) => (
-              <EntryBlock key={entry.id} entry={entry} styles={styles} showCompanyLine />
+              <EntryBlock
+                key={entry.id}
+                entry={entry}
+                styles={styles}
+                showCompanyLine
+                kind="project"
+              />
             ))}
         </View>
       ) : null}
@@ -420,11 +444,7 @@ export function ResumePdfDocument({
               {draft.skillsList.length > 0 ? (
                 <View>
                   <Text style={styles.sidebarHeading}>Skills</Text>
-                  {draft.skillsList.map((skill) => (
-                    <Text key={skill} style={styles.sidebarSkillItem}>
-                      • {skill}
-                    </Text>
-                  ))}
+                  <Text style={styles.sidebarSkillsLine}>{draft.skillsList.join(', ')}</Text>
                 </View>
               ) : null}
               {draft.education ? (

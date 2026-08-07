@@ -29,17 +29,15 @@ describe('buildJobSearchWhere', () => {
     );
   });
 
-  it('does not accept a currency filter key (removed from contract)', () => {
-    const where = buildJobSearchWhere({
-      // @ts-expect-error currency intentionally removed from JobSearchFilters
-      currency: 'USD',
-      minSalary: 100,
-    });
-    expect(where).toMatchObject({
+  it('scopes salary filters to the requested currency', () => {
+    expect(buildJobSearchWhere({ currency: 'usd', minSalary: 100 })).toEqual({
       status: 'ACTIVE',
-      salaryMax: { gte: 100 },
+      currency: 'USD',
+      OR: [
+        { salaryMax: { gte: 100 } },
+        { AND: [{ salaryMax: null }, { salaryMin: { gte: 100 } }] },
+      ],
     });
-    expect(JSON.stringify(where)).not.toMatch(/currency/i);
   });
 
   it('applies postedSince against effectivePostedAt', () => {
@@ -108,11 +106,73 @@ describe('buildJobSearchWhere', () => {
     ]);
   });
 
-  it('applies maxSalary against salaryMin', () => {
-    expect(buildJobSearchWhere({ maxSalary: 100000 })).toEqual({
-      status: 'ACTIVE',
-      salaryMin: { lte: 100000 },
-    });
+  it('applies maxSalary across currencies using USD-band conversion', () => {
+    const where = buildJobSearchWhere({ maxSalary: 100000 });
+    expect(where.status).toBe('ACTIVE');
+    expect(where.AND).toEqual([
+      {
+        OR: expect.arrayContaining([
+          {
+            currency: 'USD',
+            OR: [
+              { salaryMax: { lte: 100000 } },
+              { AND: [{ salaryMax: null }, { salaryMin: { lte: 100000 } }] },
+            ],
+          },
+          {
+            currency: 'EUR',
+            OR: [
+              { salaryMax: { lte: 92000 } },
+              { AND: [{ salaryMax: null }, { salaryMin: { lte: 92000 } }] },
+            ],
+          },
+          {
+            currency: 'INR',
+            OR: [
+              { salaryMax: { lte: 83 } },
+              { AND: [{ salaryMax: null }, { salaryMin: { lte: 83 } }] },
+            ],
+          },
+        ]),
+      },
+    ]);
+  });
+
+  it('expands USD salary bands across currencies when currency is omitted', () => {
+    const where = buildJobSearchWhere({ minSalary: 50000, maxSalary: 100000 });
+    expect(where.AND).toEqual([
+      {
+        OR: expect.arrayContaining([
+          {
+            currency: 'USD',
+            OR: [
+              { salaryMax: { gte: 50000, lte: 100000 } },
+              {
+                AND: [{ salaryMax: null }, { salaryMin: { gte: 50000, lte: 100000 } }],
+              },
+            ],
+          },
+          {
+            currency: 'EUR',
+            OR: [
+              { salaryMax: { gte: 46000, lte: 92000 } },
+              {
+                AND: [{ salaryMax: null }, { salaryMin: { gte: 46000, lte: 92000 } }],
+              },
+            ],
+          },
+          {
+            currency: 'INR',
+            OR: [
+              { salaryMax: { gte: 41.5, lte: 83 } },
+              {
+                AND: [{ salaryMax: null }, { salaryMin: { gte: 41.5, lte: 83 } }],
+              },
+            ],
+          },
+        ]),
+      },
+    ]);
   });
 
   it('drops blank filter values entirely', () => {

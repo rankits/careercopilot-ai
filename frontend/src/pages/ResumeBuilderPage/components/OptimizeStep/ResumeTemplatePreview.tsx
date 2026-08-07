@@ -35,7 +35,9 @@ function toBullets(text: string): string[] {
     .replace(/\r\n/g, '\n')
     // Break inline bullet runs onto their own lines (common in OCR / pasted resumes).
     .replace(/(?:^|\s)[•●▪▸►]\s+/g, '\n')
-    .replace(/(?:^|\s)[-*]\s+(?=[A-Z0-9])/g, '\n');
+    .replace(/(?:^|\s)[-*]\s+(?=[A-Z0-9])/g, '\n')
+    // Split glued "sentence. Next responsibility" into separate bullets when needed.
+    .replace(/([.!?])\s+(?=[A-Z])/g, '$1\n');
 
   const out: string[] = [];
   for (const raw of normalized.split(/\n/)) {
@@ -49,10 +51,13 @@ function toBullets(text: string): string[] {
 
     const prev = out[out.length - 1];
     const hadBullet = /^[\s|]*[-*•●·▪▸►]/.test(raw);
+    // Only merge soft wrap fragments — never glue two full sentences/bullets.
     if (
       prev &&
       !hadBullet &&
-      (/^[a-z]/.test(line) || /[,;:/-]$/.test(prev) || (!/[.!?]$/.test(prev) && prev.length > 30))
+      line.length < 50 &&
+      (/^[a-z]/.test(line) || /[,;:/-]$/.test(prev)) &&
+      !/[.!?]$/.test(prev)
     ) {
       out[out.length - 1] = `${prev} ${line}`.replace(/\s+/g, ' ').trim();
       continue;
@@ -78,13 +83,13 @@ function SkillsBlock({ skills }: { skills: string[] }) {
   return (
     <Box className="block">
       <Typography className="heading">Skills</Typography>
-      <ul className="skills-list">
-        {skills.map((skill, index) => (
-          <li key={`${skill}-${index}`} className="skill-item">
+      <Box className="skills-list" component="ul">
+        {skills.map((skill) => (
+          <Box key={skill} className="skill-item" component="li">
             {skill}
-          </li>
+          </Box>
         ))}
-      </ul>
+      </Box>
     </Box>
   );
 }
@@ -92,6 +97,7 @@ function SkillsBlock({ skills }: { skills: string[] }) {
 function EntryList({
   title,
   entries,
+  kind = 'experience',
 }: {
   title: string;
   entries: Array<{
@@ -102,10 +108,11 @@ function EntryList({
     endDate: string;
     details: string;
   }>;
+  kind?: 'experience' | 'project';
 }) {
   const visible = entries.filter((entry) => {
     const hasBody = Boolean(entry.company || entry.details);
-    const titleLooksLikeSection = /^(projects?|work experience|experience)$/i.test(
+    const titleLooksLikeSection = /^(projects?|work experience|experience|role)$/i.test(
       entry.title.trim(),
     );
     // Drop empty section-noise rows that would reprint the heading as an entry title.
@@ -113,20 +120,60 @@ function EntryList({
     return Boolean(entry.company || entry.title || entry.details);
   });
   if (visible.length === 0) return null;
+
+  const resolveTitle = (entry: (typeof visible)[number]): string => {
+    const raw = entry.title.trim();
+    if (kind === 'project') {
+      if (raw && !/^(projects?|project\s+\d+|role)$/i.test(raw)) return raw;
+      const company = entry.company.trim();
+      if (company && !/^https?:\/\//i.test(company) && !/^www\./i.test(company)) return company;
+      const firstDetail = entry.details
+        .split(/\n/)
+        .map((line) =>
+          line
+            .replace(/^[\s|]*[-*•●·▪▸►]+[\s·.•]*/g, '')
+            .replace(/\s+/g, ' ')
+            .trim(),
+        )
+        .find(
+          (line) =>
+            line &&
+            line.length < 70 &&
+            line.split(/\s+/).length <= 8 &&
+            !/^(built|developed|implemented|created|designed|stack:|tech)/i.test(line),
+        );
+      return firstDetail || 'Project';
+    }
+    if (/^(projects?|work experience|experience|role)$/i.test(raw)) {
+      return entry.company.trim() || raw || 'Role';
+    }
+    return raw || entry.company.trim() || 'Role';
+  };
+
   return (
     <Box className="block">
       <Typography className="heading">{title}</Typography>
       {visible.map((entry) => {
         const bullets = toBullets(entry.details);
-        const entryTitle = /^(projects?|work experience|experience)$/i.test(entry.title.trim())
-          ? entry.company || 'Role'
-          : entry.title || 'Role';
+        const entryTitle = resolveTitle(entry);
+        const showCompany =
+          Boolean(entry.company) &&
+          entryTitle !== entry.company &&
+          !/^https?:\/\//i.test(entry.company) &&
+          (kind === 'experience' || entry.company.trim().length > 0);
         return (
-          <Box key={entry.id} className="entry">
+          <Box key={entry.id} className={`entry${kind === 'project' ? ' entry-project' : ''}`}>
             <Box className="entry-top">
               <Box>
-                <Typography className="entry-title">{entryTitle}</Typography>
-                {entry.company && entryTitle !== entry.company ? (
+                <Typography
+                  className={kind === 'project' ? 'entry-title project-title' : 'entry-title'}
+                >
+                  {entryTitle}
+                </Typography>
+                {showCompany && kind === 'experience' ? (
+                  <Typography className="entry-company">{entry.company}</Typography>
+                ) : null}
+                {showCompany && kind === 'project' && !/^https?:\/\//i.test(entry.company) ? (
                   <Typography className="entry-company">{entry.company}</Typography>
                 ) : null}
               </Box>
@@ -180,8 +227,8 @@ function MainSections({ draft }: { draft: ResumeDraft }) {
     <>
       <TextBlock title="Professional Summary" body={draft.summary} />
       <SkillsBlock skills={draft.skillsList} />
-      <EntryList title="Work Experience" entries={experiences} />
-      <EntryList title="Projects" entries={projects} />
+      <EntryList title="Work Experience" entries={experiences} kind="experience" />
+      <EntryList title="Projects" entries={projects} kind="project" />
       <TextBlock title="Education" body={draft.education} />
       <TextBlock title="Certifications" body={draft.certifications} />
       <TextBlock title="Achievements" body={draft.achievements} />
@@ -232,12 +279,14 @@ function StructuredResumeBody({
           <TextBlock title="Professional Summary" body={draft.summary} />
           <EntryList
             title="Work Experience"
+            kind="experience"
             entries={draft.experiences.filter(
               (entry) => entry.company || entry.title || entry.details,
             )}
           />
           <EntryList
             title="Projects"
+            kind="project"
             entries={draft.projectsList.filter((entry) => {
               const hasBody = Boolean(entry.company || entry.details);
               const titleLooksLikeSection = /^(projects?)$/i.test(entry.title.trim());

@@ -12,9 +12,9 @@ export const jobFilters: Omit<JobFilter, 'active'>[] = [
 
 export const salaryOptions: FilterDropdownOption[] = [
   { label: 'All Salary', value: 'all' },
-  { label: 'Under 50k', value: 'under-50k' },
-  { label: '50k - 100k', value: '50-100k' },
-  { label: '100k+', value: '100k-plus' },
+  { label: 'Under $50k', value: 'under-50k' },
+  { label: '$50k - $100k', value: '50-100k' },
+  { label: '$100k+', value: '100k-plus' },
 ];
 
 export const sortOptions: FilterDropdownOption[] = [
@@ -110,6 +110,7 @@ export function salaryBandToApiRange(band: string): {
   minSalary: number | undefined;
   maxSalary: number | undefined;
 } {
+  // Bands are USD annual. Backend converts them across currencies (EUR, INR LPA, …).
   if (band === 'under-50k') return { minSalary: undefined, maxSalary: 50_000 };
   if (band === '50-100k') return { minSalary: 50_000, maxSalary: 100_000 };
   if (band === '100k-plus') return { minSalary: 100_000, maxSalary: undefined };

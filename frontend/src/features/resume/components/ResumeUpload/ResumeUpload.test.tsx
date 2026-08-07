@@ -17,7 +17,7 @@ describe('ResumeUpload', () => {
     expect(screen.getByText('Drag and drop or browse your device')).toBeInTheDocument();
     expect(screen.getByLabelText('Choose resume')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /browse files/i })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /parse resume/i })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /parse resume/i })).toBeDisabled();
   });
 
   it('selects a valid PDF file and displays file name and size', async () => {

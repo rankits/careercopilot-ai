@@ -26,7 +26,7 @@ export function LoginPage() {
           const result = await submit(values);
 
           if (result.succeeded) {
-            showToast({ message: 'Signed in successfully', severity: 'success' });
+            showToast({ message: 'Logged in successfully', severity: 'success' });
           } else {
             showToast({
               message: result.errorMessage ?? 'Unable to log in. Please try again.',

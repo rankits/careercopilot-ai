@@ -91,6 +91,8 @@ describe('skill-normalizer', () => {
     expect(skillMatchKey('Node.js')).toBe(skillMatchKey('Node'));
     expect(normalizeProfessionalSkill('React.js')).toBe('React');
     expect(normalizeProfessionalSkill('react.js')).toBe('React');
+    expect(normalizeProfessionalSkill('angular')).toBe('Angular');
+    expect(normalizeProfessionalSkill('AngularJS')).toBe('Angular');
     expect(skillAppearsIn('Built UI with React and TypeScript', 'React.js')).toBe(true);
     expect(skillAppearsIn('Experienced with Node.js APIs', 'Node')).toBe(true);
     expect(skillAppearsIn('Java Spring Boot services', 'Spring Boot')).toBe(true);
@@ -99,11 +101,19 @@ describe('skill-normalizer', () => {
     expect(skillAppearsIn('Skills: ReactJS, NodeJS, NextJS', 'Node.js')).toBe(true);
     expect(skillAppearsIn('Skills: ReactJS, NodeJS, NextJS', 'Next.js')).toBe(true);
     expect(skillAppearsIn('Technical Skills\nJavaScript | React . js | HTML5', 'React')).toBe(true);
+    expect(skillAppearsIn('SKILLS\nangular, typescript, rxjs', 'Angular')).toBe(true);
+    expect(skillAppearsIn('Built dashboards with AngularJS', 'Angular')).toBe(true);
   });
 
   it('extracts glued JS skill names from resume prose', () => {
     expect(
       extractProfessionalSkillsFromText('SKILLS\nReactJS, NodeJS, TypeScript, ExpressJS'),
     ).toEqual(expect.arrayContaining(['React', 'Node.js', 'TypeScript', 'Express']));
+  });
+
+  it('extracts space-separated PDF skill grids', () => {
+    expect(
+      extractProfessionalSkillsFromText('SKILLS\nReact TypeScript Angular Docker AWS'),
+    ).toEqual(expect.arrayContaining(['React', 'TypeScript', 'Angular', 'Docker', 'AWS']));
   });
 });

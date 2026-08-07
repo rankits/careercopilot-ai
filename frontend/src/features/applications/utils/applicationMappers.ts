@@ -145,6 +145,42 @@ export function mapUiStatusToApi(status: ApplicationStatus): ApiApplicationStatu
   return status.toUpperCase() as ApiApplicationStatus;
 }
 
+/** Expand UI status tabs that collapse multiple API statuses. */
+export function mapUiStatusTabToApiStatuses(status: string): ApiApplicationStatus[] {
+  if (status === 'offer') {
+    return ['OFFER', 'ACCEPTED', 'HIRED'];
+  }
+  if (status === 'withdrawn') {
+    return ['WITHDRAWN', 'GHOSTED', 'EXPIRED'];
+  }
+  return [mapUiStatusToApi(status as ApplicationStatus)];
+}
+
+export function mapUiSourceToApi(source: string): ApiApplicationSourceType[] | undefined {
+  if (source === 'all') {
+    return undefined;
+  }
+  if (source === 'platform-apply') {
+    return ['PLATFORM_APPLY'];
+  }
+  if (source === 'platform-job') {
+    return ['PLATFORM_JOB'];
+  }
+  if (source === 'external-url') {
+    return [
+      'MANUAL',
+      'EXTERNAL_JOB_URL',
+      'EMAIL_IMPORT',
+      'ATS_IMPORT',
+      'BROWSER_EXTENSION',
+      'CSV_IMPORT',
+      'EXTERNAL_API',
+      'AI_ASSISTED',
+    ];
+  }
+  return undefined;
+}
+
 export function mapUiPriorityToApi(priority: ApplicationPriority): ApiApplicationPriority {
   return priority.toUpperCase() as ApiApplicationPriority;
 }
@@ -210,9 +246,11 @@ export function mapUiSortToApi(sortBy: string): ApplicationSortBy | undefined {
     case 'recently-updated':
       return 'updatedAt:desc';
     case 'applied-date':
-      return 'createdAt:desc';
+      return 'appliedAt:desc';
     case 'company':
       return 'companyName:asc';
+    case 'priority':
+      return 'priority:desc';
     default:
       return undefined;
   }

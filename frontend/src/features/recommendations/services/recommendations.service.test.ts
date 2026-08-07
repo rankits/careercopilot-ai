@@ -170,7 +170,7 @@ describe('recommendationsService', () => {
     expect(result.run.id).toBe('run-1');
   });
 
-  it('loads similar jobs with a bounded limit', async () => {
+  it('loads similar jobs with an optional limit', async () => {
     getMock.mockResolvedValue({
       data: {
         data: [
@@ -186,13 +186,20 @@ describe('recommendationsService', () => {
       },
     });
 
-    const result = await recommendationsService.getSimilarJobs('job-1', { limit: 5 });
+    const limited = await recommendationsService.getSimilarJobs('job-1', { limit: 5 });
     expect(getMock).toHaveBeenCalledWith(
       '/job-recommendations/similar/job-1',
       expect.objectContaining({ params: { limit: 5 } }),
     );
-    expect(result).toHaveLength(1);
-    expect(result[0]?.displayScore).toBe(84);
+    expect(limited).toHaveLength(1);
+    expect(limited[0]?.displayScore).toBe(84);
+
+    getMock.mockClear();
+    await recommendationsService.getSimilarJobs('job-1');
+    expect(getMock).toHaveBeenCalledWith(
+      '/job-recommendations/similar/job-1',
+      expect.objectContaining({ params: {} }),
+    );
   });
 
   it('creates a career target from goal text', async () => {

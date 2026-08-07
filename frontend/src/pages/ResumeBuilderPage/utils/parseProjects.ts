@@ -2,13 +2,16 @@ import { cleanBulletText, isNoiseLine, sanitizeExtractedText } from './sanitize'
 import { newId, type ProjectEntry } from './types';
 
 const PROJECT_HEADER_URL =
-  /^([A-Za-z][A-Za-z0-9 .&'/_-]{1,60}?)\s[-–—−]\s+(https?:\/\/\S+|www\.\S+)$/i;
+  /^([A-Za-z0-9][A-Za-z0-9 .&'/_+-]{0,60}?)\s[-–—−]\s+(https?:\/\/\S+|www\.\S+)$/i;
 
 /** "Seedify — Web3 / Blockchain Platform" / "Rhino - SaaS Platform" */
-const PROJECT_TITLE_SUBTITLE = /^([A-Za-z][A-Za-z0-9 .&'/_+-]{0,48}?)\s*[-–—−]\s+(.+)$/;
+const PROJECT_TITLE_SUBTITLE = /^([A-Za-z0-9][A-Za-z0-9 .&'/_+-]{0,48}?)\s*[-–—−|:]\s+(.+)$/;
 
 const ACTION_START =
-  /^(built|developed|improved|integrated|enhanced|contributed|implemented|created|designed|delivered|led|architected|collaborated|conducted|optimized|migrated|established)/i;
+  /^(built|developed|improved|integrated|enhanced|contributed|implemented|created|designed|delivered|led|architected|collaborated|conducted|optimized|migrated|established|worked|responsible|managed|owned)/i;
+
+const BAD_PROJECT_TITLE =
+  /^(projects?|project\s+\d+|key\s+projects?|role|responsibilities|tech\s*stack|stack)$/i;
 
 function hasLeadingBullet(line: string): boolean {
   return /^[\s|]*[-*•●·▪▸►]/.test(line);
@@ -17,6 +20,12 @@ function hasLeadingBullet(line: string): boolean {
 function parseProjectHeader(line: string): { title: string; company: string } | null {
   const cleaned = cleanBulletText(line);
   if (!cleaned || cleaned.length > 100) return null;
+  if (BAD_PROJECT_TITLE.test(cleaned)) return null;
+
+  const labeled = cleaned.match(/^(?:project\s*(?:name|title)?)\s*[:\-–—]\s*(.+)$/i);
+  if (labeled?.[1]?.trim()) {
+    return { title: labeled[1].trim(), company: '' };
+  }
 
   const urlHeader = cleaned.match(PROJECT_HEADER_URL);
   if (urlHeader?.[1] && urlHeader[2]) {
@@ -28,23 +37,25 @@ function parseProjectHeader(line: string): { title: string; company: string } | 
     const title = subtitle[1].trim();
     const company = subtitle[2].trim();
     if (
-      title.split(/\s+/).length <= 5 &&
-      company.length < 80 &&
+      title.split(/\s+/).length <= 6 &&
+      company.length < 90 &&
       !ACTION_START.test(title) &&
-      !/^stack\b/i.test(title)
+      !/^stack\b/i.test(title) &&
+      !BAD_PROJECT_TITLE.test(title)
     ) {
       return { title, company };
     }
   }
 
-  // Short Title-Case project name on its own line.
+  // Short project name on its own line (Title Case, ALL CAPS, or mixed).
   if (
     !ACTION_START.test(cleaned) &&
-    !/^stack\b|^tech\s*stack\b/i.test(cleaned) &&
+    !/^stack\b|^tech\s*stack\b|^responsibilities?\b/i.test(cleaned) &&
     cleaned.length < 80 &&
-    /^[A-Z][A-Za-z0-9 .&'/_+-]+$/.test(cleaned) &&
+    /^[A-Za-z0-9][A-Za-z0-9 .&'/_+-]*$/.test(cleaned) &&
     cleaned.split(/\s+/).length <= 8 &&
-    !/\.$/.test(cleaned)
+    !/\.$/.test(cleaned) &&
+    !BAD_PROJECT_TITLE.test(cleaned)
   ) {
     return { title: cleaned, company: '' };
   }
@@ -61,6 +72,32 @@ function shouldAppendContinuation(prevDetails: string, nextText: string, rawLine
   return false;
 }
 
+/** Prefer a real project name — never leave blank titles that render as "Role". */
+export function resolveProjectDisplayTitle(entry: {
+  title: string;
+  company: string;
+  details: string;
+}): string {
+  const title = entry.title.trim();
+  if (title && !BAD_PROJECT_TITLE.test(title)) return title;
+
+  const company = entry.company.trim();
+  if (company && !/^https?:\/\//i.test(company) && !/^www\./i.test(company)) {
+    return company;
+  }
+
+  for (const raw of entry.details.split(/\n/)) {
+    const line = cleanBulletText(raw);
+    if (!line) continue;
+    if (ACTION_START.test(line)) continue;
+    if (/^stack\s*:|^tech\s*stack\s*:|^responsibilities?\b/i.test(line)) continue;
+    if (line.length > 70) continue;
+    if (line.split(/\s+/).length <= 8) return line;
+  }
+
+  return 'Project';
+}
+
 export function parseProjectBlocks(text: string): ProjectEntry[] {
   const lines = sanitizeExtractedText(text)
     .split(/\n/)
@@ -74,6 +111,9 @@ export function parseProjectBlocks(text: string): ProjectEntry[] {
 
   const pushCurrent = () => {
     if (!current) return;
+    if (!current.title.trim() || BAD_PROJECT_TITLE.test(current.title.trim())) {
+      current.title = resolveProjectDisplayTitle(current);
+    }
     if (current.title || current.details) projects.push(current);
     current = null;
   };
@@ -86,7 +126,7 @@ export function parseProjectBlocks(text: string): ProjectEntry[] {
       if (!current) {
         current = {
           id: newId(),
-          title: 'Project',
+          title: '',
           company: '',
           startDate: '',
           endDate: '',
@@ -95,6 +135,10 @@ export function parseProjectBlocks(text: string): ProjectEntry[] {
       } else {
         current.details = [current.details, cleaned].filter(Boolean).join('\n');
       }
+      continue;
+    }
+
+    if (/^responsibilities?\s*:?\s*$/i.test(cleaned)) {
       continue;
     }
 
@@ -124,7 +168,7 @@ export function parseProjectBlocks(text: string): ProjectEntry[] {
     if (!current) {
       current = {
         id: newId(),
-        title: header?.title || 'Project',
+        title: header?.title || '',
         company: header?.company || '',
         startDate: '',
         endDate: '',

@@ -299,6 +299,7 @@ export const FormColumn = styled(
       justifyContent: 'center',
       minHeight: '100%',
       overflow: 'visible',
+      scrollbarGutter: 'stable',
       WebkitOverflowScrolling: 'touch',
       [shortDesktopViewport]: {
         justifyContent: 'center',
@@ -324,18 +325,21 @@ export const FormStack = styled(
       maxWidth: authLayout.formMaxWidth,
       minWidth: 0,
       width: '100%',
+      '& > form': {
+        p: '24px !important',
+      },
       [shortDesktopViewport]: {
         gap: spacing[2],
         '& > form': {
           gap: `${spacing[3]} !important`,
-          padding: `${spacing[4]} !important`,
+          p: '24px !important',
         },
       },
       [belowDesktop]: {
         maxWidth: '100%',
         '& > form': {
           gap: { xs: spacing[5], sm: spacing[6] },
-          p: { xs: spacing[5], sm: spacing[6], md: spacing[8] },
+          p: '24px !important',
         },
       },
     },
@@ -344,7 +348,7 @@ export const FormStack = styled(
         gap: { md: spacing[3], lg: spacing[4], xl: spacing[5] },
         height: 'auto',
         minHeight: 0,
-        p: { md: spacing[4], lg: spacing[5], xl: spacing[6] },
+        p: '24px !important',
       },
       alignContent: 'start',
       maxWidth: 'none',
@@ -354,7 +358,7 @@ export const FormStack = styled(
           gap: `${spacing[2]} !important`,
           height: 'auto',
           minHeight: '100%',
-          padding: `${spacing[3]} !important`,
+          p: '24px !important',
         },
       },
       [belowDesktop]: {
@@ -362,7 +366,7 @@ export const FormStack = styled(
           gap: { xs: spacing[4], sm: spacing[4] },
           height: 'auto',
           minHeight: 0,
-          p: { xs: spacing[5], sm: spacing[6], md: spacing[6] },
+          p: '24px !important',
         },
       },
     },

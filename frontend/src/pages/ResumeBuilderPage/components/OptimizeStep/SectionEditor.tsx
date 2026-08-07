@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/atoms';
 
 import { AddIcon, Box, DeleteOutlineIcon, IconButton, TextField, Typography } from '@/lib/material';
+import { isValidPhoneNumber, sanitizePhoneInput } from '@/utils/phone';
 
 import type {
   CustomField,
@@ -103,7 +104,17 @@ function ContactEditor({
           size="small"
           label="Phone"
           value={draft.phone}
-          onChange={(event) => onChange({ ...draft, phone: event.target.value })}
+          inputProps={{ inputMode: 'tel', maxLength: 16 }}
+          onChange={(event) => {
+            const next = sanitizePhoneInput(event.target.value);
+            onChange({ ...draft, phone: next });
+          }}
+          helperText={
+            draft.phone && draft.phone.length > 0 && !isValidPhoneNumber(draft.phone)
+              ? 'Use 10 digits or +91… (e.g. +919876543210)'
+              : undefined
+          }
+          error={Boolean(draft.phone && draft.phone.length > 0 && !isValidPhoneNumber(draft.phone))}
         />
         <TextField
           size="small"

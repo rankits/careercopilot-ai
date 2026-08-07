@@ -64,10 +64,6 @@ export const DetailTabBar = styled(Box)({
   flexShrink: 0,
   gap: 0,
   gridTemplateColumns: 'repeat(4, minmax(0, 1fr))',
-
-  [mobileBreakpoint]: {
-    gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-  },
 });
 
 export const DetailTab = styled('button', {
@@ -105,9 +101,13 @@ export const DetailTab = styled('button', {
   },
 
   [mobileBreakpoint]: {
+    flexDirection: 'column',
     fontSize: fontSize.xs,
-    minHeight: spacing[10],
+    gap: spacing[1],
+    minHeight: spacing[12],
+    minWidth: 0,
     padding: `${spacing[2]} ${spacing[1]}`,
+    whiteSpace: 'nowrap',
   },
 }));
 
