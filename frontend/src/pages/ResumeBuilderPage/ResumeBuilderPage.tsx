@@ -1,15 +1,17 @@
+import Alert from '@mui/material/Alert';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogTitle from '@mui/material/DialogTitle';
 import Typography from '@mui/material/Typography';
 import { useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 
 import { Button } from '@/components/atoms';
 import { useToast } from '@/components/organisms/Toast/ToastContext';
 
 import { ROUTES } from '@/constants/routes';
+import { extractJobApplicationIdFromReturnTo } from '@/features/auto-apply/utils/returnToNavigation';
 import type { SuggestionItem } from '@/services/resumeBuilder.service';
 
 import { PageHeader } from './components/PageHeader';
@@ -17,6 +19,7 @@ import { ResumeBuilderStepPanels } from './components/ResumeBuilderStepPanels';
 import { WorkflowStepper } from './components/WorkflowStepper';
 import type { ResumeBuilderStep as Step } from './constants';
 import {
+  useAssistedApplyBuilderContext,
   useResumeAnalysisPolling,
   useResumeBuilderActions,
   useResumeBuilderDraft,
@@ -28,6 +31,7 @@ import type { ResumeTemplateId } from './utils';
 export function ResumeBuilderPage() {
   const { resumeId: paramResumeId } = useParams<{ resumeId?: string }>();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { showToast } = useToast();
 
   const [resumeId, setResumeId] = useState<string>(paramResumeId ?? '');
@@ -36,6 +40,20 @@ export function ResumeBuilderPage() {
   const [selectedTemplate, setSelectedTemplate] = useState<ResumeTemplateId>('original');
 
   const draft = useResumeBuilderDraft(resumeId);
+
+  const assistedApply = useAssistedApplyBuilderContext({
+    searchParams,
+    showToast,
+    editedContentRef: draft.editedContentRef,
+    setStep,
+    setTargetRole: draft.setTargetRole,
+    setIndustry: draft.setIndustry,
+    setEmploymentType: draft.setEmploymentType,
+    setExperienceLevel: draft.setExperienceLevel,
+    setSkills: draft.setSkills,
+    setJobDescription: draft.setJobDescription,
+    setCleanSnapshot: draft.setCleanSnapshot,
+  });
 
   const polling = useResumeAnalysisPolling({
     resumeId,
@@ -59,7 +77,12 @@ export function ResumeBuilderPage() {
     setSkills: draft.setSkills,
     setEditedContent: draft.setEditedContent,
     setCleanSnapshot: draft.setCleanSnapshot,
+    assistedApplyHydratedForRef: assistedApply.assistedApplyHydratedForRef,
   });
+
+  const jobApplicationId =
+    assistedApply.assistedApplyJobApplicationId ??
+    extractJobApplicationIdFromReturnTo(searchParams.get('returnTo'));
 
   const actions = useResumeBuilderActions({
     resumeId,
@@ -98,6 +121,8 @@ export function ResumeBuilderPage() {
     selectedTemplate,
     setSelectedTemplate,
     hydrateFromExistingAnalysis: polling.hydrateFromExistingAnalysis,
+    returnTo: searchParams.get('returnTo'),
+    jobApplicationId,
   });
 
   const navigation = useResumeBuilderNavigation({
@@ -131,6 +156,16 @@ export function ResumeBuilderPage() {
           onNext={navigation.handleHeaderNext}
         />
         <WorkflowStepper current={step} />
+        {assistedApply.assistedApplyContextNotice ? (
+          <Alert
+            severity="info"
+            sx={{ mx: 2, mb: 1 }}
+            onClose={() => assistedApply.setAssistedApplyContextNotice(false)}
+          >
+            Job details were loaded from your Assisted Apply workspace. Review them before
+            continuing.
+          </Alert>
+        ) : null}
       </StickyChrome>
       <ResumeBuilderStepPanels
         step={step}

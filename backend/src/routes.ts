@@ -1,4 +1,5 @@
 import { applicationRoutes } from '@/modules/application-management/index.js';
+import { autoApplyRoutes } from '@/modules/auto-apply/index.js';
 import express from 'express';
 import { successResponse } from '@/shared/utils/response.js';
 import { authRoutes } from '@/modules/auth/index.js';
@@ -10,6 +11,7 @@ import jobsRoutes from '@/modules/jobs/routes/jobs.route.js';
 import { jobListingRoutes } from '@/modules/job-listing/index.js';
 import { recommendationsRoutes } from '@/modules/recommendations/index.js';
 import { copilotRoutes } from '@/modules/copilot/index.js';
+import extensionRoutes from '@/modules/extension/index.js';
 
 const router = express.Router();
 
@@ -25,7 +27,9 @@ router.use('/resume-analysis', resumeAnalysisRoutes);
 router.use('/jobs', jobListingRoutes); // Public job discovery
 router.use('/jobs-ingestion', jobsRoutes); // Administrative ingestion endpoints
 router.use('/applications', applicationRoutes);
+router.use('/auto-apply', autoApplyRoutes);
 router.use('/job-recommendations', recommendationsRoutes);
 router.use('/copilot', copilotRoutes);
+router.use('/extension', extensionRoutes);
 
 export default router;

@@ -2,6 +2,7 @@ import type {
   EmbeddingProvider,
   EmbeddingPurpose,
 } from '@/modules/ai-embeddings/contracts/embedding-provider.js';
+import { embeddingProviderCircuitBreaker } from '@/modules/ai-embeddings/utils/embedding-circuit-breaker.js';
 import { AppError } from '@/shared/utils/errors/AppError.js';
 
 export interface BaseEmbeddingProviderOptions {
@@ -11,6 +12,13 @@ export interface BaseEmbeddingProviderOptions {
   readonly batchSize: number;
   readonly documentPrefix: string;
   readonly queryPrefix: string;
+  /**
+   * Circuit breaker cache key, defaults to `provider`. Pass a value scoped to
+   * the credential in use (e.g. via `fingerprintCircuitBreakerScope`) so two
+   * configs for the same provider (e.g. a separate recommendation API key)
+   * don't share breaker state unless they share the same credential.
+   */
+  readonly breakerScope?: string;
 }
 
 const normalizeVector = (vector: readonly number[], dimensions: number): number[] => {
@@ -39,6 +47,7 @@ export abstract class BaseEmbeddingProvider implements EmbeddingProvider {
   private readonly batchSize: number;
   private readonly documentPrefix: string;
   private readonly queryPrefix: string;
+  private readonly circuitBreakerScope: string;
 
   constructor(options: BaseEmbeddingProviderOptions) {
     this.provider = options.provider;
@@ -47,6 +56,7 @@ export abstract class BaseEmbeddingProvider implements EmbeddingProvider {
     this.batchSize = options.batchSize;
     this.documentPrefix = options.documentPrefix;
     this.queryPrefix = options.queryPrefix;
+    this.circuitBreakerScope = options.breakerScope ?? options.provider;
   }
 
   async generateEmbedding(text: string, purpose: EmbeddingPurpose = 'QUERY'): Promise<number[]> {
@@ -71,7 +81,7 @@ export abstract class BaseEmbeddingProvider implements EmbeddingProvider {
     const results: number[][] = [];
     for (let offset = 0; offset < prepared.length; offset += this.batchSize) {
       const batch = prepared.slice(offset, offset + this.batchSize);
-      const vectors = await this.requestBatch(batch, purpose);
+      const vectors = await this.requestBatchGuarded(batch, purpose);
       if (vectors.length !== batch.length) {
         throw new AppError(
           'Embedding provider returned an unexpected result count',
@@ -98,6 +108,24 @@ export abstract class BaseEmbeddingProvider implements EmbeddingProvider {
 
   async embedQueries(texts: readonly string[]): Promise<number[][]> {
     return this.generateEmbeddings(texts, 'QUERY');
+  }
+
+  /**
+   * Wraps `requestBatch` with the provider's circuit breaker: skips the API
+   * call entirely (no network request) while the breaker is open, and trips
+   * it when a permanent failure (e.g. "insufficient credits") is seen.
+   */
+  private async requestBatchGuarded(
+    texts: readonly string[],
+    purpose: EmbeddingPurpose,
+  ): Promise<number[][]> {
+    await embeddingProviderCircuitBreaker.assertClosed(this.circuitBreakerScope);
+    try {
+      return await this.requestBatch(texts, purpose);
+    } catch (err: unknown) {
+      await embeddingProviderCircuitBreaker.tripOnError(this.circuitBreakerScope, err);
+      throw err;
+    }
   }
 
   protected abstract requestBatch(

@@ -199,6 +199,9 @@ export class OpenRouterEmbeddingClient {
       if (code === 429 || String(code) === '429') {
         throw new AppError(msg, 429, 'OPENROUTER_EMBEDDING_RATE_LIMITED');
       }
+      if (code === 402 || String(code) === '402') {
+        throw new AppError(msg, 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+      }
       throw new AppError(msg, 502, 'OPENROUTER_EMBEDDING_REQUEST_FAILED');
     }
 
@@ -253,6 +256,7 @@ export class OpenRouterEmbeddingClient {
         code === 'OPENROUTER_EMBEDDING_UNAUTHORIZED' ||
         code === 'OPENROUTER_EMBEDDING_MODEL_NOT_FOUND' ||
         code === 'OPENROUTER_EMBEDDING_RESPONSE_INVALID' ||
+        code === 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS' ||
         code === 'EMBEDDING_DIMENSION_MISMATCH'
       ) {
         return { retryable: false, error: err };
@@ -368,6 +372,9 @@ class OpenRouterFetchHttpClient implements EmbeddingHttpClient {
       }
       if (response.status === 400) {
         throw new AppError(errorMessage, 400, 'OPENROUTER_EMBEDDING_REQUEST_FAILED');
+      }
+      if (response.status === 402) {
+        throw new AppError(errorMessage, 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
       }
 
       throw new AppError(errorMessage, response.status, 'OPENROUTER_EMBEDDING_REQUEST_FAILED', {

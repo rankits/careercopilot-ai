@@ -4,7 +4,10 @@
 
 # --- Stage 1: Base ---
 FROM node:20-alpine AS base
-RUN apk add --no-cache openssl curl su-exec
+# Chromium for optional Pre-Application headless snapshots (Ashby/JS boards).
+RUN apk add --no-cache openssl curl su-exec chromium nss freetype harfbuzz ca-certificates ttf-freefont
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+ENV CHROMIUM_PATH=/usr/bin/chromium
 WORKDIR /app
 
 # --- Stage 2: Dependencies & Prisma Generation ---

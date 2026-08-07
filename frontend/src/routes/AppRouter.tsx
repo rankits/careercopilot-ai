@@ -16,7 +16,12 @@ import {
 } from '@/routes/guards/AuthGuards';
 import {
   LazyAiMatchPage,
+  LazyApplicationDetailPage,
   LazyApplicationsPage,
+  LazyAssistedApplicationsPage,
+  LazyAssistedApplyWorkspacePage,
+  LazyAutoApplyPage,
+  LazyBrowserExtensionPage,
   LazyEditProfilePage,
   LazyHomePage,
   LazyJobDetailPage,
@@ -126,6 +131,46 @@ export const appRouteObjects: RouteObject[] = [
             element: (
               <LazyRoute>
                 <LazyApplicationsPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.APPLICATION_DETAIL,
+            element: (
+              <LazyRoute>
+                <LazyApplicationDetailPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.ASSISTED_APPLICATIONS,
+            element: (
+              <LazyRoute>
+                <LazyAssistedApplicationsPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.AUTO_APPLY,
+            element: (
+              <LazyRoute>
+                <LazyAutoApplyPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.BROWSER_EXTENSION,
+            element: (
+              <LazyRoute>
+                <LazyBrowserExtensionPage />
+              </LazyRoute>
+            ),
+          },
+          {
+            path: ROUTES.ASSISTED_APPLY_WORKSPACE,
+            element: (
+              <LazyRoute>
+                <LazyAssistedApplyWorkspacePage />
               </LazyRoute>
             ),
           },
