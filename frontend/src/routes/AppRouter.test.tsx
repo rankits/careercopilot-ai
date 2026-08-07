@@ -3,17 +3,44 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { createMemoryRouter, RouterProvider } from 'react-router-dom';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { authReducer } from '@/features/auth/authSlice';
 import type { AuthState, User } from '@/features/auth/types/auth.types';
 
 import { appRouteObjects } from './AppRouter';
 
+/** Warm lazy route chunks so Suspense resolves quickly under Vitest. */
+beforeAll(async () => {
+  await Promise.all([
+    import('@/routes/lazyPages').then((m) =>
+      Promise.all([
+        m.loadLandingPage(),
+        m.loadLoginPage(),
+        m.loadRegisterPage(),
+        m.loadProfilePage(),
+        m.loadHomePage(),
+        m.loadJobFeedPage(),
+        m.loadJobDetailPage(),
+        m.loadAiMatchPage(),
+        m.loadSavedJobsPage(),
+        m.loadApplicationsPage(),
+        m.loadSavedResumesPage(),
+        m.loadResumeBuilderPage(),
+        m.loadEditProfilePage(),
+        m.loadNotFoundPage(),
+      ]),
+    ),
+  ]);
+}, 60_000);
+
 vi.mock('@/features/auth/services/auth.service', () => ({
   authService: {
     login: vi.fn(),
     register: vi.fn(),
+    refreshSession: vi.fn().mockRejectedValue(new Error('No session')),
+    getCurrentUser: vi.fn(),
+    logout: vi.fn(),
   },
 }));
 
@@ -25,7 +52,7 @@ vi.mock('@/features/resume/services/resume.service', () => ({
   },
 }));
 
-vi.mock('@/services/resumeBuilder.service', () => ({
+vi.mock('@/features/resume/services/resumeBuilder.service', () => ({
   resumeBuilderService: {
     listResumes: vi.fn().mockResolvedValue([]),
     listSavedVersions: vi.fn().mockResolvedValue([]),
@@ -122,7 +149,7 @@ describe('AppRouter routing flow', () => {
   it('renders the marketing landing page for unauthenticated visitors on /', async () => {
     renderRoute('/');
 
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
+    expect(await screen.findByRole('heading', { level: 1 }, { timeout: 15_000 })).toHaveTextContent(
       /smarter job search/i,
     );
     expect(screen.getAllByRole('link', { name: /get started/i }).length).toBeGreaterThan(0);
@@ -132,7 +159,9 @@ describe('AppRouter routing flow', () => {
   it('redirects unauthenticated users from protected routes to Login', async () => {
     renderRoute('/jobs-feed');
 
-    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /welcome back/i }, { timeout: 15_000 }),
+    ).toBeInTheDocument();
   });
 
   it.each([['/resume-builder'], ['/resume-builder/saved'], ['/resume-builder/resume-1']])(
@@ -140,7 +169,9 @@ describe('AppRouter routing flow', () => {
     async (path) => {
       renderRoute(path);
 
-      expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+      expect(
+        await screen.findByRole('heading', { name: /welcome back/i }, { timeout: 15_000 }),
+      ).toBeInTheDocument();
       expect(screen.queryByRole('heading', { name: /resume/i })).not.toBeInTheDocument();
     },
   );
@@ -158,7 +189,11 @@ describe('AppRouter routing flow', () => {
     );
 
     expect(
-      await screen.findByRole('heading', { name: /let's build your professional profile/i }),
+      await screen.findByRole(
+        'heading',
+        { name: /let's build your professional profile/i },
+        { timeout: 15_000 },
+      ),
     ).toBeInTheDocument();
   });
 
@@ -174,7 +209,9 @@ describe('AppRouter routing flow', () => {
       }),
     );
 
-    expect(await screen.findByRole('heading', { name: /^resume builder$/i })).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { name: /^resume builder$/i }, { timeout: 15_000 }),
+    ).toBeInTheDocument();
   });
 
   it('allows authenticated users with incomplete profiles to open Login', async () => {
