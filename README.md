@@ -75,7 +75,7 @@ Services:
 | ------------------- | ----- |
 | Backend API         | 5001  |
 | Frontend            | 3000  |
-| Postgres            | 5432  |
+| Postgres            | 5433  |
 | Redis               | 6379  |
 | RabbitMQ management | 15672 |
 
