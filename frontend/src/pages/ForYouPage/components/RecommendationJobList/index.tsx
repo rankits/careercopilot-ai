@@ -1,7 +1,7 @@
 import Box from '@mui/material/Box';
 
-import { JobCard } from '@/components/molecules/JobCard';
 import type { JobCardData } from '@/components/molecules';
+import { JobCard } from '@/components/molecules/JobCard';
 
 import type { RecommendationFeedbackAction } from '@/features/recommendations/types/recommendation.types';
 
@@ -32,7 +32,11 @@ export function RecommendationJobList({
   onFeedback,
 }: RecommendationJobListProps) {
   return (
-    <Box aria-label={ariaLabel} component="ul" sx={{ display: 'grid', gap: 2, listStyle: 'none', m: 0, p: 0 }}>
+    <Box
+      aria-label={ariaLabel}
+      component="ul"
+      sx={{ display: 'grid', gap: 2, listStyle: 'none', m: 0, p: 0 }}
+    >
       {items.map((job) => (
         <Box component="li" key={job.recommendationId ?? job.id ?? `${job.company}-${job.title}`}>
           <JobCard
@@ -44,22 +48,26 @@ export function RecommendationJobList({
             onOpen={onOpen}
             onDismiss={
               job.recommendationId
-                ? (selected) => onFeedback(selected.recommendationId ?? job.recommendationId!, 'DISMISSED')
+                ? (selected) =>
+                    onFeedback(selected.recommendationId ?? job.recommendationId!, 'DISMISSED')
                 : undefined
             }
             onNotRelevant={
               job.recommendationId
-                ? (selected) => onFeedback(selected.recommendationId ?? job.recommendationId!, 'NOT_RELEVANT')
+                ? (selected) =>
+                    onFeedback(selected.recommendationId ?? job.recommendationId!, 'NOT_RELEVANT')
                 : undefined
             }
             onMoreLikeThis={
               job.recommendationId
-                ? (selected) => onFeedback(selected.recommendationId ?? job.recommendationId!, 'MORE_LIKE_THIS')
+                ? (selected) =>
+                    onFeedback(selected.recommendationId ?? job.recommendationId!, 'MORE_LIKE_THIS')
                 : undefined
             }
             onLessLikeThis={
               job.recommendationId
-                ? (selected) => onFeedback(selected.recommendationId ?? job.recommendationId!, 'LESS_LIKE_THIS')
+                ? (selected) =>
+                    onFeedback(selected.recommendationId ?? job.recommendationId!, 'LESS_LIKE_THIS')
                 : undefined
             }
           />
