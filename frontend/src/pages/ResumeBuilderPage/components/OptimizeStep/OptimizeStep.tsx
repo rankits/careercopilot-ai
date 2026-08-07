@@ -278,9 +278,9 @@ export function OptimizeStep({
       localOverrides.length === 0
         ? merged
         : (() => {
-            const overrideIds = new Set(localOverrides.map((item) => item.id));
-            return [...localOverrides, ...merged.filter((item) => !overrideIds.has(item.id))];
-          })();
+          const overrideIds = new Set(localOverrides.map((item) => item.id));
+          return [...localOverrides, ...merged.filter((item) => !overrideIds.has(item.id))];
+        })();
 
     const haveSkills = new Set(draft.skillsList.map((skill) => skill.toLowerCase()));
     const marked = withOverrides.map((item) => {
@@ -377,10 +377,10 @@ export function OptimizeStep({
   const pushDraftToParent = (next: ResumeDraft, options?: { fromApply?: boolean }) => {
     const withOriginal = options?.fromApply
       ? {
-          ...next,
-          // Keep "original" template + export fallback in sync with structured edits.
-          originalText: serializeResumeDraft(next) || next.originalText,
-        }
+        ...next,
+        // Keep "original" template + export fallback in sync with structured edits.
+        originalText: serializeResumeDraft(next) || next.originalText,
+      }
       : next;
     const serialized =
       serializeResumeDraft(withOriginal) || editedContent || analysis?.editedContent || '';
@@ -543,7 +543,7 @@ export function OptimizeStep({
       const rest = prev.filter((item) => !appliedIds.has(item.id));
       const marked = ordered
         .filter((item) => appliedIds.has(item.id) || isLocalSuggestionId(item.id))
-        .map((item) => ({ ...item, status: 'APPLIED' as const }));
+        .map((item): SuggestionItem => ({ ...item, status: 'APPLIED' }));
       // Also mark any server id we queued even if not in ordered (skill bundle extras).
       const orderedIds = new Set(ordered.map((item) => item.id));
       const extras = [...appliedIds]
@@ -726,11 +726,11 @@ export function OptimizeStep({
                     suggestionSection === 'skills'
                       ? draft.skillsList.join(', ') || 'No skills yet'
                       : getSectionText(
-                          draft,
-                          suggestionSection === 'other' ? 'summary' : suggestionSection,
-                        ) ||
-                        suggestion.originalText ||
-                        'No excerpt available';
+                        draft,
+                        suggestionSection === 'other' ? 'summary' : suggestionSection,
+                      ) ||
+                      suggestion.originalText ||
+                      'No excerpt available';
 
                   return (
                     <SuggestionCard

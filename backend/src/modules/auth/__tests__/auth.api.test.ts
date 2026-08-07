@@ -298,6 +298,7 @@ describe('POST /auth/login/otp/request and /auth/login/otp/verify', () => {
           .post(`${API}/login/otp/verify`)
           .send({ email: user.email, code });
 
+        if (verifyRes.status !== 200) console.log(verifyRes.body);
         expect(verifyRes.status).toBe(200);
         expect(verifyRes.body.accessToken).toEqual(expect.any(String));
       });
