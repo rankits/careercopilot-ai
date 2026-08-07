@@ -9,12 +9,8 @@ import {
 
 describe('activityEventLabel', () => {
   it('maps known event types to plain language', () => {
-    expect(activityEventLabel('SUBMISSION_INITIATED')).toBe(
-      'Started tracking this application',
-    );
-    expect(activityEventLabel('HANDOFF_OPENED')).toBe(
-      "Opened the employer's application page",
-    );
+    expect(activityEventLabel('SUBMISSION_INITIATED')).toBe('Started tracking this application');
+    expect(activityEventLabel('HANDOFF_OPENED')).toBe("Opened the employer's application page");
     expect(activityEventLabel('ANALYSIS_COMPLETED')).toBe('Analyzed the job posting');
     expect(activityEventLabel('MARKED_APPLIED')).toBe('Marked as applied');
     expect(activityEventLabel('BROKEN_LINK_REPORTED')).toBe('Reported a broken apply link');

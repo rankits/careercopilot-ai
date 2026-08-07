@@ -470,7 +470,11 @@ describe('OpenRouterEmbeddingProvider', () => {
     });
 
     it('opens the circuit breaker after insufficient credits and skips the API on the next call', async () => {
-      const creditsError = new AppError('Insufficient credits.', 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+      const creditsError = new AppError(
+        'Insufficient credits.',
+        402,
+        'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+      );
       const http = new RecordingHttpClient([
         creditsError,
         { data: [{ index: 0, embedding: vector(768) }] },
@@ -496,7 +500,11 @@ describe('OpenRouterEmbeddingProvider', () => {
     });
 
     it('resumes calling the API once the breaker is closed', async () => {
-      const creditsError = new AppError('Insufficient credits.', 402, 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS');
+      const creditsError = new AppError(
+        'Insufficient credits.',
+        402,
+        'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
+      );
       const http = new RecordingHttpClient([
         creditsError,
         { data: [{ index: 0, embedding: vector(768) }] },
@@ -507,7 +515,9 @@ describe('OpenRouterEmbeddingProvider', () => {
         code: 'OPENROUTER_EMBEDDING_INSUFFICIENT_CREDITS',
       });
 
-      await embeddingProviderCircuitBreaker.close(fingerprintCircuitBreakerScope('openrouter', 'key'));
+      await embeddingProviderCircuitBreaker.close(
+        fingerprintCircuitBreakerScope('openrouter', 'key'),
+      );
 
       const result = await provider.generateEmbedding('second');
       expect(result).toHaveLength(768);

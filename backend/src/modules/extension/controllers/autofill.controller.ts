@@ -13,7 +13,7 @@ export const generateAutofillAnswersController = async (
     const { url, fields } = req.body;
 
     const answers = await autofillService.generateAnswers(userId, url, fields);
-    
+
     return res.status(200).json(successResponse('Answers generated successfully', { answers }));
   } catch (error) {
     return next(error);

@@ -36,7 +36,9 @@ export function BaselineAnswersSection() {
     setErrors({});
   }, [savedSnapshot]);
 
-  const isDirty = BASELINE_ANSWER_FIELDS.some((field) => values[field.key] !== savedSnapshot[field.key]);
+  const isDirty = BASELINE_ANSWER_FIELDS.some(
+    (field) => values[field.key] !== savedSnapshot[field.key],
+  );
 
   useSetupDirty('answers', isDirty);
 
@@ -62,7 +64,8 @@ export function BaselineAnswersSection() {
       showToast({ message: 'Common answers saved.', severity: 'success' });
     } catch (error) {
       showToast({
-        message: error instanceof Error ? error.message : "We couldn't save your details. Try again.",
+        message:
+          error instanceof Error ? error.message : "We couldn't save your details. Try again.",
         severity: 'error',
       });
     }
@@ -77,7 +80,10 @@ export function BaselineAnswersSection() {
   }
 
   return (
-    <Paper sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }} variant="outlined">
+    <Paper
+      sx={{ p: 3, display: 'flex', flexDirection: 'column', gap: 2, maxWidth: 720 }}
+      variant="outlined"
+    >
       <SetupSectionHeading
         helperText="These are the questions almost every application asks. Answer them once here."
         required
@@ -105,7 +111,11 @@ export function BaselineAnswersSection() {
       ))}
 
       <Box>
-        <Button disabled={!isDirty} isLoading={upsertAnswer.isPending} onClick={() => void handleSave()}>
+        <Button
+          disabled={!isDirty}
+          isLoading={upsertAnswer.isPending}
+          onClick={() => void handleSave()}
+        >
           Save
         </Button>
       </Box>

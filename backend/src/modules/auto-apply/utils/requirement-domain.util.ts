@@ -1,8 +1,5 @@
 export type RequirementDomain =
-  | 'RESUME_EVIDENCE'
-  | 'CANDIDATE_ELIGIBILITY'
-  | 'APPLICATION_FORM'
-  | 'UNKNOWN';
+  'RESUME_EVIDENCE' | 'CANDIDATE_ELIGIBILITY' | 'APPLICATION_FORM' | 'UNKNOWN';
 
 export const REQUIREMENT_CLASSIFIER_VERSION = 'req-domain-v1';
 
@@ -86,9 +83,7 @@ export function classifyRequirementDomain(input: {
 
   // Prefix / substring heuristics for AI-extracted codes
   if (
-    /REGION|LOCATION|SPONSOR|AUTH|VISA|SALARY|COMPENSAT|NOTICE|RELOCAT|CITIZEN|CLEARANCE/.test(
-      code,
-    )
+    /REGION|LOCATION|SPONSOR|AUTH|VISA|SALARY|COMPENSAT|NOTICE|RELOCAT|CITIZEN|CLEARANCE/.test(code)
   ) {
     return 'CANDIDATE_ELIGIBILITY';
   }

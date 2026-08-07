@@ -7,11 +7,7 @@ import { AssistedApplyCompletionService } from '@/modules/auto-apply/services/as
 const completionService = new AssistedApplyCompletionService(new PrismaJobApplicationRepository());
 export const assistedApplyCompletionService = completionService;
 
-export const markAppliedController = async (
-  req: Request,
-  res: Response,
-  next: NextFunction,
-) => {
+export const markAppliedController = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = requireUserPrincipalId(req);
     const id = getParam(req.params.id, 'id');

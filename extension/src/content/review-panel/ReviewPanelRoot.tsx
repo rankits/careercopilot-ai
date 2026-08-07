@@ -7,10 +7,10 @@ import { fillFormFields } from '../index';
 let drawerRoot: ReturnType<typeof createRoot> | null = null;
 
 export function mountReviewPanel(
-  fields: FieldInfo[], 
-  answers: Record<string, string>, 
+  fields: FieldInfo[],
+  answers: Record<string, string>,
   vaultKeys: Record<string, string | null> = {},
-  contentGenerationAllowed: boolean = false
+  contentGenerationAllowed: boolean = false,
 ) {
   let container = document.getElementById('career-copilot-root');
   if (!container) {
@@ -46,14 +46,14 @@ export function mountReviewPanel(
   };
 
   drawerRoot.render(
-    <ReviewPanel 
-      fields={fields} 
-      answers={answers} 
+    <ReviewPanel
+      fields={fields}
+      answers={answers}
       vaultKeys={vaultKeys}
       contentGenerationAllowed={contentGenerationAllowed}
-      onConfirm={handleConfirm} 
-      onCancel={handleCancel} 
-    />
+      onConfirm={handleConfirm}
+      onCancel={handleCancel}
+    />,
   );
 }
 

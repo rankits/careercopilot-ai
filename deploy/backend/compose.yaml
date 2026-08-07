@@ -1,5 +1,5 @@
 # Production Docker Compose for Career Copilot Backend
-# API + outbox-relay + job-embedding-worker on one EC2 host.
+# API + outbox-relay + job-embedding-worker + application-submission-worker + resume-analysis-worker on one EC2 host.
 # Redis, RabbitMQ, and PostgreSQL run externally via private networking.
 # Embeddings use third-party providers from shared .env (e.g. OpenRouter).
 #
@@ -66,6 +66,26 @@ services:
     restart: unless-stopped
     # Exceeds APPLICATION_SUBMISSION_WORKER_DRAIN_TIMEOUT_MS default (30s) so SIGTERM drain can finish (AA-008).
     stop_grace_period: 45s
+    mem_limit: 192m
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  resume-analysis-worker:
+    image: ${BACKEND_IMAGE}
+    command: ['node', 'dist/workers/run-resume-analysis-worker.js']
+    env_file:
+      - ${SHARED_ENV_FILE:-/opt/career-copilot/backend/shared/.env}
+    environment:
+      NODE_ENV: production
+      RUN_MIGRATIONS: 'false'
+      RUN_SEEDS_ON_STARTUP: 'false'
+    restart: unless-stopped
     mem_limit: 192m
     depends_on:
       api:

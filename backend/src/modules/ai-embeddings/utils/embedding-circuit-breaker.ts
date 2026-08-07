@@ -11,7 +11,10 @@ import { AppError } from '@/shared/utils/errors/AppError.js';
  * the same credential/credits pool. The key itself is never persisted or
  * logged — only a short, non-reversible hash of it.
  */
-export const fingerprintCircuitBreakerScope = (provider: string, apiKey: string | undefined): string => {
+export const fingerprintCircuitBreakerScope = (
+  provider: string,
+  apiKey: string | undefined,
+): string => {
   if (!apiKey) return provider;
   const fingerprint = createHash('sha256').update(apiKey).digest('hex').slice(0, 12);
   return `${provider}:${fingerprint}`;

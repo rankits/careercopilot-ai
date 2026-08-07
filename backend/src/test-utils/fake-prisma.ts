@@ -1347,11 +1347,7 @@ export class FakeDb {
           }
           return { count };
         },
-        deleteMany: async ({
-          where,
-        }: {
-          where: { target: string; purpose: OtpPurpose };
-        }) => {
+        deleteMany: async ({ where }: { where: { target: string; purpose: OtpPurpose } }) => {
           let count = 0;
           db.otps = db.otps.filter((o) => {
             const matches = o.target === where.target && o.purpose === where.purpose;

@@ -130,12 +130,12 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
       failureMessage: null,
       planInputsHash: null,
       planVersion: 1,
-    progressStep: null,
-    reopenedAt: null,
-    handoffOpenedAt: null,
-    appliedNotes: null,
-    abandonReason: null,
-    abandonNote: null,
+      progressStep: null,
+      reopenedAt: null,
+      handoffOpenedAt: null,
+      appliedNotes: null,
+      abandonReason: null,
+      abandonNote: null,
       createdAt: now,
       updatedAt: now,
     };
@@ -315,7 +315,6 @@ class FakeJobApplicationRepository implements IJobApplicationRepository {
     record.updatedAt = new Date();
     return this.copy(record);
   }
-
 }
 
 class FakeConsentRepository implements IApplicationConsentRepository {

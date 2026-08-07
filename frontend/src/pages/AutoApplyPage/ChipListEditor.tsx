@@ -3,15 +3,7 @@ import { useState, type KeyboardEvent } from 'react';
 import { Button } from '@/components/atoms/Button';
 
 import { setupTouchTargetSx } from '@/features/auto-apply/utils/setupFieldFocus';
-import {
-  Box,
-  Chip,
-  FormHelperText,
-  Stack,
-  TextField,
-  Typography,
-} from '@/lib/material';
-
+import { Box, Chip, FormHelperText, Stack, TextField, Typography } from '@/lib/material';
 
 export interface ChipListEditorProps {
   id: string;
@@ -86,7 +78,10 @@ export function ChipListEditor({
           {duplicateError}
         </FormHelperText>
       ) : null}
-      <Box aria-live="polite" sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5, minHeight: 32 }}>
+      <Box
+        aria-live="polite"
+        sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.75, mt: 1.5, minHeight: 32 }}
+      >
         {values.length === 0 ? (
           <Typography color="text.secondary" variant="body2">
             {emptyMessage}

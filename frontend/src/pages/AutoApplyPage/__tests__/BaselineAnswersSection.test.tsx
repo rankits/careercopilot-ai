@@ -52,9 +52,7 @@ describe('BaselineAnswersSection AA-025', () => {
     expect(
       screen.getByLabelText(/How many years of relevant experience do you have/i),
     ).toBeInTheDocument();
-    expect(
-      screen.queryByLabelText(/years_of_experience/i),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/years_of_experience/i)).not.toBeInTheDocument();
   });
 
   it('validates numeric years of experience', async () => {
