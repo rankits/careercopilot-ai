@@ -91,7 +91,9 @@ describe('profileMatchViewModel', () => {
       handoffReadiness: {
         decision: 'BLOCKED',
         ready: false,
-        blockingReasons: [{ code: 'LOCATION', message: 'Location incompatible' }],
+        blockingReasons: [
+          { code: 'LOCATION', message: 'Location incompatible', severity: 'BLOCKING' },
+        ],
         warnings: [],
       },
     });
@@ -210,7 +212,7 @@ describe('profileMatchViewModel', () => {
         decision: 'READY',
         ready: true,
         blockingReasons: [],
-        warnings: [{ code: 'WARN', message: 'Advisory warning' }],
+        warnings: [{ code: 'WARN', message: 'Advisory warning', severity: 'WARNING' }],
       },
     });
     expect(ready.navigation.canOpenEmployerHandoff).toBe(true);
@@ -220,7 +222,7 @@ describe('profileMatchViewModel', () => {
       handoffReadiness: {
         decision: 'BLOCKED',
         ready: false,
-        blockingReasons: [{ code: 'CONSENT', message: 'Consent required' }],
+        blockingReasons: [{ code: 'CONSENT', message: 'Consent required', severity: 'BLOCKING' }],
         warnings: [],
       },
     });

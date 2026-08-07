@@ -16,7 +16,7 @@ export function hasNoRecommendationResults(
 ): boolean {
   if (Array.isArray(result)) return result.length === 0;
 
-  const runResult: RecommendationRunResult = result;
+  const runResult = result as RecommendationRunResult;
   if (typeof runResult.total === 'number') return runResult.total === 0;
   return (runResult.items?.length ?? 0) === 0;
 }

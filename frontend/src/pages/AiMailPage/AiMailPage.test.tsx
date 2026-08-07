@@ -102,7 +102,7 @@ const {
     },
     subject: '',
     bodyText: '',
-    status: 'input' as const,
+    status: 'input' as import('@/features/ai-mail/types/aiMail.types').MailDraftStatus,
     version: 1,
     userEdited: false,
     createdAt: '2026-08-07T00:00:00.000Z',

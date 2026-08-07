@@ -158,7 +158,7 @@ export class ResumeJobAnalyzer {
       if (domain !== 'RESUME_EVIDENCE') {
         excludedRequirements.push({
           code: req.code,
-          domain: domain === 'RESUME_EVIDENCE' ? 'UNKNOWN' : domain,
+          domain,
           reason:
             domain === 'CANDIDATE_ELIGIBILITY'
               ? 'Evaluated in Fit & Eligibility, not Resume Match.'

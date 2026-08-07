@@ -903,7 +903,6 @@ export const autoApplySwagger = {
             'Fetches the public job page with SSRF controls, detects provider (e.g. Ashby → EXTERNAL_MANUAL), extracts requirements with evidence, and persists an ApplicationPageAnalysis snapshot. Idempotent on jobId + URL + content hash + extractor version.',
           params: [jobIdParam],
           body: {
-            type: 'object',
             properties: {
               forceRefresh: { type: 'boolean' },
             },
@@ -954,7 +953,6 @@ export const autoApplySwagger = {
             'Orchestrates Pre-Application Intelligence for the frontend Prepare Application CTA. Does not submit. Match scoring uses cached recommendations only in Phase 1; missing match is a warning for PREPARE/ASSISTED.',
           params: [jobIdParam],
           body: {
-            type: 'object',
             properties: {
               applyMode: {
                 type: 'string',
