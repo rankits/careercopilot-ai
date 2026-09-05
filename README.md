@@ -51,3 +51,17 @@ import { Button, Input } from '@careercopilot/ui-library';
 ```
 
 Then replace the starter native controls in feature components.
+
+## API and workers
+
+The backend exposes a REST API on `http://localhost:5001` and uses background workers for long-running tasks. Each worker runs independently:
+
+| Worker | Command | Purpose |
+|--------|---------|---------|
+| Email | `npm run worker:email` | Sends transactional emails (OTP, welcome, security alerts) via SMTP |
+| Resume analysis | `npm run worker:resume-analysis` | Runs AI resume analysis jobs (Gemini/Groq/OpenRouter) with retry fallbacks |
+| Job embeddings | `npm run worker:job-embeddings` | Creates vector embeddings for jobs (pgvector + AI providers) for semantic recommendations |
+| Application submission | `npm run worker:application-submission` | Processes auto-apply submissions with reliability guarantees (locking, validation, retries) |
+| Outbox relay | `npm run worker:outbox` | Relays outbox events to RabbitMQ with configurable batch size and retry backoff |
+
+Resume analysis durability (outbox → RabbitMQ → worker) is enabled in compose via `RESUME_ANALYSIS_USE_OUTBOX=true`. Without it, analysis runs inline in the API process (`setImmediate`) so local `npm run dev` still works.
