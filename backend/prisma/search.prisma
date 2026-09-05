@@ -1,0 +1,25 @@
+model IndexState {
+  jobId           String   @id @map("job_id")
+  databaseVersion Int      @map("database_version")
+  indexedVersion  Int      @map("indexed_version")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  @@index([databaseVersion, indexedVersion])
+  @@map("index_states")
+}
+
+model SavedSearch {
+  id        String    @id @default(uuid())
+  userId    String    @map("user_id")
+  name      String    @db.VarChar(160)
+  query     String?   @db.Text
+  filters   Json      @default("{}")
+  context   Json?     @map("context")
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, id])
+  @@map("saved_searches")
+}

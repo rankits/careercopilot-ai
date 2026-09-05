@@ -1,0 +1,56 @@
+# Production Multi-Stage Dockerfile for @careercopilot/backend
+
+# --- Stage 1: Base ---
+FROM node:20-alpine AS base
+RUN apk add --no-cache openssl curl su-exec
+WORKDIR /app
+
+# --- Stage 2: Dependencies & Prisma Generation ---
+FROM base AS deps
+COPY package*.json ./
+COPY prisma.config.ts ./
+COPY prisma ./prisma
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi \
+  && npx prisma generate
+
+# --- Stage 3: TypeScript Build ---
+FROM deps AS build
+COPY . .
+RUN npm run build
+
+# --- Stage 4: Production Dependencies ---
+# Keep the Prisma CLI available for migrate deploy at container start.
+FROM deps AS production-deps
+RUN npm prune --omit=dev \
+  && npm install prisma --no-save \
+  && npx prisma generate
+
+# --- Stage 5: Minimal Production Runtime ---
+FROM base AS production
+
+COPY package*.json ./
+COPY prisma.config.ts ./
+COPY prisma ./prisma
+COPY --from=production-deps /app/node_modules ./node_modules
+COPY docker/entrypoint.sh ./docker/entrypoint.sh
+
+COPY --from=build /app/dist ./dist
+COPY --from=build /app/prisma/migrations ./prisma/migrations
+
+# Same entrypoint path as Dockerfile.dev (outside /app).
+COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+RUN mkdir -p /app/storage/resumes \
+  && chown -R node:node /app \
+  && chmod +x /usr/local/bin/docker-entrypoint.sh
+
+ENV NODE_ENV=production
+ENV PORT=5001
+
+EXPOSE 5001
+
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD curl -f http://localhost:5001/health || exit 1
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["node", "dist/server.js"]

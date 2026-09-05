@@ -1,0 +1,379 @@
+import { describe, expect, it, vi, beforeEach } from 'vitest';
+import {
+  ApplicationStatus,
+  ApplicationSourceType,
+  ApplicationPriority,
+  StatusChangedBy,
+} from '@prisma/client';
+import { ApplicationManagementService } from '@/modules/application-management/services/application.service.js';
+import { IApplicationRepository } from '@/modules/application-management/contracts/application.repository.js';
+import { AppError } from '@/shared/utils/errors/AppError.js';
+import {
+  ApplicationDto,
+  ApplicationDetailDto,
+} from '@/modules/application-management/types/application.types.js';
+
+const prismaMock = vi.hoisted(() => ({ job: { findUnique: vi.fn() } }));
+vi.mock('@/shared/config/db.conf.js', () => ({ prisma: prismaMock, default: prismaMock }));
+
+describe('ApplicationManagementService', () => {
+  let mockRepo: IApplicationRepository;
+  let service: ApplicationManagementService;
+
+  const mockAppDto: ApplicationDto = {
+    id: 'app-1',
+    userId: 'user-1',
+    jobId: null,
+    companyId: null,
+    jobTitle: 'Backend Engineer',
+    companyName: 'Acme Corp',
+    companyLogoUrl: null,
+    originalJobUrl: 'https://acme.com/jobs/backend',
+    location: null,
+    remoteType: null,
+    employmentType: null,
+    salaryMin: null,
+    salaryMax: null,
+    salaryCurrency: null,
+    salaryPeriod: null,
+    currentStatus: ApplicationStatus.SAVED,
+    primarySourceType: ApplicationSourceType.EXTERNAL_JOB_URL,
+    priority: ApplicationPriority.MEDIUM,
+    interestLevel: null,
+    appliedAt: null,
+    firstResponseAt: null,
+    closedAt: null,
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+    archivedAt: null,
+  };
+
+  const mockAppDetailDto: ApplicationDetailDto = {
+    ...mockAppDto,
+    descriptionSnapshot: null,
+    skillsSnapshot: [],
+    statusHistory: [],
+    notes: [],
+    tasks: [],
+  };
+
+  beforeEach(() => {
+    mockRepo = {
+      create: vi.fn().mockResolvedValue(mockAppDto),
+      findById: vi.fn().mockResolvedValue(mockAppDetailDto),
+      findByJobId: vi.fn().mockResolvedValue(null),
+      findByNormalisedUrl: vi.fn().mockResolvedValue(null),
+      list: vi.fn(),
+      update: vi.fn().mockResolvedValue(mockAppDto),
+      delete: vi.fn().mockResolvedValue(true),
+      addStatusHistory: vi.fn(),
+      addNote: vi.fn(),
+      deleteNote: vi.fn(),
+      addTask: vi.fn(),
+      updateTask: vi.fn(),
+      deleteTask: vi.fn(),
+    };
+
+    service = new ApplicationManagementService(mockRepo);
+  });
+
+  it('throws 409 conflict when creating an EXTERNAL_JOB_URL application that already exists for user', async () => {
+    vi.mocked(mockRepo.findByNormalisedUrl).mockResolvedValue(mockAppDto);
+
+    await expect(
+      service.createApplication('user-1', {
+        sourceType: 'EXTERNAL_JOB_URL',
+        originalJobUrl: 'https://acme.com/jobs/backend?utm_source=test',
+        jobTitle: 'Backend Engineer',
+        companyName: 'Acme Corp',
+        currentStatus: ApplicationStatus.SAVED,
+        priority: ApplicationPriority.MEDIUM,
+      }),
+    ).rejects.toThrowError(
+      new AppError(
+        'You are already tracking an application for this job URL.',
+        409,
+        'APPLICATION_EXISTS',
+        {
+          existingApplicationId: 'app-1',
+        },
+      ),
+    );
+  });
+
+  it('creates MANUAL application and populates appliedAt when initial status is APPLIED', async () => {
+    await service.createApplication('user-1', {
+      sourceType: 'MANUAL',
+      jobTitle: 'Frontend Engineer',
+      companyName: 'Beta Inc',
+      currentStatus: ApplicationStatus.APPLIED,
+      priority: ApplicationPriority.HIGH,
+    });
+
+    expect(mockRepo.create).toHaveBeenCalledTimes(1);
+    const callArgs = vi.mocked(mockRepo.create).mock.calls[0][0];
+    expect(callArgs.appliedAt).toBeInstanceOf(Date);
+    expect(callArgs.currentStatus).toBe(ApplicationStatus.APPLIED);
+  });
+
+  it('creates MANUAL application with an explicit appliedAt date', async () => {
+    await service.createApplication('user-1', {
+      sourceType: 'MANUAL',
+      jobTitle: 'Senior Full Stack Engineer',
+      companyName: 'Acme Corp',
+      appliedAt: '2025-05-08',
+      currentStatus: ApplicationStatus.SAVED,
+      priority: ApplicationPriority.MEDIUM,
+    });
+
+    const callArgs = vi.mocked(mockRepo.create).mock.calls[0][0];
+    expect(new Date(callArgs.appliedAt as string | Date).toISOString()).toBe(
+      '2025-05-08T00:00:00.000Z',
+    );
+    expect(callArgs.currentStatus).toBe(ApplicationStatus.SAVED);
+  });
+
+  it('updates appliedAt when patching an application', async () => {
+    await service.updateApplication('user-1', 'app-1', {
+      appliedAt: '2025-05-08',
+    });
+
+    expect(mockRepo.update).toHaveBeenCalledWith('user-1', 'app-1', {
+      appliedAt: new Date('2025-05-08T00:00:00.000Z'),
+    });
+  });
+
+  it('throws 404 AppError if application is not found during transitionStatus', async () => {
+    vi.mocked(mockRepo.findById).mockResolvedValue(null);
+
+    await expect(
+      service.transitionStatus('user-1', 'non-existent-id', {
+        toStatus: ApplicationStatus.INTERVIEW,
+      }),
+    ).rejects.toThrowError(new AppError('Application not found', 404, 'APPLICATION_NOT_FOUND'));
+  });
+
+  it('updates firstResponseAt automatically when reaching an interview stage', async () => {
+    await service.transitionStatus('user-1', 'app-1', {
+      toStatus: ApplicationStatus.INTERVIEW,
+      note: 'First technical interview scheduled',
+    });
+
+    expect(mockRepo.addStatusHistory).toHaveBeenCalledWith('user-1', 'app-1', {
+      fromStatus: ApplicationStatus.SAVED,
+      toStatus: ApplicationStatus.INTERVIEW,
+      changedBy: StatusChangedBy.USER,
+      note: 'First technical interview scheduled',
+    });
+
+    const updateCall = vi.mocked(mockRepo.update).mock.calls[0][2];
+    expect(updateCall.firstResponseAt).toBeInstanceOf(Date);
+    expect(updateCall.appliedAt).toBeInstanceOf(Date); // Auto-sets appliedAt if it was null
+  });
+
+  it('updates closedAt automatically when reaching a terminal stage (e.g., HIRED or REJECTED)', async () => {
+    await service.transitionStatus('user-1', 'app-1', {
+      toStatus: ApplicationStatus.HIRED,
+    });
+
+    const updateCall = vi.mocked(mockRepo.update).mock.calls[0][2];
+    expect(updateCall.closedAt).toBeInstanceOf(Date);
+  });
+
+  it('savePlatformJob returns existing application without creating a duplicate', async () => {
+    const saved = { ...mockAppDto, jobId: '11111111-1111-4111-8111-111111111111' };
+    vi.mocked(mockRepo.findByJobId).mockResolvedValue(saved);
+
+    const result = await service.savePlatformJob('user-1', saved.jobId!);
+
+    expect(result).toEqual({ application: saved, created: false });
+    expect(mockRepo.create).not.toHaveBeenCalled();
+  });
+
+  it('unsavePlatformJob deletes SAVED applications and no-ops when missing', async () => {
+    await service.unsavePlatformJob('user-1', '11111111-1111-4111-8111-111111111111');
+    expect(mockRepo.delete).not.toHaveBeenCalled();
+
+    vi.mocked(mockRepo.findByJobId).mockResolvedValue({
+      ...mockAppDto,
+      id: 'app-1',
+      jobId: '11111111-1111-4111-8111-111111111111',
+      currentStatus: ApplicationStatus.SAVED,
+    });
+    await service.unsavePlatformJob('user-1', '11111111-1111-4111-8111-111111111111');
+    expect(mockRepo.delete).toHaveBeenCalledWith('user-1', 'app-1');
+  });
+
+  it('unsavePlatformJob rejects non-SAVED applications', async () => {
+    vi.mocked(mockRepo.findByJobId).mockResolvedValue({
+      ...mockAppDto,
+      jobId: '11111111-1111-4111-8111-111111111111',
+      currentStatus: ApplicationStatus.APPLIED,
+    });
+
+    await expect(
+      service.unsavePlatformJob('user-1', '11111111-1111-4111-8111-111111111111'),
+    ).rejects.toMatchObject({ statusCode: 409, code: 'APPLICATION_NOT_SAVED' });
+  });
+
+  it('creates a PLATFORM_APPLY application from a job listing', async () => {
+    prismaMock.job.findUnique.mockResolvedValue({
+      id: 'job-1',
+      title: 'Backend Engineer',
+      companySlug: 'acme',
+      company: { id: 'comp-1', name: 'Acme Corp', logoUrl: 'l.png' },
+      salaryMin: 100,
+      salaryMax: 200,
+      currency: 'USD',
+      descriptionText: 'Built things',
+      skills: ['node'],
+    });
+
+    await service.createApplication('user-1', {
+      sourceType: 'PLATFORM_APPLY',
+      jobId: 'job-1',
+      currentStatus: ApplicationStatus.APPLIED,
+      priority: ApplicationPriority.HIGH,
+    });
+
+    const callArgs = vi.mocked(mockRepo.create).mock.calls[0][0];
+    expect(callArgs.jobTitle).toBe('Backend Engineer');
+    expect(callArgs.primarySourceType).toBe(ApplicationSourceType.PLATFORM_APPLY);
+    expect(callArgs.appliedAt).toBeInstanceOf(Date);
+  });
+
+  it('creates a PLATFORM_JOB application falling back to companySlug', async () => {
+    prismaMock.job.findUnique.mockResolvedValue({
+      id: 'job-1',
+      title: 'T',
+      companySlug: 'acme',
+      company: null,
+      salaryMin: null,
+      salaryMax: null,
+      currency: null,
+      descriptionHtml: '<p>x</p>',
+      skills: null,
+    });
+    await service.createApplication('user-1', {
+      sourceType: 'PLATFORM_JOB',
+      jobId: 'job-1',
+      priority: ApplicationPriority.MEDIUM,
+    });
+    const callArgs = vi.mocked(mockRepo.create).mock.calls[0][0];
+    expect(callArgs.primarySourceType).toBe(ApplicationSourceType.PLATFORM_JOB);
+    expect(callArgs.companyName).toBe('acme');
+  });
+
+  it('throws 409 when tracking an existing platform job', async () => {
+    vi.mocked(mockRepo.findByJobId).mockResolvedValue(mockAppDto);
+    prismaMock.job.findUnique.mockResolvedValue({ id: 'job-1', title: 'T' });
+    await expect(
+      service.createApplication('user-1', { sourceType: 'PLATFORM_JOB', jobId: 'job-1' }),
+    ).rejects.toMatchObject({ statusCode: 409, code: 'APPLICATION_EXISTS' });
+  });
+
+  it('throws 404 when the referenced job listing does not exist', async () => {
+    prismaMock.job.findUnique.mockResolvedValue(null);
+    await expect(
+      service.createApplication('user-1', { sourceType: 'PLATFORM_JOB', jobId: 'job-x' }),
+    ).rejects.toMatchObject({ statusCode: 404, code: 'JOB_NOT_FOUND' });
+  });
+
+  it('throws 400 for an unsupported source type', async () => {
+    await expect(
+      service.createApplication('user-1', {
+        sourceType: 'WHATSAPP' as never,
+        jobTitle: 'T',
+        companyName: 'C',
+      }),
+    ).rejects.toMatchObject({ statusCode: 400, code: 'UNSUPPORTED_SOURCE_TYPE' });
+  });
+
+  it('savePlatformJob creates a new SAVED application', async () => {
+    vi.mocked(mockRepo.findByJobId).mockResolvedValue(null);
+    prismaMock.job.findUnique.mockResolvedValue({
+      id: 'job-1',
+      title: 'T',
+      companySlug: 'acme',
+      company: null,
+      salaryMin: 1,
+      salaryMax: 2,
+      currency: 'USD',
+      descriptionText: 'd',
+      skills: [],
+    });
+    vi.mocked(mockRepo.create).mockResolvedValue(mockAppDto);
+    const result = await service.savePlatformJob('user-1', 'job-1');
+    expect(result.created).toBe(true);
+    expect(mockRepo.create).toHaveBeenCalled();
+  });
+
+  it('getApplicationById returns the detail via the repository', async () => {
+    const result = await service.getApplicationById('user-1', 'app-1');
+    expect(result).toEqual(mockAppDetailDto);
+    expect(mockRepo.findById).toHaveBeenCalledWith('user-1', 'app-1');
+  });
+
+  it('getApplications passes filters through to the repository list', async () => {
+    vi.mocked(mockRepo.list).mockResolvedValue({
+      items: [],
+      pagination: {
+        totalItems: 0,
+        totalPages: 1,
+        hasNextPage: false,
+        hasPreviousPage: false,
+        page: 1,
+        limit: 10,
+      },
+    });
+    const result = await service.getApplications({
+      userId: 'user-1',
+      filters: { status: ApplicationStatus.APPLIED, search: 'node' },
+      pagination: { page: 1, limit: 10 },
+      sortBy: 'createdAt:desc',
+    });
+    expect(mockRepo.list).toHaveBeenCalled();
+    expect(result.items).toEqual([]);
+  });
+
+  it('archiveApplication updates the archive timestamp', async () => {
+    await service.archiveApplication('user-1', 'app-1');
+    const updateCall = vi.mocked(mockRepo.update).mock.calls[0];
+    expect(updateCall).toHaveLength(3);
+    expect(updateCall[2]).toHaveProperty('archivedAt');
+  });
+
+  it('unarchiveApplication clears the archive timestamp', async () => {
+    await service.unarchiveApplication('user-1', 'app-1');
+    const updateCall = vi.mocked(mockRepo.update).mock.calls[0][2];
+    expect(updateCall.archivedAt).toBeNull();
+  });
+
+  it('deleteApplication returns the repository delete result', async () => {
+    await expect(service.deleteApplication('user-1', 'app-1')).resolves.toBe(true);
+    expect(mockRepo.delete).toHaveBeenCalledWith('user-1', 'app-1');
+  });
+
+  it('addNote forwards to the repository', async () => {
+    const note = { id: 'n1' };
+    vi.mocked(mockRepo.addNote).mockResolvedValue(note as never);
+    await expect(service.addNote('user-1', 'app-1', { content: 'x' } as never)).resolves.toBe(note);
+  });
+
+  it('addTask and updateTask forward to the repository', async () => {
+    const task = { id: 't1' };
+    vi.mocked(mockRepo.addTask).mockResolvedValue(task as never);
+    vi.mocked(mockRepo.updateTask).mockResolvedValue(task as never);
+    await expect(service.addTask('user-1', 'app-1', { title: 'x' } as never)).resolves.toBe(task);
+    await expect(
+      service.updateTask('user-1', 'app-1', 't1', { status: ApplicationStatus.OFFER } as never),
+    ).resolves.toBe(task);
+  });
+
+  it('deleteNote and deleteTask forward to the repository', async () => {
+    vi.mocked(mockRepo.deleteNote).mockResolvedValue(true);
+    vi.mocked(mockRepo.deleteTask).mockResolvedValue(true);
+    await expect(service.deleteNote('user-1', 'app-1', 'n1')).resolves.toBe(true);
+    await expect(service.deleteTask('user-1', 'app-1', 't1')).resolves.toBe(true);
+  });
+});

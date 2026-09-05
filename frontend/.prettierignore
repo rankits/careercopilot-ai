@@ -1,0 +1,9 @@
+# Generated / dependency output — never format these
+dist
+coverage
+node_modules
+test-results
+playwright-report
+blob-report
+package-lock.json
+*.tsbuildinfo

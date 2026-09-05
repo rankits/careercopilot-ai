@@ -1,0 +1,1 @@
+export { SavedResumesPage } from './SavedResumesPage';

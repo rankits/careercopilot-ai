@@ -1,0 +1,54 @@
+# Development Dockerfile for @careercopilot/backend
+# Structure mirrors Dockerfile.prod (base → deps → runtime) so Prisma
+# generation, migrations, and storage permissions behave the same way.
+
+# --- Stage 1: Base ---
+FROM node:20-alpine AS base
+# Chromium for optional Pre-Application headless snapshots (Ashby/JS boards).
+RUN apk add --no-cache openssl curl su-exec chromium nss freetype harfbuzz ca-certificates ttf-freefont
+ENV PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH=/usr/bin/chromium
+ENV CHROMIUM_PATH=/usr/bin/chromium
+WORKDIR /app
+
+# --- Stage 2: Dependencies & Prisma Generation ---
+FROM base AS deps
+COPY package*.json ./
+COPY prisma.config.ts ./
+COPY prisma ./prisma
+RUN npm ci && npx prisma generate
+COPY prisma.config.ts ./prisma.config.ts
+# COPY ENTRY POINT SCRIPT
+COPY docker/entrypoint.sh ./docker/entrypoint.sh
+
+RUN if [ -f package-lock.json ]; then npm ci; else npm install; fi \
+  && npx prisma generate
+
+# --- Stage 3: Development Runtime ---
+FROM base AS development
+
+ENV NODE_ENV=development
+ENV PORT=5001
+
+COPY package*.json ./
+COPY prisma.config.ts ./
+COPY prisma ./prisma
+COPY --from=deps /app/node_modules ./node_modules
+
+# Install entrypoint outside /app so the compose bind-mount (./backend:/app)
+# cannot overwrite it with a non-executable host file.
+COPY docker/entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+
+# Source is bind-mounted in compose; COPY still needed for non-compose runs.
+COPY . .
+
+RUN mkdir -p /app/storage/resumes \
+  && chown -R node:node /app \
+  && chmod +x /usr/local/bin/docker-entrypoint.sh
+
+EXPOSE 5001
+
+HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
+  CMD curl -f http://localhost:5001/health || exit 1
+
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["npm", "run", "dev"]

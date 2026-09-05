@@ -1,0 +1,167 @@
+:root {
+  font-family:
+    Inter,
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
+  color: #14213d;
+  background: #f5f8ff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+  min-width: 0;
+  min-height: 100dvh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  background:
+    radial-gradient(circle at top left, rgba(99, 91, 255, 0.08), transparent 28rem), #f8fafc;
+}
+
+/* App layout: lock document scroll so only .main-content scrolls (sidebar stays fixed). */
+html:has(.app-shell),
+body:has(.app-shell) {
+  height: 100%;
+  overflow: hidden;
+}
+
+#root:has(.app-shell) {
+  height: 100%;
+}
+a {
+  color: inherit;
+}
+button,
+input {
+  font: inherit;
+}
+h1 {
+  margin: 0 0 12px;
+  font-size: clamp(2rem, 4vw, 3.4rem);
+  line-height: 1.05;
+}
+
+.center-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem;
+}
+
+.eyebrow {
+  color: #2b69dc;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.muted {
+  color: #64748b;
+  line-height: 1.7;
+}
+.skip-link {
+  background: #1d4ed8;
+  border-radius: 0.5rem;
+  color: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 700;
+  left: 1rem;
+  padding: 0.625rem 1rem;
+  position: absolute;
+  text-decoration: none;
+  top: 1rem;
+  transform: translateY(-200%);
+  z-index: 10000;
+}
+.skip-link:focus,
+.skip-link:focus-visible {
+  outline: 0.125rem solid #93c5fd;
+  outline-offset: 0.125rem;
+  transform: translateY(0);
+}
+.app-shell {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  height: 100dvh;
+  max-height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  width: 100%;
+}
+
+.app-shell > * {
+  min-height: 0;
+}
+.content-shell {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  overflow: hidden;
+}
+.main-content {
+  min-height: 0;
+  min-width: 0;
+  overflow-x: clip;
+  overflow-y: auto;
+  overscroll-behavior-y: contain;
+  padding: 1rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-gutter: stable;
+  scrollbar-color: #d1d5db #f3f4f6;
+  scrollbar-width: thin;
+  width: 100%;
+}
+
+.main-content::-webkit-scrollbar {
+  width: 0.5rem;
+}
+
+.main-content::-webkit-scrollbar-track {
+  background: #f3f4f6;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  background: #d1d5db;
+  border-radius: 9999px;
+}
+.home-content {
+  align-content: center;
+  display: grid;
+  justify-items: center;
+  min-height: 100%;
+  text-align: center;
+}
+.profile-card {
+  background: white;
+  border: 1px solid #dfe7f6;
+  border-radius: 20px;
+  box-shadow: 0 20px 70px rgba(33, 83, 166, 0.1);
+  padding: 1.625rem;
+  max-width: 600px;
+  margin-top: 1.5rem;
+}
+
+@media (max-width: 760px) {
+  .app-shell {
+    grid-template-columns: 1fr;
+  }
+  .main-content {
+    padding: 1rem 1rem 6rem;
+  }
+}
+
+.setup-field-highlight {
+  outline: 2px solid #635bff;
+  outline-offset: 2px;
+  border-radius: 4px;
+}

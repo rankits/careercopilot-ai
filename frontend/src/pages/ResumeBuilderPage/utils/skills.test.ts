@@ -1,0 +1,68 @@
+import { describe, expect, it } from 'vitest';
+
+import {
+  canonicalizeSkill,
+  extractKeywordsFromText,
+  isSkillLabelNoise,
+  mergeSkillLists,
+  parseSkillChips,
+  splitSkillTokens,
+} from './skills';
+
+describe('skills utils', () => {
+  it('splits comma skill lists and canonicalizes aliases', () => {
+    const skills = splitSkillTokens('java, reactjs, nodejs, Spring Boot, CI/CD');
+    expect(skills).toEqual(
+      expect.arrayContaining(['Java', 'React', 'Node.js', 'Spring Boot', 'CI/CD']),
+    );
+  });
+
+  it('extracts skills from PDF-style one-per-line and space-joined lists', () => {
+    expect(
+      splitSkillTokens(`• React
+• TypeScript
+• Angular
+• Node.js
+• Docker`),
+    ).toEqual(expect.arrayContaining(['React', 'TypeScript', 'Angular', 'Node.js', 'Docker']));
+
+    expect(splitSkillTokens('React TypeScript Angular Node.js Docker AWS')).toEqual(
+      expect.arrayContaining(['React', 'TypeScript', 'Angular', 'Node.js', 'Docker', 'AWS']),
+    );
+  });
+
+  it('canonicalizes angular aliases', () => {
+    expect(canonicalizeSkill('angular')).toBe('Angular');
+    expect(canonicalizeSkill('AngularJS')).toBe('Angular');
+  });
+
+  it('rejects invalid / generic skill tokens', () => {
+    expect(canonicalizeSkill('API')).toBeNull();
+    expect(canonicalizeSkill('Control')).toBeNull();
+    expect(canonicalizeSkill('CSS Deep')).toBeNull();
+    expect(canonicalizeSkill('Context API')).toBeNull();
+    expect(canonicalizeSkill('TypeScript')).toBe('TypeScript');
+    expect(canonicalizeSkill('HTML5')).toBe('HTML5');
+  });
+
+  it('ignores skill label noise', () => {
+    expect(isSkillLabelNoise('Technical Skills:')).toBe(true);
+    expect(isSkillLabelNoise('Java')).toBe(false);
+  });
+
+  it('extracts keywords from JD prose', () => {
+    const keys = extractKeywordsFromText(
+      'We need experience with Java, Spring Boot, and AWS microservices.',
+    );
+    expect(keys).toEqual(expect.arrayContaining(['Java', 'Spring Boot', 'AWS']));
+    expect(keys).not.toContain('API');
+    expect(keys).not.toContain('Control');
+  });
+
+  it('parses skill chips and merges lists without duplicates', () => {
+    expect(parseSkillChips('Python, Docker')).toEqual(expect.arrayContaining(['Python', 'Docker']));
+    expect(mergeSkillLists(['Java'], ['java', 'React'], ['Custom Tool'])).toEqual(
+      expect.arrayContaining(['Java', 'React', 'Custom Tool']),
+    );
+  });
+});

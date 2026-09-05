@@ -1,10 +1,29 @@
 node_modules
 dist
+frontend/dist
 .env
 .env.*
 !.env.example
 coverage
+frontend/coverage
 .DS_Store
 *.local
 .vscode/*
 !.vscode/extensions.json
+backend/docs/
+backend/storage/
+# Playwright
+frontend/playwright-report/
+frontend/test-results/
+frontend/blob-report/
+
+flow-diagrames
+docs/*
+!docs/auto-apply/
+docs/
+# Local manual deploy config (never commit secrets)
+deploy/manual-deploy.env
+deploy/frontend-manual-deploy.env
+manual-deploy.env
+docs/*
+!docs/auto-apply/

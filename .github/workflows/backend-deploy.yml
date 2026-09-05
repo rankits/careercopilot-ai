@@ -1,0 +1,303 @@
+name: Deploy Backend to AWS EC2
+
+on:
+  push:
+    branches:
+      - main
+      - staging
+    paths:
+      - 'backend/**'
+      - 'deploy/backend/**'
+      - '.github/workflows/backend-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: career-copilot-backend-production
+  cancel-in-progress: false
+
+jobs:
+  validate:
+    name: Validate Backend Before Deployment
+    # runs-on: self-hosted
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    services:
+      postgres:
+        image: pgvector/pgvector:pg16
+        env:
+          POSTGRES_USER: test
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      rabbitmq:
+        image: rabbitmq:4-management-alpine
+        ports:
+          - 5672:5672
+        options: >-
+          --health-cmd "rabbitmq-diagnostics -q ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+      - name: Run TypeScript compiler typecheck
+        run: npm run typecheck
+
+      - name: Run automated unit tests with coverage
+        run: npm test -- --coverage
+
+      - name: Run integration tests
+        run: npm run test:integration
+
+      - name: Validate production build
+        run: npm run build
+
+      - name: Run vulnerability scan
+        run: npm audit --audit-level=high
+
+  build-and-push:
+    name: Build and Push Docker Image
+    needs: validate
+    # runs-on: self-hosted
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push production image
+        uses: docker/build-push-action@v6
+        with:
+          # Dockerfile.prod's COPY paths (docker/entrypoint.sh, prisma, package*.json)
+          # are relative to backend/, matching docker-compose.dev.yml's convention.
+          # A repo-root context makes those COPY sources resolve to the wrong files.
+          # Note: `file` is resolved relative to the repo root, not `context`.
+          context: ./backend
+          file: ./backend/docker/Dockerfile.prod
+          platforms: linux/amd64
+          push: true
+          tags: |
+            ${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}
+            ${{ vars.DOCKER_IMAGE_NAME }}:main
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  package-deployment:
+    name: Package and Upload Release Bundle
+    needs: build-and-push
+    # runs-on: self-hosted
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v5
+
+      - name: Create release tarball bundle
+        run: |
+          mkdir -p bundle
+          tar -czvf bundle/backend-deployment.tar.gz -C deploy/backend .
+          echo "Release bundle created successfully."
+
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_BACKEND_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: GitHubActions-Backend-Package
+
+      - name: Upload bundle to S3 deployment bucket
+        run: |
+          aws s3 cp bundle/backend-deployment.tar.gz \
+            s3://${{ vars.BACKEND_DEPLOYMENT_BUCKET }}/backend/career-copilot-backend-${{ github.sha }}.tar.gz
+          echo "Bundle uploaded to s3://${{ vars.BACKEND_DEPLOYMENT_BUCKET }}/backend/career-copilot-backend-${{ github.sha }}.tar.gz"
+
+  deploy:
+    name: Deploy to EC2 via AWS Systems Manager
+    needs: package-deployment
+    # runs-on: self-hosted
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}
+
+    steps:
+      - name: Configure AWS credentials via OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_BACKEND_DEPLOY_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+          role-session-name: GitHubActions-Backend-Deploy
+
+      - name: Trigger atomic EC2 deployment via SSM Run Command
+        id: ssm_deploy
+        run: |
+          cat <<EOF > ssm-params.json
+          {
+            "commands": [
+              "set -Eeuo pipefail",
+              "mkdir -p /opt/career-copilot/backend/releases/${{ github.sha }}",
+              "aws s3 cp s3://${{ vars.BACKEND_DEPLOYMENT_BUCKET }}/backend/career-copilot-backend-${{ github.sha }}.tar.gz /tmp/career-copilot-backend-${{ github.sha }}.tar.gz",
+              "tar -xzvf /tmp/career-copilot-backend-${{ github.sha }}.tar.gz -C /opt/career-copilot/backend/releases/${{ github.sha }}",
+              "rm -f /tmp/career-copilot-backend-${{ github.sha }}.tar.gz",
+              "chmod +x /opt/career-copilot/backend/releases/${{ github.sha }}/*.sh",
+              "/opt/career-copilot/backend/releases/${{ github.sha }}/install-release.sh \"${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}\" \"${{ github.sha }}\""
+            ]
+          }
+          EOF
+
+          COMMAND_ID=$(aws ssm send-command \
+            --document-name "AWS-RunShellScript" \
+            --instance-ids "${{ vars.EC2_INSTANCE_ID }}" \
+            --comment "Deploy Career Copilot Backend SHA ${{ github.sha }}" \
+            --parameters file://ssm-params.json \
+            --output text \
+            --query "Command.CommandId")
+
+          echo "command_id=$COMMAND_ID" >> "$GITHUB_OUTPUT"
+          echo "Triggered SSM Command ID: $COMMAND_ID on instance ${{ vars.EC2_INSTANCE_ID }}"
+
+      - name: Wait for SSM Command Completion
+        run: |
+          COMMAND_ID="${{ steps.ssm_deploy.outputs.command_id }}"
+          echo "Waiting for SSM Command ID: $COMMAND_ID..."
+          STATUS="InProgress"
+
+          for i in $(seq 1 60); do
+            STATUS=$(aws ssm get-command-invocation \
+              --command-id "$COMMAND_ID" \
+              --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+              --query "Status" \
+              --output text 2>/dev/null || echo "Pending")
+
+            echo "Attempt $i: Status = $STATUS"
+            if [ "$STATUS" = "Success" ] || [ "$STATUS" = "Failed" ] || [ "$STATUS" = "Cancelled" ] || [ "$STATUS" = "TimedOut" ]; then
+              break
+            fi
+            sleep 5
+          done
+
+          echo "Final SSM Command Status: $STATUS"
+
+          echo "--- Standard Output ---"
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+            --query "StandardOutputContent" \
+            --output text || true
+
+          echo "--- Standard Error ---"
+          aws ssm get-command-invocation \
+            --command-id "$COMMAND_ID" \
+            --instance-id "${{ vars.EC2_INSTANCE_ID }}" \
+            --query "StandardErrorContent" \
+            --output text || true
+
+          if [ "$STATUS" != "Success" ]; then
+            echo "Error: SSM deployment command failed with status: $STATUS"
+            exit 1
+          fi
+
+  verify-public-endpoint:
+    name: Verify Public Health Endpoint
+    needs: deploy
+    # runs-on: self-hosted
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify Public Health Endpoint
+        run: |
+          HEALTH_URL="${{ vars.BACKEND_PUBLIC_HEALTH_URL }}"
+          echo "Verifying public health endpoint at $HEALTH_URL..."
+          MAX_ATTEMPTS=12
+          SLEEP_SECONDS=5
+
+          for attempt in $(seq 1 "$MAX_ATTEMPTS"); do
+            echo "Attempt $attempt/$MAX_ATTEMPTS: Checking $HEALTH_URL..."
+            RESPONSE="$(curl -s -w "\n%{http_code}" "$HEALTH_URL" 2>/dev/null || echo -e "\n000")"
+            HTTP_CODE="$(echo "$RESPONSE" | tail -n 1)"
+            BODY="$(echo "$RESPONSE" | sed '$d')"
+
+            if [ "$HTTP_CODE" = "200" ]; then
+              if echo "$BODY" | grep -E -q '"status"\s*:\s*"ok"'; then
+                echo "Public endpoint health verification passed! Response: $BODY"
+                exit 0
+              else
+                echo "Warning: HTTP 200 received but status not ok: $BODY"
+              fi
+            else
+              echo "Warning: Received HTTP $HTTP_CODE"
+            fi
+
+            if [ "$attempt" -lt "$MAX_ATTEMPTS" ]; then
+              sleep "$SLEEP_SECONDS"
+            fi
+          done
+
+          echo "Error: Public health verification failed after $MAX_ATTEMPTS attempts."
+          exit 1
+
+      - name: Generate Deployment Step Summary
+        if: always()
+        run: |
+          {
+            echo "# Backend Deployment Summary"
+            echo ""
+            if [ "${{ job.status }}" = "success" ]; then
+              echo "**Status:** Deployment Successful"
+            else
+              echo "**Status:** Deployment Failed (${{ job.status }})"
+            fi
+            echo ""
+            echo "## Deployment Details"
+            echo "- **Environment:** ${{ github.ref == 'refs/heads/main' && 'production' || 'staging' }}"
+            echo "- **Git Branch:** \`${{ github.ref_name }}\`"
+            echo "- **Commit SHA:** \`${{ github.sha }}\`"
+            echo "- **Docker Image:** \`${{ vars.DOCKER_IMAGE_NAME }}:${{ github.sha }}\`"
+            echo "- **EC2 Instance ID:** \`${{ vars.EC2_INSTANCE_ID }}\`"
+            echo "- **S3 Bundle:** \`s3://${{ vars.BACKEND_DEPLOYMENT_BUCKET }}/backend/career-copilot-backend-${{ github.sha }}.tar.gz\`"
+            echo "- **Public Health URL:** [${{ vars.BACKEND_PUBLIC_URL || vars.BACKEND_PUBLIC_HEALTH_URL }}](${{ vars.BACKEND_PUBLIC_HEALTH_URL }})"
+          } >> "$GITHUB_STEP_SUMMARY"
