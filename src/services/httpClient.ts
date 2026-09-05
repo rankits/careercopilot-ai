@@ -18,6 +18,12 @@ httpClient.interceptors.request.use((config) => {
 
 httpClient.interceptors.response.use(
   (response) => response,
-  (error: unknown) =>
-    Promise.reject(error instanceof Error ? error : new Error('HTTP request failed')),
+  (error: unknown) => {
+    if (error instanceof Error) {
+      console.error('HTTP request failed:', error.message);
+    } else {
+      console.error('HTTP request failed: unknown error');
+    }
+    return Promise.reject(error instanceof Error ? error : new Error('HTTP request failed'));
+  },
 );
