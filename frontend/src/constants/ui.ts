@@ -1,0 +1,712 @@
+import AssignmentOutlinedIcon from '@mui/icons-material/AssignmentOutlined';
+import AutoAwesomeOutlinedIcon from '@mui/icons-material/AutoAwesomeOutlined';
+import BookmarkBorderOutlinedIcon from '@mui/icons-material/BookmarkBorderOutlined';
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import EditNoteOutlinedIcon from '@mui/icons-material/EditNoteOutlined';
+import FolderOutlinedIcon from '@mui/icons-material/FolderOutlined';
+import GridViewOutlinedIcon from '@mui/icons-material/GridViewOutlined';
+import InsightsOutlinedIcon from '@mui/icons-material/InsightsOutlined';
+import LanguageOutlinedIcon from '@mui/icons-material/LanguageOutlined';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
+import MailOutlineOutlinedIcon from '@mui/icons-material/MailOutlineOutlined';
+import SearchOutlinedIcon from '@mui/icons-material/SearchOutlined';
+import SecurityOutlinedIcon from '@mui/icons-material/SecurityOutlined';
+import SmartToyOutlinedIcon from '@mui/icons-material/SmartToyOutlined';
+import TaskAltOutlinedIcon from '@mui/icons-material/TaskAltOutlined';
+import * as yup from 'yup';
+
+import type {
+  AuthFormContent,
+  AuthFormField,
+  AuthFormMode,
+} from '@/components/organisms/AuthForm/interfaces';
+import type { AuthPageFeature } from '@/components/organisms/AuthPageLayout/interfaces';
+import type { SidebarNavItem } from '@/components/organisms/Sidebar/interfaces';
+
+import { ROUTES } from '@/constants/routes';
+/* ----------------------------------------------------------------------------
+ * Brand & actions shared across multiple components.
+ * -------------------------------------------------------------------------- */
+
+export const BRAND_NAME = 'Career Copilot';
+export const BRAND_TAGLINE = 'Find. Optimize. Apply. Succeed.';
+
+export const APP_ACTIONS = {
+  APPLY_NOW: 'Apply Now',
+  RETRY: 'Retry',
+  SAVE: 'Save',
+  SAVE_FOR_LATER: 'Save for later',
+  SAVED: 'Saved',
+  UPLOAD_RESUME: 'Upload Resume',
+  VIEW_JOB: 'View Job',
+} as const;
+
+export const JOB_UI = {
+  MATCH_SUFFIX: '% Match',
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * ChatInput
+ * -------------------------------------------------------------------------- */
+
+export const CHAT_INPUT_COPY = {
+  placeholder: 'Ask Career Copilot…',
+  sendAriaLabel: 'Send message',
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * DashboardJobRow
+ * -------------------------------------------------------------------------- */
+
+export const DASHBOARD_JOB_ROW_COPY = {
+  saveJobAria: (title: string) => `Save ${title}`,
+  /** Prefix stripped from `postedAt` values such as "Posted 1d ago". */
+  postedPrefix: 'Posted ',
+} as const;
+
+export const DASHBOARD_JOB_ROW_LIMITS = {
+  featuredMaxSkills: 5,
+  maxSkills: 4,
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * HeaderSearch
+ * -------------------------------------------------------------------------- */
+
+export const HEADER_SEARCH_COPY = {
+  ariaLabel: 'Search',
+  placeholder: 'Search jobs, companies, skills...',
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * HeaderUserMenu
+ * -------------------------------------------------------------------------- */
+
+export const HEADER_USER_MENU_COPY = {
+  ariaLabel: 'User menu',
+  connectedAccounts: 'Connected Accounts',
+  editProfile: 'Edit Profile',
+  logout: 'Logout',
+  roleLabel: 'Frontend Developer',
+} as const;
+
+/** Fallback initials shown when a name yields no recognizable letters. */
+export const USER_INITIALS_FALLBACK = 'U';
+
+/* ----------------------------------------------------------------------------
+ * JobCard
+ * -------------------------------------------------------------------------- */
+
+/** Static user-facing copy for the JobCard. */
+export const JOB_CARD_COPY = {
+  aiRecommended: 'AI Recommended',
+  details: 'Details',
+  dismiss: 'Dismiss',
+  lessLikeThis: 'Less like this',
+  moreLikeThis: 'More like this',
+  moreActions: 'More actions',
+  notRelevant: 'Not relevant',
+  saveJob: 'Save job',
+  unsaveJob: 'Unsave job',
+  verifiedCompany: 'Verified company',
+} as const;
+
+/** Accessible names composed from job data at render time. */
+export const JOB_CARD_ARIA = {
+  apply: (title: string, available: boolean) =>
+    `Apply to ${title}${available ? '' : ' unavailable'}`,
+  companyLogo: (company: string) => `${company} logo`,
+  details: (title: string) => `View details for ${title}`,
+  dismiss: (title: string) => `Dismiss ${title} recommendation`,
+  lessLikeThis: (title: string) => `Show fewer jobs like ${title}`,
+  match: (match: number, subtitle?: string) =>
+    `${match} percent match${subtitle ? `, ${subtitle}` : ''}`,
+  moreActions: (title: string) => `More actions for ${title}`,
+  moreLikeThis: (selected: boolean, title: string) =>
+    selected ? `More jobs like ${title} selected` : `Show more jobs like ${title}`,
+  notRelevant: (title: string) => `Mark ${title} as not relevant`,
+  open: (title: string, company: string) => `Open ${title} at ${company}`,
+  save: (saved: boolean, title: string) => `${saved ? 'Unsave' : 'Save'} ${title}`,
+  viewJob: (title: string) => `View ${title}`,
+} as const;
+
+export const JOB_CARD_LIMITS = {
+  /** Number of recommendation bullets rendered before collapsing. */
+  maxBullets: 3,
+  /** Number of supporting evidence items joined into the bullet text. */
+  maxEvidence: 2,
+  /** Converts a 0-1 score into a percentage. */
+  percentScale: 100,
+} as const;
+
+type SkillGapKey = 'alias' | 'exact' | 'missing' | 'related' | 'transferable';
+
+/** Ordered skill-gap groups and their display labels. */
+export const SKILL_GAP_SECTIONS: ReadonlyArray<{ key: SkillGapKey; label: string }> = [
+  { key: 'exact', label: 'Matched' },
+  { key: 'alias', label: 'Alias' },
+  { key: 'related', label: 'Related' },
+  { key: 'transferable', label: 'Transferable' },
+  { key: 'missing', label: 'Missing' },
+];
+
+/* ----------------------------------------------------------------------------
+ * JobFeedStatus
+ * -------------------------------------------------------------------------- */
+
+/** Friendly copy shown while jobs load or when the feed errors. */
+export const JOB_FEED_STATUS_MESSAGES = {
+  defaultError: 'Something went wrong. Please try again.',
+  forbidden: 'You don’t have access to this content.',
+  loading: 'Loading jobs…',
+  notFound: 'We couldn’t find matching results right now. Try again in a moment.',
+  requestFailed: 'We couldn’t complete this request. Please try again.',
+  unavailable: 'The service is temporarily unavailable. Please try again.',
+  unauthorized: 'Your session may have expired. Sign in again, then retry.',
+} as const;
+
+/**
+ * Raw API error messages are mapped to friendly copy by their first matching
+ * pattern. Unknown messages are surfaced verbatim.
+ */
+export const JOB_FEED_STATUS_RULES: ReadonlyArray<{ pattern: RegExp; message: string }> = [
+  {
+    message: JOB_FEED_STATUS_MESSAGES.notFound,
+    pattern: /status code 404|not found/i,
+  },
+  {
+    message: JOB_FEED_STATUS_MESSAGES.unauthorized,
+    pattern: /status code 401|unauthorized|session/i,
+  },
+  {
+    message: JOB_FEED_STATUS_MESSAGES.forbidden,
+    pattern: /status code 403|forbidden/i,
+  },
+  {
+    message: JOB_FEED_STATUS_MESSAGES.unavailable,
+    pattern: /status code 5\d\d|unavailable|network|timeout|failed to fetch|network error/i,
+  },
+  {
+    message: JOB_FEED_STATUS_MESSAGES.requestFailed,
+    pattern: /request failed with status code/i,
+  },
+];
+
+/* ----------------------------------------------------------------------------
+ * JobFilterBar
+ * -------------------------------------------------------------------------- */
+
+export const JOB_FILTER_BAR_COPY = {
+  scrollLeftAria: 'Scroll filters left',
+  scrollRightAria: 'Scroll filters right',
+  trackAria: 'Job filters',
+} as const;
+
+export const JOB_FILTER_BAR_SCROLL = {
+  /** Remaining scroll (px) below which the edge button is disabled. */
+  edgeThresholdPx: 2,
+  /** Minimum smooth-scroll step used for narrow tracks. */
+  minStepPx: 160,
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * ResumeScoreCard
+ * -------------------------------------------------------------------------- */
+
+/** Static user-facing copy for the ResumeScoreCard. */
+export const RESUME_SCORE_COPY = {
+  aiAnalysis: 'AI Analysis',
+  ariaLabel: (score: number) => `Resume score ${score} percent`,
+  excellent: 'Excellent',
+  growth: 'up 4% from last scan',
+  improveResume: 'Improve Resume',
+  message: 'Great job! Your resume is performing really well.',
+  title: 'Resume Score',
+} as const;
+
+export const RESUME_SCORE_ANIMATION = {
+  /** Total count-up frames; higher scores advance in larger steps. */
+  frames: 24,
+  /** Milliseconds between count-up ticks. */
+  intervalMs: 28,
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * AppHeader
+ * -------------------------------------------------------------------------- */
+
+export const APP_HEADER_DEFAULTS = {
+  userName: 'User',
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * AuthForm
+ * -------------------------------------------------------------------------- */
+
+export const AUTH_FIELD_LIMITS = {
+  email: 300,
+  name: 80,
+  password: 128,
+  phone: 16,
+} as const;
+
+export const AUTH_FORM_CONTENT: Record<AuthFormMode, AuthFormContent> = {
+  login: {
+    footerActionLabel: 'Create account',
+    footerText: "Don't have an account?",
+    submitLabel: 'Login',
+    subtitle: 'Login to continue to your account',
+    title: 'Welcome back!',
+  },
+  register: {
+    footerActionLabel: 'Login',
+    footerText: 'Already have an account?',
+    submitLabel: 'Create account',
+    subtitle: '',
+    title: 'Create account',
+  },
+};
+
+export const AUTH_FORM_FIELDS: Record<AuthFormMode, AuthFormField[]> = {
+  login: [
+    {
+      autoComplete: 'username',
+      label: 'Email address',
+      maxLength: AUTH_FIELD_LIMITS.email,
+      name: 'email',
+      placeholder: 'you@example.com',
+      startIcon: 'email',
+      type: 'email',
+    },
+    {
+      autoComplete: 'current-password',
+      endIcon: 'visibilityOff',
+      label: 'Password',
+      maxLength: AUTH_FIELD_LIMITS.password,
+      name: 'password',
+      placeholder: 'Enter your password',
+      startIcon: 'lock',
+      type: 'password',
+    },
+  ],
+  register: [
+    {
+      autoComplete: 'given-name',
+      label: 'First name',
+      maxLength: AUTH_FIELD_LIMITS.name,
+      name: 'firstName',
+      placeholder: 'Jane',
+      startIcon: 'person',
+      type: 'text',
+    },
+    {
+      autoComplete: 'family-name',
+      label: 'Last name',
+      maxLength: AUTH_FIELD_LIMITS.name,
+      name: 'lastName',
+      placeholder: 'Doe',
+      startIcon: 'person',
+      type: 'text',
+    },
+    {
+      autoComplete: 'email',
+      label: 'Email address',
+      maxLength: AUTH_FIELD_LIMITS.email,
+      name: 'email',
+      placeholder: 'you@example.com',
+      startIcon: 'email',
+      type: 'email',
+    },
+    {
+      autoComplete: 'tel',
+      label: 'Phone number',
+      maxLength: AUTH_FIELD_LIMITS.phone,
+      name: 'phone',
+      placeholder: '9876543210',
+      startIcon: 'phone',
+      type: 'tel',
+    },
+    {
+      autoComplete: 'new-password',
+      endIcon: 'visibilityOff',
+      label: 'Password',
+      maxLength: AUTH_FIELD_LIMITS.password,
+      name: 'password',
+      placeholder: 'Enter your password',
+      startIcon: 'lock',
+      type: 'password',
+    },
+    {
+      autoComplete: 'new-password',
+      endIcon: 'visibilityOff',
+      label: 'Confirm password',
+      maxLength: AUTH_FIELD_LIMITS.password,
+      name: 'confirmPassword',
+      placeholder: 'Confirm your password',
+      startIcon: 'lock',
+      type: 'password',
+    },
+  ],
+};
+
+/** Copy that is not tied to a single mode (login vs register). */
+export const AUTH_FORM_STATIC_COPY = {
+  dividerLabel: 'or',
+  forgotPasswordLabel: 'Forgot password?',
+  rememberMeLabel: 'Remember me',
+} as const;
+
+/** Accessible names composed from field data at render time. */
+export const AUTH_FORM_ARIA = {
+  visibilityToggle: (visible: boolean, fieldLabel: string) =>
+    `${visible ? 'Hide' : 'Show'} ${fieldLabel}`,
+} as const;
+
+export const AUTH_FORM_VALIDATION_SCHEMAS = {
+  login: yup.object({
+    email: yup
+      .string()
+      .max(AUTH_FIELD_LIMITS.email, 'Email address must be 300 characters or fewer')
+      .email('Enter a valid email address')
+      .required('Email is required'),
+    password: yup
+      .string()
+      .required('Password is required')
+      .min(8, 'Password must be at least 8 characters')
+      .max(AUTH_FIELD_LIMITS.password, 'Password must be 128 characters or fewer'),
+    rememberMe: yup.boolean().default(true),
+  }),
+  register: yup.object({
+    confirmPassword: yup
+      .string()
+      .max(AUTH_FIELD_LIMITS.password, 'Confirm password must be 128 characters or fewer')
+      .oneOf([yup.ref('password')], 'Passwords must match')
+      .required('Confirm password is required'),
+    email: yup
+      .string()
+      .max(AUTH_FIELD_LIMITS.email, 'Email address must be 300 characters or fewer')
+      .email('Enter a valid email address')
+      .required('Email is required'),
+    firstName: yup
+      .string()
+      .trim()
+      .max(AUTH_FIELD_LIMITS.name, 'First name must be 80 characters or fewer')
+      .required('First name is required'),
+    lastName: yup
+      .string()
+      .trim()
+      .max(AUTH_FIELD_LIMITS.name, 'Last name must be 80 characters or fewer')
+      .required('Last name is required'),
+    password: yup
+      .string()
+      .required('Password is required')
+      .min(8, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .max(AUTH_FIELD_LIMITS.password, 'Password must be 128 characters or fewer')
+      .matches(/[A-Z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/[a-z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/\d/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(
+        /[^A-Za-z0-9]/,
+        'Use 8+ characters with uppercase, lowercase, number & special character',
+      ),
+    phone: yup
+      .string()
+      .required('Phone number is required')
+      .matches(/^\d{10}$/, {
+        excludeEmptyString: true,
+        message: 'Enter a valid 10-digit phone number',
+      }),
+  }),
+  forgotPassword: yup.object({
+    email: yup
+      .string()
+      .trim()
+      .email('Enter a valid email address')
+      .max(AUTH_FIELD_LIMITS.email, 'Email cannot exceed 300 characters')
+      .required('Email is required'),
+    confirmPassword: yup
+      .string()
+      .oneOf([yup.ref('password')], 'Passwords must match')
+      .required('Confirm password is required'),
+    password: yup
+      .string()
+      .required('Password is required')
+      .min(8, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .max(AUTH_FIELD_LIMITS.password, 'Password cannot exceed 128 characters')
+      .matches(/[A-Z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/[a-z]/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(/\d/, 'Use 8+ characters with uppercase, lowercase, number & special character')
+      .matches(
+        /[^A-Za-z0-9]/,
+        'Use 8+ characters with uppercase, lowercase, number & special character',
+      ),
+  }),
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * AuthPageLayout
+ * -------------------------------------------------------------------------- */
+
+/** Static user-facing copy for the AuthPageLayout hero and panels. */
+export const AUTH_PAGE_COPY = {
+  aiBadge: 'AI-powered career platform',
+  aiPlatformAlt: 'AI platform illustration',
+  alreadyHaveAccount: 'Already have an account?',
+  careerJourneyAlt: 'Career journey illustration',
+  heroDescription:
+    'Discover roles, optimize your resume, track applications, and prepare for interviews with one intelligent career workspace.',
+  heroHeadingAccent: 'Build your dream career.',
+  heroHeadingText: 'Find the right opportunities.',
+  loginAria: 'Login from header',
+  loginLink: 'Login',
+  logoAlt: 'CareerCopilot',
+  productOverviewAria: 'Career Copilot product overview',
+  registerDescription: 'Build a stronger profile and make every career move with confidence.',
+  registerHeadingAccent: 'smarter career',
+  registerHeadingSuffix: ' journey today',
+  registerHeadingText: 'Start your ',
+  securityAria: 'Security and trust',
+} as const;
+
+export const LOGIN_FEATURES: AuthPageFeature[] = [
+  {
+    description: 'Opportunities aligned with your experience.',
+    icon: SearchOutlinedIcon,
+    title: 'Smart Job Matching',
+    tone: 'primary',
+  },
+  {
+    description: 'Stronger applications with focused insights.',
+    icon: InsightsOutlinedIcon,
+    title: 'AI-powered guidance',
+    tone: 'success',
+  },
+  {
+    description: 'Every application organized in one place.',
+    icon: BookmarkBorderOutlinedIcon,
+    title: 'Application tracking',
+    tone: 'warning',
+  },
+];
+
+export const TRUST_ITEMS: AuthPageFeature[] = [
+  {
+    description: 'Advanced encryption',
+    icon: SecurityOutlinedIcon,
+    title: 'Your data is safe',
+    tone: 'primary',
+  },
+  {
+    description: 'Your data stays private',
+    icon: LockOutlinedIcon,
+    title: 'Privacy first',
+    tone: 'success',
+  },
+  {
+    description: 'Transparent recommendations',
+    icon: CheckCircleOutlineIcon,
+    title: 'AI you can trust',
+    tone: 'warning',
+  },
+];
+
+/* ----------------------------------------------------------------------------
+ * CareerCopilot
+ * -------------------------------------------------------------------------- */
+
+/** Static user-facing copy for the CareerCopilot panel. */
+export const CAREER_COPILOT_COPY = {
+  closeAria: `Close ${BRAND_NAME}`,
+  openAria: `Open ${BRAND_NAME}`,
+  retryLastMessage: 'Retry last message',
+  suggestedPromptsAria: 'Suggested prompts',
+  subtitle: 'Context-aware career coach',
+  thinking: `${BRAND_NAME} is thinking…`,
+  unavailable: `${BRAND_NAME} is temporarily unavailable.`,
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * Sidebar
+ * -------------------------------------------------------------------------- */
+
+export const SIDEBAR_NAV_LABELS = {
+  applicationSetup: 'Application Setup',
+  browserExtension: 'Browser Extension',
+  applications: 'Applications',
+  assistedApplications: 'Assisted Applications',
+  aiMail: 'AI Mail',
+  aiMatch: 'AI Match',
+  dashboard: 'Dashboard',
+  jobsFeed: 'Jobs Feed',
+  resumeBuilder: 'Resume Builder',
+  savedJobs: 'Saved Jobs',
+  savedResumes: 'Saved Resumes',
+} as const;
+
+/** Short labels for the 5-item mobile bottom bar (avoids ellipsis truncation). */
+export const SIDEBAR_BOTTOM_NAV_LABELS = {
+  applications: 'Apps',
+  aiMatch: 'AI Match',
+  dashboard: 'Home',
+  jobsFeed: 'Jobs',
+} as const;
+
+export const DEFAULT_SIDEBAR_ITEMS: SidebarNavItem[] = [
+  {
+    href: ROUTES.DASHBOARD,
+    icon: GridViewOutlinedIcon,
+    id: 'dashboard',
+    label: SIDEBAR_NAV_LABELS.dashboard,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.dashboard,
+  },
+  {
+    href: ROUTES.JOB_FEED,
+    icon: SearchOutlinedIcon,
+    id: 'jobs-feed',
+    label: SIDEBAR_NAV_LABELS.jobsFeed,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.jobsFeed,
+  },
+  {
+    href: ROUTES.AI_MATCH,
+    icon: AutoAwesomeOutlinedIcon,
+    id: 'ai-match',
+    label: SIDEBAR_NAV_LABELS.aiMatch,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.aiMatch,
+  },
+  {
+    href: ROUTES.AI_MAIL,
+    icon: MailOutlineOutlinedIcon,
+    id: 'ai-mail',
+    label: SIDEBAR_NAV_LABELS.aiMail,
+  },
+  {
+    href: ROUTES.APPLICATIONS,
+    icon: AssignmentOutlinedIcon,
+    id: 'applications',
+    label: SIDEBAR_NAV_LABELS.applications,
+    shortLabel: SIDEBAR_BOTTOM_NAV_LABELS.applications,
+  },
+  {
+    href: ROUTES.SAVED_JOBS,
+    icon: BookmarkBorderOutlinedIcon,
+    id: 'saved-jobs',
+    label: SIDEBAR_NAV_LABELS.savedJobs,
+  },
+  {
+    href: ROUTES.AUTO_APPLY,
+    icon: SmartToyOutlinedIcon,
+    id: 'auto-apply',
+    label: SIDEBAR_NAV_LABELS.applicationSetup,
+  },
+  {
+    href: ROUTES.ASSISTED_APPLICATIONS,
+    icon: TaskAltOutlinedIcon,
+    id: 'assisted-applications',
+    label: SIDEBAR_NAV_LABELS.assistedApplications,
+  },
+  {
+    href: ROUTES.BROWSER_EXTENSION,
+    icon: LanguageOutlinedIcon,
+    id: 'browser-extension',
+    label: SIDEBAR_NAV_LABELS.browserExtension,
+  },
+  {
+    href: ROUTES.RESUME_BUILDER,
+    icon: EditNoteOutlinedIcon,
+    id: 'resume-builder',
+    label: SIDEBAR_NAV_LABELS.resumeBuilder,
+  },
+  {
+    href: ROUTES.SAVED_RESUMES,
+    icon: FolderOutlinedIcon,
+    id: 'saved-resumes',
+    label: SIDEBAR_NAV_LABELS.savedResumes,
+  },
+];
+
+export const DEFAULT_SIDEBAR_SECTIONS = [
+  {
+    id: 'career',
+    itemIds: [
+      'dashboard',
+      'jobs-feed',
+      'ai-match',
+      'applications',
+      'assisted-applications',
+      'saved-jobs',
+    ],
+    label: 'CAREER',
+  },
+  {
+    id: 'tools',
+    itemIds: ['ai-mail', 'browser-extension'],
+    label: 'TOOLS',
+  },
+  {
+    id: 'resume',
+    itemIds: ['resume-builder', 'saved-resumes'],
+    label: 'RESUME',
+  },
+  {
+    id: 'settings',
+    itemIds: ['auto-apply'],
+    label: 'SETTINGS',
+  },
+] as const;
+
+/** Primary destinations shown in the mobile bottom bar (More opens the overflow drawer). */
+export const DEFAULT_BOTTOM_NAV_IDS = [
+  'dashboard',
+  'jobs-feed',
+  'ai-match',
+  'applications',
+] as const;
+
+/** Sidebar destinations that live in the mobile More drawer instead of the bottom bar. */
+export const DEFAULT_MOBILE_DRAWER_NAV_IDS = [
+  'saved-jobs',
+  'assisted-applications',
+  'ai-mail',
+  'browser-extension',
+  'resume-builder',
+  'saved-resumes',
+  'auto-apply',
+] as const;
+
+/** Static user-facing copy and defaults for the Sidebar. */
+export const SIDEBAR_COPY = {
+  bottomNavAria: 'Mobile navigation',
+  collapseAria: 'Collapse sidebar',
+  dailyGoal: 'Daily Goal',
+  dailyGoalProgress: 60,
+  dailyGoalStatus: '3 / 5 applications today',
+  aiHelpSubtitle: 'Ask our AI Assistant',
+  aiHelpTitle: 'Need Help?',
+  downloadLatest: 'Download Latest',
+  drawerAccount: 'Account',
+  drawerAria: 'More navigation',
+  drawerPages: 'Pages',
+  drawerResume: 'Resume',
+  connectedAccounts: 'Connected Accounts',
+  editProfile: 'Edit Profile',
+  expandAria: 'Expand sidebar',
+  logout: 'Logout',
+  moreAria: 'Open more menu',
+  moreLabel: 'More',
+  primaryNavAria: 'Primary navigation',
+  uploadNow: 'Upload Now',
+  uploadPanelDescription: 'Get AI analysis and better job matches',
+  latestResumeTitle: 'Latest Resume',
+  openAiAssistantAria: 'Open AI assistant',
+  viewAllVersions: 'View All Versions',
+  viewResumeVersions: 'View resume versions',
+} as const;
+
+/* ----------------------------------------------------------------------------
+ * SocialConnectButton
+ * -------------------------------------------------------------------------- */
+
+export const SOCIAL_CONNECT_LABELS = {
+  google: 'Continue with Google',
+  linkedin: 'Continue with LinkedIn',
+} as const;

@@ -1,0 +1,303 @@
+import { configureStore } from '@reduxjs/toolkit';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { render, screen } from '@testing-library/react';
+import { Provider } from 'react-redux';
+import { createMemoryRouter, RouterProvider } from 'react-router-dom';
+import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { authReducer } from '@/features/auth/authSlice';
+import type { AuthState, User } from '@/features/auth/types/auth.types';
+
+import { appRouteObjects } from './AppRouter';
+
+/** Warm lazy route chunks so Suspense resolves quickly under Vitest. */
+beforeAll(async () => {
+  await Promise.all([
+    import('@/routes/lazyPages').then((m) =>
+      Promise.all([
+        m.loadLandingPage(),
+        m.loadLoginPage(),
+        m.loadRegisterPage(),
+        m.loadProfilePage(),
+        m.loadHomePage(),
+        m.loadJobFeedPage(),
+        m.loadJobDetailPage(),
+        m.loadAiMatchPage(),
+        m.loadAiMailPage(),
+        m.loadSavedJobsPage(),
+        m.loadApplicationsPage(),
+        m.loadSavedResumesPage(),
+        m.loadResumeBuilderPage(),
+        m.loadEditProfilePage(),
+        m.loadNotFoundPage(),
+      ]),
+    ),
+  ]);
+}, 60_000);
+
+vi.mock('@/features/auth/services/auth.service', () => ({
+  authService: {
+    login: vi.fn(),
+    register: vi.fn(),
+    refreshSession: vi.fn().mockRejectedValue(new Error('No session')),
+    getCurrentUser: vi.fn(),
+    logout: vi.fn(),
+  },
+}));
+
+vi.mock('@/features/resume/services/resume.service', () => ({
+  resumeService: {
+    confirmProfile: vi.fn(),
+    getProfileStatus: vi.fn(),
+    parse: vi.fn(),
+  },
+}));
+
+vi.mock('@/features/resume/services/resumeBuilder.service', () => ({
+  resumeBuilderService: {
+    listResumes: vi.fn().mockResolvedValue([]),
+    listSavedVersions: vi.fn().mockResolvedValue([]),
+    getAnalysis: vi.fn().mockResolvedValue(null),
+    getVersions: vi.fn().mockResolvedValue([]),
+    getKeywords: vi.fn().mockResolvedValue({ matched: [], missing: [], partial: [] }),
+    getSuggestions: vi.fn().mockResolvedValue([]),
+    uploadResume: vi.fn(),
+    startAnalysis: vi.fn(),
+    updateStep: vi.fn(),
+    updateContent: vi.fn(),
+    applySuggestion: vi.fn(),
+    ignoreSuggestion: vi.fn(),
+    recheckAts: vi.fn(),
+    saveVersion: vi.fn(),
+    exportResume: vi.fn(),
+    getSavedVersion: vi.fn(),
+  },
+}));
+
+const user: User = {
+  email: 'ada@example.com',
+  id: 'user-1',
+  name: 'Ada',
+  role: 'user',
+};
+
+function createStore(preloaded?: Partial<AuthState>) {
+  return configureStore({
+    preloadedState: preloaded
+      ? {
+          auth: {
+            accessToken: null,
+            error: null,
+            isAuthenticated: false,
+            isLoading: false,
+            isProfileComplete: false,
+            isSessionResolved: true,
+            user: null,
+            ...preloaded,
+          },
+        }
+      : undefined,
+    reducer: { auth: authReducer },
+  });
+}
+
+function renderRoute(path: string, store = createStore()) {
+  const queryClient = new QueryClient({
+    defaultOptions: { mutations: { retry: false }, queries: { retry: false } },
+  });
+  const router = createMemoryRouter(appRouteObjects, { initialEntries: [path] });
+
+  return render(
+    <QueryClientProvider client={queryClient}>
+      <Provider store={store}>
+        <RouterProvider router={router} />
+      </Provider>
+    </QueryClientProvider>,
+  );
+}
+
+const localStorageMock = (() => {
+  let store: Record<string, string> = {};
+  return {
+    clear: () => {
+      store = {};
+    },
+    getItem: (key: string) => store[key] ?? null,
+    key: (index: number) => Object.keys(store)[index] ?? null,
+    get length() {
+      return Object.keys(store).length;
+    },
+    removeItem: (key: string) => {
+      delete store[key];
+    },
+    setItem: (key: string, value: string) => {
+      store[key] = String(value);
+    },
+  };
+})();
+
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: localStorageMock,
+  writable: true,
+});
+
+describe('AppRouter routing flow', () => {
+  beforeEach(() => {
+    localStorage.clear();
+  });
+
+  it('renders the marketing landing page for unauthenticated visitors on /', async () => {
+    renderRoute('/');
+
+    expect(await screen.findByRole('heading', { level: 1 }, { timeout: 15_000 })).toHaveTextContent(
+      /smarter job search/i,
+    );
+    expect(screen.getAllByRole('link', { name: /get started/i }).length).toBeGreaterThan(0);
+    expect(screen.queryByRole('heading', { name: /welcome back/i })).not.toBeInTheDocument();
+  });
+
+  it('redirects unauthenticated users from protected routes to Login', async () => {
+    renderRoute('/jobs-feed');
+
+    expect(
+      await screen.findByRole('heading', { name: /welcome back/i }, { timeout: 15_000 }),
+    ).toBeInTheDocument();
+  });
+
+  it.each([['/resume-builder'], ['/resume-builder/saved'], ['/resume-builder/resume-1']])(
+    'blocks unauthenticated access to %s and redirects to Login',
+    async (path) => {
+      renderRoute(path);
+
+      expect(
+        await screen.findByRole('heading', { name: /welcome back/i }, { timeout: 15_000 }),
+      ).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: /resume/i })).not.toBeInTheDocument();
+    },
+  );
+
+  it('sends incomplete profiles from Resume Builder to onboarding', async () => {
+    renderRoute(
+      '/resume-builder',
+      createStore({
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete: false,
+        isSessionResolved: true,
+        user,
+      }),
+    );
+
+    expect(
+      await screen.findByRole(
+        'heading',
+        { name: /let's build your professional profile/i },
+        { timeout: 15_000 },
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it('allows authenticated complete profiles to open Resume Builder', async () => {
+    renderRoute(
+      '/resume-builder',
+      createStore({
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete: true,
+        isSessionResolved: true,
+        user,
+      }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: /^resume builder$/i }, { timeout: 15_000 }),
+    ).toBeInTheDocument();
+  });
+
+  it('allows authenticated users with incomplete profiles to open Login', async () => {
+    renderRoute(
+      '/login',
+      createStore({
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete: false,
+        isSessionResolved: true,
+        user,
+      }),
+    );
+
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+  });
+
+  it('allows authenticated users with complete profiles to open Login', async () => {
+    renderRoute(
+      '/login',
+      createStore({
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete: true,
+        isSessionResolved: true,
+        user,
+      }),
+    );
+
+    expect(await screen.findByRole('heading', { name: /welcome back/i })).toBeInTheDocument();
+  });
+
+  it('allows users with completed profiles to revisit /profile to upload a new resume', async () => {
+    renderRoute(
+      '/profile',
+      createStore({
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete: true,
+        isSessionResolved: true,
+        user,
+      }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: /let's build your professional profile/i }),
+    ).toBeInTheDocument();
+  });
+
+  it('allows incomplete profiles to access onboarding', async () => {
+    renderRoute(
+      '/profile',
+      createStore({
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete: false,
+        isSessionResolved: true,
+        user,
+      }),
+    );
+
+    expect(
+      await screen.findByRole('heading', { name: /let's build your professional profile/i }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('banner')).not.toBeInTheDocument();
+  });
+
+  it('renders the register page at /register', async () => {
+    renderRoute('/register');
+
+    expect(await screen.findByRole('heading', { name: /create account/i })).toBeInTheDocument();
+  });
+
+  it('sends stored complete profiles to Job Feed from the root route', async () => {
+    renderRoute(
+      '/',
+      createStore({
+        accessToken: 'token',
+        isAuthenticated: true,
+        isProfileComplete: true,
+        isSessionResolved: true,
+        user,
+      }),
+    );
+
+    expect(await screen.findByRole('heading', { name: /^job feed$/i })).toBeInTheDocument();
+  });
+});

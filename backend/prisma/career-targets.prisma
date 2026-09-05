@@ -1,0 +1,13 @@
+model CareerTarget {
+  id         String    @id @default(uuid())
+  userId     String    @map("user_id")
+  goalText   String    @map("goal_text") @db.Text
+  structured Json      @default("{}")
+  createdAt  DateTime  @default(now()) @map("created_at")
+  updatedAt  DateTime  @updatedAt @map("updated_at")
+  archivedAt DateTime? @map("archived_at")
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([userId, id])
+  @@map("career_targets")
+}

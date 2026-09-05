@@ -1,0 +1,119 @@
+# Production Docker Compose for Career Copilot Backend
+# API + outbox-relay + job-embedding-worker + application-submission-worker + resume-analysis-worker on one EC2 host.
+# Redis, RabbitMQ, and PostgreSQL run externally via private networking.
+# Embeddings use third-party providers from shared .env (e.g. OpenRouter).
+#
+# Fixed project name so release-directory deploys replace the same stack
+# instead of competing for 127.0.0.1:5001.
+name: career-copilot-backend
+
+services:
+  api:
+    image: ${BACKEND_IMAGE}
+    command: ['node', 'dist/server.js']
+    env_file:
+      - ${SHARED_ENV_FILE:-/opt/career-copilot/backend/shared/.env}
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      RUN_MIGRATIONS: 'true'
+      RUN_SEEDS_ON_STARTUP: 'false'
+    ports:
+      - '127.0.0.1:5001:5001'
+    restart: unless-stopped
+    mem_limit: 384m
+    healthcheck:
+      test: ['CMD-SHELL', 'curl -f http://localhost:5001/health || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  outbox-relay:
+    image: ${BACKEND_IMAGE}
+    command: ['node', 'dist/workers/run-outbox-relay.js']
+    env_file:
+      - ${SHARED_ENV_FILE:-/opt/career-copilot/backend/shared/.env}
+    environment:
+      NODE_ENV: production
+      RUN_MIGRATIONS: 'false'
+      RUN_SEEDS_ON_STARTUP: 'false'
+    restart: unless-stopped
+    mem_limit: 160m
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  application-submission-worker:
+    image: ${BACKEND_IMAGE}
+    command: ['node', 'dist/workers/run-application-submission-worker.js']
+    env_file:
+      - ${SHARED_ENV_FILE:-/opt/career-copilot/backend/shared/.env}
+    environment:
+      NODE_ENV: production
+      RUN_MIGRATIONS: 'false'
+      RUN_SEEDS_ON_STARTUP: 'false'
+    restart: unless-stopped
+    # Exceeds APPLICATION_SUBMISSION_WORKER_DRAIN_TIMEOUT_MS default (30s) so SIGTERM drain can finish (AA-008).
+    stop_grace_period: 45s
+    mem_limit: 192m
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  resume-analysis-worker:
+    image: ${BACKEND_IMAGE}
+    command: ['node', 'dist/workers/run-resume-analysis-worker.js']
+    env_file:
+      - ${SHARED_ENV_FILE:-/opt/career-copilot/backend/shared/.env}
+    environment:
+      NODE_ENV: production
+      RUN_MIGRATIONS: 'false'
+      RUN_SEEDS_ON_STARTUP: 'false'
+    restart: unless-stopped
+    mem_limit: 192m
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'
+
+  # Consumes RabbitMQ job-embedding requests (from outbox) and writes pgvector rows.
+  # Uses AI_EMBEDDING_* from shared .env (OpenRouter/Google/Groq) — no local model.
+  job-embedding-worker:
+    image: ${BACKEND_IMAGE}
+    command: ['node', 'dist/workers/run-job-embedding-worker.js']
+    env_file:
+      - ${SHARED_ENV_FILE:-/opt/career-copilot/backend/shared/.env}
+    environment:
+      NODE_ENV: production
+      RUN_MIGRATIONS: 'false'
+      RUN_SEEDS_ON_STARTUP: 'false'
+    restart: unless-stopped
+    mem_limit: 256m
+    depends_on:
+      api:
+        condition: service_healthy
+    logging:
+      driver: 'json-file'
+      options:
+        max-size: '10m'
+        max-file: '3'

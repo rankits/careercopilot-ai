@@ -1,0 +1,26 @@
+export const CacheTTL = {
+  ONE_MINUTE: 60,
+  FIVE_MINUTES: 300,
+  FIFTEEN_MINUTES: 900,
+  ONE_HOUR: 3600,
+  ONE_DAY: 86400,
+  SEVEN_DAYS: 604800,
+} as const;
+
+export const CacheKeys = {
+  AUTH: {
+    USER_SESSION: (userId: string | number) => `careercopilot:auth:session:${userId}`,
+    USER_PERMISSIONS: (userId: string | number) => `careercopilot:auth:permissions:${userId}`,
+    FAILED_ATTEMPTS: (email: string) => `careercopilot:auth:failed_attempts:${email}`,
+    PREFIX: 'careercopilot:auth:*',
+  },
+  USER: {
+    PROFILE: (userId: string | number) => `careercopilot:user:profile:${userId}`,
+    PREFIX: 'careercopilot:user:*',
+  },
+  AI_EMBEDDINGS: {
+    /** Circuit-breaker state for a given embedding provider (e.g. "openrouter"). */
+    CIRCUIT_BREAKER: (provider: string) => `careercopilot:ai-embeddings:circuit:${provider}`,
+    PREFIX: 'careercopilot:ai-embeddings:*',
+  },
+} as const;

@@ -1,0 +1,1648 @@
+import { describe, expect, it, vi } from 'vitest';
+import type { JobDetailDto, JobListDto } from '@/modules/job-listing/types/job-listing.types.js';
+import type { IJobSearchRepository } from '@/modules/job-listing/contracts/IJobSearchRepository.js';
+import { RecommendationScoringEngine } from '@/modules/recommendations/scoring/recommendation-scoring.engine.js';
+import { HEURISTIC_SCORE_CALCULATORS } from '@/modules/recommendations/scoring/calculators/heuristic-score.calculators.js';
+import { defaultMatchTypeClassifier } from '@/modules/recommendations/scoring/default-match-type.classifier.js';
+import { RecommendationScoringService } from '@/modules/recommendations/services/recommendation-scoring.service.js';
+import { RecommendationFeedbackService } from '@/modules/recommendations/services/recommendation-feedback.service.js';
+import { RecommendationSourceAuthorizationService } from '@/modules/recommendations/services/recommendation-source-authorization.service.js';
+import type { RecommendationReranker } from '@/modules/recommendations/contracts/recommendation-provider.contracts.js';
+import {
+  recommendationMetricsSnapshot,
+  resetRecommendationMetricsForTests,
+} from '@/modules/recommendations/observability/recommendation.metrics.js';
+import { RECOMMENDATION_ERROR_CODES } from '@/modules/recommendations/errors/recommendation.error.js';
+import { RecommendationsService } from '@/modules/recommendations/services/recommendations.service.js';
+import { RecommendationContextService } from '@/modules/recommendations/services/recommendation-context.service.js';
+import { RecommendationStrategyResolver } from '@/modules/recommendations/strategies/recommendation-strategy.resolver.js';
+import {
+  CareerGoalSourceStrategy,
+  JobSourceStrategy,
+  ProfileSourceStrategy,
+  ResumeSourceStrategy,
+  SavedSearchSourceStrategy,
+  TargetTextSourceStrategy,
+} from '@/modules/recommendations/strategies/recommendation-source.strategy.js';
+import { InMemoryRecommendationUnitOfWork } from '@/modules/recommendations/repositories/in-memory-recommendation.unit-of-work.js';
+import { applyRecommendationFilters } from '@/modules/recommendations/utils/apply-recommendation-filters.js';
+import {
+  RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+  type RecommendationContext,
+  type ScoredJobRecommendation,
+} from '@/modules/recommendations/types/recommendations.types.js';
+import type { RecommendationRetrievalService } from '@/modules/recommendations/services/recommendation-retrieval.service.js';
+import { createChildLogger } from '@/shared/logger/logger.js';
+
+const jobDetail = (id: string): JobDetailDto => ({
+  id,
+  title: 'Backend Engineer',
+  company: { slug: 'good-co', name: 'Good Co', logoUrl: null, verified: true },
+  location: { formatted: 'Remote', remoteType: 'REMOTE' },
+  employmentType: 'FULL_TIME',
+  salary: { minimum: 130000, maximum: 160000, currency: 'USD' },
+  skills: ['TypeScript', 'PostgreSQL'],
+  publishedAt: null,
+  applyUrl: null,
+  descriptionHtml: '<p>Build APIs</p>',
+  descriptionText: 'Build APIs with TypeScript',
+  benefits: [],
+  tags: [],
+  companyIndustry: 'SaaS',
+  companySize: null,
+});
+
+const jobList = (id: string, overrides: Partial<JobListDto> = {}): JobListDto => ({
+  id,
+  title: overrides.title ?? 'Backend Engineer',
+  company: overrides.company ?? {
+    slug: 'good-co',
+    name: 'Good Co',
+    logoUrl: null,
+    verified: true,
+  },
+  location: overrides.location ?? { formatted: 'Remote', remoteType: 'REMOTE' },
+  employmentType: overrides.employmentType ?? 'FULL_TIME',
+  salary: overrides.salary ?? { minimum: 130000, maximum: 160000, currency: 'USD' },
+  skills: overrides.skills ?? ['TypeScript', 'PostgreSQL'],
+  publishedAt: null,
+  applyUrl: null,
+});
+
+const scoredRecommendation = (id: string, overallScore: number): ScoredJobRecommendation => ({
+  job: jobList(id, { title: id === 'job-high' ? 'Backend Engineer' : 'Platform Engineer' }),
+  scoreResult: {
+    overallScore,
+    components: {
+      requiredSkills: overallScore,
+      title: overallScore,
+      experience: overallScore,
+      responsibilities: overallScore,
+      preferredSkills: overallScore,
+      location: overallScore,
+      industry: overallScore,
+      salary: overallScore,
+      qualifications: overallScore,
+    },
+    matchedSkills: [],
+    aliasSkills: [],
+    relatedSkills: [],
+    transferableSkills: [],
+    missingSkills: [],
+    reasons: [],
+  },
+  category: 'GOOD_MATCH',
+  matchType: 'EXACT',
+});
+
+const baseContext = (): RecommendationContext => ({
+  userId: 'user-1',
+  sourceType: 'TARGET_TEXT',
+  contextSchemaVersion: RECOMMENDATION_CONTEXT_SCHEMA_VERSION,
+  targetTitles: ['Backend Engineer'],
+  relatedTitles: [],
+  requiredSkills: ['TypeScript'],
+  preferredSkills: [],
+  industries: [],
+  locations: ['Remote'],
+  remotePreference: 'REMOTE',
+  employmentTypes: ['FULL_TIME'],
+  salaryExpectation: { minimum: 100000, currency: 'USD' },
+  education: [],
+  certifications: [],
+  excludedCompanies: [],
+  excludedSkills: [],
+  sourceText: 'Backend engineer TypeScript PostgreSQL',
+});
+
+describe('heuristic scoring', () => {
+  it('scores candidates with all nine calculators', async () => {
+    const engine = new RecommendationScoringEngine(
+      HEURISTIC_SCORE_CALCULATORS,
+      defaultMatchTypeClassifier,
+    );
+    const scored = await engine.score(baseContext(), jobList('job-1'));
+    expect(scored.scoreResult.overallScore).toBeGreaterThan(0.5);
+    expect(Object.keys(scored.scoreResult.components)).toHaveLength(9);
+    expect(scored.category).toBeTruthy();
+    expect(scored.matchType).toBeTruthy();
+  });
+});
+
+describe('RecommendationSourceAuthorizationService', () => {
+  const emptyProfiles = {
+    findCandidateProfileByUserId: vi.fn(),
+    findOwnedResumeProfileSource: vi.fn(),
+  };
+
+  it('authorizes JOB sources from the job catalog', async () => {
+    const detail = jobDetail('11111111-1111-1111-1111-111111111111');
+    const jobs = {
+      findById: vi.fn().mockResolvedValue(detail),
+    } as unknown as IJobSearchRepository;
+    const service = new RecommendationSourceAuthorizationService(jobs, emptyProfiles);
+
+    const authorized = await service.authorizeForSource('user-1', {
+      sourceType: 'JOB',
+      sourceId: detail.id,
+    });
+
+    expect(authorized).toEqual({
+      userId: 'user-1',
+      sourceType: 'JOB',
+      sourceId: detail.id,
+      authorizedSourcePayload: detail,
+    });
+  });
+
+  it('authorizes TARGET_TEXT from the request body', () => {
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      emptyProfiles,
+    );
+
+    expect(service.authorizeFromText('user-1', { targetText: '  Platform engineer  ' })).toEqual({
+      userId: 'user-1',
+      sourceType: 'TARGET_TEXT',
+      authorizedSourcePayload: 'Platform engineer',
+    });
+  });
+
+  it('authorizes PROFILE from candidate profile JSON', async () => {
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+          personalDetails: { currentTitle: 'Backend Engineer', summary: 'APIs' },
+          skills: ['TypeScript'],
+          experience: [{ title: 'Software Engineer' }],
+          education: [],
+          certifications: [],
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', { sourceType: 'PROFILE' });
+    expect(authorized.sourceType).toBe('PROFILE');
+    expect(authorized.authorizedSourcePayload).toMatchObject({
+      targetTitles: ['Backend Engineer', 'Software Engineer'],
+      requiredSkills: ['TypeScript'],
+      sourceText: 'APIs',
+    });
+  });
+
+  it('authorizes owned RESUME parse data', async () => {
+    const resumeId = '22222222-2222-2222-2222-222222222222';
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource: vi.fn().mockResolvedValue({
+          personalDetails: { primaryRole: 'Platform Engineer' },
+          skills: ['Go'],
+          experience: [],
+          education: [],
+          certifications: [],
+        }),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', {
+      sourceType: 'RESUME',
+      sourceId: resumeId,
+    });
+    expect(authorized).toMatchObject({
+      sourceType: 'RESUME',
+      sourceId: resumeId,
+      authorizedSourcePayload: {
+        targetTitles: ['Platform Engineer'],
+        requiredSkills: ['Go'],
+      },
+    });
+  });
+
+  it('rejects missing or unowned RESUME sources', async () => {
+    const resumeId = '22222222-2222-2222-2222-222222222222';
+    const findOwnedResumeProfileSource = vi.fn().mockResolvedValue(null);
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource,
+      },
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', {
+        sourceType: 'RESUME',
+        sourceId: resumeId,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'RECOMMENDATION_SOURCE_NOT_FOUND',
+    });
+    expect(findOwnedResumeProfileSource).toHaveBeenCalledWith('user-1', resumeId);
+  });
+
+  it('rejects owned incomplete RESUME parse data with a context error', async () => {
+    const resumeId = '22222222-2222-2222-2222-222222222222';
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        lookupOwnedResumeProfileSource: vi.fn().mockResolvedValue({
+          status: 'INCOMPLETE',
+          reason: 'PARSE_NOT_READY',
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+      },
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', {
+        sourceType: 'RESUME',
+        sourceId: resumeId,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 422,
+      code: 'RECOMMENDATION_CONTEXT_INVALID',
+    });
+  });
+
+  it('authorizes CAREER_GOAL by owned target and merges profile direction', async () => {
+    const targetId = '33333333-3333-3333-3333-333333333333';
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+          personalDetails: { currentTitle: 'Senior Engineer', summary: 'Builds platforms' },
+          skills: ['TypeScript', 'PostgreSQL'],
+          experience: [],
+          education: [],
+          certifications: [],
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedCareerTargetSource: vi.fn().mockResolvedValue({
+          id: targetId,
+          userId: 'user-1',
+          goalText: 'Move into engineering management in SaaS',
+          structured: {
+            targetRole: 'Engineering Manager',
+            targetSkills: ['Leadership'],
+            targetIndustries: ['SaaS'],
+            timeframe: '12 months',
+          },
+        }),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', {
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+    });
+
+    expect(authorized).toMatchObject({
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+      authorizedSourcePayload: {
+        targetTitles: ['Engineering Manager'],
+        relatedTitles: ['Senior Engineer'],
+        requiredSkills: ['Leadership', 'TypeScript', 'PostgreSQL'],
+        industries: ['SaaS'],
+        flexibilityMode: 'FLEXIBLE',
+        filterMode: 'FLEXIBLE',
+        goalIntent: {
+          currentRole: undefined,
+          targetRole: 'Engineering Manager',
+          targetIndustries: ['SaaS'],
+          timeframe: '12 months',
+        },
+      },
+    });
+  });
+
+  it('extracts free-text career goals and keeps filters flexible when structured is empty', async () => {
+    const targetId = '33333333-3333-3333-3333-333333333334';
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+          personalDetails: {
+            currentTitle: 'QA Analyst',
+            summary: 'Manual testing',
+            location: 'Noida, U.P., India',
+          },
+          skills: ['Selenium'],
+          experience: [],
+          education: [],
+          certifications: [],
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedCareerTargetSource: vi.fn().mockResolvedValue({
+          id: targetId,
+          userId: 'user-1',
+          goalText: 'Angular Developer role',
+          structured: {},
+        }),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', {
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+    });
+
+    expect(authorized).toMatchObject({
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+      authorizedSourcePayload: {
+        targetTitles: expect.arrayContaining(['Angular Developer']),
+        requiredSkills: expect.arrayContaining(['Angular', 'Selenium']),
+        locations: ['Noida, U.P., India'],
+        flexibilityMode: 'FLEXIBLE',
+        filterMode: 'FLEXIBLE',
+        goalIntent: {
+          targetRole: 'Angular Developer',
+          summary: 'Angular Developer role',
+        },
+      },
+    });
+  });
+
+  it('hides missing or unowned CAREER_GOAL sources', async () => {
+    const targetId = '33333333-3333-3333-3333-333333333333';
+    const findOwnedCareerTargetSource = vi.fn().mockResolvedValue(null);
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedCareerTargetSource,
+      },
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', {
+        sourceType: 'CAREER_GOAL',
+        sourceId: targetId,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'RECOMMENDATION_SOURCE_NOT_FOUND',
+    });
+    expect(findOwnedCareerTargetSource).toHaveBeenCalledWith('user-1', targetId);
+  });
+
+  it('authorizes SAVED_SEARCH by owned snapshot and maps filters into context', async () => {
+    const savedSearchId = '44444444-4444-4444-4444-444444444444';
+    const updatedAt = new Date('2026-08-02T00:00:00.000Z');
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedSavedSearchSource: vi.fn().mockResolvedValue({
+          id: savedSearchId,
+          userId: 'user-1',
+          name: 'Remote backend search',
+          query: 'backend typescript',
+          filters: {
+            locations: ['Remote'],
+            workModes: ['REMOTE'],
+            employmentTypes: ['FULL_TIME'],
+            minimumSalary: 120000,
+            currency: 'usd',
+          },
+          context: {
+            targetTitles: ['Backend Engineer'],
+            requiredSkills: ['TypeScript'],
+            industries: ['SaaS'],
+          },
+          updatedAt,
+        }),
+      },
+    );
+
+    const authorized = await service.authorizeForSource('user-1', {
+      sourceType: 'SAVED_SEARCH',
+      sourceId: savedSearchId,
+    });
+
+    expect(authorized).toMatchObject({
+      sourceType: 'SAVED_SEARCH',
+      sourceId: savedSearchId,
+      authorizedSourcePayload: {
+        targetTitles: ['Backend Engineer'],
+        requiredSkills: ['TypeScript'],
+        locations: ['Remote'],
+        remotePreference: 'REMOTE',
+        employmentTypes: ['FULL_TIME'],
+        salaryExpectation: { minimum: 120000, currency: 'USD' },
+        savedSearchSnapshot: {
+          searchId: savedSearchId,
+          criteriaVersion: updatedAt.toISOString(),
+          query: 'backend typescript',
+          filters: {
+            titles: ['Backend Engineer'],
+            locations: ['Remote'],
+            remotePreference: 'REMOTE',
+          },
+        },
+      },
+    });
+  });
+
+  it('hides missing or unowned SAVED_SEARCH sources', async () => {
+    const savedSearchId = '44444444-4444-4444-4444-444444444444';
+    const findOwnedSavedSearchSource = vi.fn().mockResolvedValue(null);
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn(),
+        findOwnedResumeProfileSource: vi.fn(),
+        findOwnedSavedSearchSource,
+      },
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', {
+        sourceType: 'SAVED_SEARCH',
+        sourceId: savedSearchId,
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'RECOMMENDATION_SOURCE_NOT_FOUND',
+    });
+    expect(findOwnedSavedSearchSource).toHaveBeenCalledWith('user-1', savedSearchId);
+  });
+
+  it('rejects empty candidate profiles', async () => {
+    const service = new RecommendationSourceAuthorizationService(
+      { findById: vi.fn() } as unknown as IJobSearchRepository,
+      {
+        findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+          personalDetails: {},
+          skills: [],
+          experience: [],
+          education: [],
+          certifications: [],
+        }),
+        findOwnedResumeProfileSource: vi.fn(),
+      },
+    );
+
+    await expect(
+      service.authorizeForSource('user-1', { sourceType: 'PROFILE' }),
+    ).rejects.toMatchObject({ statusCode: 422, code: 'RECOMMENDATION_CONTEXT_INVALID' });
+  });
+});
+
+describe('applyRecommendationFilters', () => {
+  it('overlays request filters onto context', () => {
+    const filtered = applyRecommendationFilters(baseContext(), {
+      locations: ['Berlin'],
+      workModes: ['HYBRID'],
+      minimumSalary: 150000,
+      employmentTypes: ['CONTRACT'],
+      filterMode: 'FLEXIBLE',
+    });
+    expect(filtered.locations).toEqual(['Berlin']);
+    expect(filtered.remotePreference).toBe('HYBRID');
+    expect(filtered.salaryExpectation.minimum).toBe(150000);
+    expect(filtered.employmentTypes).toEqual(['CONTRACT']);
+    expect(filtered.filterMode).toBe('FLEXIBLE');
+  });
+});
+
+describe('RecommendationsService generation', () => {
+  it('runs authorize → retrieve → score → ephemeral persist for text', async () => {
+    const retrievalService = {
+      retrieve: vi.fn().mockResolvedValue([
+        { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+        {
+          job: jobList('job-low', {
+            title: 'Marketing Manager',
+            skills: ['SEO'],
+            salary: { minimum: 40000, maximum: 50000, currency: 'USD' },
+          }),
+          retrievalScore: 0.2,
+        },
+      ]),
+    } as unknown as RecommendationRetrievalService;
+
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([
+          new TargetTextSourceStrategy(),
+          new JobSourceStrategy(),
+        ]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Backend engineer with TypeScript and PostgreSQL',
+      filters: { workModes: ['REMOTE'], minimumSalary: 100000 },
+    });
+
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        backend: 'PGVECTOR',
+        limit: 20,
+        context: expect.objectContaining({
+          targetTitles: ['Backend Engineer'],
+          requiredSkills: ['TypeScript', 'PostgreSQL'],
+          remotePreference: 'REMOTE',
+          salaryExpectation: expect.objectContaining({ minimum: 100000 }),
+        }),
+      }),
+    );
+    expect(records).toHaveLength(2);
+    expect(records[0]?.rank).toBe(1);
+    expect(records[0]?.scoreResult.overallScore).toBeGreaterThanOrEqual(
+      records[1]?.scoreResult.overallScore ?? 0,
+    );
+    expect(records[0]?.runId).toBeTruthy();
+  });
+
+  it('runs CAREER_GOAL generation from an owned career target', async () => {
+    resetRecommendationMetricsForTests();
+    const targetId = '33333333-3333-3333-3333-333333333333';
+    const retrievalService = {
+      retrieve: vi.fn().mockResolvedValue([
+        {
+          job: jobList('job-manager', {
+            title: 'Engineering Manager',
+            skills: ['Leadership', 'TypeScript'],
+          }),
+          retrievalScore: 0.9,
+        },
+      ]),
+    } as unknown as RecommendationRetrievalService;
+
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-career-goal' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new CareerGoalSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn().mockResolvedValue({
+            personalDetails: { currentTitle: 'Senior Engineer' },
+            skills: ['TypeScript'],
+            experience: [],
+            education: [],
+            certifications: [],
+          }),
+          findOwnedResumeProfileSource: vi.fn(),
+          findOwnedCareerTargetSource: vi.fn().mockResolvedValue({
+            id: targetId,
+            userId: 'user-1',
+            goalText: 'Move into engineering management',
+            structured: {
+              targetRole: 'Engineering Manager',
+              targetSkills: ['Leadership'],
+            },
+          }),
+        },
+      ),
+    });
+
+    const records = await service.createForSource('user-1', {
+      sourceType: 'CAREER_GOAL',
+      sourceId: targetId,
+    });
+
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          sourceType: 'CAREER_GOAL',
+          sourceId: targetId,
+          targetTitles: ['Engineering Manager'],
+          requiredSkills: ['Leadership', 'TypeScript'],
+          goalIntent: expect.objectContaining({ targetRole: 'Engineering Manager' }),
+        }),
+      }),
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ userId: 'user-1', rank: 1 });
+    expect(recommendationMetricsSnapshot().careerGoalApiTotal).toBe(1);
+  });
+
+  it('runs SAVED_SEARCH generation from an owned saved search', async () => {
+    const savedSearchId = '44444444-4444-4444-4444-444444444444';
+    const retrievalService = {
+      retrieve: vi.fn().mockResolvedValue([
+        {
+          job: jobList('job-backend', {
+            title: 'Backend Engineer',
+            skills: ['TypeScript'],
+            location: { formatted: 'Remote', remoteType: 'REMOTE' },
+          }),
+          retrievalScore: 0.9,
+        },
+      ]),
+    } as unknown as RecommendationRetrievalService;
+
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-saved-search' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new SavedSearchSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+          findOwnedSavedSearchSource: vi.fn().mockResolvedValue({
+            id: savedSearchId,
+            userId: 'user-1',
+            name: 'Remote backend',
+            query: 'backend typescript',
+            filters: { locations: ['Remote'], workModes: ['REMOTE'] },
+            context: { targetTitles: ['Backend Engineer'], requiredSkills: ['TypeScript'] },
+            updatedAt: new Date('2026-08-02T00:00:00.000Z'),
+          }),
+        },
+      ),
+    });
+
+    const records = await service.createForSource('user-1', {
+      sourceType: 'SAVED_SEARCH',
+      sourceId: savedSearchId,
+    });
+
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          sourceType: 'SAVED_SEARCH',
+          sourceId: savedSearchId,
+          targetTitles: ['Backend Engineer'],
+          requiredSkills: ['TypeScript'],
+          locations: ['Remote'],
+          remotePreference: 'REMOTE',
+          savedSearchSnapshot: expect.objectContaining({ searchId: savedSearchId }),
+        }),
+      }),
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({ userId: 'user-1', rank: 1 });
+  });
+
+  it('does not create a run when RESUME ownership authorization fails', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ResumeSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn().mockResolvedValue(null),
+        },
+      ),
+    });
+
+    await expect(
+      service.createForSource('user-1', {
+        sourceType: 'RESUME',
+        sourceId: '22222222-2222-2222-2222-222222222222',
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: 'RECOMMENDATION_SOURCE_NOT_FOUND',
+    });
+    await expect(
+      unitOfWork.execute(({ runs }) => runs.findLatestByUser('user-1')),
+    ).resolves.toBeNull();
+  });
+
+  it('rejects authorized contexts whose userId does not match the caller before creating a run', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const sourceAuthorization = {
+      authorizeForSource: vi.fn().mockResolvedValue({
+        userId: 'public-user-id',
+        sourceType: 'PROFILE',
+        authorizedSourcePayload: {
+          targetTitles: ['Backend Engineer'],
+          requiredSkills: ['TypeScript'],
+          sourceText: 'Backend Engineer TypeScript',
+        },
+      }),
+      authorizeFromText: vi.fn(),
+    } as unknown as RecommendationSourceAuthorizationService;
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization,
+    });
+
+    await expect(service.createForSource('42', { sourceType: 'PROFILE' })).rejects.toMatchObject({
+      statusCode: 403,
+      code: RECOMMENDATION_ERROR_CODES.ACCESS_DENIED,
+    });
+    expect(sourceAuthorization.authorizeForSource).toHaveBeenCalledWith('42', {
+      sourceType: 'PROFILE',
+    });
+    await expect(unitOfWork.execute(({ runs }) => runs.findLatestByUser('42'))).resolves.toBeNull();
+    await expect(
+      unitOfWork.execute(({ runs }) => runs.findLatestByUser('public-user-id')),
+    ).resolves.toBeNull();
+  });
+
+  it('persists run recommendations and feedback with the principalId userId invariant', async () => {
+    const principalUserId = '42';
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+          ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+    const feedbackService = new RecommendationFeedbackService({
+      upsert: (input) => unitOfWork.execute(({ feedback }) => feedback.upsert(input)),
+      findByRecommendation: (userId, recommendationId) =>
+        unitOfWork.execute(({ feedback }) =>
+          feedback.findByRecommendation(userId, recommendationId),
+        ),
+      listByJob: (userId, jobId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+      listByAction: (userId, action, options) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByAction(userId, action, options)),
+      listExcludedJobIds: (userId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
+    });
+
+    const records = await service.createFromText(principalUserId, {
+      targetText: 'Backend engineer TypeScript',
+    });
+    const run = await unitOfWork.execute(({ runs }) => runs.findLatestByUser(principalUserId));
+    const feedback = await feedbackService.store({
+      userId: principalUserId,
+      recommendationId: records[0]!.id,
+      jobId: records[0]!.job.id,
+      action: 'SAVED',
+    });
+
+    expect(run).toMatchObject({ userId: principalUserId });
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      userId: principalUserId,
+      runId: run?.id,
+    });
+    expect(feedback).toMatchObject({
+      userId: principalUserId,
+      recommendationId: records[0]!.id,
+      jobId: records[0]!.job.id,
+    });
+  });
+
+  it('returns owned run details and rejects cross-user run access', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+          ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const [record] = await service.createFromText('owner', {
+      targetText: 'Backend engineer TypeScript',
+    });
+
+    const ownerDetails = await service.getRunDetailsForUser('owner', record!.runId, {
+      page: 1,
+      limit: 20,
+    });
+    await expect(
+      service.getRunDetailsForUser('intruder', record!.runId, { page: 1, limit: 20 }),
+    ).rejects.toMatchObject({
+      statusCode: 404,
+      code: RECOMMENDATION_ERROR_CODES.RUN_NOT_FOUND,
+    });
+
+    expect(ownerDetails.run).toMatchObject({ id: record!.runId, userId: 'owner' });
+    expect(ownerDetails.items.map((item) => item.id)).toEqual([record!.id]);
+  });
+
+  it('lists only the latest run when latestOnly is requested', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+    const createRunRecommendation = async () => {
+      const run = await unitOfWork.execute(({ runs }) =>
+        runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+      );
+      await unitOfWork.execute(({ recommendations, runs }) =>
+        recommendations
+          .createMany('user-1', run.id, [
+            {
+              job: jobList('duplicate-job', { title: 'Backend Engineer' }),
+              category: 'GOOD_MATCH',
+              matchType: 'RELATED',
+              scoreResult: {
+                overallScore: 0.7,
+                components: {
+                  requiredSkills: 0.7,
+                  title: 0.7,
+                  experience: 0.7,
+                  responsibilities: 0.7,
+                  preferredSkills: 0.7,
+                  location: 0.7,
+                  industry: 0.7,
+                  salary: 0.7,
+                  qualifications: 0.7,
+                },
+                matchedSkills: [],
+                aliasSkills: [],
+                relatedSkills: [],
+                transferableSkills: [],
+                missingSkills: [],
+                reasons: [],
+              },
+            },
+          ])
+          .then(async (records) => {
+            await runs.markCompleted('user-1', run.id);
+            return { run, record: records[0]! };
+          }),
+      );
+      return run;
+    };
+
+    await createRunRecommendation();
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    const latestRun = await createRunRecommendation();
+
+    const latestPage = await service.listForUser(
+      'user-1',
+      { page: 1, limit: 20 },
+      { latestOnly: true },
+    );
+    const allHistoryPage = await service.listForUser('user-1', { page: 1, limit: 20 });
+
+    expect(latestPage.total).toBe(1);
+    expect(latestPage.items[0]).toMatchObject({
+      runId: latestRun.id,
+      job: expect.objectContaining({ id: 'duplicate-job' }),
+    });
+    expect(new Set(latestPage.items.map((item) => item.job.id)).size).toBe(latestPage.items.length);
+    expect(allHistoryPage.total).toBe(2);
+  });
+
+  it('assigns persisted ranks by score, match quality, then job id', async () => {
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const run = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+    );
+    const recommendation = (
+      jobId: string,
+      overallScore: number,
+      matchType: 'EXACT' | 'RELATED' | 'MISSING',
+    ) => ({
+      job: jobList(jobId, { title: 'Backend Engineer' }),
+      category: 'GOOD_MATCH' as const,
+      matchType,
+      scoreResult: {
+        overallScore,
+        components: {
+          requiredSkills: overallScore,
+          title: overallScore,
+          experience: overallScore,
+          responsibilities: overallScore,
+          preferredSkills: overallScore,
+          location: overallScore,
+          industry: overallScore,
+          salary: overallScore,
+          qualifications: overallScore,
+        },
+        matchedSkills: [],
+        aliasSkills: [],
+        relatedSkills: [],
+        transferableSkills: [],
+        missingSkills: [],
+        reasons: [],
+      },
+    });
+
+    const records = await unitOfWork.execute(({ recommendations }) =>
+      recommendations.createMany('user-1', run.id, [
+        recommendation('job-c', 0.8, 'RELATED'),
+        recommendation('job-b', 0.8, 'EXACT'),
+        recommendation('job-a', 0.9, 'MISSING'),
+        recommendation('job-d', 0.8, 'EXACT'),
+      ]),
+    );
+
+    expect(records.map((item) => [item.rank, item.job.id])).toEqual([
+      [1, 'job-a'],
+      [2, 'job-b'],
+      [3, 'job-d'],
+      [4, 'job-c'],
+    ]);
+  });
+
+  it('hides historical recommendations when the underlying job is no longer active', async () => {
+    resetRecommendationMetricsForTests();
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const run = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+    );
+    await unitOfWork.execute(({ recommendations }) =>
+      recommendations.createMany('user-1', run.id, [
+        scoredRecommendation('job-active', 0.8),
+        {
+          ...scoredRecommendation('job-closed', 0.9),
+          job: {
+            ...jobList('job-closed', { title: 'Closed Backend Engineer' }),
+            status: 'EXPIRED',
+          } as JobListDto,
+        },
+      ]),
+    );
+
+    const byRun = await unitOfWork.execute(({ recommendations }) =>
+      recommendations.listByRun('user-1', run.id, { page: 1, limit: 20 }),
+    );
+    const byUser = await unitOfWork.execute(({ recommendations }) =>
+      recommendations.listByUser('user-1', { page: 1, limit: 20 }),
+    );
+
+    expect(byRun.items.map((item) => item.job.id)).toEqual(['job-active']);
+    expect(byRun.total).toBe(1);
+    expect(byUser.items.map((item) => item.job.id)).toEqual(['job-active']);
+    expect(recommendationMetricsSnapshot().jobRecommendationHiddenTotal).toBe(2);
+  });
+
+  it('lists, loads, and stores feedback for persisted recommendations', async () => {
+    resetRecommendationMetricsForTests();
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const retrievalService = {
+      retrieve: vi
+        .fn()
+        .mockResolvedValue([
+          { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+        ]),
+    } as unknown as RecommendationRetrievalService;
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+    const feedbackService = new RecommendationFeedbackService({
+      upsert: (input) => unitOfWork.execute(({ feedback }) => feedback.upsert(input)),
+      findByRecommendation: (userId, recommendationId) =>
+        unitOfWork.execute(({ feedback }) =>
+          feedback.findByRecommendation(userId, recommendationId),
+        ),
+      listByJob: (userId, jobId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+      listByAction: (userId, action, options) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByAction(userId, action, options)),
+      listExcludedJobIds: (userId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
+    });
+
+    const created = await service.createFromText('user-1', {
+      targetText: 'Backend engineer TypeScript',
+    });
+    const page = await service.listForUser('user-1', { page: 1, limit: 20 });
+    const detail = await service.getForUser('user-1', created[0]!.id);
+    const feedback = await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: created[0]!.id,
+      jobId: created[0]!.job.id,
+      action: 'SAVED',
+      note: 'Strong match',
+    });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: created[0]!.id,
+      jobId: created[0]!.job.id,
+      action: 'VIEWED',
+    });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: created[0]!.id,
+      jobId: created[0]!.job.id,
+      action: 'OPENED',
+    });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: created[0]!.id,
+      jobId: created[0]!.job.id,
+      action: 'APPLIED',
+    });
+    await service.createFromText('user-1', {
+      targetText: 'Backend engineer TypeScript',
+    });
+
+    expect(page.total).toBe(1);
+    expect(page.items[0]?.id).toBe(created[0]?.id);
+    expect(detail.job.id).toBe('job-high');
+    expect(feedback.action).toBe('SAVED');
+    await expect(
+      feedbackService.findForRecommendation('user-1', created[0]!.id),
+    ).resolves.toMatchObject({ action: 'APPLIED', note: null });
+    await expect(
+      unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds('user-1')),
+    ).resolves.toEqual(['job-high']);
+    expect(retrievalService.retrieve).toHaveBeenLastCalledWith(
+      expect.objectContaining({ excludeJobIds: ['job-high'] }),
+    );
+    expect(recommendationMetricsSnapshot().feedbackActionTotal).toMatchObject({
+      SAVED: 1,
+      VIEWED: 1,
+      OPENED: 1,
+      APPLIED: 1,
+    });
+    expect(recommendationMetricsSnapshot().feedbackAppliedLinkedTotal).toBe(1);
+  });
+
+  it('excludes LESS_LIKE_THIS jobs and boosts MORE_LIKE_THIS affinity before ranking', async () => {
+    resetRecommendationMetricsForTests();
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const previousRun = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'TARGET_TEXT' }),
+    );
+    const previousRecommendations = await unitOfWork.execute(({ recommendations }) =>
+      recommendations.createMany('user-1', previousRun.id, [
+        {
+          ...scoredRecommendation('job-excluded', 0.8),
+          job: jobList('job-excluded', {
+            title: 'Legacy Backend Engineer',
+            skills: ['Python', 'Django'],
+          }),
+        },
+        {
+          ...scoredRecommendation('job-anchor', 0.8),
+          job: jobList('job-anchor', {
+            title: 'React Platform Engineer',
+            skills: ['React', 'TypeScript'],
+          }),
+        },
+      ]),
+    );
+    const feedbackService = new RecommendationFeedbackService({
+      upsert: (input) => unitOfWork.execute(({ feedback }) => feedback.upsert(input)),
+      findByRecommendation: (userId, recommendationId) =>
+        unitOfWork.execute(({ feedback }) =>
+          feedback.findByRecommendation(userId, recommendationId),
+        ),
+      listByJob: (userId, jobId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByJob(userId, jobId)),
+      listByAction: (userId, action, options) =>
+        unitOfWork.execute(({ feedback }) => feedback.listByAction(userId, action, options)),
+      listExcludedJobIds: (userId) =>
+        unitOfWork.execute(({ feedback }) => feedback.listExcludedJobIds(userId)),
+    });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: previousRecommendations.find((item) => item.job.id === 'job-excluded')!.id,
+      jobId: 'job-excluded',
+      action: 'LESS_LIKE_THIS',
+    });
+    await feedbackService.store({
+      userId: 'user-1',
+      recommendationId: previousRecommendations.find((item) => item.job.id === 'job-anchor')!.id,
+      jobId: 'job-anchor',
+      action: 'MORE_LIKE_THIS',
+    });
+
+    const candidates = [
+      {
+        job: jobList('job-excluded', {
+          title: 'Legacy Backend Engineer',
+          skills: ['Python', 'Django'],
+        }),
+        retrievalScore: 0.9,
+      },
+      {
+        job: jobList('job-generic', {
+          title: 'Backend Engineer',
+          skills: ['Python', 'Django'],
+        }),
+        retrievalScore: 0.9,
+      },
+      {
+        job: jobList('job-similar', {
+          title: 'React Platform Engineer',
+          skills: ['React', 'TypeScript', 'GraphQL'],
+        }),
+        retrievalScore: 0.9,
+      },
+    ];
+    const retrievalService = {
+      retrieve: vi.fn(async (request: { excludeJobIds?: string[] }) =>
+        candidates.filter((candidate) => !request.excludeJobIds?.includes(candidate.job.id)),
+      ),
+    } as unknown as RecommendationRetrievalService;
+    const fakeScoringService = {
+      score: vi.fn(async (_context: RecommendationContext, candidateItems: typeof candidates) =>
+        candidateItems.map(({ job }) => {
+          const overallScore = job.id === 'job-similar' ? 0.7 : 0.72;
+          return {
+            ...scoredRecommendation(job.id, overallScore),
+            job,
+          };
+        }),
+      ),
+    } as unknown as RecommendationScoringService;
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: fakeScoringService,
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Frontend platform engineer with React and TypeScript',
+    });
+
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({ excludeJobIds: ['job-excluded'] }),
+    );
+    expect(records.map((item) => item.job.id)).toEqual(['job-similar', 'job-generic']);
+    expect(records[0]?.scoreResult.reasons).toContainEqual(
+      expect.objectContaining({
+        message: 'More-like-this feedback lightly boosted this recommendation',
+      }),
+    );
+    expect(recommendationMetricsSnapshot()).toMatchObject({
+      feedbackMoreLessTotal: 2,
+      feedbackActionTotal: {
+        LESS_LIKE_THIS: 1,
+        MORE_LIKE_THIS: 1,
+      },
+    });
+  });
+
+  it('drops stretch/related categories when includeStretchOpportunities is false', async () => {
+    const retrievalService = {
+      retrieve: vi.fn().mockResolvedValue([
+        { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+        {
+          job: jobList('job-low', {
+            title: 'Marketing Manager',
+            skills: ['SEO'],
+            salary: { minimum: 40000, maximum: 50000, currency: 'USD' },
+          }),
+          retrievalScore: 0.1,
+        },
+      ]),
+    } as unknown as RecommendationRetrievalService;
+
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Backend engineer with TypeScript and PostgreSQL',
+      filters: { includeStretchOpportunities: false },
+    });
+
+    expect(records.every((item) => ['BEST_MATCH', 'GOOD_MATCH'].includes(item.category))).toBe(
+      true,
+    );
+    expect(records.some((item) => item.job.id === 'job-high')).toBe(true);
+  });
+
+  it('labels flexible filter near-misses as stretch opportunities', async () => {
+    const retrievalService = {
+      retrieve: vi.fn().mockResolvedValue([
+        {
+          job: jobList('job-near-miss', {
+            salary: { minimum: 70000, maximum: 90000, currency: 'USD' },
+          }),
+          retrievalScore: 0.95,
+        },
+      ]),
+    } as unknown as RecommendationRetrievalService;
+
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Backend engineer with TypeScript and PostgreSQL',
+      filters: { filterMode: 'FLEXIBLE', minimumSalary: 100000, currency: 'USD' },
+    });
+
+    expect(retrievalService.retrieve).toHaveBeenCalledWith(
+      expect.objectContaining({
+        context: expect.objectContaining({
+          filterMode: 'FLEXIBLE',
+          salaryExpectation: expect.objectContaining({ minimum: 100000 }),
+        }),
+      }),
+    );
+    expect(records).toHaveLength(1);
+    expect(records[0]).toMatchObject({
+      job: expect.objectContaining({ id: 'job-near-miss' }),
+      category: 'STRETCH_OPPORTUNITY',
+    });
+    expect(records[0]?.scoreResult.reasons).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          message:
+            'Flexible filter mode kept this stretch opportunity outside one or more preferences',
+          evidence: expect.arrayContaining(['filterViolation=SALARY_MINIMUM']),
+        }),
+      ]),
+    );
+  });
+
+  it('persists reranked order when a reranker is configured', async () => {
+    resetRecommendationMetricsForTests();
+    const scoringService = {
+      score: vi
+        .fn()
+        .mockResolvedValue([
+          scoredRecommendation('job-low', 0.7),
+          scoredRecommendation('job-high', 0.95),
+        ]),
+    } as unknown as RecommendationScoringService;
+    const reranker = {
+      rerank: vi
+        .fn()
+        .mockImplementation(
+          async (
+            _context: RecommendationContext,
+            recommendations: readonly ScoredJobRecommendation[],
+          ) => [recommendations[1]!, recommendations[0]!],
+        ),
+    } satisfies RecommendationReranker;
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi.fn().mockResolvedValue([
+          { job: jobList('job-low'), retrievalScore: 0.5 },
+          { job: jobList('job-high'), retrievalScore: 0.9 },
+        ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService,
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+      reranker,
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Backend engineer TypeScript',
+    });
+
+    expect(reranker.rerank).toHaveBeenCalledWith(
+      expect.any(Object),
+      expect.arrayContaining([
+        expect.objectContaining({ job: expect.objectContaining({ id: 'job-high' }) }),
+        expect.objectContaining({ job: expect.objectContaining({ id: 'job-low' }) }),
+      ]),
+    );
+    expect(records.map((item) => [item.rank, item.job.id])).toEqual([
+      [1, 'job-low'],
+      [2, 'job-high'],
+    ]);
+    const metrics = recommendationMetricsSnapshot();
+    expect(metrics).toMatchObject({
+      generateCount: 1,
+      rerankSuccessCount: 1,
+      rerankFallbackCount: 0,
+      stageAverageLatencyMs: {
+        context: expect.any(Number),
+        feedback: expect.any(Number),
+        retrieval: expect.any(Number),
+        scoring: expect.any(Number),
+        ranking: expect.any(Number),
+        persistence: expect.any(Number),
+      },
+    });
+    for (const histogram of Object.values(metrics.stageLatencyHistogram)) {
+      expect(Object.values(histogram).reduce((total, count) => total + count, 0)).toBe(1);
+    }
+  });
+
+  it('falls back to deterministic order when reranker fails', async () => {
+    resetRecommendationMetricsForTests();
+    const scoringService = {
+      score: vi
+        .fn()
+        .mockResolvedValue([
+          scoredRecommendation('job-low', 0.7),
+          scoredRecommendation('job-high', 0.95),
+        ]),
+    } as unknown as RecommendationScoringService;
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new TargetTextSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi.fn().mockResolvedValue([
+          { job: jobList('job-low'), retrievalScore: 0.5 },
+          { job: jobList('job-high'), retrievalScore: 0.9 },
+        ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService,
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId: vi.fn(),
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+      reranker: {
+        rerank: vi.fn().mockRejectedValue(new Error('rerank unavailable')),
+      },
+    });
+
+    const records = await service.createFromText('user-1', {
+      targetText: 'Backend engineer TypeScript',
+    });
+
+    expect(records.map((item) => [item.rank, item.job.id])).toEqual([
+      [1, 'job-high'],
+      [2, 'job-low'],
+    ]);
+    expect(recommendationMetricsSnapshot()).toMatchObject({
+      rerankFailureCount: 1,
+      rerankFallbackCount: 1,
+    });
+  });
+});
+
+describe('RecommendationsService readiness', () => {
+  it('reports profile readiness for generate', async () => {
+    const findCandidateProfileByUserId = vi.fn().mockResolvedValue({
+      titles: ['Backend Engineer'],
+      skills: ['TypeScript'],
+      summary: 'Backend engineer',
+      locations: [],
+      industries: [],
+      employmentTypes: [],
+      experienceLevels: [],
+      education: [],
+      certifications: [],
+    });
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork: new InMemoryRecommendationUnitOfWork(),
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId,
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+    });
+
+    await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({
+      ready: true,
+      lifecycleState: 'NOT_STARTED',
+      canGenerateFromProfile: true,
+      blockers: [],
+      retrieval: { backend: 'PGVECTOR', configured: true },
+    });
+  });
+
+  it('reports STALE when a completed run is older than the profile', async () => {
+    const findCandidateProfileByUserId = vi.fn().mockResolvedValue({
+      titles: ['Backend Engineer'],
+      skills: ['TypeScript'],
+      summary: 'Backend engineer',
+    });
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const run = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+    );
+    await unitOfWork.execute(({ runs }) => runs.markCompleted('user-1', run.id));
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
+      ),
+      retrievalService: { retrieve: vi.fn() } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId,
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+      profileUpdatedAfter: vi.fn().mockResolvedValue(true),
+    });
+
+    await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({
+      ready: true,
+      lifecycleState: 'STALE',
+      stale: true,
+      blockers: ['RECOMMENDATIONS_STALE'],
+      lastGeneratedAt: expect.any(String),
+    });
+  });
+
+  it('refreshes stale recommendations into a completed latest READY run', async () => {
+    let profileUpdatedAfterRun = true;
+    const findCandidateProfileByUserId = vi.fn().mockResolvedValue({
+      personalDetails: { currentTitle: 'Backend Engineer', summary: 'APIs' },
+      skills: ['TypeScript'],
+      experience: [],
+      education: [],
+      certifications: [],
+    });
+    const unitOfWork = new InMemoryRecommendationUnitOfWork();
+    const previousRun = await unitOfWork.execute(({ runs }) =>
+      runs.create({ userId: 'user-1', sourceType: 'PROFILE' }),
+    );
+    await unitOfWork.execute(({ runs }) => runs.markCompleted('user-1', previousRun.id));
+    const service = new RecommendationsService(createChildLogger({ scope: 'test-recs' }), {
+      contextService: new RecommendationContextService(
+        new RecommendationStrategyResolver([new ProfileSourceStrategy()]),
+      ),
+      retrievalService: {
+        retrieve: vi
+          .fn()
+          .mockResolvedValue([
+            { job: jobList('job-high', { title: 'Backend Engineer' }), retrievalScore: 0.9 },
+          ]),
+      } as unknown as RecommendationRetrievalService,
+      scoringService: new RecommendationScoringService(
+        new RecommendationScoringEngine(HEURISTIC_SCORE_CALCULATORS, defaultMatchTypeClassifier),
+      ),
+      unitOfWork,
+      sourceAuthorization: new RecommendationSourceAuthorizationService(
+        { findById: vi.fn() } as unknown as IJobSearchRepository,
+        {
+          findCandidateProfileByUserId,
+          findOwnedResumeProfileSource: vi.fn(),
+        },
+      ),
+      profileUpdatedAfter: vi
+        .fn()
+        .mockImplementation(() => Promise.resolve(profileUpdatedAfterRun)),
+    });
+
+    await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({
+      lifecycleState: 'STALE',
+      stale: true,
+    });
+
+    await new Promise((resolve) => setTimeout(resolve, 2));
+    profileUpdatedAfterRun = false;
+    const refresh = await service.refreshForSource('user-1');
+
+    expect(refresh.run).toMatchObject({ status: 'COMPLETED', userId: 'user-1' });
+    expect(refresh.items).toHaveLength(1);
+    await expect(service.getReadinessStatus('user-1')).resolves.toMatchObject({
+      lifecycleState: 'READY',
+      stale: false,
+      blockers: [],
+    });
+  });
+});

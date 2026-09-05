@@ -1,0 +1,189 @@
+enum ApplicationStatus {
+  SAVED
+  PREPARING
+  APPLIED
+  SCREENING
+  INTERVIEW
+  ASSESSMENT
+  OFFER
+  ACCEPTED
+  HIRED
+  REJECTED
+  WITHDRAWN
+  GHOSTED
+  EXPIRED
+}
+
+enum ApplicationSourceType {
+  MANUAL
+  PLATFORM_JOB
+  PLATFORM_APPLY
+  EXTERNAL_JOB_URL
+  EMAIL_IMPORT
+  ATS_IMPORT
+  BROWSER_EXTENSION
+  CSV_IMPORT
+  EXTERNAL_API
+  AI_ASSISTED
+}
+
+enum StatusChangedBy {
+  USER
+  SYSTEM
+  IMPORT
+  AI
+}
+
+enum ApplicationPriority {
+  LOW
+  MEDIUM
+  HIGH
+}
+
+enum SalaryPeriod {
+  HOUR
+  DAY
+  WEEK
+  MONTH
+  YEAR
+}
+
+enum NoteType {
+  GENERAL
+  INTERVIEW
+  RECRUITER
+  PREPARATION
+  OFFER
+  REJECTION
+}
+
+enum TaskType {
+  FOLLOW_UP
+  PREPARE_INTERVIEW
+  COMPLETE_ASSESSMENT
+  SEND_DOCUMENT
+  RESEARCH_COMPANY
+  NEGOTIATE_OFFER
+  OTHER
+}
+
+enum TaskStatus {
+  PENDING
+  COMPLETED
+  CANCELLED
+}
+
+model Application {
+  id        String  @id @default(uuid())
+  userId    String  @map("user_id")
+  jobId     String? @map("job_id")
+  companyId String? @map("company_id")
+
+  // Job Snapshot Fields
+  jobTitle            String        @map("job_title") @db.VarChar(160)
+  companyName         String        @map("company_name") @db.VarChar(160)
+  companyLogoUrl      String?       @map("company_logo_url")
+  originalJobUrl      String?       @map("original_job_url")
+  normalisedJobUrl    String?       @map("normalised_job_url")
+  applicationUrl      String?       @map("application_url")
+  location            String?       @db.VarChar(128)
+  remoteType          String?       @map("remote_type") @db.VarChar(32)
+  employmentType      String?       @map("employment_type") @db.VarChar(32)
+  descriptionSnapshot String?       @map("description_snapshot") @db.Text
+  skillsSnapshot      String[]      @default([]) @map("skills_snapshot")
+  salaryMin           Decimal?      @map("salary_min") @db.Decimal(19, 4)
+  salaryMax           Decimal?      @map("salary_max") @db.Decimal(19, 4)
+  salaryCurrency      String?       @map("salary_currency") @db.VarChar(3)
+  salaryPeriod        SalaryPeriod? @default(YEAR) @map("salary_period")
+
+  // Lifecycle & Status Tracking
+  currentStatus     ApplicationStatus     @default(SAVED) @map("current_status")
+  primarySourceType ApplicationSourceType @default(MANUAL) @map("primary_source_type")
+  priority          ApplicationPriority   @default(MEDIUM)
+  interestLevel     Int?                  @map("interest_level") // 1-5
+
+  // Deterministic Lifecycle Timestamps
+  appliedAt       DateTime? @map("applied_at")
+  firstResponseAt DateTime? @map("first_response_at")
+  closedAt        DateTime? @map("closed_at")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+  archivedAt      DateTime? @map("archived_at")
+
+  // Relations (within Application Management domain)
+  sources       ApplicationSource[]
+  statusHistory ApplicationStatusHistory[]
+  notes         ApplicationNote[]
+  tasks         ApplicationTask[]
+
+  @@index([userId, archivedAt, currentStatus, updatedAt(sort: Desc)])
+  @@index([userId, companyName, jobTitle])
+  @@index([userId, normalisedJobUrl])
+  @@map("applications")
+}
+
+model ApplicationSource {
+  id            String                @id @default(uuid())
+  applicationId String                @map("application_id")
+  sourceType    ApplicationSourceType @map("source_type")
+  provider      String?
+  externalId    String?               @map("external_id")
+  externalUrl   String?               @map("external_url")
+  importedAt    DateTime              @default(now()) @map("imported_at")
+  lastSyncedAt  DateTime?             @map("last_synced_at")
+  metadata      Json                  @default("{}")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@unique([applicationId, sourceType, externalId])
+  @@index([applicationId])
+  @@map("application_sources")
+}
+
+model ApplicationStatusHistory {
+  id            String             @id @default(uuid())
+  applicationId String             @map("application_id")
+  fromStatus    ApplicationStatus? @map("from_status")
+  toStatus      ApplicationStatus  @map("to_status")
+  changedAt     DateTime           @default(now()) @map("changed_at")
+  changedBy     StatusChangedBy    @default(USER) @map("changed_by")
+  note          String?            @db.Text
+  sourceId      String?            @map("source_id")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, changedAt(sort: Asc)])
+  @@map("application_status_history")
+}
+
+model ApplicationNote {
+  id            String   @id @default(uuid())
+  applicationId String   @map("application_id")
+  type          NoteType @default(GENERAL)
+  content       String   @db.Text
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, createdAt(sort: Desc)])
+  @@map("application_notes")
+}
+
+model ApplicationTask {
+  id            String     @id @default(uuid())
+  applicationId String     @map("application_id")
+  title         String
+  description   String?    @db.Text
+  type          TaskType   @default(FOLLOW_UP)
+  dueAt         DateTime?  @map("due_at")
+  completedAt   DateTime?  @map("completed_at")
+  status        TaskStatus @default(PENDING)
+  createdAt     DateTime   @default(now()) @map("created_at")
+  updatedAt     DateTime   @updatedAt @map("updated_at")
+
+  application Application @relation(fields: [applicationId], references: [id], onDelete: Cascade)
+
+  @@index([applicationId, status, dueAt])
+  @@map("application_tasks")
+}
