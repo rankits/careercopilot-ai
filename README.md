@@ -108,6 +108,20 @@ npm run dev
 
 Without `RESUME_ANALYSIS_USE_OUTBOX=true`, analysis runs inline in the API process (`setImmediate`) so local `npm run dev` still works.
 
+### Background workers
+
+The API offloads work to dedicated worker processes via RabbitMQ. Each worker runs independently with `npm run worker:<name>`:
+
+| Worker                 | Command                                 | Purpose                                                                                     |
+| ---------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------- |
+| Email                  | `npm run worker:email`                  | Sends transactional emails (OTP, welcome, security alerts) via SMTP                         |
+| Resume analysis        | `npm run worker:resume-analysis`        | Runs AI resume analysis jobs (Gemini/Groq/OpenRouter) with retry fallbacks                  |
+| Job embeddings         | `npm run worker:job-embeddings`         | Creates vector embeddings for jobs (pgvector + AI providers) for semantic recommendations   |
+| Application submission | `npm run worker:application-submission` | Processes auto-apply submissions with reliability guarantees (locking, validation, retries) |
+| Outbox relay           | `npm run worker:outbox`                 | Relays outbox events to RabbitMQ with configurable batch size and retry backoff             |
+
+Without `RESUME_ANALYSIS_USE_OUTBOX=true`, analysis runs inline in the API process (`setImmediate`) so local `npm run dev` still works.
+
 ## Monorepo layout
 
 ```text
